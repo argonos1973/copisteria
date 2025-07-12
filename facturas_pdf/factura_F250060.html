@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #fff;
+            font-size: 12px;
+        }
+
+        .header {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .factura-info {
+            margin-bottom: 10px;
+        }
+
+        .factura-info p {
+            margin: 3px 0;
+        }
+
+        #logo {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 90px;
+            height: auto;
+        }
+
+        .direcciones {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .emisor {
+            width: 40%;
+        }
+
+        .cliente {
+            width: 40%;
+            position: absolute;
+            right: 0;
+            text-align: right;
+        }
+
+        .emisor p {
+            margin: 2px 0;
+            line-height: 1.1;
+        }
+
+        .cliente p {
+            margin: 2px 0;
+            line-height: 1.1;
+        }
+
+        .cliente h2 {
+            font-size: 14px;
+            margin: 0 0 8px 0;
+            text-align: right;
+        }
+
+        .detalle-concepto {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detalle-descripcion {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f8f8;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th:first-child, td:first-child {
+            text-align: left;
+        }
+
+        .cantidad {
+            text-align: center;
+        }
+
+        .precio, .total {
+            text-align: right;
+        }
+
+        .totales {
+            width: 300px;
+            margin-left: auto;
+        }
+
+        .totales p {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .condiciones {
+            margin-top: 30px;
+        }
+
+        .pie-pagina {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 10px;
+            color: #666;
+        }
+    </style>
+
+                        <style>
+                            body {
+                                font-family: Arial, sans-serif;
+                                margin: 20px;
+                                padding: 0;
+                            }
+                            .factura-header {
+                                margin-bottom: 30px;
+                            }
+                            table {
+                                width: 100%;
+                                border-collapse: collapse;
+                                margin: 20px 0;
+                            }
+                            th, td {
+                                border: 1px solid #ddd;
+                                padding: 8px;
+                                text-align: left;
+                            }
+                            th {
+                                background-color: #f2f2f2;
+                            }
+                            .total-section {
+                                text-align: right;
+                                margin: 20px 0;
+                            }
+                            .emisor-info, .cliente-info {
+                                margin-bottom: 20px;
+                            }
+                            .precio, .total {
+                                text-align: right;
+                            }
+                            .cantidad {
+                                text-align: center;
+                            }
+                            .detalle-concepto {
+                                font-weight: bold;
+                            }
+                            .detalle-descripcion {
+                                font-size: 0.9em;
+                                color: #666;
+                                display: block;
+                            }
+                        </style>
+                    </head>
+<body>
+    <div class="header">
+        <h1>Factura</h1>
+        <div style="font-size: 28px; font-weight: bold; margin: 20px 0; color: #2c3e50; text-align: center;">ALEPH70</div>
+        <div class="factura-info">
+            <p><strong>Número #</strong> <span id="numero">F250060</span></p>
+            <p><strong>Fecha</strong> <span id="fecha">29/03/2025</span></p>
+        </div>
+    </div>
+
+    <div class="direcciones">
+        <div class="emisor">
+            <p>SAMUEL RODRIGUEZ MIQUEL</p>
+            <p>LEGALITAT, 70</p>
+            <p>BARCELONA (08024), BARCELONA, España</p>
+            <p>44007535W</p>
+            <p>info@aleph70.com</p>
+        </div>
+
+        <div class="cliente">
+            <h2>Cliente</h2>
+            <p>POL RODRIGUEZ MIQUEL</p>
+            <p>ENCARNACION 20 ENTLO 1º</p>
+            <p>08012, Barcelona</p>
+            <p>44015615D</p>
+        </div>
+    </div>
+
+    <div class="detalles">
+        <table>
+            <thead>
+                <tr>
+                    <th>Concepto</th>
+                    <th class="cantidad">Cantidad</th>
+                    <th class="precio">Precio</th>
+                    <th class="precio">IVA %</th>
+                    <th class="total">Total</th>
+                </tr>
+            </thead>
+            <tbody id="detalles-factura">
+                <tr><td>50 TARJETAS 2 CARA(300GR)</td><td class="cantidad">1</td><td class="precio">14.87603€</td><td class="total">18.0€</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="totales">
+        <p><span>BASE IMPONIBLE</span> <span id="base">14.88€</span></p>
+        <p><span>IVA 21%</span> <span id="iva">3.12€</span></p>
+        <p><strong>TOTAL</strong> <strong id="total"></strong></p>
+    </div>
+
+    <div class="condiciones">
+        <p><strong>Condiciones de pago</strong></p>
+        <p id="forma-pago">Tarjeta</p>
+    </div>
+
+    
+</body>
+</html>

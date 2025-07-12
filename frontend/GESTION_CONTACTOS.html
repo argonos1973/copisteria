@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Contacto</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Font Awesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+  />
+
+  <!-- Enlace al archivo de estilos externo -->
+  <link rel="stylesheet" href="../static/styles.css" />
+  <link rel="stylesheet" href="../static/notificaciones.css" />
+
+  <!-- Vue.js y Axios -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script type="module" src="../static/notificaciones.js"></script>
+
+
+  <style>
+    /* Estilos para el contenedor principal */
+    #app {
+      width: 100%;
+      margin: 0;
+      padding: 15px;
+      background-color: var(--color-fondo);
+      border-radius: 0;
+      box-shadow: none;
+    }
+    
+    /* Estilos para grupos de formulario */
+    .form-group {
+      margin-bottom: 5px; /* Reducido de 10px a 5px */
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      width: 100%;
+    }
+    
+    /* Estructura de formulario en columnas */
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      margin-right: -10px;
+      margin-left: -10px;
+      align-items: flex-start;
+      width: 100%;
+      margin-bottom: 2px; /* Reducido de 5px a 2px */
+    }
+    
+    /* Estilos para columnas */
+    .form-column {
+      flex: 0 0 auto;
+      padding-right: 10px;
+      padding-left: 10px;
+      margin-bottom: 5px; /* Reducido de 15px a 5px */
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .form-column input, .form-column select, .form-column textarea {
+      width: 100%;
+    }
+    
+    .col-1 { width: 8.33%; }
+    .col-2 { width: 16.66%; }
+    .col-3 { width: 25%; }
+    .col-4 { width: 33.33%; }
+    .col-5 { width: 41.66%; }
+    .col-6 { width: 50%; }
+    .col-7 { width: 58.33%; }
+    .col-8 { width: 66.66%; }
+    .col-9 { width: 75%; }
+    .col-10 { width: 83.33%; }
+    .col-11 { width: 91.66%; }
+    .col-12 { width: 100%; }
+    
+    /* Columnas juntas */
+    .col-juntas {
+      padding-right: 2px;
+      padding-left: 2px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 3px; /* Reducido de 5px a 3px */
+      font-weight: var(--font-weight-bold);
+      font-size: var(--font-size-small);
+      text-transform: uppercase;
+      color: var(--color-etiqueta);
+    }
+    
+    input, select, textarea {
+      padding: 6px 8px; /* Reducido de 8px 10px a 6px 8px */
+      border: 1px solid var(--color-borde);
+      border-radius: 4px;
+      font-family: 'Roboto', sans-serif;
+      font-size: 14px;
+      transition: border-color 0.3s;
+      height: 32px; /* Reducido de 38px a 32px */
+      width: 200px;
+    }
+    
+    /* Excepción para campos que necesitan más espacio */
+    .input-razonsocial {
+      width: 600px !important;
+    }
+    
+    .input-mail {
+      width: 400px !important;
+    }
+    
+    .form-control {
+      width: 600px !important;
+    }
+    
+    /* Anchos específicos para otros campos */
+    .input-identificador {
+      width: 300px !important;
+    }
+    
+    .input-cp {
+      width: 100px !important;
+    }
+    
+    .input-telf1,
+    .input-telf2 {
+      width: 150px !important;
+    }
+    
+    .input-poblacio,
+    .input-provincia {
+      width: 150px !important;
+    }
+    
+    .input-provincia {
+      width: 200px !important;
+    }
+    
+    /* Ajuste para la validación de iconos */
+    .validation-icon {
+      position: static;
+      display: inline-block;
+      margin-left: 5px;
+      font-size: 14px;
+      vertical-align: middle;
+    }
+    
+    /* Estilos para las sugerencias de dirección */
+    .direccion-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .sugerencias-lista {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background-color: white;
+      border: 1px solid var(--color-borde);
+      border-radius: 4px;
+      max-height: 200px;
+      overflow-y: auto;
+      width: 100%;
+      z-index: 9999;
+      box-shadow: 0 4px 8px var(--color-shadow);
+      margin-top: 2px;
+    }
+
+    .sugerencia-item {
+      padding: 10px 15px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--color-borde);
+      transition: all 0.2s ease;
+      display: block;
+      background-color: var(--color-fondo);
+    }
+
+    .sugerencia-item:last-child {
+      border-bottom: none;
+    }
+
+    .sugerencia-item:hover {
+      background-color: var(--color-hover);
+      color: var(--color-texto);
+      padding-left: 20px;
+    }
+
+    /* Estilos para los mensajes de notificación */
+    .message {
+      padding: 10px 15px;
+      border-radius: 4px;
+      margin-top: 15px;
+      font-weight: var(--font-weight-normal);
+    }
+    
+    /* Estilos para iconos de validación */
+    .valid {
+      color: #28a745;
+    }
+    
+    .invalid {
+      color: #dc3545;
+    }
+
+    .message.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .message.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    /* Estilos para botones de acción */
+    .btn-container {
+      display: flex;
+      justify-content: flex-start;
+      margin-top: 20px;
+      width: 100%;
+      gap: 10px;
+    }
+    
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s;
+      display: inline-block;
+    }
+    
+    .btn-primary {
+      background-color: var(--color-primario);
+      color: white;
+    }
+    
+    .btn-secondary {
+      background-color: var(--color-secundario);
+      color: white;
+    }
+    
+    /* Estilos para checkboxes */
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-left: 0;
+      padding-left: 0;
+      flex-direction: row;
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      margin-left: 0;
+      padding-left: 0;
+      flex-direction: row;
+    }
+    
+    .input-checkbox {
+      margin-right: 8px;
+      width: auto !important;
+      height: auto !important;
+    }
+    
+    .checkbox-text {
+      font-weight: normal;
+      color: var(--color-primario);
+      font-size: 14px;
+    }
+    
+    /* Estilos para el encabezado */
+    .header {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    
+    h1 {
+      color: var(--color-primario);
+      margin-bottom: 20px;
+      font-size: 24px;
+      text-align: left;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    /* Contenedor para input y su icono */
+    .input-container {
+      display: flex;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container">
+    <!-- Contenedor para notificaciones -->
+    <div id="notificaciones-contenedor"></div>
+
+    <form @submit.prevent="handleSubmit">
+      <!-- Encabezado -->
+      <div class="header" style="text-align: left;">
+        <h1 style="text-align: left;">Gestión de Contacto</h1>
+      </div>
+      
+      <!-- Fila 1: Razón social -->
+      <div class="form-row">
+        <div class="form-column col-12">
+          <div class="form-group">
+            <label for="razonsocial">Razón Social</label>
+            <input
+              type="text"
+              id="razonsocial"
+              v-model="contacto.razonsocial"
+              maxlength="90"
+              required
+              class="input-razonsocial"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila 2: Identificador -->
+      <div class="form-row">
+        <div class="form-column col-12">
+          <div class="form-group">
+            <label for="identificador">Identificador</label>
+            <div class="input-container">
+              <input
+                type="text"
+                id="identificador"
+                v-model="contacto.identificador"
+                maxlength="20"
+                required
+                @input="validateIdentificador"
+                class="input-identificador"
+              />
+              <i
+                v-if="contacto.identificador"
+                class="validation-icon"
+                :class="valid.identificador ? 'fa fa-check valid' : 'fa fa-times invalid'"
+              ></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila 3: Email -->
+      <div class="form-row">
+        <div class="form-column col-12">
+          <div class="form-group">
+            <label for="mail">Email</label>
+            <div class="input-container">
+              <input
+                type="email"
+                id="mail"
+                v-model="contacto.mail"
+                maxlength="90"
+                required
+                @input="validateEmail"
+                class="input-mail"
+              />
+              <i
+                v-if="contacto.mail"
+                class="validation-icon"
+                :class="valid.mail ? 'fa fa-check valid' : 'fa fa-times invalid'"
+              ></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila 4: Dirección -->
+      <div class="form-row">
+        <div class="form-column col-12">
+          <div class="form-group">
+            <label for="direccion">Dirección</label>
+            <div class="direccion-container">
+              <input
+                type="text"
+                id="direccion"
+                v-model="contacto.direccion"
+                @input="handleDireccionInput"
+                class="form-control"
+              />
+              <!-- Lista de sugerencias -->
+              <div v-show="sugerenciasCarrer.length > 0" class="sugerencias-lista">
+                <div
+                  v-for="sugerencia in sugerenciasCarrer"
+                  :key="sugerencia.carrer"
+                  class="sugerencia-item"
+                  @click="seleccionarDireccion(sugerencia)"
+                >
+                  {{ sugerencia.carrer }} ({{ sugerencia.cp }})
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila 5: Teléfono 1 y Teléfono 2 -->
+      <div class="form-row" style="display: flex; gap: 10px; margin: 0; padding: 0;">
+        <div style="margin: 0; padding: 0;">
+          <div class="form-group" style="margin-right: 0;">
+            <label for="telf1">Teléfono 1</label>
+            <div class="input-container">
+              <input
+                type="tel"
+                id="telf1"
+                v-model="contacto.telf1"
+                maxlength="10"
+                pattern="^[0-9]{9,10}$"
+                @input="validateTelf1"
+                class="input-telf1"
+                style="width: 120px !important; margin-right: 0;"
+              />
+              <i
+                v-if="contacto.telf1"
+                class="validation-icon"
+                :class="valid.telf1 ? 'fa fa-check valid' : 'fa fa-times invalid'"
+              ></i>
+            </div>
+          </div>
+        </div>
+        <div style="margin: 0; padding: 0;">
+          <div class="form-group" style="margin-left: 0;">
+            <label for="telf2">Teléfono 2</label>
+            <div class="input-container">
+              <input
+                type="tel"
+                id="telf2"
+                v-model="contacto.telf2"
+                maxlength="10"
+                pattern="^[0-9]{9,10}$"
+                @input="validateTelf2"
+                class="input-telf2"
+                style="width: 120px !important; margin-left: 0;"
+              />
+              <i
+                v-if="contacto.telf2"
+                class="validation-icon"
+                :class="valid.telf2 ? 'fa fa-check valid' : 'fa fa-times invalid'"
+              ></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila 6: Código Postal -->
+      <div class="form-row">
+        <div class="form-column col-12">
+          <div class="form-group">
+            <label for="cp">Código Postal</label>
+            <div class="input-container">
+              <input
+                type="text"
+                id="cp"
+                v-model="contacto.cp"
+                maxlength="15"
+                @input="handleCP(contacto.cp)"
+                class="input-cp"
+                required
+              />
+              <i
+                v-if="contacto.cp"
+                class="validation-icon"
+                :class="valid.cp ? 'fa fa-check valid' : 'fa fa-times invalid'"
+              ></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila 7: Población y Provincia -->
+      <div class="form-row" style="display: flex; gap: 10px; margin: 0; padding: 0;">
+        <div style="margin: 0; padding: 0;">
+          <div class="form-group" style="margin-right: 0;">
+            <label for="poblacio">Población</label>
+            <input
+              type="text"
+              id="poblacio"
+              v-model="contacto.poblacio"
+              class="input-poblacio"
+              required
+              maxlength="80"
+              style="width: 120px !important; margin-right: 0;"
+            />
+          </div>
+        </div>
+        <div style="margin: 0; padding: 0;">
+          <div class="form-group" style="margin-left: 0;">
+            <label for="provincia">Provincia</label>
+            <input
+              type="text"
+              id="provincia"
+              v-model="contacto.provincia"
+              class="input-provincia"
+              required
+              maxlength="20"
+              style="width: 200px !important; margin-left: 0;"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Fila 8: Facturación Automática -->
+      <div class="form-row">
+        <div class="form-column col-12" style="padding-left: 0;">
+          <div class="form-group checkbox-group" style="margin-left: 0; padding-left: 0; flex-direction: row;">
+            <label for="facturacion_automatica" class="checkbox-label" style="margin-left: 0; padding-left: 0; text-transform: none;">
+              <input
+                type="checkbox"
+                id="facturacion_automatica"
+                v-model="contacto.tipo"
+                :true-value="1"
+                :false-value="0"
+                class="input-checkbox"
+                style="margin-left: 0; margin-right: 8px;"
+              />
+              <span class="checkbox-text">Facturación Automática</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botones de acción -->
+      <div class="btn-container">
+        <button type="button" class="btn-primary" @click="handleSubmit">
+          <i class="fa fa-save"></i> Guardar
+        </button>
+        <button type="button" class="btn-secondary" @click="cerrarFormulario">
+          <i class="fa fa-times"></i> Cancelar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Archivo JS -->
+  <script type="module">
+    import { IP_SERVER, PORT } from '../static/constantes.js';
+    import { mostrarNotificacion } from '../static/notificaciones.js';
+
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        const API_URL = `http://${IP_SERVER}:${PORT}/api`;
+        const contacto = ref({
+          razonsocial: '',
+          identificador: '',
+          mail: '',
+          telf1: '',
+          telf2: '',
+          direccion: '',
+          cp: '',
+          poblacio: '',
+          localidad: '', // Añadido campo localidad como copia de poblacio
+          provincia: '',
+          tipo: 0  // Valor por defecto: 0 (no facturación automática)
+        });
+        const sugerenciasCarrer = ref([]);
+        const loading = ref(false);
+        const valid = ref({
+          identificador: true,
+          mail: true,
+          telf1: true,
+          telf2: true,
+          cp: true
+        });
+
+        // Validaciones
+        const validateIdentificador = () => {
+  const identificador = contacto.value.identificador.toUpperCase();
+
+  // Aceptar identificadores personalizados con "/"
+  if (identificador.indexOf('/') !== -1) {
+    valid.value.identificador = true;
+    return;
+  }
+
+  // Aceptar VAT IDs extranjeros como ES514950749 o solo números (mínimo 8-10 dígitos)
+  const vatPattern = /^([A-Z]{2})?[0-9]{8,10}$/;
+  if (vatPattern.test(identificador)) {
+    valid.value.identificador = true;
+    return;
+  }
+
+  // Validación clásica NIF/NIE/CIF (opcional, puedes eliminar esto si solo quieres VATs)
+  const nifPattern = /^[0-9]{8}[A-Z]$/;
+  const niePattern = /^[XYZ][0-9]{7}[A-Z]$/;
+  const cifPattern = /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/;
+
+  valid.value.identificador = false;
+
+  const letrasNIF = "TRWAGMYFPDXBNJZSQVHLCKET";
+
+  const validarNIF = (nif) => {
+    const numero = nif.substring(0, 8);
+    const letra = nif.charAt(8);
+    const indice = parseInt(numero, 10) % 23;
+    return letra === letrasNIF.charAt(indice);
+  };
+
+  const validarNIE = (nie) => {
+    const letraInicial = nie.charAt(0);
+    let numero;
+    switch (letraInicial) {
+      case 'X': numero = '0' + nie.substring(1, 8); break;
+      case 'Y': numero = '1' + nie.substring(1, 8); break;
+      case 'Z': numero = '2' + nie.substring(1, 8); break;
+      default: return false;
+    }
+    const letra = nie.charAt(8);
+    const indice = parseInt(numero, 10) % 23;
+    return letra === letrasNIF.charAt(indice);
+  };
+
+  const validarCIF = (cif) => {
+    const letraInicial = cif.charAt(0);
+    const numeros = cif.substring(1, 8);
+    const control = cif.charAt(8);
+    let sumaPares = 0;
+    for (let i = 1; i < 7; i += 2) {
+      sumaPares += parseInt(numeros.charAt(i), 10);
+    }
+    let sumaImpares = 0;
+    for (let i = 0; i < 7; i += 2) {
+      const n = parseInt(numeros.charAt(i), 10) * 2;
+      sumaImpares += Math.floor(n / 10) + (n % 10);
+    }
+    const total = sumaPares + sumaImpares;
+    const unidad = total % 10;
+    const controlNumero = (unidad === 0) ? 0 : 10 - unidad;
+    const letrasControl = "JABCDEFGHI";
+    const letraEsperada = letrasControl.charAt(controlNumero);
+
+    if (/[PQSKW]/.test(letraInicial)) {
+      return control === letraEsperada;
+    } else {
+      return control === controlNumero.toString();
+    }
+  };
+
+  if (nifPattern.test(identificador)) {
+    valid.value.identificador = validarNIF(identificador);
+  } else if (niePattern.test(identificador)) {
+    valid.value.identificador = validarNIE(identificador);
+  } else if (cifPattern.test(identificador)) {
+    valid.value.identificador = validarCIF(identificador);
+  }
+};
+
+
+        const validateEmail = () => {
+          const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          valid.value.mail = regex.test(contacto.value.mail);
+        };
+
+        const validateTelf1 = () => {
+          const regex = /^[0-9]{9,10}$/;
+          valid.value.telf1 = regex.test(contacto.value.telf1);
+        };
+
+        const validateTelf2 = () => {
+          const regex = /^[0-9]{9,10}$/;
+          valid.value.telf2 = !contacto.value.telf2 || regex.test(contacto.value.telf2);
+        };
+
+        // Función para buscar sugerencias de direcciones
+        const buscarSugerenciasCarrer = async (query) => {
+          if (!query || query.length < 3) {
+            sugerenciasCarrer.value = [];
+            return;
+          }
+
+          try {
+            const response = await fetch(`${API_URL}/contactos/searchCarrer?query=${encodeURIComponent(query)}`);
+            if (!response.ok) throw new Error('Error al buscar direcciones');
+            const data = await response.json();
+            sugerenciasCarrer.value = data;
+          } catch (error) {
+            console.error('Error:', error);
+            sugerenciasCarrer.value = [];
+          }
+        };
+
+        // Función para seleccionar una dirección
+        const seleccionarDireccion = async (sugerencia) => {
+          contacto.value.direccion = sugerencia.carrer;
+          contacto.value.cp = sugerencia.cp;
+
+          // Obtener datos adicionales del CP
+          try {
+            const response = await fetch(`${API_URL}/contactos/get_cp?cp=${sugerencia.cp}`);
+            if (!response.ok) throw new Error('Error al obtener datos del CP');
+            const data = await response.json();
+            if (data && data.length > 0) {
+              contacto.value.poblacio = data[0].poblacio;
+              contacto.value.provincia = data[0].provincia;
+            }
+          } catch (error) {
+            console.error('Error:', error);
+          }
+
+          // Limpiar sugerencias
+          sugerenciasCarrer.value = [];
+        };
+
+        // Debounce para la búsqueda de direcciones
+        let timeoutId = null;
+        const handleDireccionInput = (event) => {
+          clearTimeout(timeoutId);
+          const query = event.target.value;
+          timeoutId = setTimeout(() => buscarSugerenciasCarrer(query), 300);
+        };
+
+        // Manejar el CP
+        const handleCP = async (cp) => {
+          // Limpiar los campos si el CP no tiene 5 dígitos
+          if (!cp || cp.length !== 5) {
+            contacto.value.poblacio = '';
+            contacto.value.provincia = '';
+            valid.value.cp = true;
+            return;
+          }
+
+          try {
+            const response = await fetch(`${API_URL}/contactos/get_cp?cp=${cp}`);
+            if (!response.ok) throw new Error('Error al obtener datos del CP');
+            
+            const data = await response.json();
+            if (data && data.length > 0) {
+              // Actualizar los campos con los datos recibidos
+              contacto.value.poblacio = data[0].poblacio;
+              contacto.value.provincia = data[0].provincia;
+              valid.value.cp = true;
+            } else {
+              // Limpiar campos si no se encuentran datos
+              contacto.value.poblacio = '';
+              contacto.value.provincia = '';
+              valid.value.cp = false;
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            // Limpiar campos en caso de error
+            contacto.value.poblacio = '';
+            contacto.value.provincia = '';
+            valid.value.cp = false;
+          }
+        };
+
+        // Función para validar el formulario
+        const validateForm = () => {
+          validateIdentificador();
+          validateEmail();
+          validateTelf1();
+          validateTelf2();
+          
+          // Validar que CP, población y provincia no estén vacíos
+          const cpValid = contacto.value.cp && valid.value.cp;
+          const poblacioValid = contacto.value.poblacio && contacto.value.poblacio.trim() !== '';
+          const provinciaValid = contacto.value.provincia && contacto.value.provincia.trim() !== '';
+          
+          return valid.value.identificador && 
+                 valid.value.mail && 
+                 (contacto.value.telf1 ? valid.value.telf1 : true) &&
+                 (contacto.value.telf2 ? valid.value.telf2 : true) &&
+                 cpValid && poblacioValid && provinciaValid;
+        };
+
+        // Manejar el envío del formulario
+        const handleSubmit = async () => {
+          // Validar antes de enviar
+          if (!validateForm()) return;
+
+          // Convertir todos los campos de texto a mayúsculas antes de enviar, excepto el campo 'mail'
+          Object.keys(contacto.value).forEach(key => {
+            if (key !== 'mail' && typeof contacto.value[key] === 'string') {
+              contacto.value[key] = contacto.value[key].toUpperCase();
+            }
+          });
+
+          try {
+            // Preparar los datos para enviar
+            const contactoData = {
+              razonsocial: contacto.value.razonsocial.trim(),
+              identificador: contacto.value.identificador.trim().toUpperCase(),
+              mail: contacto.value.mail.trim(),
+              telf1: contacto.value.telf1 ? contacto.value.telf1.trim() : null,
+              telf2: contacto.value.telf2 ? contacto.value.telf2.trim() : null,
+              direccion: contacto.value.direccion ? contacto.value.direccion.trim() : null,
+              cp: contacto.value.cp ? contacto.value.cp.trim() : null,
+              poblacio: contacto.value.poblacio ? contacto.value.poblacio.trim() : null,
+              localidad: contacto.value.poblacio ? contacto.value.poblacio.trim() : null, // Añadido campo localidad
+              provincia: contacto.value.provincia ? contacto.value.provincia.trim() : null,
+              tipo: contacto.value.tipo
+            };
+
+            const url = contacto.value.idContacto 
+              ? `${API_URL}/contactos/update_contacto/${contacto.value.idContacto}`
+              : `${API_URL}/contactos/create_contacto`;
+            
+            const method = contacto.value.idContacto ? 'PUT' : 'POST';
+            
+            const response = await fetch(url, {
+              method,
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(contactoData)
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Error al guardar el contacto');
+            }
+            
+            const result = await response.json();
+            mostrarNotificacion(result.message || 'Contacto guardado correctamente', 'success');
+            
+            // Volver a la consulta después de guardar exitosamente
+            setTimeout(() => {
+              window.location.href = 'CONSULTA_CONTACTOS.html';
+            }, 1500);
+          } catch (error) {
+            console.error('Error:', error);
+            mostrarNotificacion(error.message || 'Error al guardar el contacto', 'error');
+          }
+        };
+
+        // Función para volver a la consulta
+        const cerrarFormulario = () => {
+          window.location.href = 'CONSULTA_CONTACTOS.html';
+        };
+
+        // Cargar contacto existente si hay ID en la URL
+        onMounted(async () => {
+          const urlParams = new URLSearchParams(window.location.search);
+          const id = urlParams.get('id');
+          
+          if (id) {
+            try {
+              const response = await fetch(`${API_URL}/contactos/get_contacto/${id}`);
+              if (!response.ok) throw new Error('Error al obtener el contacto');
+              const data = await response.json();
+              contacto.value = { ...data };
+
+              // Si el contacto tiene CP, validar y obtener población y provincia
+              if (contacto.value.cp) {
+                try {
+                  const cpResponse = await fetch(`${API_URL}/contactos/get_cp?cp=${contacto.value.cp}`);
+                  if (cpResponse.ok) {
+                    const cpData = await cpResponse.json();
+                    if (cpData && cpData.length > 0) {
+                      contacto.value.poblacio = cpData[0].poblacio;
+                      contacto.value.provincia = cpData[0].provincia;
+                      valid.value.cp = true;
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error al obtener datos del CP:', error);
+                }
+              }
+
+              // Validar todos los campos al cargar
+              if (contacto.value.identificador) validateIdentificador();
+              if (contacto.value.mail) validateEmail();
+              if (contacto.value.telf1) validateTelf1();
+              if (contacto.value.telf2) validateTelf2();
+            } catch (error) {
+              console.error('Error:', error);
+              mostrarNotificacion('Error al cargar el contacto', 'error');
+            }
+          }
+        });
+
+        return {
+          contacto,
+          sugerenciasCarrer,
+          loading,
+          valid,
+          handleDireccionInput,
+          seleccionarDireccion,
+          validateIdentificador,
+          validateEmail,
+          validateTelf1,
+          validateTelf2,
+          handleCP,
+          handleSubmit,
+          cerrarFormulario,
+          validateForm
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

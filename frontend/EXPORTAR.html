@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Selector de Ejercicio y Trimestre</title>
+
+  <!-- Enlace a Google Fonts para la fuente Roboto -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Carga de tu hoja de estilos externa -->
+  <link rel="stylesheet" href="../static/styles.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Selecciona Ejercicio y Trimestre</h1>
+    
+    <div class="filters-container">
+      
+      <div class="filter-group">
+        <label for="ejercicio">Ejercicio</label>
+        <select id="ejercicio" name="ejercicio">
+          <!-- Opciones rellenadas dinámicamente -->
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="trimestre">Trimestre</label>
+        <select id="trimestre" name="trimestre">
+          <option value="todos">Todos</option>
+          <option value="1">1 Trimestre</option>
+          <option value="2">2 Trimestre</option>
+          <option value="3">3 Trimestre</option>
+          <option value="4">4 Trimestre</option>
+        </select>
+      </div>
+      
+      <div class="buttons">
+        <button type="button" id="exportar-btn">Exportar</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Contenedor para Notificaciones -->
+  <div id="notificacion" class="notificacion oculto"></div>
+
+  <!-- Script principal usando import de constantes -->
+  <script type="module">
+    import { IP_SERVER, PORT } from '../static/constantes.js';
+    
+    // Función para rellenar el selector de Ejercicio
+    function rellenarEjercicio() {
+      const ejercicioSelect = document.getElementById('ejercicio');
+      if (!ejercicioSelect) {
+        console.error('Elemento con id "ejercicio" no encontrado.');
+        return;
+      }
+      const currentYear = new Date().getFullYear();
+      const numberOfYears = 6; // Año actual + 5 anteriores
+
+      for (let i = 0; i < numberOfYears; i++) {
+        const year = currentYear - i;
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        ejercicioSelect.appendChild(option);
+      }
+
+      // Seleccionar el año actual por defecto
+      ejercicioSelect.value = currentYear;
+    }
+
+    // Función para seleccionar el trimestre actual por defecto
+    function seleccionarTrimestreActual() {
+      const trimestreSelect = document.getElementById('trimestre');
+      if (!trimestreSelect) {
+        console.error('Elemento con id "trimestre" no encontrado.');
+        return;
+      }
+      const currentMonth = new Date().getMonth() + 1; // getMonth() es 0-based
+      let currentTrimestre;
+
+      if (currentMonth >= 1 && currentMonth <= 3) {
+        currentTrimestre = '1';
+      } else if (currentMonth >= 4 && currentMonth <= 6) {
+        currentTrimestre = '2';
+      } else if (currentMonth >= 7 && currentMonth <= 9) {
+        currentTrimestre = '3';
+      } else {
+        currentTrimestre = '4';
+      }
+
+      // Seleccionar el trimestre actual
+      for (let i = 0; i < trimestreSelect.options.length; i++) {
+        if (trimestreSelect.options[i].value === currentTrimestre) {
+          trimestreSelect.selectedIndex = i;
+          break;
+        }
+      }
+    }
+
+    // Función para mostrar notificaciones
+    function mostrarNotificacion(mensaje, esError = false) {
+      const notificacion = document.getElementById('notificacion');
+      notificacion.textContent = mensaje;
+      notificacion.classList.remove('oculto', 'error');
+      notificacion.classList.add('visible');
+
+      if (esError) {
+        notificacion.classList.add('error');
+      } else {
+        notificacion.classList.remove('error');
+      }
+
+      // Ocultar la notificación después de 3 segundos
+      setTimeout(() => {
+        notificacion.classList.remove('visible');
+        notificacion.classList.add('oculto');
+      }, 3000);
+    }
+
+    // Función para exportar las selecciones a un archivo CSV desde el backend
+    async function exportarSeleccion() {
+      const ejercicio = document.getElementById('ejercicio').value;
+      const trimestre = document.getElementById('trimestre').value;
+
+      try {
+        // Mostrar un indicador de carga o deshabilitar el botón si lo deseas
+        const exportarBtn = document.getElementById('exportar-btn');
+        exportarBtn.disabled = true;
+        exportarBtn.textContent = 'Exportando...';
+
+        // Construir la URL con los parámetros de consulta, usando IP_SERVER y PORT
+        const url = new URL(`http://${IP_SERVER}:${PORT}/api/exportar`);
+        url.searchParams.append('ejercicio', ejercicio);
+        url.searchParams.append('trimestre', trimestre);
+
+        // Enviar la solicitud al backend
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            Accept: 'text/csv'
+          }
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Error en la solicitud');
+        }
+
+        // Extraer el nombre del archivo del encabezado 'Content-Disposition'
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = 'exportacion.csv';
+        if (disposition && disposition.indexOf('filename=') !== -1) {
+          const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+          const matches = filenameRegex.exec(disposition);
+          if (matches && matches[1]) {
+            filename = matches[1].replace(/['"]/g, '');
+          }
+        }
+
+        // Obtener el blob del archivo CSV
+        const blob = await response.blob();
+        const urlBlob = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = urlBlob;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+
+        // Limpiar
+        link.parentNode.removeChild(link);
+        window.URL.revokeObjectURL(urlBlob);
+
+        // Restaurar el botón
+        exportarBtn.disabled = false;
+        exportarBtn.textContent = 'Exportar';
+
+        // Mostrar notificación de éxito
+        mostrarNotificacion('Exportación completada exitosamente.');
+      } catch (error) {
+        console.error('Error al exportar:', error);
+        mostrarNotificacion(`Hubo un error al exportar los datos: ${error.message}`, true);
+
+        const exportarBtn = document.getElementById('exportar-btn');
+        exportarBtn.disabled = false;
+        exportarBtn.textContent = 'Exportar';
+      }
+    }
+
+    // Ejecutar las funciones al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+      rellenarEjercicio();
+      seleccionarTrimestreActual();
+
+      const exportarBtn = document.getElementById('exportar-btn');
+      if (exportarBtn) {
+        exportarBtn.addEventListener('click', exportarSeleccion);
+      } else {
+        console.error('Botón con id "exportar-btn" no encontrado.');
+      }
+    });
+  </script>
+</body>
+</html>

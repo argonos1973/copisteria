@@ -1,0 +1,32 @@
+2025-07-12 10:43:15,517 - INFO - === scrapeo.py iniciado ===
+2025-07-12 10:43:16,361 - INFO - Navegador iniciado en modo headless con configuración anti-detección avanzada
+2025-07-12 10:43:16,596 - INFO - → Abriendo página...
+2025-07-12 10:43:16,596 - INFO - Navegando a página de inicio del banco...
+2025-07-12 10:43:19,399 - INFO - Buscando enlace a la página de login
+2025-07-12 10:43:24,403 - INFO - No se encontró enlace directo a login, navegando directamente
+2025-07-12 10:43:24,978 - INFO - Página de login cargada
+2025-07-12 10:43:25,105 - INFO - Captura de pantalla guardada en /var/www/html/logs/pantalla_inicial_20250712_104324.png
+2025-07-12 10:43:25,208 - INFO - Contenido HTML guardado en /var/www/html/logs/pagina_inicial_20250712_104325.html
+2025-07-12 10:43:25,208 - INFO - URL actual: https://particulares.bancosantander.es/login/
+2025-07-12 10:43:25,208 - INFO - Intentando aceptar cookies con selector: #onetrust-accept-btn-handler
+2025-07-12 10:43:25,319 - INFO - Intentando aceptar cookies con selector: button:has-text('Aceptar')
+2025-07-12 10:43:25,334 - INFO - Intentando aceptar cookies con selector: button:has-text('Aceptar todas')
+2025-07-12 10:43:25,338 - INFO - Intentando aceptar cookies con selector: button:has-text('Aceptar cookies')
+2025-07-12 10:43:25,342 - INFO - Intentando aceptar cookies con selector: .cookie-accept-button
+2025-07-12 10:43:25,345 - INFO - Intentando aceptar cookies con selector: #cookie-accept
+2025-07-12 10:43:25,347 - INFO - Intentando aceptar cookies con selector: #accept-cookies
+2025-07-12 10:43:31,782 - INFO - Captura después de cookies guardada en /var/www/html/logs/pantalla_cookies_20250712_104331.png
+2025-07-12 10:43:31,791 - INFO - Analizando todos los campos de entrada visibles en la página
+2025-07-12 10:43:31,797 - INFO - Se encontraron 10 campos de entrada
+2025-07-12 10:43:31,797 - INFO - Input 0: id=inputDocuNumber, type=text, name=number, visible=True
+2025-07-12 10:43:31,797 - INFO - Input 1: id=inputPW0, type=password, name=formControlPass0, visible=True
+2025-07-12 10:43:31,797 - INFO - Input 2: id=inputPW1, type=password, name=formControlPass1, visible=True
+2025-07-12 10:43:31,797 - INFO - Input 3: id=inputPW2, type=password, name=formControlPass2, visible=True
+2025-07-12 10:43:31,797 - INFO - Input 4: id=inputPW3, type=password, name=formControlPass3, visible=True
+2025-07-12 10:43:31,797 - INFO - Input 5: id=inputPW4, type=password, name=formControlPass4, visible=True
+2025-07-12 10:43:31,797 - INFO - Input 6: id=inputPW5, type=password, name=formControlPass5, visible=True
+2025-07-12 10:43:31,797 - INFO - Input 7: id=inputPW6, type=password, name=formControlPass6, visible=True
+2025-07-12 10:43:31,797 - INFO - Input 8: id=inputPW7, type=password, name=formControlPass7, visible=True
+2025-07-12 10:43:31,797 - INFO - Input 9: id=mat-checkbox-1-input, type=checkbox, name=rememberMe, visible=False
+2025-07-12 10:43:31,797 - INFO - Intentando encontrar el selector: #inputDocuNumber
+2025-07-12 10:43:31,799 - INFO - Selector encontrado y visible: #inputDocuNumber

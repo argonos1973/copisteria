@@ -1,0 +1,2353 @@
+import base64
+import csv
+import hashlib
+import os
+import sqlite3
+import tempfile
+from datetime import datetime
+from time import strftime
+
+import qrcode
+from flask import (Flask, Response, jsonify, render_template, request,
+                   send_file, stream_with_context)
+from flask_cors import CORS, cross_origin
+
+try:
+    from weasyprint import CSS, HTML
+except ImportError:
+    print("WeasyPrint no está instalado. La generación de PDF no estará disponible.")
+
+import base64
+import datetime
+import hashlib
+import importlib.util
+import io
+import json
+import locale
+import math
+import os
+import re
+import subprocess
+import sys
+import time
+import zipfile
+from datetime import datetime, timedelta
+
+from flask import (Flask, Response, jsonify, make_response, request, send_file,
+                   url_for)
+
+# Importación de módulos locales
+import contactos
+import factura
+import generar_pdf
+import proforma
+import verifactu
+# Nota: Los módulos recibos y usuarios no existen, se han comentado
+# import recibos
+# import usuarios
+# Fin de importaciones
+from constantes import *
+from dashboard_routes import dashboard_bp
+from db_utils import (formatear_numero_documento, get_db_connection,
+                      obtener_numerador, redondear_importe)
+from factura import obtener_factura_abierta
+from facturae import extraer_xml_desde_xsig
+from gastos import gastos_bp
+from proforma import obtener_proforma_abierta
+from verifactu.core import generar_datos_verifactu_para_ticket
+
+application = Flask(__name__, 
+                   template_folder='templates',
+                   static_folder='static')
+app = application
+app.register_blueprint(dashboard_bp)
+app.register_blueprint(gastos_bp, url_prefix='')
+# Configurar CORS
+CORS(app, resources={
+    r"/*": {"origins": "*"}  # Permitir cualquier ruta
+})
+
+# Producción
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+app.config['DEBUG'] = os.getenv('FLASK_DEBUG', 'False') == 'True'
+app.config['DATABASE'] = DB_NAME
+
+def format_date(date_value):
+    """Función auxiliar para formatear fechas en formato DD/MM/AAAA"""
+    if date_value is None:
+        return None
+    if isinstance(date_value, str):
+        try:
+            # Intentar convertir la cadena a datetime para asegurar formato correcto
+            from datetime import datetime
+            date_obj = datetime.strptime(date_value, '%Y-%m-%d')
+            return date_obj.strftime('%d/%m/%Y')
+        except:
+            return date_value
+    return date_value.strftime('%d/%m/%Y')
+
+@app.route('/exportar', methods=['GET'])
+def exportar():
+    # Obtener parámetros de la consulta
+    ejercicio = request.args.get('ejercicio')
+    trimestre = request.args.get('trimestre')
+
+    # Validación de parámetros
+    if not ejercicio or not ejercicio.isdigit():
+        return jsonify({'error': 'El parámetro "ejercicio" es obligatorio y debe ser un número.'}), 400
+
+    # Mapa de trimestres con meses en dos dígitos
+    trimestre_map = {
+        '1': ('01', '03'),
+        '2': ('04', '06'),
+        '3': ('07', '09'),
+        '4': ('10', '12')
+    }
+
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'No se pudo establecer conexión con la base de datos.'}), 500
+
+        with conn:
+            cursor = conn.cursor()
+
+            # ================ 1) CONSULTA TICKETS =====================
+            query_tickets = """
+                SELECT
+                    fecha,
+                    numero,
+                    importe_bruto,
+                    importe_impuestos,
+                    importe_cobrado,
+                    total
+                FROM tickets
+                WHERE strftime('%Y', fecha) = ?
+                AND estado = 'C'
+            """
+            params_tickets = [ejercicio]
+
+            if trimestre in trimestre_map:
+                inicio_mes, fin_mes = trimestre_map[trimestre]
+                query_tickets += " AND strftime('%m', fecha) BETWEEN ? AND ?"
+                params_tickets.extend([inicio_mes, fin_mes])
+            elif trimestre and trimestre.lower() != 'todos':
+                return jsonify({'error': 'Trimestre inválido. Debe ser 1, 2, 3, 4 o "todos".'}), 400
+
+            cursor.execute(query_tickets, tuple(params_tickets))
+            resultados_tickets = cursor.fetchall()
+
+            # ================ 2) CONSULTA FACTURAS =====================
+            query_facturas = """
+                SELECT
+                    f.fecha,
+                    f.numero,
+                    f.nif,
+                    c.razonSocial,
+                    f.importe_bruto,
+                    f.importe_impuestos,
+                    f.importe_cobrado,
+                    f.total
+                FROM factura f
+                INNER JOIN contactos c ON f.idContacto = c.idContacto
+                WHERE strftime('%Y', f.fecha) = ?
+            """
+            params_facturas = [ejercicio]
+
+            if trimestre in trimestre_map:
+                inicio_mes, fin_mes = trimestre_map[trimestre]
+                query_facturas += " AND strftime('%m', f.fecha) BETWEEN ? AND ?"
+                params_facturas.extend([inicio_mes, fin_mes])
+            elif trimestre and trimestre.lower() != 'todos':
+                return jsonify({'error': 'Trimestre inválido. Debe ser 1, 2, 3, 4 o "todos".'}), 400
+
+            cursor.execute(query_facturas, tuple(params_facturas))
+            resultados_facturas = cursor.fetchall()
+
+            # Verificar datos
+            if not resultados_tickets and not resultados_facturas:
+                return jsonify({
+                    'mensaje': 'No se encontraron tickets ni facturas con los filtros proporcionados.'
+                }), 404
+
+            # ================ 3) UNIFICAR DATOS =====================
+            columnas_csv = [
+                "fecha",
+                "numero",
+                "nif",
+                "razonSocial",
+                "importe_bruto",
+                "importe_impuestos",
+                "importe_cobrado",
+                "total"
+            ]
+
+            filas_unificadas = []
+
+            # Procesar tickets
+            for t in resultados_tickets:
+                filas_unificadas.append({
+                    "fecha": t["fecha"],
+                    "numero": t["numero"],
+                    "nif": "",
+                    "razonSocial": "",
+                    "importe_bruto": t["importe_bruto"],
+                    "importe_impuestos": t["importe_impuestos"],
+                    "importe_cobrado": t["importe_cobrado"],
+                    "total": t["total"]
+                })
+
+            # Procesar facturas
+            for f in resultados_facturas:
+                filas_unificadas.append({
+                    "fecha": f["fecha"],
+                    "numero": f["numero"],
+                    "nif": f["nif"],
+                    "razonSocial": f["razonSocial"],
+                    "importe_bruto": f["importe_bruto"],
+                    "importe_impuestos": f["importe_impuestos"],
+                    "importe_cobrado": f["importe_cobrado"],
+                    "total": f["total"]
+                })
+
+            # ================ 4) GENERAR CSV =====================
+            # Formatear nombre del archivo
+            trimestre_nombre = trimestre if trimestre else "todos"
+            if trimestre in trimestre_map:
+                inicio_mes, fin_mes = trimestre_map[trimestre]
+                trimestre_nombre = f"{inicio_mes}-{fin_mes}"
+
+            nombre_archivo = f'UNICO_{ejercicio}_TRIMESTRE_{trimestre_nombre}.csv'
+            ruta_archivo = os.path.join(BASE_DIR, 'exports', nombre_archivo)
+            os.makedirs(os.path.dirname(ruta_archivo), exist_ok=True)
+
+            # Escribir CSV
+            with open(ruta_archivo, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile, delimiter=';')
+                writer.writerow(columnas_csv)
+                
+                for fila in filas_unificadas:
+                    row = [
+                        datetime.strptime(fila["fecha"], '%Y-%m-%d').strftime('%d/%m/%Y') if fila["fecha"] else "",
+                        fila["numero"],
+                        fila["nif"],
+                        fila["razonSocial"],
+                        f"{fila['importe_bruto']:.2f}".replace('.', ','),
+                        f"{fila['importe_impuestos']:.2f}".replace('.', ','),
+                        f"{fila['importe_cobrado']:.2f}".replace('.', ','),
+                        f"{fila['total']:.2f}".replace('.', ',')
+                    ]
+                    writer.writerow(row)
+
+            # ================ 5) ENVIAR ARCHIVO =====================
+            return send_file(
+                ruta_archivo,
+                mimetype='text/csv',
+                as_attachment=True,
+                download_name=nombre_archivo
+            )
+
+    except sqlite3.Error as e:
+        return jsonify({'error': f'Error de base de datos: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': f'Error inesperado: {str(e)}'}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+
+
+@app.route('/contactos', methods=['GET'])
+def listar_contactos():
+    try:
+        return jsonify(contactos.obtener_contactos())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/contactos/buscar', methods=['GET'])
+def filtrar_contactos():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Obtener parámetros de búsqueda
+        razon_social = request.args.get('razonSocial', '')
+        nif = request.args.get('nif', '')
+
+        # Construir la consulta SQL base
+        sql = '''
+            SELECT 
+                c.idContacto,
+                c.razonsocial,
+                c.identificador,
+                c.mail,
+                c.telf1,
+                c.telf2,
+                c.direccion,
+                c.localidad,
+                c.cp,
+                c.provincia,
+                c.tipo,
+                c.idContacto as id,
+                (
+                    SELECT p.numero 
+                    FROM proforma p 
+                    WHERE p.idcontacto = c.idContacto 
+                    AND p.estado = 'A'
+                    ORDER BY p.fecha DESC, p.id DESC
+                    LIMIT 1
+                ) as numero_proforma_abierta
+            FROM contactos c
+            WHERE 1=1
+        '''
+        params = []
+
+        # Añadir condiciones según los parámetros
+        if razon_social:
+            sql += ' AND LOWER(c.razonsocial) LIKE LOWER(?)'
+            params.append(f'%{razon_social}%')
+        if nif:
+            sql += ' AND LOWER(c.identificador) LIKE LOWER(?)'
+            params.append(f'%{nif}%')
+
+        # Ordenar por razón social y limitar a 20 resultados
+        sql += ' ORDER BY c.razonsocial ASC LIMIT 20'
+
+        # Ejecutar la consulta
+        cursor.execute(sql, params)
+        resultados = cursor.fetchall()
+
+        # Convertir los resultados a una lista de diccionarios
+        contactos_list = [dict(row) for row in resultados]
+
+        return jsonify(contactos_list)
+
+    except Exception as e:
+        print(f"Error en filtrar_contactos: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/contactos/searchCarrer', methods=['GET'])
+def search_carrer():
+    query = request.args.get('query', '').strip()
+    if not query:
+        return jsonify([])
+    
+    try:
+        sugerencias = contactos.obtener_sugerencias_carrer(query)
+        return jsonify(sugerencias)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/contactos/get_cp', methods=['GET'])
+def get_cp():
+    cp = request.args.get('cp', '').strip()
+    if not cp:
+        return jsonify([])
+    
+    try:
+        datos = contactos.obtener_datos_cp(cp)
+        return jsonify(datos)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/contactos/get_contacto/<int:idContacto>', methods=['GET'])
+def get_contacto_endpoint(idContacto):
+    try:
+        contacto = contactos.obtener_contacto(idContacto)
+        if contacto:
+            return jsonify(contacto)
+        else:
+            return jsonify({'error': 'Contacto no encontrado'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/contactos/create_contacto', methods=['POST'])
+def crear():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No se recibieron datos'}), 400
+
+        # Validar campos requeridos
+        required_fields = ['razonsocial', 'identificador']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'El campo {field} es requerido'}), 400
+
+        resultado = contactos.crear_contacto(data)
+        if resultado['success']:
+            return jsonify(resultado), 201
+        else:
+            return jsonify(resultado), 400
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/contactos/update_contacto/<int:idContacto>', methods=['PUT'])
+def actualizar(idContacto):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No se recibieron datos'}), 400
+
+        # Validar campos requeridos
+        required_fields = ['razonsocial', 'identificador']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'El campo {field} es requerido'}), 400
+
+        resultado = contactos.actualizar_contacto(idContacto, data)
+        if resultado['success']:
+            return jsonify(resultado)
+        else:
+            return jsonify(resultado), 400
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/contactos/eliminar_contacto/<int:idContacto>', methods=['DELETE'])
+def eliminar(idContacto):
+    try:
+        if contactos.delete_contacto(idContacto):
+            return jsonify({'mensaje': 'Contacto eliminado exitosamente'})
+        return jsonify({'error': 'No se pudo eliminar el contacto'}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/tickets/obtener_numerador/<string:tipoNum>', methods=['GET'])
+def obtener_numero_ticket(tipoNum):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        ejercicio = datetime.now().year
+
+        cursor.execute("SELECT numerador FROM numerador WHERE tipo = ? AND ejercicio = ?", (tipoNum, ejercicio))
+        resultado = cursor.fetchone()
+        
+        if not resultado:
+            return jsonify({"error": "No se encontró el numerador"}), 404
+
+        numerador = resultado[0]
+        
+        return jsonify({"numerador": numerador})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/tickets/total_cobrados_ano_actual', methods=['GET'])
+def total_tickets_cobrados_ano_actual():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Obtener el año actual
+        año_actual = datetime.now().year
+        año_anterior = año_actual - 1
+
+        try:
+            # Consulta para el año actual
+            cursor.execute('''
+                SELECT COALESCE(SUM(total), 0) as total
+                FROM tickets
+                WHERE estado = 'C'
+                AND strftime('%Y', fecha) = ?
+            ''', (str(año_actual),))
+            total_actual = cursor.fetchone()['total'] or 0
+
+            # Consulta para el año anterior
+            cursor.execute('''
+                SELECT COALESCE(SUM(total), 0) as total
+                FROM tickets
+                WHERE estado = 'C'
+                AND strftime('%Y', fecha) = ?
+            ''', (str(año_anterior),))
+            total_anterior = cursor.fetchone()['total'] or 0
+
+            # Calcular el porcentaje de diferencia
+            if float(total_anterior) > 0:
+                porcentaje_diferencia = ((float(total_actual) - float(total_anterior)) / float(total_anterior)) * 100
+            else:
+                porcentaje_diferencia = 100 if float(total_actual) > 0 else 0
+
+            return jsonify({
+                'total_actual': float(total_actual),
+                'total_anterior': float(total_anterior),
+                'porcentaje_diferencia': float(porcentaje_diferencia)
+            })
+
+        except sqlite3.Error as e:
+            print(f"Error en la consulta SQL: {str(e)}")
+            return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
+
+    except Exception as e:
+        print(f"Error en total_tickets_cobrados_ano_actual: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/tickets/media_ventas_mensual', methods=['GET'])
+def media_ventas_mensual():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Consulta simplificada
+            cursor.execute('''
+                SELECT COALESCE(AVG(total_mensual), 0) as media
+                FROM (
+                    SELECT SUM(total) as total_mensual
+                    FROM tickets
+                    WHERE estado = 'C'
+                    AND strftime('%Y', fecha) = strftime('%Y', 'now')
+                    GROUP BY strftime('%m', fecha)
+                )
+            ''')
+            resultado = cursor.fetchone()
+            media = float(resultado['media'] if resultado['media'] is not None else 0)
+
+            return jsonify({"media_ventas_mensual": media})
+
+        except sqlite3.Error as e:
+            print(f"Error en la consulta SQL: {str(e)}")
+            return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
+
+    except Exception as e:
+        print(f"Error en media_ventas_mensual: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/tickets/media_ventas_diaria', methods=['GET'])
+def media_ventas_diaria():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        try:
+            # Consulta simplificada
+            cursor.execute('''
+                SELECT COALESCE(AVG(total_diario), 0) as media
+                FROM (
+                    SELECT SUM(total) as total_diario
+                    FROM tickets
+                    WHERE estado = 'C'
+                    AND strftime('%Y', fecha) = strftime('%Y', 'now')
+                    GROUP BY fecha
+                )
+            ''')
+            resultado = cursor.fetchone()
+            media = float(resultado['media'] if resultado['media'] is not None else 0)
+
+            return jsonify({"media_ventas_diaria": media})
+
+        except sqlite3.Error as e:
+            print(f"Error en la consulta SQL: {str(e)}")
+            return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
+
+    except Exception as e:
+        print(f"Error en media_ventas_diaria: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/tickets/media_gasto_por_ticket', methods=['GET'])
+def media_gasto_por_ticket():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        try:
+            # Consulta simplificada
+            cursor.execute('''
+                SELECT 
+                    COALESCE(AVG(total), 0) as media_gasto,
+                    COUNT(*) as num_tickets
+                FROM tickets
+                WHERE estado = 'C'
+                AND strftime('%Y', fecha) = strftime('%Y', 'now')
+            ''')
+            resultado = cursor.fetchone()
+            
+            media_gasto = float(resultado['media_gasto'] if resultado['media_gasto'] is not None else 0)
+            num_tickets = int(resultado['num_tickets'])
+
+            return jsonify({
+                'media_gasto': media_gasto,
+                'media_gasto_formateado': "{:.2f}".format(media_gasto),
+                'num_tickets': num_tickets
+            })
+
+        except sqlite3.Error as e:
+            print(f"Error en la consulta SQL: {str(e)}")
+            return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
+
+    except Exception as e:
+        print(f"Error en media_gasto_por_ticket: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'cursor' in locals():
+            cursor.close()
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/tickets/obtener_actualizar_numerador/<string:tipoNum>', methods=['GET'])
+def obtener_actualizar_numero_ticket(tipoNum):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        ejercicio = datetime.now().year
+
+        cursor.execute("SELECT numerador FROM numerador WHERE tipo = ? AND ejercicio = ?", (tipoNum, ejercicio))
+        resultado = cursor.fetchone()
+        
+        if not resultado:
+            return jsonify({"error": "No se encontró el numerador"}), 404
+
+        numerador = resultado[0]
+        
+        # Actualizar el numerador
+        cursor.execute("UPDATE numerador SET numerador = ? WHERE tipo = ? AND ejercicio = ?", 
+                      (numerador + 1, tipoNum, ejercicio))
+        conn.commit()
+
+        return jsonify({"numerador": numerador})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/tickets/guardar', methods=['POST'])
+def guardar_ticket():
+    conn = None
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No se recibieron datos"}), 400
+        
+        # Validar que todos los campos requeridos estén presentes
+        campos_requeridos = ['fecha', 'numero', 'total', 'detalles', 'estado', 'formaPago', 'importe_cobrado']
+        campos_faltantes = [campo for campo in campos_requeridos if campo not in data]
+        
+        if campos_faltantes:
+            return jsonify({
+                "error": f"Faltan campos requeridos: {', '.join(campos_faltantes)}",
+                "datos_recibidos": data
+            }), 400
+        
+        # Obtener y redondear los importes
+        try:
+            importe_cobrado = redondear_importe(data.get('importe_cobrado', 0))
+            total = redondear_importe(data.get('total', 0))
+        except (TypeError, ValueError) as e:
+            return jsonify({
+                "error": "Error al procesar los importes",
+                "detalle": str(e),
+                "datos_recibidos": {
+                    "importe_cobrado": data.get('importe_cobrado'),
+                    "total": data.get('total')
+                }
+            }), 400
+
+        # Convertir fecha de DD/MM/YYYY a YYYY-MM-DD
+        try:
+            fecha_str = data.get('fecha')
+            if not fecha_str:
+                return jsonify({"error": "La fecha es requerida"}), 400
+            
+            # Convertir la fecha al formato correcto
+            if '/' in fecha_str:
+                dia, mes, anio = fecha_str.split('/')
+                fecha = f"{anio}-{mes.zfill(2)}-{dia.zfill(2)}"
+            else:
+                fecha = fecha_str
+        except Exception as e:
+            return jsonify({
+                "error": "Error al procesar la fecha",
+                "detalle": str(e),
+                "fecha_recibida": fecha_str
+            }), 400
+
+        numero = data.get('numero')
+        detalles = data.get('detalles')
+        estado = data.get('estado')
+        formaPago = data.get('formaPago', 'E')
+
+ 
+        if not fecha or not numero or total is None or not detalles:
+            return jsonify({
+                "error": "Datos incompletos",
+                "datos_recibidos": {
+                    "fecha": fecha,
+                    "numero": numero,
+                    "total": total,
+                    "detalles": len(detalles) if detalles else 0
+                }
+            }), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            conn.execute('BEGIN EXCLUSIVE TRANSACTION')
+            
+            # Comprobar si ya existe un ticket con el mismo número
+            cursor.execute("SELECT id FROM tickets WHERE numero = ?", (numero,))
+            existe_ticket = cursor.fetchone()
+
+            if existe_ticket:
+                conn.rollback()
+                return jsonify({"error": f"Ya existe un ticket con el número {numero}"}), 400
+
+            # Calcular y redondear importes
+            try:
+                importe_bruto = redondear_importe(sum(d['precio'] * d['cantidad'] for d in detalles))
+                importe_impuestos = redondear_importe(sum((d['precio'] * d['cantidad']) * (d['impuestos'] / 100) for d in detalles))
+                total_ticket = redondear_importe(total)
+            except (TypeError, ValueError, KeyError) as e:
+                conn.rollback()
+                return jsonify({
+                    "error": "Error al calcular los importes",
+                    "detalle": str(e),
+                    "detalles_recibidos": detalles
+                }), 400
+
+    
+
+            # Insertar el ticket en la tabla tickets
+            cursor.execute('''
+                INSERT INTO tickets (fecha, numero, importe_bruto, importe_impuestos, importe_cobrado, total, timestamp, estado, formaPago)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (fecha, numero, importe_bruto, importe_impuestos, importe_cobrado, total_ticket, datetime.now().isoformat(), estado, formaPago))
+            
+            id_ticket = cursor.lastrowid
+
+            # Insertar los detalles en la tabla detalle_tickets
+            for detalle in detalles:
+                cursor.execute('''
+                    INSERT INTO detalle_tickets (
+                        id_ticket, concepto, descripcion, cantidad, 
+                        precio, impuestos, total, productoId
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    id_ticket,
+                    detalle['concepto'],
+                    detalle.get('descripcion', ''),
+                    detalle['cantidad'],
+                    float(detalle['precio']),
+                    float(detalle['impuestos']),
+                    redondear_importe(float(detalle['total'])),
+                    detalle.get('productoId', None)
+                ))
+
+            # Actualizar el numerador solo si no estamos en modo edición
+            if not existe_ticket:
+                cursor.execute("SELECT numerador FROM numerador WHERE tipo = 'T' AND ejercicio = ?", (datetime.now().year,))
+                resultado = cursor.fetchone()
+                if resultado:
+                    numerador = resultado[0]
+                    cursor.execute("UPDATE numerador SET numerador = ? WHERE tipo = 'T' AND ejercicio = ?", 
+                              (numerador + 1, datetime.now().year))
+            
+            # Hacer commit de toda la transacción
+            conn.commit()
+
+            # Generar datos VERI*FACTU para el ticket
+            try:
+                generar_datos_verifactu_para_ticket(id_ticket)
+            except Exception as vf_exc:
+                print(f"Error generando datos VERI*FACTU para ticket {id_ticket}: {vf_exc}")
+
+            return jsonify({"mensaje": "Ticket guardado correctamente", "id": id_ticket})
+
+        except sqlite3.Error as e:
+            if conn:
+                conn.rollback()
+            return jsonify({
+                "error": "Error al guardar en la base de datos",
+                "detalle": str(e)
+            }), 500
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print("Error al guardar ticket:", str(e))
+        return jsonify({
+            "error": "Error al procesar la solicitud",
+            "detalle": str(e)
+        }), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route('/tickets/consulta', methods=['GET'])
+def consulta_tickets():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Obtener parámetros de la consulta
+        fecha_inicio = request.args.get('fecha_inicio')
+        fecha_fin = request.args.get('fecha_fin')
+        estado = request.args.get('estado')
+        numero = request.args.get('numero')
+        forma_pago = request.args.get('formaPago')
+
+        # Construir la consulta SQL base
+        sql = '''
+            SELECT t.*
+            FROM tickets t
+            WHERE 1=1
+        '''
+        params = []
+
+        # Añadir condiciones según los parámetros
+        if fecha_inicio:
+            sql += ' AND t.fecha >= ?'
+            params.append(fecha_inicio)
+        if fecha_fin:
+            sql += ' AND t.fecha <= ?'
+            params.append(fecha_fin)
+        if estado:
+            sql += ' AND t.estado = ?'
+            params.append(estado)
+        if numero:
+            sql += ' AND t.numero LIKE ?'
+            params.append(f'%{numero}%')
+        if forma_pago:
+            sql += ' AND t.formaPago = ?'
+            params.append(forma_pago)
+
+        sql += ' ORDER BY t.fecha DESC, t.timestamp DESC'
+
+        print("SQL Query:", sql)  # Para depuración
+        print("Params:", params)  # Para depuración
+
+        # Ejecutar la consulta
+        cursor.execute(sql, params)
+        tickets = cursor.fetchall()
+
+        # Convertir los resultados a una lista de diccionarios
+        tickets_list = []
+        for ticket in tickets:
+            ticket_dict = dict(ticket)
+            tickets_list.append(ticket_dict)
+
+        return jsonify(tickets_list)
+
+    except Exception as e:
+        print("Error en consulta_tickets:", str(e))  # Para depuración
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/tickets/actualizar_estado/<int:id>', methods=['PATCH'])
+def actualizar_estado_ticket(id):
+    try:
+        data = request.get_json()
+        nuevo_estado = data.get('estado')
+        
+        if not nuevo_estado:
+            return jsonify({'error': 'El estado es requerido'}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Verificar si el ticket existe
+        cursor.execute('SELECT id FROM tickets WHERE id = ?', (id,))
+        if not cursor.fetchone():
+            return jsonify({'error': 'Ticket no encontrado'}), 404
+
+        # Actualizar el estado
+        cursor.execute('UPDATE tickets SET estado = ? WHERE id = ?', (nuevo_estado, id))
+        conn.commit()
+
+        return jsonify({'mensaje': 'Estado actualizado correctamente'})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/productos/<int:id>', methods=['GET'])
+def buscar_producto_por_id(id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Buscar el producto por ID
+        cursor.execute('SELECT * FROM productos WHERE id = ?', (id,))
+        producto = cursor.fetchone()
+
+        if producto:
+            return jsonify(dict(producto))
+        else:
+            return jsonify({'error': 'Producto no encontrado'}), 404
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/productos/nombre/<string:nombre>', methods=['GET'])
+def buscar_producto_por_nombre(nombre):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Buscar productos que coincidan con el nombre
+        cursor.execute('''
+            SELECT * FROM productos 
+            WHERE LOWER(nombre) LIKE LOWER(?) 
+            ORDER BY nombre
+        ''', (f'%{nombre}%',))
+        
+        productos = cursor.fetchall()
+
+        # Convertir los resultados a una lista de diccionarios
+        productos_list = [dict(producto) for producto in productos]
+
+        return jsonify(productos_list)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/productos', methods=['GET'])
+def listar_productos():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Obtener todos los productos ordenados por nombre
+        cursor.execute('SELECT * FROM productos ORDER BY nombre')
+        productos = cursor.fetchall()
+
+        # Convertir los resultados a una lista de diccionarios
+        productos_list = [dict(producto) for producto in productos]
+
+        return jsonify(productos_list)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/tickets/detalles/<int:id_ticket>', methods=['GET'])
+def obtener_ticket_con_detalles(id_ticket):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Obtener el ticket
+        cursor.execute('SELECT * FROM tickets WHERE id = ?', (id_ticket,))
+        ticket = cursor.fetchone()
+
+        if not ticket:
+            return jsonify({'error': 'Ticket no encontrado'}), 404
+
+        # Obtener los detalles del ticket
+        cursor.execute('SELECT * FROM detalle_tickets WHERE id_ticket = ?', (id_ticket,))
+        detalles = cursor.fetchall()
+
+        # Convertir los resultados a diccionarios
+        ticket_dict = dict(ticket)
+        detalles_list = [dict(detalle) for detalle in detalles]
+
+        # Obtener datos VERI*FACTU (QR y CSV) si existen
+        cursor.execute('SELECT codigo_qr, csv FROM registro_facturacion WHERE ticket_id = ?', (id_ticket,))
+        reg = cursor.fetchone()
+        codigo_qr = reg['codigo_qr'] if reg else None
+        csv = reg['csv'] if reg else None
+
+        # Combinar ticket, detalles y datos VERI*FACTU
+        resultado = {
+            'ticket': ticket_dict,
+            'detalles': detalles_list,
+            'codigo_qr': codigo_qr,
+            'csv': csv
+        }
+
+        return jsonify(resultado)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/tickets/obtenerTicket/<int:id_ticket>', methods=['GET'])
+def consultar_ticket_detalles(id_ticket):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Obtener el ticket
+        cursor.execute('''
+            SELECT t.*, GROUP_CONCAT(d.concepto || ' x' || d.cantidad) as detalles_texto
+            FROM tickets t
+            LEFT JOIN detalle_tickets d ON t.id = d.id_ticket
+            WHERE t.id = ?
+            GROUP BY t.id
+        ''', (id_ticket,))
+        ticket = cursor.fetchone()
+
+        if not ticket:
+            return jsonify({'error': 'Ticket no encontrado'}), 404
+
+        # Obtener los detalles del ticket
+        cursor.execute('SELECT * FROM detalle_tickets WHERE id_ticket = ?', (id_ticket,))
+        detalles = cursor.fetchall()
+
+        # Convertir los resultados a diccionarios
+        ticket_dict = dict(ticket)
+        detalles_list = [dict(detalle) for detalle in detalles]
+
+        # Obtener datos VERI*FACTU (QR y CSV) si existen
+        cursor.execute('SELECT codigo_qr, csv FROM registro_facturacion WHERE ticket_id = ?', (id_ticket,))
+        reg = cursor.fetchone()
+        codigo_qr = reg['codigo_qr'] if reg else None
+        csv = reg['csv'] if reg else None
+
+        # Combinar ticket, detalles y datos VERI*FACTU
+        resultado = {
+            'ticket': ticket_dict,
+            'detalles': detalles_list,
+            'codigo_qr': codigo_qr,
+            'csv': csv
+        }
+
+        return jsonify(resultado)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/tickets/actualizar', methods=['PATCH'])
+def actualizar_ticket():
+    try:
+        data = request.get_json()
+        if not data or 'id' not in data:
+            return jsonify({"error": "No se recibieron datos o falta el ID"}), 400
+
+        id_ticket = data['id']
+        
+        # Validar y convertir el importe_cobrado
+        try:
+            # Asegurarnos de que el importe_cobrado esté presente en los datos
+            if 'importe_cobrado' not in data:
+                print("importe_cobrado no está presente en los datos")
+                return jsonify({"error": "El campo importe_cobrado es requerido"}), 400
+
+            # Convertir el importe_cobrado a float, reemplazando comas por puntos
+            importe_cobrado_str = str(data['importe_cobrado']).replace(',', '.')
+            importe_cobrado = redondear_importe(float(importe_cobrado_str))
+            print(f"Datos completos recibidos: {data}")
+            print(f"Importe cobrado recibido (raw): {data['importe_cobrado']}")
+            print(f"Importe cobrado convertido: {importe_cobrado}")
+        except (ValueError, TypeError) as e:
+            print(f"Error al convertir importe_cobrado: {e}")
+            return jsonify({"error": f"Error al procesar importe_cobrado: {str(e)}"}), 400
+
+        total = redondear_importe(data.get('total', 0))
+        estado = data.get('estado')
+        formaPago = data.get('formaPago')
+        detalles_nuevos = data.get('detalles', [])
+
+
+        conn = get_db_connection()
+        conn.execute('BEGIN EXCLUSIVE TRANSACTION')
+        cursor = conn.cursor()
+
+        # Verificar si el ticket existe y obtener datos actuales
+        cursor.execute('SELECT id, importe_cobrado, total FROM tickets WHERE id = ?', (id_ticket,))
+        ticket_actual = cursor.fetchone()
+        if not ticket_actual:
+            conn.rollback()
+            return jsonify({"error": "Ticket no encontrado"}), 404
+
+        print(f"Datos actuales del ticket: {dict(ticket_actual)}")
+
+        # 1. Recuperar todos los detalles existentes
+        cursor.execute('''
+            SELECT id, concepto, descripcion, cantidad, precio, impuestos, total
+            FROM detalle_tickets 
+            WHERE id_ticket = ?
+        ''', (id_ticket,))
+        detalles_existentes = {str(row['id']): dict(row) for row in cursor.fetchall()}
+
+        # 2. Procesar los detalles
+        detalles_finales = []
+        for detalle in detalles_nuevos:
+            detalle_procesado = detalle.copy()
+            
+            if 'id' in detalle and detalle['id'] and str(detalle['id']) in detalles_existentes:
+                # Es un detalle existente
+                detalle_original = detalles_existentes[str(detalle['id'])]
+                # Comparar si el detalle ha sido modificado
+                ha_cambiado = (
+                    detalle['concepto'] != detalle_original['concepto'] or
+                    detalle.get('descripcion', '') != detalle_original['descripcion'] or
+                    float(detalle['cantidad']) != float(detalle_original['cantidad']) or
+                    float(detalle['precio']) != float(detalle_original['precio']) or
+                    float(detalle['impuestos']) != float(detalle_original['impuestos']) or
+                    float(detalle['total']) != float(detalle_original['total'])
+                )
+                
+                if ha_cambiado:
+                    # Si el detalle ha sido modificado, usar la nueva forma de pago
+                    detalle_procesado['formaPago'] = formaPago
+                    print(f"Detalle {detalle['id']} modificado, asignando nueva formaPago: {formaPago}")
+                else:
+                    # Si no ha sido modificado, mantener la forma de pago original
+                    detalle_procesado['formaPago'] = detalle_original['formaPago']
+                    print(f"Detalle {detalle['id']} sin cambios, manteniendo formaPago: {detalle_original['formaPago']}")
+            else:
+                # Es un detalle nuevo, asignar la nueva forma de pago
+                detalle_procesado['formaPago'] = formaPago
+                print(f"Detalle nuevo, asignando formaPago: {formaPago}")
+            
+            detalles_finales.append(detalle_procesado)
+
+        # Calcular importes
+        importe_bruto = redondear_importe(sum(float(d['precio']) * int(d['cantidad']) for d in detalles_finales))
+        importe_impuestos = redondear_importe(sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles_finales))
+        total_ticket = redondear_importe(total)
+
+        print(f"Importes calculados: bruto={importe_bruto}, impuestos={importe_impuestos}, total={total_ticket}, cobrado={importe_cobrado}")
+
+        # Actualizar todos los campos de una vez, incluyendo el importe_cobrado
+        cursor.execute('''
+            UPDATE tickets 
+            SET importe_bruto = ?,
+                importe_impuestos = ?,
+                importe_cobrado = ?,
+                total = ?,
+                estado = ?,
+                formaPago = ?,
+                timestamp = ?
+            WHERE id = ?
+        ''', (
+            importe_bruto,
+            importe_impuestos,
+            importe_cobrado,
+            total_ticket,
+            estado,
+            formaPago,
+            datetime.now().isoformat(),
+            id_ticket
+        ))
+
+        # Verificar el estado final
+        cursor.execute('SELECT importe_cobrado, total FROM tickets WHERE id = ?', (id_ticket,))
+        resultado_final = cursor.fetchone()
+        print(f"Estado final del ticket:")
+        print(f"Importe cobrado: {resultado_final['importe_cobrado']}")
+        print(f"Total: {resultado_final['total']}")
+
+        # Actualizar detalles
+        cursor.execute('DELETE FROM detalle_tickets WHERE id_ticket = ?', (id_ticket,))
+
+        for detalle in detalles_finales:
+            cursor.execute('''
+                INSERT INTO detalle_tickets (
+                    id_ticket, concepto, descripcion, cantidad, 
+                    precio, impuestos, total, productoId
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                id_ticket,
+                detalle['concepto'],
+                detalle.get('descripcion', ''),
+                int(detalle['cantidad']),
+                float(detalle['precio']),
+                float(detalle['impuestos']),
+                redondear_importe(float(detalle['total'])),
+                detalle.get('productoId', None)
+            ))
+
+        conn.commit()
+        print(f"Ticket {id_ticket} actualizado correctamente")
+        print(f"Importe cobrado final: {importe_cobrado}")
+        
+        return jsonify({
+            "mensaje": "Ticket actualizado correctamente",
+            "id": id_ticket,
+            "importe_cobrado": importe_cobrado,
+            "total": total_ticket
+        })
+
+    except Exception as e:
+        if 'conn' in locals():
+            conn.rollback()
+        print(f"Error al actualizar ticket: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/tickets/verificar_numero/<string:numero>', methods=['GET'])
+def verificar_numero_ticket(numero):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Buscar ticket con el mismo número
+        cursor.execute('SELECT id FROM tickets WHERE numero = ?', (numero,))
+        ticket = cursor.fetchone()
+        
+        if ticket:
+            return jsonify({
+                'existe': True,
+                'id': ticket['id']
+            })
+        
+        return jsonify({
+            'existe': False,
+            'id': None
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/facturas/actualizar', methods=['PATCH'])
+def actualizar_factura_endpoint():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No se recibieron datos'}), 400
+        if 'id' not in data:
+            return jsonify({'error': 'Se requiere el ID de la factura'}), 400
+            
+        result = factura.actualizar_factura(data['id'], data)
+        
+        # Si result es una tupla, significa que es un error con código de estado
+        if isinstance(result, tuple):
+            return result
+            
+        # Si no es una tupla, es una respuesta exitosa
+        return result
+    except Exception as e:
+        print(f"Error en actualizar factura: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/facturas/<int:idContacto>/<int:idFactura>', methods=['GET'])
+def buscar_factura_abierta(idContacto, idFactura):
+    try:
+        print(f"Obteniendo factura {idFactura} para contacto {idContacto}")  # Debug
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Consulta para obtener la factura con los datos del contacto
+        query = """
+            SELECT 
+                f.*,
+                c.razonsocial,
+                c.identificador,
+                c.direccion,
+                c.cp,
+                c.localidad,
+                c.provincia
+            FROM factura f
+            INNER JOIN contactos c ON f.idContacto = c.idContacto
+            WHERE f.id = %s AND f.idContacto = %s
+        """
+        print(f"Ejecutando query: {query}")  # Debug
+        print(f"Con parámetros: idFactura={idFactura}, idContacto={idContacto}")  # Debug
+        
+        cursor.execute(query, (idFactura, idContacto))
+        
+        factura = cursor.fetchone()
+        print(f"Resultado de la query: {factura}")  # Debug
+        
+        if not factura:
+            print("No se encontró la factura")  # Debug
+            return jsonify({'error': 'Factura no encontrada'}), 404
+
+        # Convertir a diccionario usando los nombres de columnas
+        columnas = [desc[0] for desc in cursor.description]
+        print("Nombres de columnas:", columnas)  # Debug
+        
+        factura_dict = dict(zip(columnas, factura))
+        print("Factura dict:", factura_dict)  # Debug
+        
+        # Obtener detalles
+        cursor.execute('SELECT * FROM detalle_factura WHERE id_factura = %s', (idFactura,))
+        detalles = cursor.fetchall()
+        print(f"Detalles encontrados: {len(detalles)}")  # Debug
+        
+        # Convertir detalles a lista de diccionarios
+        columnas_detalle = [desc[0] for desc in cursor.description]
+        detalles_list = [dict(zip(columnas_detalle, detalle)) for detalle in detalles]
+        
+        # Agregar detalles al diccionario de la factura
+        factura_dict['detalles'] = detalles_list
+        
+        print("Datos completos de factura a devolver:", factura_dict)  # Debug
+        return jsonify(factura_dict)
+        
+    except Exception as e:
+        print(f"Error al obtener factura: {str(e)}")
+        import traceback
+        print(traceback.format_exc())  # Debug - muestra el stack trace completo
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@app.route('/facturas', methods=['POST'])
+def crear_factura_endpoint():
+    try:
+        return factura.crear_factura()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/factura/numero', methods=['GET'])
+def obtener_numero_factura_endpoint():
+    try:
+      
+        numerador = formatear_numero_documento('F')
+       
+        if numerador is None:
+            return jsonify({"error": "No se encontró el numerador"}), 404
+        return jsonify({"numerador": numerador})
+    except Exception as e:
+      
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/proforma/abierta/<int:idContacto>', methods=['GET'])
+def buscar_proforma_abierta(idContacto):
+    return obtener_proforma_abierta(idContacto)
+
+@app.route('/proforma/numero', methods=['GET'])
+def obtener_numero_proforma_endpoint():
+    try:
+        numero_proforma = formatear_numero_documento('P')
+        
+        if numero_proforma is None:
+            return jsonify({"error": "No se encontró el numerador"}), 404
+            
+        return jsonify({"numerador": numero_proforma})
+    except Exception as e:
+      
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/proforma/<int:id>', methods=['GET'])
+def obtener_proforma(id):
+    try:
+        return proforma.obtener_proforma(id)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/proforma', methods=['POST'])
+def crear_proforma():
+    try:
+        return proforma.crear_proforma(request.get_json())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/proformas/actualizar', methods=['PATCH'])
+def actualizar_proforma():
+    try:
+        data = request.get_json()
+        if not data or 'id' not in data:
+            return jsonify({"error": "No se recibieron datos o falta el ID"}), 400
+
+        proforma_id = data['id']
+        
+        # Validar y convertir el importe_cobrado
+        try:
+            # Asegurarnos de que el importe_cobrado esté presente en los datos
+            if 'importe_cobrado' not in data:
+                print("importe_cobrado no está presente en los datos")
+                return jsonify({"error": "El campo importe_cobrado es requerido"}), 400
+
+            # Convertir el importe_cobrado a float, reemplazando comas por puntos
+            importe_cobrado_str = str(data['importe_cobrado']).replace(',', '.')
+            importe_cobrado = redondear_importe(float(importe_cobrado_str))
+            print(f"Datos completos recibidos: {data}")
+            print(f"Importe cobrado recibido (raw): {data['importe_cobrado']}")
+            print(f"Importe cobrado convertido: {importe_cobrado}")
+        except (ValueError, TypeError) as e:
+            print(f"Error al convertir importe_cobrado: {e}")
+            return jsonify({"error": f"Error al procesar importe_cobrado: {str(e)}"}), 400
+
+        total = redondear_importe(data.get('total', 0))
+        estado = data.get('estado')
+        formaPago = data.get('formaPago')
+        detalles_nuevos = data.get('detalles', [])
+
+
+        conn = get_db_connection()
+        conn.execute('BEGIN EXCLUSIVE TRANSACTION')
+        cursor = conn.cursor()
+
+        # Verificar si la proforma existe y obtener datos actuales
+        cursor.execute('SELECT id, importe_cobrado, total FROM proforma WHERE id = ?', (proforma_id,))
+        proforma_actual = cursor.fetchone()
+        if not proforma_actual:
+            conn.rollback()
+            return jsonify({"error": "Proforma no encontrada"}), 404
+
+        print(f"Datos actuales de la proforma: {dict(proforma_actual)}")
+
+        # 1. Recuperar todos los detalles existentes
+        cursor.execute('''
+            SELECT id, formaPago, concepto, descripcion, cantidad, precio, impuestos, total
+            FROM detalle_proforma 
+            WHERE id_proforma = ?
+        ''', (proforma_id,))
+        detalles_existentes = {str(row['id']): dict(row) for row in cursor.fetchall()}
+
+        # 2. Procesar los detalles
+        detalles_finales = []
+        for detalle in detalles_nuevos:
+            detalle_procesado = detalle.copy()
+            
+            if 'id' in detalle and detalle['id'] and str(detalle['id']) in detalles_existentes:
+                # Es un detalle existente
+                detalle_original = detalles_existentes[str(detalle['id'])]
+                # Comparar si el detalle ha sido modificado
+                ha_cambiado = (
+                    detalle['concepto'] != detalle_original['concepto'] or
+                    detalle.get('descripcion', '') != detalle_original['descripcion'] or
+                    float(detalle['cantidad']) != float(detalle_original['cantidad']) or
+                    float(detalle['precio']) != float(detalle_original['precio']) or
+                    float(detalle['impuestos']) != float(detalle_original['impuestos']) or
+                    float(detalle['total']) != float(detalle_original['total'])
+                )
+                
+                if ha_cambiado:
+                    # Si el detalle ha sido modificado, usar la nueva forma de pago
+                    detalle_procesado['formaPago'] = formaPago
+                    print(f"Detalle {detalle['id']} modificado, asignando nueva formaPago: {formaPago}")
+                else:
+                    # Si no ha sido modificado, mantener la forma de pago original
+                    detalle_procesado['formaPago'] = detalle_original['formaPago']
+                    print(f"Detalle {detalle['id']} sin cambios, manteniendo formaPago: {detalle_original['formaPago']}")
+            else:
+                # Es un detalle nuevo, asignar la nueva forma de pago
+                detalle_procesado['formaPago'] = formaPago
+                print(f"Detalle nuevo, asignando formaPago: {formaPago}")
+            
+            detalles_finales.append(detalle_procesado)
+
+        # Calcular importes
+        importe_bruto = redondear_importe(sum(float(d['precio']) * int(d['cantidad']) for d in detalles_finales))
+        importe_impuestos = redondear_importe(sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles_finales))
+        total_proforma = redondear_importe(total)
+
+        print(f"Importes calculados: bruto={importe_bruto}, impuestos={importe_impuestos}, total={total_proforma}, cobrado={importe_cobrado}")
+
+        # Actualizar todos los campos de una vez, incluyendo el importe_cobrado
+        cursor.execute('''
+            UPDATE proforma 
+            SET importe_bruto = ?,
+                importe_impuestos = ?,
+                importe_cobrado = ?,
+                total = ?,
+                estado = ?,
+                formaPago = ?,
+                timestamp = ?
+            WHERE id = ?
+        ''', (
+            importe_bruto,
+            importe_impuestos,
+            importe_cobrado,
+            total_proforma,
+            estado,
+            formaPago,
+            datetime.now().isoformat(),
+            proforma_id
+        ))
+
+        # Verificar el estado final
+        cursor.execute('SELECT importe_cobrado, total FROM proforma WHERE id = ?', (proforma_id,))
+        resultado_final = cursor.fetchone()
+      
+        # Actualizar detalles
+        cursor.execute('DELETE FROM detalle_proforma WHERE id_proforma = ?', (proforma_id,))
+
+        for detalle in detalles_finales:
+            cursor.execute('''
+                INSERT INTO detalle_proforma (
+                    id_proforma, concepto, descripcion, cantidad, 
+                    precio, impuestos, total, formaPago, productoId, fechaDetalle
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                proforma_id,
+                detalle['concepto'],
+                detalle.get('descripcion', ''),
+                int(detalle['cantidad']),
+                float(detalle['precio']),
+                float(detalle['impuestos']),
+                redondear_importe(float(detalle['total'])),
+                detalle['formaPago'],
+                detalle.get('productoId', None),
+                detalle.get('fechaDetalle', data.get('fecha'))
+            ))
+
+        conn.commit()
+        print(f"Proforma {proforma_id} actualizada correctamente")
+        print(f"Importe cobrado final: {importe_cobrado}")
+        
+        return jsonify({
+            "mensaje": "Proforma actualizada correctamente",
+            "id": proforma_id,
+            "importe_cobrado": importe_cobrado,
+            "total": total_proforma
+        })
+
+    except Exception as e:
+        if 'conn' in locals():
+            conn.rollback()
+        print(f"Error al actualizar proforma: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/proformas/consulta', methods=['GET'])
+def consultar_proformas():
+    return proforma.consultar_proformas()
+
+@app.route('/proformas/consulta/<int:id>', methods=['GET'])
+def consultar_proforma_por_id(id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Consulta para obtener la proforma y los datos del contacto
+        query = """
+            SELECT 
+                p.*,
+                c.razonsocial,
+                c.identificador,
+                c.direccion,
+                c.localidad,
+                c.cp,
+                c.provincia
+            FROM proforma p
+            INNER JOIN contactos c ON p.idcontacto = c.idContacto
+            WHERE p.id = ?
+        """
+        cursor.execute(query, (id,))
+        proforma = cursor.fetchone()
+
+        if not proforma:
+            return jsonify({'error': 'Proforma no encontrada'}), 404
+
+        # Obtener los detalles de la proforma
+        cursor.execute('SELECT * FROM detalle_proforma WHERE id_proforma = ?', (id,))
+        detalles = cursor.fetchall()
+
+        # Construir la respuesta
+        resultado = {
+            'id': proforma['id'],
+            'numero': proforma['numero'],
+            'fecha': format_date(proforma['fecha']),
+            'estado': proforma['estado'],
+            'total': float(proforma['total']) if proforma['total'] is not None else 0,
+            'idContacto': proforma['idcontacto'],
+            'contacto': {
+                'id': proforma['idcontacto'],
+                'razonsocial': proforma['razonsocial'],
+                'identificador': proforma['identificador'],
+                'direccion': proforma['direccion'],
+                'localidad': proforma['localidad'],
+                'cp': proforma['cp'],
+                'provincia': proforma['provincia']
+            },
+            'detalles': [dict(detalle) for detalle in detalles]
+        }
+
+        return jsonify(resultado)
+
+    except Exception as e:
+        print(f"Error al consultar proforma: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/proforma/verificar_numero/<string:numero>', methods=['GET'])
+def verificar_numero_proforma_endpoint(numero):
+    try:
+        return proforma.verificar_numero_proforma(numero)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/proformas', methods=['POST'])
+def crear_proforma_endpoint():
+    try:
+        return proforma.crear_proforma()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/proformas/<int:id>/convertir', methods=['POST'])
+def convertir_proforma_a_factura_endpoint(id):
+    try:
+        return proforma.convertir_proforma_a_factura(id)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/facturas/obtener_contacto/<int:factura_id>', methods=['GET'])
+def obtener_contacto_por_factura_id(factura_id):
+    try:
+        # Consulta para obtener solo el idContacto asociado a una factura
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        query = "SELECT idContacto FROM factura WHERE id = ?"
+        cursor.execute(query, (factura_id,))
+        resultado = cursor.fetchone()
+        
+        if resultado:
+            return jsonify({'idContacto': resultado['idContacto']})
+        else:
+            return jsonify({'error': 'Factura no encontrada'}), 404
+    
+    except Exception as e:
+        print(f"Error al obtener contacto para factura ID {factura_id}: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/facturas/consulta/<int:factura_id>', methods=['GET'])
+def obtener_factura_para_imprimir(factura_id):
+    try:
+        # Consulta para obtener los datos de la factura
+        query = """
+            SELECT 
+                f.id,
+                f.numero,
+                f.fecha,
+                f.importe_bruto as base,
+                f.importe_impuestos as iva,
+                f.total,
+                f.estado,
+                f.formaPago,
+                f.importe_cobrado,
+                f.tipo,
+                f.id_factura_rectificada,
+                f.hash_factura,
+                c.razonsocial,
+                c.direccion,
+                c.localidad,
+                c.provincia,
+                c.cp,
+                c.identificador,
+                c.mail,
+                c.telf1,
+                c.telf2,
+                c.idContacto as idcontacto,
+                d.concepto,
+                d.descripcion,
+                d.cantidad,
+                d.precio,
+                d.impuestos,
+                d.total as subtotal,
+                d.productoId,
+                d.fechaDetalle
+            FROM factura f
+            INNER JOIN contactos c ON f.idcontacto = c.idContacto
+            INNER JOIN detalle_factura d ON f.id = d.id_factura
+            WHERE f.id = ?
+        """
+        
+        # Ejecutar la consulta
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(query, (factura_id,))
+        resultados = cursor.fetchall()
+        
+        if not resultados:
+            cursor.close()
+            conn.close()
+            return jsonify({'error': 'Factura no encontrada'}), 404
+            
+        # Procesar los resultados
+        columnas = [desc[0] for desc in cursor.description]  # Obtener nombres de columnas
+        resultados_dict = []
+        
+        for row in resultados:
+            resultado = dict(zip(columnas, row))
+            resultados_dict.append(resultado)
+        
+        # Obtener código QR y hash de la tabla registro_facturacion si existe
+        print(f"[DEBUG] Obteniendo QR y hash para factura_id: {factura_id}")
+        cursor.execute("""
+            SELECT codigo_qr, hash FROM registro_facturacion
+            WHERE factura_id = ?
+        """, (factura_id,))
+        registro = cursor.fetchone()
+        
+        print(f"[DEBUG] ¿Se encontró registro en registro_facturacion?: {registro is not None}")
+        if registro:
+            print(f"[DEBUG] Tipo de datos de registro['codigo_qr']: {type(registro['codigo_qr']) if registro['codigo_qr'] else 'None'}")
+            print(f"[DEBUG] Tamaño de datos QR: {len(registro['codigo_qr']) if registro['codigo_qr'] else 0} bytes")
+        
+        # Definimos variables para el QR y hash
+        qr_code_base64 = None
+        hash_value = 'No disponible'
+        
+        # Obtener hash y QR desde registro_facturacion si existe
+        if registro and registro['hash']:
+            hash_value = registro['hash']
+            print(f"[DEBUG] Usando hash de registro_facturacion: {hash_value}")
+        # Si no, usar el hash de la tabla factura
+        elif resultados_dict[0]['hash_factura']:
+            hash_value = resultados_dict[0]['hash_factura']
+            print(f"[DEBUG] Usando hash de tabla factura: {hash_value}")
+        
+        # Codificar el QR en base64 si existe o generarlo si no existe
+        try:
+            import base64
+            import sys
+            from datetime import datetime
+            from io import BytesIO
+
+            import qrcode
+            
+            qr_bytes = None
+            qr_code_base64 = None  # Nueva variable para mantener la representación base64 final
+
+            # 1. Intentar obtener el QR de la base de datos
+            if registro and registro['codigo_qr']:
+                print("[DEBUG] QR encontrado en la base de datos")
+                qr_db_value = registro['codigo_qr']
+                print(f"[DEBUG] Tipo de datos QR almacenado: {type(qr_db_value)}")
+
+                # Caso A: el valor es bytes (BLOB) ➜ codificar a base64
+                if isinstance(qr_db_value, (bytes, bytearray)):
+                    qr_bytes = bytes(qr_db_value)
+                    qr_code_base64 = base64.b64encode(qr_bytes).decode('utf-8')
+                    print("[DEBUG] QR obtenido como bytes y codificado a base64")
+
+                # Caso B: el valor es str (probablemente ya base64) ➜ usar directamente
+                elif isinstance(qr_db_value, str):
+                    # Verificar de forma heurística si parece base64 (empieza con iVBOR para PNG)
+                    if qr_db_value.startswith('iVBOR') or qr_db_value.startswith('/9j/'):
+                        qr_code_base64 = qr_db_value
+                        try:
+                            qr_bytes = base64.b64decode(qr_db_value)
+                            print("[DEBUG] QR era cadena base64: decodificado a bytes correctamente")
+                        except Exception as e:
+                            print(f"[WARNING] No se pudo decodificar la cadena base64 del QR: {e}")
+                            qr_bytes = None
+                    else:
+                        # Si la cadena no parece base64 (p.ej. se ha guardado como texto plano de bytes)
+                        print("[DEBUG] La cadena QR no parece base64, convirtiendo con latin1 y recodificando")
+                        qr_bytes = qr_db_value.encode('latin1')
+                        qr_code_base64 = base64.b64encode(qr_bytes).decode('utf-8')
+            
+            # 2. Si no hay QR en la base de datos, NO generarlo: esperar a AEAT
+            else:
+                print("[DEBUG] QR no disponible en BBDD y no se generará hasta recibir CSV de AEAT")
+                qr_bytes = None
+                qr_code_base64 = None
+                
+                # QR todavía no disponible; se mostrará cuando la AEAT proporcione el CSV.
+                print("[DEBUG] QR no disponible en BBDD. Esperando validación de AEAT para generarlo.")
+                qr_bytes = None
+                qr_code_base64 = None
+
+            
+            # 3. Asegurarse de tener representación base64 válida para enviar al frontend
+            if qr_code_base64 is None and qr_bytes is not None:
+                qr_code_base64 = base64.b64encode(qr_bytes).decode('utf-8')
+                print("[DEBUG] QR bytes codificados a base64 (no venían de BBDD en base64)")
+
+            if qr_code_base64:
+                print(f"[DEBUG] Longitud de qr_code_base64 final: {len(qr_code_base64)}")
+            else:
+                print("[ERROR] qr_code_base64 es None. No se podrá mostrar el QR en el frontal")
+            
+            # 4. Guardar el QR en un archivo accesible (solo si se ha obtenido QR)
+            if qr_bytes:
+                try:
+                    qr_path = '/var/www/html/static/qr_temp.png'
+                    with open(qr_path, 'wb') as f:
+                        f.write(qr_bytes)
+                    # Ajustar permisos para que Apache pueda leerlo
+                    import os
+                    os.chmod(qr_path, 0o644)
+                    print(f"[DEBUG] QR guardado en {qr_path} para verificación")
+                except Exception as e:
+                    print(f"[ERROR] Error al guardar archivo QR: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                
+        except Exception as e:
+            print(f"[ERROR] Error al procesar QR: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            qr_code_base64 = None
+            
+        print(f"[DEBUG] ¿Se generó qr_code_base64?: {qr_code_base64 is not None}")
+        if qr_code_base64:
+            print(f"[DEBUG] Inicio del QR base64: {qr_code_base64[:30]}...")
+        else:
+            print("[DEBUG] qr_code_base64 es None")
+        
+        # Procesar los resultados
+        factura = {
+            'id': resultados_dict[0]['id'],
+            'numero': resultados_dict[0]['numero'],
+            'fecha': format_date(resultados_dict[0]['fecha']),
+            'base': float(resultados_dict[0]['base']) if resultados_dict[0]['base'] is not None else 0.0,
+            'iva': float(resultados_dict[0]['iva']) if resultados_dict[0]['iva'] is not None else 0.0,
+            'total': float(resultados_dict[0]['total']) if resultados_dict[0]['total'] is not None else 0.0,
+            'estado': resultados_dict[0]['estado'],
+            'tipo': resultados_dict[0]['tipo'],
+            'id_factura_rectificada': resultados_dict[0]['id_factura_rectificada'],
+            'formaPago': resultados_dict[0]['formaPago'],
+            'importe_cobrado': float(resultados_dict[0]['importe_cobrado']) if resultados_dict[0]['importe_cobrado'] is not None else 0.0,
+            'hash_verifactu': hash_value,
+            'qr_verifactu': qr_code_base64,
+            'contacto': {
+                'id': resultados_dict[0]['idcontacto'],
+                'razonsocial': resultados_dict[0]['razonsocial'],
+                'direccion': resultados_dict[0]['direccion'],
+                'localidad': resultados_dict[0]['localidad'],
+                'provincia': resultados_dict[0]['provincia'],
+                'cp': resultados_dict[0]['cp'],
+                'identificador': resultados_dict[0]['identificador'],
+                'email': resultados_dict[0]['mail'],
+                'telefono1': resultados_dict[0]['telf1'],
+                'telefono2': resultados_dict[0]['telf2']
+            },
+            'detalles': []
+        }
+        
+        # Procesar las líneas de la factura
+        for resultado in resultados_dict:
+            if resultado['concepto'] or resultado['descripcion']:  # Solo si hay concepto o descripción (evita líneas nulas)
+                linea = {
+                    'concepto': resultado['concepto'],
+                    'descripcion': resultado['descripcion'],
+                    'cantidad': float(resultado['cantidad']) if resultado['cantidad'] is not None else 0.0,
+                    'precio': float(resultado['precio']) if resultado['precio'] is not None else 0.0,
+                    'impuestos': float(resultado['impuestos']) if resultado['impuestos'] is not None else 0.0,
+                    'total': float(resultado['subtotal']) if resultado['subtotal'] is not None else 0.0,
+                    'productoId': resultado['productoId'] if 'productoId' in resultado else None,
+                    'fechaDetalle': resultado['fechaDetalle'] if 'fechaDetalle' in resultado else None
+                }
+                print(f"Agregando línea de detalle: {linea}")  # Debug
+                factura['detalles'].append(linea)
+
+        print("Datos completos de factura a enviar:", factura)  # Debug
+        cursor.close()
+        conn.close()
+        return jsonify({'factura': factura})
+        
+    except Exception as e:
+        print(f"Error al obtener la factura: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
+
+@app.route('/factura/abierta/<int:idContacto>/<int:idFactura>', methods=['GET'])
+def obtener_factura_abierta_endpoint(idContacto, idFactura):
+    print(f"Endpoint obtener_factura_abierta llamado con idContacto={idContacto}, idFactura={idFactura}")
+    try:
+        result = obtener_factura_abierta(idContacto, idFactura)
+        print(f"Resultado de obtener_factura_abierta: {result}")
+        return result
+    except Exception as e:
+        print(f"Error al obtener factura abierta: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Importar la función enviar_factura_email_endpoint desde el módulo factura
+from factura import enviar_factura_email_endpoint
+
+
+@app.route('/facturas/email/<int:id_factura>', methods=['POST'])
+@app.route('/api/facturas/email/<int:id_factura>', methods=['POST'])
+def enviar_factura_email_route(id_factura):
+    try:
+        print(f"Intentando enviar factura {id_factura} por email")
+        return enviar_factura_email_endpoint(id_factura)
+    except Exception as e:
+        print(f"Error al enviar factura por email: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/facturas/anular/<int:id_factura>', methods=['POST'])
+def anular_factura_route(id_factura):
+    from anulacion import anular_factura
+    return anular_factura(id_factura)
+
+@app.route('/tickets/anular/<int:id_ticket>', methods=['POST'])
+@app.route('/api/tickets/anular/<int:id_ticket>', methods=['POST'])
+def anular_ticket_route(id_ticket):
+    from anulacion_ticket import anular_ticket
+    return anular_ticket(id_ticket)
+
+@app.route('/facturas/consulta', methods=['GET'])
+def consultar_facturas_route():
+    try:
+        return factura.consultar_facturas_get()
+    except Exception as e:
+        print(f"Error al consultar facturas: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Rutas para API con redirecciones a las rutas sin prefijo
+@app.route('/api/scraping/ejecutar_scrapeo', methods=['POST'])
+def api_ejecutar_scrapeo():
+    """Endpoint API para ejecutar el script de scraping (redirección)"""
+    return ejecutar_scrapeo()
+
+@app.route('/api/scraping/estado_scraping', methods=['GET'])
+def api_estado_scraping():
+    """Endpoint API para verificar el estado del scraping (redirección)"""
+    return estado_scraping()
+
+@app.route('/api/estadisticas_gastos', methods=['GET'])
+def api_estadisticas_gastos():
+    """Endpoint API para obtener estadísticas de gastos (redirección)"""
+    from dashboard_routes import estadisticas_gastos
+    return estadisticas_gastos()
+
+@app.route('/scraping/ejecutar_scrapeo', methods=['POST'])
+def ejecutar_scrapeo():
+    """Endpoint para ejecutar el script de scraping de forma asíncrona"""
+    try:
+        # Ejecutar el script de scraping en un subproceso
+        # Usar python con el entorno virtual adecuado
+        python_path = '/var/www/html/venv/bin/python'
+        script_path = '/var/www/html/scrapeo.py'
+        log_path = '/tmp/scrapeo_web.log'  # Usar /tmp para garantizar permisos de escritura
+        
+        # Registrar en el log de scraping que se intenta ejecutar el script
+        with open('/var/www/html/scraping_status.log', 'a') as f:
+            timestamp = datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
+            f.write(f"{timestamp} Intentando ejecutar script de scraping con xvfb-run\n")
+            
+        # Verificar que los archivos existen
+        if not os.path.exists(python_path):
+            return jsonify({'exito': False, 'error': f'No se encontró Python en {python_path}'}), 500
+        
+        if not os.path.exists(script_path):
+            return jsonify({'exito': False, 'error': f'No se encontró el script en {script_path}'}), 500
+        
+        # Ejecutar directamente el script con sudo para garantizar permisos
+        # Usamos sudo -u sami para ejecutarlo con el usuario que tiene todos los permisos
+        comando = f"sudo -u sami /usr/bin/xvfb-run -a -s \"-screen 0 1920x1080x24\" {python_path} {script_path} >> {log_path} 2>&1"
+        
+        # Ejecutar el comando shell completo (asíncrono)
+        subprocess.Popen(comando, 
+                         shell=True,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+        
+        # Guardar log en un archivo con permisos adecuados
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_file = "/var/www/html/scraping_status.log"
+        
+        # Crear el archivo de log si no existe y asegurarse de que tenga permisos adecuados
+        try:
+            with open(log_file, "a") as f:
+                f.write(f"[{timestamp}] Iniciando proceso de scraping bancario\n")
+            
+            # Asegurar que el archivo tiene permisos adecuados
+            os.chmod(log_file, 0o666)  # Permisos de lectura/escritura para todos
+        except Exception as e:
+            print(f"Error al escribir en el archivo de log: {str(e)}")
+            
+        return jsonify({
+            'exito': True, 
+            'mensaje': 'Proceso de actualización bancaria iniciado correctamente'
+        })
+        
+    except Exception as e:
+        # Registrar el error
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open('/var/www/html/log_scraping.txt', 'a') as f:
+            f.write(f"[{timestamp}] Error al iniciar el scraping: {str(e)}\n")
+            
+        return jsonify({
+            'exito': False,
+            'error': f'Error al ejecutar el script: {str(e)}'
+        }), 500
+
+@app.route('/scraping/estado_scraping', methods=['GET'])
+def estado_scraping():
+    """Endpoint para verificar si el proceso de scraping está en ejecución"""
+    try:
+        # Verificar el archivo de estado
+        log_file = "/var/www/html/scraping_status.log"
+        ultima_actualizacion = None
+        estado_actual = "desconocido"
+        mensaje = ""
+        timestamp_actual = datetime.now()
+        
+        # Verificar si hay algún proceso de python ejecutando scrapeo.py o xvfb-run
+        resultado_python = subprocess.run(["pgrep", "-f", "scrapeo.py"], capture_output=True, text=True)
+        resultado_xvfb = subprocess.run(["pgrep", "-f", "xvfb-run"], capture_output=True, text=True)
+        
+        # Comprobar si los procesos están ejecutándose
+        en_ejecucion = bool(resultado_python.stdout.strip() or resultado_xvfb.stdout.strip())
+        
+        # Leer el archivo de estado si existe
+        if os.path.exists(log_file):
+            try:
+                with open(log_file, 'r') as f:
+                    lineas = f.readlines()
+                    if lineas:
+                        ultima_linea = lineas[-1].strip()
+                        # Tratar de extraer el timestamp
+                        if ultima_linea.startswith('[') and ']' in ultima_linea:
+                            timestamp_str = ultima_linea[1:ultima_linea.find(']')]
+                            try:
+                                ultima_actualizacion = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                                # Si la última actualización es de hace más de 10 minutos y
+                                # no hay procesos ejecutándose, considerarlo como completado
+                                if (timestamp_actual - ultima_actualizacion).total_seconds() > 600 and not en_ejecucion:
+                                    estado_actual = "completado"
+                                    mensaje = "Proceso completado o interrumpido"
+                                else:
+                                    estado_actual = "en_ejecucion" if en_ejecucion else "completado_recientemente"
+                                    mensaje = ultima_linea[ultima_linea.find(']') + 1:].strip()
+                            except ValueError:
+                                estado_actual = "error_formato"
+                                mensaje = "Error al analizar el timestamp en el log"
+            except Exception as e:
+                estado_actual = "error_lectura"
+                mensaje = f"Error al leer el archivo de log: {str(e)}"
+        else:
+            estado_actual = "sin_historial"
+            mensaje = "No hay historial de ejecuciones previas"
+        
+        # Registrar esta consulta de estado
+        try:
+            with open(log_file, "a") as f:
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                f.write(f"[{timestamp}] Consulta de estado: {estado_actual}, Procesos activos: {en_ejecucion}\n")
+        except:
+            pass  # No hacemos nada si falla el registro
+        
+        return jsonify({
+            'exito': True,
+            'en_ejecucion': en_ejecucion,
+            'estado': estado_actual,
+            'mensaje': mensaje,
+            'ultima_actualizacion': ultima_actualizacion.strftime("%Y-%m-%d %H:%M:%S") if ultima_actualizacion else None
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'exito': False,
+            'error': f'Error al verificar el estado: {str(e)}'
+        }), 500
+
+@app.route('/notificaciones', methods=['GET'])
+def api_notificaciones():
+    conn = sqlite3.connect(app.config['DATABASE'])
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM notificaciones ORDER BY timestamp DESC LIMIT 50")
+    notificaciones = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(notificaciones)
+
+
+@app.route('/notificaciones/stream')
+def notificaciones_stream():
+    """Flujo SSE para notificaciones en tiempo real"""
+    def event_stream():
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Asegurar que la tabla exista
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notificaciones (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tipo TEXT NOT NULL,
+                mensaje TEXT NOT NULL,
+                timestamp TEXT NOT NULL
+            )
+        """)
+        conn.commit()
+        last_id = 0
+        KEEPALIVE_INTERVAL = 15  # segundos entre latidos
+        while True:
+            cursor.execute("SELECT id, tipo, mensaje FROM notificaciones WHERE id > ? ORDER BY id", (last_id,))
+            rows = cursor.fetchall()
+            if not rows:
+                # Enviar latido para mantener viva la conexión
+                yield ": keep-alive\n\n"
+                time.sleep(KEEPALIVE_INTERVAL)
+                continue
+            for row in rows:
+                last_id = row['id']
+                payload = json.dumps({'mensaje': row['mensaje'], 'tipo': row['tipo']})
+                yield f"data: {payload}\n\n"
+                # Pausa breve para evitar que lleguen todas las notificaciones de golpe
+                time.sleep(0.5)
+                # Eliminar notificación tras enviarla para que no se repita
+                try:
+                    cursor.execute("DELETE FROM notificaciones WHERE id = ?", (row['id'],))
+                    conn.commit()
+                except Exception as _e:
+                    print(f"Error eliminando notificación {row['id']}: {_e}")
+            time.sleep(0.8)
+    headers = {'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'}
+    return Response(stream_with_context(event_stream()), mimetype='text/event-stream', headers=headers)
+
+# Rutas para imprimir facturas como PDF
+@app.route('/imprimir_factura_pdf/<int:id_factura>', methods=['GET'])
+def imprimir_factura_pdf(id_factura):
+    """
+    Genera un PDF de la factura con el código QR y permite descargarlo
+    """
+    try:
+        pdf_path = generar_pdf.generar_factura_pdf(id_factura)
+        if pdf_path and os.path.exists(pdf_path):
+            # Devolver el PDF como descarga
+            return send_file(
+                pdf_path,
+                as_attachment=True,
+                download_name=f'factura_{id_factura}.pdf',
+                mimetype='application/pdf'
+            )
+        else:
+            return jsonify({'error': 'No se pudo generar el PDF de la factura'}), 500
+    except Exception as e:
+        import traceback
+        print(f"Error en endpoint imprimir_factura_pdf: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': f'Error al generar el PDF: {str(e)}'}), 500
+
+# Agregar la ruta al API también
+@app.route('/api/imprimir_factura_pdf/<int:id_factura>', methods=['GET'])
+def api_imprimir_factura_pdf(id_factura):
+    return imprimir_factura_pdf(id_factura)
+
+# Endpoints para manejar facturas firmadas electrónicamente (XSIG)
+@app.route('/validar-factura-xsig/<int:id_factura>', methods=['GET'])
+def validar_factura_xsig(id_factura):
+    """
+    Valida una factura firmada electrónicamente (XSIG)
+    
+    Args:
+        id_factura: ID de la factura con archivo XSIG
+        
+    Returns:
+        JSON con el resultado de la validación incluyendo información de firma
+    """
+    try:
+        # Usar la función de validación que hemos creado en verifactu.py
+        resultado = verifactu.validar_factura_xml_antes_procesar(id_factura)
+        
+        # Verificar si realmente es un archivo XSIG
+        if not resultado.get('firmado', False):
+            return jsonify({
+                'error': 'El archivo no es una factura firmada electrónicamente (XSIG)',
+                'valido': False
+            }), 400
+            
+        return jsonify(resultado)
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error al validar la factura XSIG: {str(e)}',
+            'valido': False
+        }), 500
+
+@app.route('/procesar-factura-xsig/<int:id_factura>', methods=['POST'])
+def procesar_factura_xsig(id_factura):
+    """
+    Procesa una factura firmada electrónicamente (XSIG) para VERI*FACTU
+    generando hash encadenado y código QR
+    
+    Args:
+        id_factura: ID de la factura con archivo XSIG
+        
+    Returns:
+        JSON con los datos generados para VERI*FACTU
+    """
+    try:
+        # Primero validar que sea un archivo XSIG válido
+        validacion = verifactu.validar_factura_xml_antes_procesar(id_factura)
+        
+        if not validacion.get('valido', False):
+            return jsonify({
+                'error': 'La factura XSIG no es válida',
+                'detalles': validacion.get('errores', [])
+            }), 400
+            
+        # Generar datos VERI*FACTU para la factura
+        resultados = verifactu.generar_datos_verifactu_para_factura(id_factura)
+        
+        if not resultados:
+            return jsonify({
+                'error': 'Error al generar datos VERI*FACTU para la factura'
+            }), 500
+            
+        return jsonify({
+            'factura_id': id_factura,
+            'hash': resultados.get('hash'),
+            'qr_data': resultados.get('qr_data'),
+            'firmado': resultados.get('firmado', False),
+            'estado': 'Procesada correctamente'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'error': f'Error al procesar la factura XSIG: {str(e)}'
+        }), 500
+
+# Endpoint API para validación de facturas XSIG (con prefijo api)
+@app.route('/api/validar-factura-xsig/<int:id_factura>', methods=['GET'])
+def api_validar_factura_xsig(id_factura):
+    return validar_factura_xsig(id_factura)
+
+# Endpoint API para procesamiento de facturas XSIG (con prefijo api)
+@app.route('/api/factura/xsig/procesar/<int:id_factura>', methods=['POST'])
+def api_procesar_factura_xsig(id_factura):
+    return procesar_factura_xsig(id_factura)
+
+# Endpoint para enviar facturas a AEAT usando VERI*FACTU
+@app.route('/factura/enviar/<int:factura_id>', methods=['POST'])
+def enviar_factura_aeat(factura_id):
+    """
+    Envía una factura al servicio web de AEAT para VERI*FACTU
+    
+    Args:
+        factura_id: ID de la factura a enviar
+    
+    Returns:
+        JSON con el resultado del envío
+    """
+    try:
+        from verifactu.soap.client import enviar_registro_aeat
+
+        # Verificar que la factura existe
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM factura WHERE id = ?', (factura_id,))
+        factura = cursor.fetchone()
+        conn.close()
+        
+        if not factura:
+            return jsonify({
+                'success': False,
+                'mensaje': f'No se encontró la factura con ID {factura_id}'
+            }), 404
+            
+        # Realizar el envío a AEAT
+        resultado = enviar_registro_aeat(factura_id)
+        
+        return jsonify(resultado)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'mensaje': f'Error al enviar la factura a AEAT: {str(e)}'
+        }), 500
+        
+# Endpoint API para enviar facturas a AEAT usando VERI*FACTU (con prefijo api)
+@app.route('/api/factura/enviar/<int:factura_id>', methods=['POST'])
+def api_enviar_factura_aeat(factura_id):
+    return enviar_factura_aeat(factura_id)
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5001)
+
+@app.route('/api/ventas/total_mes', methods=['GET'])
+def obtener_totales_mes():
+    try:
+        anio = request.args.get('anio', str(datetime.now().year))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener totales de tickets por mes
+        cursor.execute('''
+            SELECT 
+                strftime('%m', fecha) as mes,
+                COUNT(*) as cantidad,
+                SUM(total) as total
+            FROM tickets
+            WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+            GROUP BY mes
+            ORDER BY mes
+        ''', (anio,))
+        
+        tickets = {}
+        for row in cursor.fetchall():
+            tickets[row['mes']] = {
+                'cantidad': row['cantidad'],
+                'total': float(row['total']) if row['total'] else 0.0
+            }
+        
+        # Obtener totales de facturas por mes
+        cursor.execute('''
+            SELECT 
+                strftime('%m', fecha) as mes,
+                COUNT(*) as cantidad,
+                SUM(total) as total
+            FROM factura
+            WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+            GROUP BY mes
+            ORDER BY mes
+        ''', (anio,))
+        
+        facturas = {}
+        for row in cursor.fetchall():
+            facturas[row['mes']] = {
+                'cantidad': row['cantidad'],
+                'total': float(row['total']) if row['total'] else 0.0
+            }
+        
+        # Calcular totales globales
+        global_data = {}
+        for mes in range(1, 13):
+            mes_str = f"{mes:02d}"
+            total_tickets = tickets.get(mes_str, {'total': 0})['total']
+            total_facturas = facturas.get(mes_str, {'total': 0})['total']
+            global_data[mes_str] = total_tickets + total_facturas
+        
+        return jsonify({
+            'anio': anio,
+            'tickets': tickets,
+            'facturas': facturas,
+            'global': global_data
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()

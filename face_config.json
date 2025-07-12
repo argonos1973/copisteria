@@ -1,0 +1,9 @@
+{
+    "entorno": "desarrollo",
+    "ruta_certificado": "/var/www/html/certs/certificado.pfx",
+    "password_certificado": "password_certificado",
+    "email_notificaciones": "notificaciones@example.com",
+    "organo_gestor": "L01000000",
+    "unidad_tramitadora": "L01000000",
+    "oficina_contable": "L01000000"
+}

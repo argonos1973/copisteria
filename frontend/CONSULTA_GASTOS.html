@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extracto Banco</title>
+    <link rel="stylesheet" href="../static/styles.css">
+    <link rel="stylesheet" href="../static/notificaciones.css">
+    <link rel="stylesheet" href="../static/footer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1>Extracto Banco</h1>
+        </div>
+        <div class="form-inline">
+            <div class="form-group">
+                <label for="fecha-inicio">Fecha inicio:</label>
+                <input type="date" id="fecha-inicio" />
+            </div>
+            <div class="form-group">
+                <label for="fecha-fin">Fecha fin:</label>
+                <input type="date" id="fecha-fin" />
+            </div>
+            <div class="form-group">
+                <label for="concepto">Concepto:</label>
+                <input type="text" id="concepto" placeholder="Buscar concepto..." />
+            </div>
+            <div class="form-group">
+                <label for="tipo-movimiento">Tipo:</label>
+                <select id="tipo-movimiento">
+                    <option value="todos">Todos</option>
+                    <option value="ingresos">Ingresos</option>
+                    <option value="gastos">Extracto Banco</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <button id="buscar-btn">Buscar</button>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <div class="table-scroll">
+                <table class="grid" id="tabla-gastos">
+                    <thead>
+                        <tr>
+                            <th style="width: 120px;">Fecha Operación</th>
+                            <th style="width: 120px;">Fecha Valor</th>
+                            <th>Concepto</th>
+                            <th class="text-right" style="width: 120px;">Importe (€)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Resultados dinámicos -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div id="notificacion" class="notificacion oculto"></div>
+        <div id="no-resultados" class="no-results oculto">No se encontraron Extracto Banco.</div>
+    </div>
+    <div class="fixed-footer fixed-footer-gastos">
+        <table class="grid">
+            <tr>
+                <td class="footer-fecha-operacion" style="width: 120px; padding-left: 0; text-align: left;">
+    <div class="toggle-totals" style="margin-left: 0; display: flex; align-items: center; justify-content: flex-start; height: 100%;">
+        <i class="fas fa-eye-slash"></i>
+    </div>
+</td>
+                <td class="label-totales" style="width: 120px;"><span class="content-cell hidden"><strong>Totales:</strong></span></td>
+<td style="width: 180px;">
+    <span class="content-cell total-data hidden" id="totalIngresos">0,00 €</span><br>
+    <small class="label-totales-small">Ingresos</small>
+</td>
+<td style="width: 180px;">
+    <span class="content-cell total-data hidden" id="totalGastos">0,00 €</span><br>
+    <small class="label-totales-small">Gastos</small>
+</td>
+<td class="text-right" style="width: 180px; position: relative; padding-right: 48px;">
+    <span class="content-cell total-data hidden" id="totalDiferencia">0,00 €</span><br>
+    <small class="label-totales-small">Diferencia</small>
+</td>
+            </tr>
+        </table>
+    </div>
+    <script type="module" src="../static/CONSULTA_GASTOS.js"></script>
+</body>
+</html>

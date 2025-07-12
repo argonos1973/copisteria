@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Factura {{ factura.numero }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            font-size: 12px;
+        }
+        .header {
+            margin-bottom: 30px;
+        }
+        .company-info {
+            float: left;
+            width: 50%;
+        }
+        .invoice-info {
+            float: right;
+            width: 50%;
+            text-align: right;
+        }
+        .clear {
+            clear: both;
+        }
+        .customer-info {
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f5f5f5;
+        }
+        .totals {
+            float: right;
+            width: 300px;
+        }
+        .totals table {
+            width: 100%;
+        }
+        .totals td {
+            padding: 5px;
+        }
+        .totals td:last-child {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-info">
+            <h2>ALEPH70</h2>
+            <p>NIF: B02658383</p>
+            <p>Calle Calderón de la Barca, 10</p>
+            <p>02002 Albacete</p>
+        </div>
+        <div class="invoice-info">
+            <h1>FACTURA</h1>
+            <p>Nº: {{ factura.numero }}</p>
+            <p>Fecha: {{ fecha_formateada }}</p>
+        </div>
+        <div class="clear"></div>
+    </div>
+
+    <div class="customer-info">
+        <h3>Cliente</h3>
+        <p>{{ factura.razonsocial }}</p>
+        <p>NIF: {{ factura.nif }}</p>
+        <p>{{ factura.direccion }}</p>
+        <p>{{ factura.cp }} {{ factura.localidad }}</p>
+        <p>{{ factura.provincia }}</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Concepto</th>
+                <th>Descripción</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>IVA %</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for detalle in detalles %}
+            <tr>
+                <td>{{ detalle.concepto }}</td>
+                <td>{{ detalle.descripcion }}</td>
+                <td>{{ detalle.cantidad }}</td>
+                <td>{{ "%.2f"|format(detalle.precio) }} €</td>
+                <td>{{ "%.2f"|format(detalle.impuestos) }} %</td>
+                <td>{{ "%.2f"|format(detalle.total) }} €</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <table>
+            <tr>
+                <td>Base Imponible:</td>
+                <td>{{ "%.2f"|format(factura.importe_bruto) }} €</td>
+            </tr>
+            <tr>
+                <td>IVA:</td>
+                <td>{{ "%.2f"|format(factura.importe_impuestos) }} €</td>
+            </tr>
+            <tr>
+                <td><strong>Total:</strong></td>
+                <td><strong>{{ "%.2f"|format(factura.total) }} €</strong></td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="clear"></div>
+    
+    <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">
+        <div style="float: left; width: 70%;">
+            <p><strong>Información VERI*FACTU</strong></p>
+            <p>Esta factura cumple con los requisitos de VERI*FACTU.</p>
+            <p>Hash: {{ factura.hash_factura|default('No disponible', true) }}</p>
+        </div>
+        <div style="float: right; width: 30%; text-align: right;">
+            {% if qr_code %}
+            <img src="data:image/png;base64,{{ qr_code }}" alt="Código QR VERI*FACTU" style="width: 150px; height: 150px;">
+            <p style="font-size: 9px; margin-top: 5px;">VERI*FACTU</p>
+            {% else %}
+            <p>Código QR no disponible</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

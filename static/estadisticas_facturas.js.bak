@@ -1,0 +1,338 @@
+// ==============================
+// ESTADISTICAS FACTURAS - COMPLETO
+// ==============================
+
+// ==============================
+// EVENTOS INICIALES
+// ==============================
+document.addEventListener('DOMContentLoaded', async () => {
+    const selectorFecha = document.getElementById('selector-fecha');
+    if (selectorFecha && !selectorFecha.value) {
+      const hoy = new Date();
+      selectorFecha.value = hoy.toISOString().slice(0, 7);
+    }
+  
+    selectorFecha?.addEventListener('change', recargarEstadisticas);
+    document.getElementById('btn-descargar-csv')?.addEventListener('click', descargarCSV);
+    document.getElementById('btn-graficos')?.addEventListener('click', abrirModalGraficos);
+    document.getElementById('cerrar-modal')?.addEventListener('click', () => {
+      document.getElementById('modal-graficos').style.display = 'none';
+    });
+    document.getElementById('tipo-datos')?.addEventListener('change', abrirModalGraficos);
+  
+    initModalDrag();
+    await recargarEstadisticas();
+  });
+  
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) recargarEstadisticas();
+  });
+  
+  // ==============================
+  // RELOAD GENERAL
+  // ==============================
+  async function recargarEstadisticas() {
+    const { mes, anio } = getFechaSeleccionada();
+    document.getElementById('year-indicator').textContent = `(${anio})`;
+    await Promise.all([
+      cargarEstadisticas(mes, anio),
+      cargarKpiGastos(mes, anio)
+    ]);
+  }
+  
+  function getFechaSeleccionada() {
+    const selector = document.getElementById('selector-fecha');
+    if (selector && selector.value) {
+      const [anio, mes] = selector.value.split('-');
+      return { mes, anio };
+    }
+    const hoy = new Date();
+    return { mes: String(hoy.getMonth() + 1).padStart(2, '0'), anio: String(hoy.getFullYear()) };
+  }
+  
+  // ==============================
+  // HELPERS
+  // ==============================
+  function formatearImporte(importe) {
+    return parseFloat(importe).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+  }
+  
+  function parsearImporte(valor) {
+    if (typeof valor === 'number') return valor;
+    if (typeof valor === 'string') {
+      const limpio = valor.replace(/\./g, '').replace(',', '.');
+      return isNaN(Number(limpio)) ? 0 : Number(limpio);
+    }
+    return 0;
+  }
+  
+  function formatearPorcentaje(valor) {
+    const v = parseFloat(valor) || 0;
+    return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
+  }
+  
+  function actualizarPorcentaje(id, val) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (val === null || val === undefined) {
+      el.textContent = "N/A";
+      el.className = 'stats-percentage';
+      return;
+    }
+    el.textContent = formatearPorcentaje(val);
+    el.className = 'stats-percentage ' + (val >= 0 ? 'positive' : 'negative');
+  }
+  
+  function actualizarPorcentajeFaltaMediaMensual(valorId, porcentajeId, total, media, cardId = null) {
+    const valorElem = document.getElementById(valorId);
+    const porcentajeElem = document.getElementById(porcentajeId);
+    let card = cardId ? document.getElementById(cardId) : null;
+    card?.classList.remove('stats-superado');
+  
+    if (!media || isNaN(media) || media === 0) {
+      valorElem.textContent = formatearImporte(0);
+      porcentajeElem.textContent = "0%";
+      return;
+    }
+  
+    const dif = media - total;
+    if (dif > 0) {
+      const p = (dif / media) * 100;
+      valorElem.textContent = formatearImporte(dif);
+      porcentajeElem.textContent = `${p.toFixed(1)}%`;
+      porcentajeElem.className = 'stats-percentage negative';
+    } else {
+      const p = (Math.abs(dif) / media) * 100;
+      valorElem.textContent = `¡Superado en ${p.toFixed(1)}%!`;
+      porcentajeElem.textContent = `¡Superado en ${p.toFixed(1)}%!`;
+      porcentajeElem.className = 'stats-percentage positive';
+      card?.classList.add('stats-superado');
+    }
+  }
+  
+  // ==============================
+  // CARGA ESTADISTICAS COMPLETAS
+  // ==============================
+  async function cargarEstadisticas(mes, anio) {
+    const qp = new URLSearchParams({ mes, anio });
+    const datos = await fetchConManejadorErrores('/api/ventas/media_por_documento?' + qp);
+    const global = datos.global;
+  
+    actualizarStats('tickets', datos.tickets, 'card-tickets');
+    actualizarStats('facturas', datos.facturas, 'card-facturas');
+    actualizarStats('proformas', datos.proformas, ''); // sin card especial
+    actualizarGlobal(global);
+  
+    actualizarTopClientes(await fetchConManejadorErrores('/api/clientes/top_ventas?' + qp));
+    actualizarTopProductos(await fetchConManejadorErrores('/api/productos/top_ventas?' + qp));
+  }
+  
+  function actualizarStats(prefijo, data, cardId) {
+    document.getElementById(`${prefijo}Total`).textContent = formatearImporte(data.actual.total);
+    document.getElementById(`${prefijo}Media`).textContent = formatearImporte(data.actual.media);
+    document.getElementById(`${prefijo}MediaMensual`).textContent = formatearImporte(data.actual.media_mensual);
+    document.getElementById(`${prefijo}Cantidad`).textContent = data.actual.cantidad;
+    document.getElementById(`${prefijo}Anterior`).textContent = `Año anterior: ${formatearImporte(data.anterior.total)}`;
+    actualizarPorcentaje(`${prefijo}Porcentaje`, data.porcentaje_diferencia);
+  
+    if (data.actual.mes_actual?.cantidad) {
+      document.getElementById(`${prefijo}TotalMes`).textContent = formatearImporte(data.actual.mes_actual.total);
+      document.getElementById(`${prefijo}MesAnterior`).textContent = `Mismo mes año anterior: ${formatearImporte(data.anterior.mismo_mes.total)}`;
+      actualizarPorcentaje(`${prefijo}PorcentajeMes`, data.porcentaje_diferencia_mes);
+      actualizarPorcentajeFaltaMediaMensual(
+        `${prefijo}FaltaMediaMensual`,
+        `${prefijo}PorcentajeFalta`,
+        parsearImporte(data.actual.mes_actual.total),
+        parsearImporte(data.actual.media_mensual),
+        cardId
+      );
+    }
+  }
+  
+  function actualizarGlobal(global) {
+    if (!global) return;
+    document.getElementById('globalTotal').textContent = formatearImporte(global.actual.total);
+    document.getElementById('globalMedia').textContent = formatearImporte(global.actual.media);
+    document.getElementById('globalMediaMensual').textContent = formatearImporte(global.actual.media_mensual);
+    document.getElementById('globalCantidad').textContent = global.actual.cantidad;
+    document.getElementById('globalAnterior').textContent = `Año anterior: ${formatearImporte(global.anterior.total)}`;
+    actualizarPorcentaje('globalPorcentaje', global.porcentaje_diferencia);
+  
+    const mediaMensual = parsearImporte(global.actual.media_mensual);
+    const mesActual = new Date().getMonth() + 1;
+    const acumulado = parsearImporte(global.actual.total);
+    const previsto = acumulado + (mediaMensual * (12 - mesActual));
+    document.getElementById('globalTotalPrevisto').textContent = formatearImporte(previsto);
+  
+    const p = (acumulado / previsto) * 100;
+    const diff = p >= 100 ? p - 100 : 100 - p;
+    document.getElementById('globalPorcentajePrevistoAnyo').textContent = `${p >= 100 ? '+' : '-'}${diff.toFixed(1)}%`;
+    document.getElementById('globalPorcentajePrevistoAnyo').className = 'stats-percentage ' + (p >= 100 ? 'positive' : 'negative');
+  
+    if (global.actual.mes_actual?.cantidad) {
+      document.getElementById('globalTotalMes').textContent = formatearImporte(global.actual.mes_actual.total);
+      document.getElementById('globalMesAnterior').textContent = `Mismo mes año anterior: ${formatearImporte(global.anterior.mismo_mes.total)}`;
+      actualizarPorcentaje('globalPorcentajeMes', global.porcentaje_diferencia_mes);
+      actualizarPorcentajeFaltaMediaMensual(
+        'globalFaltaMediaMensual',
+        'globalPorcentajeFalta',
+        parsearImporte(global.actual.mes_actual.total),
+        parsearImporte(global.actual.media_mensual),
+        'card-global'
+      );
+    }
+  }
+  
+  // ==============================
+  // TOPS
+  // ==============================
+  function actualizarTopClientes(datos) {
+    const tbody = document.getElementById('topClientesBody');
+    tbody.innerHTML = '';
+    datos.clientes.forEach(c => {
+      tbody.innerHTML += `<tr><td title="${c.nombre}">${c.nombre.slice(0,15)}${c.nombre.length>15?'...':''}</td>
+        <td>${formatearImporte(c.total_actual)}</td>
+        <td class="${c.porcentaje_diferencia>=0?'positive':'negative'}">${formatearPorcentaje(c.porcentaje_diferencia)}</td></tr>`;
+    });
+  }
+  
+  function actualizarTopProductos(datos) {
+    const tbody = document.getElementById('topProductosBody');
+    tbody.innerHTML = '';
+    datos.productos.forEach(p => {
+      tbody.innerHTML += `<tr><td title="${p.nombre}">${p.nombre.slice(0,12)}${p.nombre.length>12?'...':''}</td>
+        <td>${p.cantidad_actual}</td>
+        <td>${formatearImporte(p.total_actual)}</td>
+        <td class="${p.porcentaje_diferencia>=0?'positive':'negative'}">${formatearPorcentaje(p.porcentaje_diferencia)}</td></tr>`;
+    });
+  }
+  
+  // ==============================
+  // EXTRACTO BANCO
+  // ==============================
+  async function cargarKpiGastos(mes, anio) {
+    const data = await fetchConManejadorErrores(`/api/estadisticas_gastos?mes=${mes}&anio=${anio}&t=${Date.now()}`);
+    document.getElementById('kpi-ingresos-mes-actual').textContent = formatearImporte(data.ingresos_mes_actual);
+    document.getElementById('kpi-gastos-mes-actual').textContent = formatearImporte(data.gastos_mes_actual);
+    document.getElementById('kpi-balance-mes-actual').textContent = formatearImporte(data.balance_mes_actual);
+    const saldo = document.getElementById('kpi-saldo-mes-actual');
+    saldo.textContent = data.saldo_mes_actual ? formatearImporte(data.saldo_mes_actual) : '-';
+    saldo.className = parsearImporte(data.saldo_mes_actual) >= 0 ? 'importe-positivo' : 'importe-negativo';
+    const actualizacion = document.getElementById('kpi-ultima-actualizacion');
+    actualizacion.textContent = data.ultima_actualizacion || '-';
+  }
+  
+  // ==============================
+  // CSV
+  // ==============================
+  async function descargarCSV() {
+    const { anio } = getFechaSeleccionada();
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const datos = await fetchConManejadorErrores(`/api/ventas/total_mes?anio=${anio}`);
+    const SEP = ';';
+    const fila = (tipo, arr) => [tipo, ...arr.map(n => n.toFixed(2).replace('.', ',')), arr.reduce((a,b) => a+b,0).toFixed(2).replace('.', ',')].join(SEP);
+    const get = t => meses.map((_,i) => parsearImporte(datos[t][String(i+1).padStart(2,'0')]));
+  
+    const csv = [`Año${SEP}${anio}`, `Generado${SEP}${new Date().toLocaleString('es-ES')}`,
+      '', `Concepto${SEP}${meses.join(SEP)}${SEP}Total`,
+      fila('Tickets', get('tickets')),
+      fila('Facturas', get('facturas')),
+      fila('Global', get('global'))].join('\n');
+  
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+    link.download = `estadisticas_${anio}.csv`;
+    link.click();
+  }
+  
+  // ==============================
+  // MODAL DRAG
+  // ==============================
+  function initModalDrag(){
+    const dialog = document.querySelector('#modal-graficos .modal-content');
+    if(!dialog) return;
+    let isDragging = false, startX, startY, initialLeft, initialTop;
+  
+    dialog.addEventListener('mousedown', e => {
+      if(e.target.classList.contains('cerrar-modal')) return;
+      isDragging = true;
+      startX = e.clientX; startY = e.clientY;
+      const rect = dialog.getBoundingClientRect();
+      initialLeft = rect.left; initialTop = rect.top;
+      dialog.style.transform = 'none';
+      dialog.style.left = `${initialLeft}px`;
+      dialog.style.top = `${initialTop}px`;
+      document.body.style.userSelect = 'none';
+    });
+  
+    document.addEventListener('mousemove', e => {
+      if(!isDragging) return;
+      dialog.style.left = `${initialLeft + e.clientX - startX}px`;
+      dialog.style.top = `${initialTop + e.clientY - startY}px`;
+    });
+  
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+      document.body.style.userSelect = '';
+    });
+  }
+  
+  // ==============================
+  // MODAL GRAFICOS
+  // ==============================
+  let chartEstadisticas = null;
+  
+  async function abrirModalGraficos() {
+    await asegurarChartJs();
+    const { anio } = getFechaSeleccionada();
+    const tipo = document.getElementById('tipo-datos').value;
+    const anioAnterior = anio - 1;
+    const [datosActual, datosAnterior] = await Promise.all([
+      fetchConManejadorErrores(`/api/ventas/total_mes?anio=${anio}`),
+      fetchConManejadorErrores(`/api/ventas/total_mes?anio=${anioAnterior}`)
+    ]);
+  
+    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const datasets = [];
+    if (tipo === 'global') {
+      datasets.push({ label: `Global ${anioAnterior}`, data: meses.map((_, i) => datosAnterior.global[String(i+1).padStart(2,'0')]), backgroundColor: '#9b59b6' });
+      datasets.push({ label: `Global ${anio}`, data: meses.map((_, i) => datosActual.global[String(i+1).padStart(2,'0')]), backgroundColor: '#3498db' });
+    } else if (tipo === 'tickets') {
+      datasets.push({ label: `Tickets ${anio}`, data: meses.map((_, i) => datosActual.tickets[String(i+1).padStart(2,'0')]), backgroundColor: '#2ecc71' });
+    } else {
+      datasets.push({ label: `Facturas ${anio}`, data: meses.map((_, i) => datosActual.facturas[String(i+1).padStart(2,'0')]), backgroundColor: '#f1c40f' });
+    }
+  
+    if (chartEstadisticas) chartEstadisticas.destroy();
+    chartEstadisticas = new Chart(document.getElementById('chart-estadisticas').getContext('2d'), {
+      type: 'bar',
+      data: { labels: meses, datasets },
+      options: { responsive: true }
+    });
+  
+    document.getElementById('modal-graficos').style.display = 'block';
+  }
+  
+  async function asegurarChartJs() {
+    if (typeof Chart !== 'undefined') return;
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  
+  window.addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-graficos')) document.getElementById('modal-graficos').style.display = 'none';
+  });
+  
+  // ==============================
+  // FETCH WRAPPER
+  // ==============================
+  async function fetchConManejadorErrores(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return res.json();
+  }
+  

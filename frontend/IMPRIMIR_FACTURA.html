@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura</title>
+    <style>
+        /* Reglas específicas para impresión */
+        @media print {
+            #qr-verifactu {
+                display: block !important;
+                visibility: visible !important;
+                page-break-inside: avoid;
+            }
+            #qr-verifactu img {
+                display: block !important;
+                visibility: visible !important;
+                width: 150px !important;
+                height: 150px !important;
+            }
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #fff;
+            font-size: 12px;
+        }
+
+        .header {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .factura-info {
+            margin-bottom: 10px;
+        }
+
+        .factura-info p {
+            margin: 3px 0;
+        }
+
+        #logo {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 90px;
+            height: auto;
+        }
+
+        .direcciones {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .emisor {
+            width: 40%;
+        }
+
+        .cliente {
+            width: 40%;
+            position: absolute;
+            right: 0;
+            text-align: right;
+        }
+
+        .emisor p {
+            margin: 2px 0;
+            line-height: 1.1;
+        }
+
+        .cliente p {
+            margin: 2px 0;
+            line-height: 1.1;
+        }
+
+        .cliente h2 {
+            font-size: 14px;
+            margin: 0 0 8px 0;
+            text-align: right;
+        }
+
+        .detalle-concepto {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detalle-descripcion {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f8f8;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th:first-child, td:first-child {
+            text-align: left;
+        }
+
+        .cantidad {
+            text-align: center;
+        }
+
+        .precio, .total {
+            text-align: right;
+        }
+
+        .totales {
+            width: 300px;
+            margin-left: auto;
+        }
+
+        .totales p {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .condiciones {
+            margin-top: 30px;
+        }
+
+        .pie-pagina {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Factura <span style="color: #0056b3; font-size: 0.7em; background-color: #f0f8ff; border: 1px solid #0056b3; padding: 2px 6px; border-radius: 4px;">VERI*FACTU</span></h1>
+        <img id="logo" src="/static/img/logo.png" alt="Logo">
+        <div class="factura-info">
+            <p><strong>Número #</strong> <span id="numero"></span></p>
+            <p><strong>Fecha</strong> <span id="fecha"></span></p>
+        </div>
+    </div>
+
+    <!-- Información factura rectificativa (se rellena dinámicamente) -->
+    <div id="rectificativa-info"></div>
+
+    <div class="direcciones">
+        <div class="emisor">
+            <p id="emisor-nombre"></p>
+            <p id="emisor-direccion"></p>
+            <p id="emisor-cp-ciudad"></p>
+            <p id="emisor-nif"></p>
+            <p id="emisor-email"></p>
+        </div>
+
+        <div class="cliente">
+            <h2>Cliente</h2>
+            <p id="razonsocial"></p>
+            <p id="direccion"></p>
+            <p id="cp-localidad"></p>
+            <p id="nif"></p>
+        </div>
+    </div>
+
+    <div class="detalles">
+        <table>
+            <thead>
+                <tr>
+                    <th>Concepto</th>
+                    <th class="cantidad">Cantidad</th>
+                    <th class="precio">Precio</th>
+                    <th class="precio">IVA %</th>
+                    <th class="total">Total</th>
+                </tr>
+            </thead>
+            <tbody id="detalles-factura">
+                <!-- Los detalles se insertarán aquí dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="totales">
+        <p><span>BASE IMPONIBLE</span> <span id="base"></span></p>
+        <p><span>IVA 21%</span> <span id="iva"></span></p>
+        <p><strong>TOTAL</strong> <strong id="total"></strong></p>
+    </div>
+
+    <div class="condiciones">
+        <p><strong>Condiciones de pago</strong></p>
+        <p id="forma-pago">Tarjeta</p>
+    </div>
+
+    <div class="clear" style="clear:both; margin-top: 30px;"></div>
+
+    <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">
+        <div style="float: left; width: 70%;">
+            <p><strong>Información VERI*FACTU</strong></p>
+            <p>Esta factura ha sido generada mediante un sistema de emisión de facturas verificables <strong>VERI*FACTU</strong>. Los registros de esta factura son enviados automáticamente a la Agencia Tributaria.</p>
+            <p id="hash-factura">Hash: </p>
+        </div>
+        <div style="float: right; width: 30%; text-align: right;">
+            <div id="qr-verifactu" style="width: 150px; height: 150px; margin-left: auto;">
+                <!-- El QR se cargará automáticamente con JavaScript -->
+                <!-- Esta imagen es una alternativa de respaldo -->
+                <img src="/static/qr_temp.png" alt="Código QR VERI*FACTU" style="width: 150px; height: 150px;" onerror="this.style.display='block'">
+            </div>
+            <p style="font-size: 12px; margin-top: 5px; text-align: center; font-weight: bold; color: #0056b3;">VERI*FACTU</p>
+        </div>
+    </div>
+
+    <script type="module" src="/static/imprimir-factura.js"></script>
+</body>
+</html>

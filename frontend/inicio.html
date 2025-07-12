@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Inicio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .tarjeta {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .tarjeta-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .tarjeta-titulo {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .comparativa {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .valor {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .valor-anterior {
+            font-size: 1.2em;
+            color: #7f8c8d;
+        }
+
+        .total-actual, .total-anterior {
+            font-size: 1.1em;
+            color: #2c3e50;
+            margin: 5px 0;
+        }
+
+        .total-anterior {
+            color: #7f8c8d;
+            margin-left: 15px;
+        }
+
+        .variacion {
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .variacion.positiva {
+            color: #27ae60;
+            background-color: #eafaf1;
+        }
+
+        .variacion.negativa {
+            color: #c0392b;
+            background-color: #fdeaea;
+        }
+
+        #dashboard-error {
+            display: none;
+            background-color: #fdeaea;
+            color: #c0392b;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="dashboard-error"></div>
+    
+    <div class="dashboard">
+        <!-- Tickets -->
+        <div class="tarjeta">
+            <div class="tarjeta-header">
+                <span class="tarjeta-titulo">Tickets Cobrados</span>
+                <span id="tickets-variacion" class="variacion">--</span>
+            </div>
+            <div class="valor" id="tickets-actuales">--</div>
+            <div class="total-actual">Total: <span id="tickets-total-actual">--</span></div>
+            <div class="comparativa">
+                <span class="valor-anterior">Año anterior: <span id="tickets-anteriores">--</span></span>
+                <span class="total-anterior">Total: <span id="tickets-total-anterior">--</span></span>
+            </div>
+        </div>
+
+        <!-- Facturas -->
+        <div class="tarjeta">
+            <div class="tarjeta-header">
+                <span class="tarjeta-titulo">Facturas Cobradas</span>
+                <span id="facturas-variacion" class="variacion">--</span>
+            </div>
+            <div class="valor" id="facturas-actuales">--</div>
+            <div class="total-actual">Total: <span id="facturas-total-actual">--</span></div>
+            <div class="comparativa">
+                <span class="valor-anterior">Año anterior: <span id="facturas-anteriores">--</span></span>
+                <span class="total-anterior">Total: <span id="facturas-total-anterior">--</span></span>
+            </div>
+        </div>
+
+        <!-- Total Global -->
+        <div class="tarjeta">
+            <div class="tarjeta-header">
+                <span class="tarjeta-titulo">Total Global</span>
+                <span id="total-variacion" class="variacion">--</span>
+            </div>
+            <div class="valor" id="total-actual">--</div>
+            <div class="total-actual">Total: <span id="total-actual">--</span></div>
+            <div class="comparativa">
+                <span class="valor-anterior">Año anterior: <span id="total-anterior">--</span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Estadísticas Mensuales -->
+    <div class="tabla-mensual">
+        <h2>Estadísticas Mensuales</h2>
+        <table class="grid">
+            <thead>
+                <tr>
+                    <th>Mes</th>
+                    <th>Tickets</th>
+                    <th>Media Tickets</th>
+                    <th>Facturas</th>
+                    <th>Media Facturas</th>
+                    <th>Total</th>
+                    <th>Diferencia</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-mensual-body">
+                <!-- Los datos mensuales se cargarán aquí -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="/static/dashboard.js"></script>
+</body>
+</html>

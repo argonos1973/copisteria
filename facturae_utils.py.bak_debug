@@ -1,0 +1,47 @@
+# Copia de seguridad antes de refactor para debug XML
+
+import os
+import io
+from datetime import datetime
+from lxml import etree
+from signxml import XMLSigner
+from signxml import methods as signxml_methods
+import base64
+from cryptography import x509
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.serialization import pkcs12
+
+def es_persona_fisica(nif):
+    if not nif:
+        return False
+    nif = nif.upper().strip()
+    if len(nif) > 0 and nif[0] not in "XYZKLM" and not nif[0].isdigit():
+        return False
+    return True
+
+def validar_nif(nif):
+    if not nif:
+        return False
+    nif = nif.upper().strip()
+    patron_nif = r'^[0-9XYZ][0-9]{7}[A-Z]$'
+    patron_cif = r'^[A-HJNPQRSUVW][0-9]{7}[0-9A-J]$'
+    import re
+    if re.match(patron_nif, nif) or re.match(patron_cif, nif):
+        return True
+    return False
+
+def separar_nombre_apellidos(nombre_completo):
+    if not nombre_completo:
+        return ("", "", "")
+    partes = nombre_completo.strip().split()
+    if len(partes) == 1:
+        return (partes[0], "", "")
+    elif len(partes) == 2:
+        return (partes[0], partes[1], "")
+    else:
+        nombre = partes[0]
+        segundo_apellido = partes[-1]
+        primer_apellido = " ".join(partes[1:-1])
+        return (nombre, primer_apellido, segundo_apellido)
+
+# ... resto del código igual ...

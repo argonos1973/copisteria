@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consulta de Contactos</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Enlace al archivo de estilos externo -->
+  <link rel="stylesheet" href="../static/styles.css" />
+  <link rel="stylesheet" href="../static/notificaciones.css" />
+  
+  <style>
+    /* Estilos personalizados para la tabla de contactos */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    
+    .table-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin-top: 10px;
+      min-height: 0;
+    }
+    
+    .table-responsive {
+      flex: 1;
+      max-height: none !important;
+      overflow-y: auto;
+    }
+  </style>
+
+  <!-- Vue.js y Axios (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+  <div id="app" class="container">
+    <h1>Contactos</h1>
+    
+    <!-- Contenedor de Filtros -->
+    <div class="form-inline">
+      <div class="form-group">
+        <label for="razonSocialInput">Razón Social:</label>
+        <input
+          type="text"
+          id="razonSocialInput"
+          v-model="filters.razonSocial"
+          placeholder="Nombre del contacto..."
+          @input="handleSearch"
+        />
+      </div>
+      <div class="form-group">
+        <label for="nifInput">Identificador:</label>
+        <input
+          type="text"
+          id="nifInput"
+          v-model="filters.nif"
+          placeholder="Identificador del contacto..."
+          @input="handleSearch"
+        />
+      </div>
+      <div class="form-group">
+        <button @click="nuevoContacto">Nuevo Contacto</button>
+      </div>
+    </div>
+
+    <!-- Contenedor de la Tabla -->
+    <div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th class="razon-social">Razón Social</th>
+              <th class="nif-col">Identificador</th>
+              <th class="email-col">Email</th>
+              <th class="telefono-col">Teléfono</th>
+              <th class="proforma-col" title="Proforma Abierta">Proforma</th>
+              <th class="acciones-col" title="Crear Proforma">✎</th>
+              <th class="acciones-col" title="Crear Factura">⚡</th>
+              <th class="acciones-col" title="Eliminar">✕</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Mensaje de carga -->
+            <tr v-if="loading">
+              <td colspan="7" style="text-align: center;">Cargando contactos...</td>
+            </tr>
+
+            <!-- Mensaje de sin resultados -->
+            <tr v-if="!loading && contactos.length === 0">
+              <td colspan="7" style="text-align: left;">No se encontraron contactos.</td>
+            </tr>
+
+            <!-- Filas de contactos -->
+            <tr
+              v-for="contacto in contactos"
+              :key="contacto.idContacto"
+              @click="verContacto(contacto.idContacto)"
+            >
+              <td class="razon-social" :title="contacto.razonsocial">
+                {{ contacto.razonsocial }}
+              </td>
+              <td class="nif-col" :title="contacto.identificador">
+                {{ contacto.identificador }}
+              </td>
+              <td class="email-col" :title="contacto.mail">
+                {{ contacto.mail }}
+              </td>
+              <td class="telefono-col" :title="contacto.telf1">
+                {{ contacto.telf1 }}
+              </td>
+              <td class="proforma-col" :title="contacto.numero_proforma_abierta">
+                {{ contacto.numero_proforma_abierta }}
+              </td>
+              <td class="acciones-col">
+                <button
+                  v-if="contacto.identificador"
+                  class="btn-icon"
+                  :title="contacto.numero_proforma_abierta ? 'Modificar Proforma' : 'Crear Proforma'"
+                  @click.stop="crearProforma(contacto.idContacto)"
+                >
+                  ✎
+                </button>
+              </td>
+              <td class="acciones-col">
+                <button
+                  v-if="contacto.identificador"
+                  class="btn-icon"
+                  title="Crear Factura"
+                  @click.stop="crearFactura(contacto.idContacto)"
+                >
+                  ⚡
+                </button>
+              </td>
+              <td class="acciones-col">
+                <button
+                  class="btn-icon"
+                  title="Eliminar"
+                  @click.stop="deleteContacto(contacto.idContacto)"
+                >
+                  ✕
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Un solo script "type=module" para importar y usar las constantes -->
+  <script type="module">
+    import { IP_SERVER, PORT } from '../static/constantes.js';
+    import { mostrarNotificacion, mostrarConfirmacion } from '../static/notificaciones.js';
+
+    const { createApp, ref, reactive, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        // Construimos la URL de la API con las constantes importadas
+        const API_URL = `http://${IP_SERVER}:${PORT}/api`;
+
+        // Reactive data
+        const filters = reactive({
+          razonSocial: '',
+          nif: ''
+        });
+
+        const contactos = ref([]);
+        const loading = ref(false);
+
+        // Función para guardar filtros en sessionStorage
+        const guardarFiltros = () => {
+          sessionStorage.setItem('filtrosContactos', JSON.stringify({
+            razonSocial: filters.razonSocial,
+            nif: filters.nif
+          }));
+        };
+
+        // Función para restaurar filtros desde sessionStorage
+        const restaurarFiltros = () => {
+          const filtrosGuardados = sessionStorage.getItem('filtrosContactos');
+          if (filtrosGuardados) {
+            const filtrosParseados = JSON.parse(filtrosGuardados);
+            filters.razonSocial = filtrosParseados.razonSocial;
+            filters.nif = filtrosParseados.nif;
+          } else {
+            // Si no hay filtros guardados, inicializar para mostrar los primeros 20 registros
+            filters.razonSocial = '';
+            filters.nif = '';
+            guardarFiltros();
+          }
+          fetchContactos();
+        };
+
+        // Llamada a la API de contactos
+        const fetchContactos = async () => {
+          try {
+            loading.value = true;
+            const queryParams = new URLSearchParams({
+              razonSocial: filters.razonSocial,
+              nif: filters.nif,
+              limit: '20'
+            });
+
+            const response = await fetch(`${API_URL}/contactos/buscar?${queryParams}`);
+            if (!response.ok) throw new Error('Error en la búsqueda');
+            
+            const data = await response.json();
+            contactos.value = data;
+          } catch (error) {
+            console.error('Error:', error);
+            contactos.value = [];
+          } finally {
+            loading.value = false;
+          }
+        };
+
+        // Eliminar contacto
+        const deleteContacto = async (id) => {
+          try {
+            const confirmado = await mostrarConfirmacion('¿Está seguro de eliminar este contacto?');
+            if (confirmado) {
+              await axios.delete(`${API_URL}/contactos/eliminar_contacto/${id}`);
+              mostrarNotificacion('Contacto eliminado correctamente', 'success');
+              fetchContactos(); // Refresca la lista
+            }
+          } catch (error) {
+            console.error('Error al eliminar el contacto:', error);
+            mostrarNotificacion(error.response?.data?.error || 'No se pudo eliminar el contacto. Inténtalo de nuevo.', 'error');
+          }
+        };
+
+        // Crear Proforma y Factura
+        const crearProforma = (id) => {
+          // Guardar filtros antes de navegar
+          guardarFiltros();
+          // Asegurarnos de que el origen se guarda en sessionStorage
+          sessionStorage.setItem('origenProforma', 'contactos');
+          window.location.href = `GESTION_PROFORMAS.html?idContacto=${id}&origen=contactos`;
+        };
+
+        const crearFactura = (id) => {
+          console.log(`Crear Factura para el contacto ID:&& ${id}`);
+          guardarFiltros();
+          // Asegurarnos de que el origen se guarda en sessionStorage
+          sessionStorage.setItem('origenProforma', 'contactos');
+          window.location.href = `GESTION_FACTURAS.html?idContacto=${id}&origen=contactos`;
+          // TODO: Implementar la creación de factura
+        };
+
+        // Función para mostrar errores
+        const mostrarError = (mensaje) => {
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-message';
+          errorDiv.textContent = mensaje;
+          errorDiv.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #ff4444;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+          `;
+          document.body.appendChild(errorDiv);
+          setTimeout(() => {
+            errorDiv.remove();
+          }, 3000);
+        };
+
+        // Manejo de la búsqueda (con debounce)
+        let debounceTimer = null;
+        const handleSearch = () => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            fetchContactos();
+          }, 300);
+        };
+
+        // Ver contacto existente
+        const verContacto = (id) => {
+          // Guardar filtros antes de navegar
+          guardarFiltros();
+          window.location.href = `GESTION_CONTACTOS.html?id=${id}`;
+        };
+
+        // Nuevo contacto
+        const nuevoContacto = () => {
+          // Guardar filtros antes de navegar
+          guardarFiltros();
+          window.location.href = 'GESTION_CONTACTOS.html';
+        };
+
+        // Cargar datos al montar el componente
+        onMounted(async () => {
+          // Restaurar filtros guardados
+          restaurarFiltros();
+          // Cargar contactos
+          await fetchContactos();
+          // Poner el foco en el campo de razón social usando nextTick
+          Vue.nextTick(() => {
+            const razonSocialInput = document.getElementById('razonSocial');
+            if (razonSocialInput) {
+              razonSocialInput.focus();
+            }
+          });
+        });
+
+        // Función para validar el formulario
+        const validateForm = () => {
+          return true; // En la consulta no necesitamos validación
+        };
+
+        return {
+          filters,
+          contactos,
+          loading,
+          deleteContacto,
+          crearProforma,
+          crearFactura,
+          handleSearch,
+          verContacto,
+          nuevoContacto,
+          validateForm
+        };
+      }
+    }).mount('#app');
+  </script>
+  
+  <!-- Contenedor para notificaciones -->
+  <div id="notificaciones-contenedor"></div>
+</body>
+</html>

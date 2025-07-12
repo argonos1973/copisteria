@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factura</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #fff;
+            font-size: 12px;
+        }
+
+        .header {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .factura-info {
+            margin-bottom: 10px;
+        }
+
+        .factura-info p {
+            margin: 3px 0;
+        }
+
+        #logo {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 90px;
+            height: auto;
+        }
+
+        .direcciones {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .emisor {
+            width: 40%;
+        }
+
+        .cliente {
+            width: 40%;
+            position: absolute;
+            right: 0;
+            text-align: right;
+        }
+
+        .emisor p {
+            margin: 2px 0;
+            line-height: 1.1;
+        }
+
+        .cliente p {
+            margin: 2px 0;
+            line-height: 1.1;
+        }
+
+        .cliente h2 {
+            font-size: 14px;
+            margin: 0 0 8px 0;
+            text-align: right;
+        }
+
+        .detalle-concepto {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detalle-descripcion {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8f8f8;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th:first-child, td:first-child {
+            text-align: left;
+        }
+
+        .cantidad {
+            text-align: center;
+        }
+
+        .precio, .total {
+            text-align: right;
+        }
+
+        .totales {
+            width: 300px;
+            margin-left: auto;
+        }
+
+        .totales p {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .condiciones {
+            margin-top: 30px;
+        }
+
+        .pie-pagina {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 10px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Factura</h1>
+        <img id="logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAAAyCAQAAAAAPLY3AAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAAmJLR0QA/4ePzL8AAAAHdElNRQfkAx4KNSdKQPZbAAAEsElEQVRo3u2ZS2yUVRTHf3c6bWmLFAUhIBT5qPIhIbRK2bhwYeJGE+NGEhZq0IWBFRITE1iIGDXRjRE2riSEaGICCw3EaGKIiRrsAEJaaSnUlpampbSd1zlnFnfu9303RUqH6XjW9z3fPffce/7nf9+PRmfJBpDmB+YRVqIzPM+k9GI/LuAezifM4+eIeZu7KHMuYMrrTAUXvcdcgMFNbOPeAOZKM2KvcheWXRifBsIxjInwNzD2dJQNkRQZI88+vLIXYz/GXLWTHifMj4Ey4pQQXOZjfpXmQDnGSn4hx0m12mPFTN3HWMIq4/k9HGU/Y5oyvMsD7GS5XilMIpUzxXf2UcE2Zikv2/mLVXwr7fmyA6PEMvs5xQ+KjMHCZB9jLlUmKTGXhH3HSHKEXo7JpgE/VqYKLhOXcgljG6vIJ0jYTNDJBJ18r5zbXS9FxhmjtqBpMc+zhPtZxDWO4mI5k2s28BWTMuzvTU/XRnkjwA9Q5jNucIwtfMATrOVVB9j/9z2jLJOURJn46VMMcZH93MsGPiJBDMVSM0iXmvAc5xlV7/+7QnkzuXKUfawg0dQORnXnEBHjhGSxcJn9fMMzTPjOGWacg9h8xLl/lXcnXjw2ZkU5oypK/fz+mJPHIY+EzUm20Ntwo/h9qMwBfvbkKlHhLLbfnCMxSo1NkEgyVWW2k8/dRdqGN0iGMUr6W9oQc26yCZN2nVQKdNPZ8C/yP0R5jAyXeVz9mVXlpNFUqY9Sma/VpyGHhE15A+lrkzE6T42c+iBLOeTIUQ9NlMqc4BI1YtVDmYwXGHOIEbLmWMvzvKkOoZbzqLwb9m96GeE62ywu0WMJ+zDe8y9B/2AEPVuiQ+VgSEU5JQ9zN+vYwgaWgQRbHvBsOjBrTbUeRUJ2s4OXucKPqrrF5NQJ0jwh412YOCQ67e8lhUXNW4laTvERm9nIMXYwzK+YQvVrXScVF4eL/N6w5Z4ghyNWK+L4GOMUl3hblWazrCirvqGoDnGcPG9oNvI1RSXKYw3P1hkvM8DfbFEbBuV9SrxCnByTDPKSZA6s0qk0RYnL7MXhfCBH5AtnYmq9OUxK4FVb5sKi4hJ5XpcJCRJWdBnH0dLRnbfZE0R5Xz3eXTyCf/bGKQUcBvIK5SHyYL3+VYzQy06x41X7qbCSLUyqHPM45PGcSZJM0atD2aBNJiA5i1KOMRk2Q5WFLKGrnUx1GhkmOMsnAcYlzD5MRXXWSuuUXmMxLzAhmbAYs0MvFGM51ZVkOYtLkt4goVwCi1Uo92B8LJtCdtbKbZEuiuRJkGNXcHYqnKHIKE9LGvQQ5lM+YzF55RA8Z9jKLXGuqxpfqh1N9a81jcPEjC4h24Kzoymk6eGmwM5wJajzVf41Sh13RmXqJM0iDjDMK2wC3uZBdvMkm8HhYpG0mjSM7TrEanLZikUJYybrhBOA401OudNO3GWaARZRYS75wLBQxFTZG5xNGCM0TXtDHnVmKTDGlHCGFEWg3LCVg7RMNTBv0dv0zP9eAi5DvUd5mRdZAkzQy042s41B+uhhpvJTkxK2AeNv9pKIqxJKssoAAAAldEVYdGRhdGU6Y3JlYXRlADIwMjAtMDMtMzBUMTA6NTM6MzkrMDA6MDCBnCL4AAAAJXRFWHRkYXRlOm1vZGlmeQAyMDIwLTAzLTMwVDEwOjUzOjM5KzAwOjAw8MGaRAAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAAASUVORK5CYII=") alt="Logo">
+        <div class="factura-info">
+            <p><strong>Número #</strong> <span id="numero">F250059</span></p>
+            <p><strong>Fecha</strong> <span id="fecha">29/03/2025</span></p>
+        </div>
+    </div>
+
+    <div class="direcciones">
+        <div class="emisor">
+            <p>SAMUEL RODRIGUEZ MIQUEL</p>
+            <p>LEGALITAT, 70</p>
+            <p>BARCELONA (08024), BARCELONA, España</p>
+            <p>44007535W</p>
+            <p>info@aleph70.com</p>
+        </div>
+
+        <div class="cliente">
+            <h2>Cliente</h2>
+            <p>POL RODRIGUEZ MIQUEL</p>
+            <p>ENCARNACION 20 ENTLO 1º</p>
+            <p>08012, Barcelona</p>
+            <p>44015615D</p>
+        </div>
+    </div>
+
+    <div class="detalles">
+        <table>
+            <thead>
+                <tr>
+                    <th>Concepto</th>
+                    <th class="cantidad">Cantidad</th>
+                    <th class="precio">Precio</th>
+                    <th class="precio">IVA %</th>
+                    <th class="total">Total</th>
+                </tr>
+            </thead>
+            <tbody id="detalles-factura">
+                
+                        <tr>
+                            <td>
+                                <div class="detalle-concepto">
+                                    <span>150 TARJETAS COLOR 1 CARA(300GR)</span>
+                                    <span class='detalle-descripcion'>29/03/2025</span>
+                                </div>
+                            </td>
+                            <td class="cantidad">1</td>
+                            <td class="precio">20,66€</td>
+                            <td class="precio">21.0%</td>
+                            <td class="total">25,00€</td>
+                        </tr>
+                    
+            </tbody>
+        </table>
+    </div>
+
+    <div class="totales">
+        <p><span>BASE IMPONIBLE</span> <span id="base">20,66€</span></p>
+        <p><span>IVA 21%</span> <span id="iva">4,34€</span></p>
+        <p><strong>TOTAL</strong> <strong id="total"></strong></p>
+    </div>
+
+    <div class="condiciones">
+        <p><strong>Condiciones de pago</strong></p>
+        <p id="forma-pago">Tarjeta</p>
+    </div>
+
+    
+</body>
+</html>

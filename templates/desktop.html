@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Ventanas RouterOS</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        #desktop {
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            position: relative;
+        }
+
+        .window {
+            position: absolute;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .window.maximized {
+            width: 100% !important;
+            height: calc(100% - 40px) !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
+
+        .window.minimized {
+            display: none;
+        }
+
+        .window-header {
+            background: #2a5298;
+            color: white;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            cursor: move;
+        }
+
+        .window-title {
+            flex-grow: 1;
+            margin-left: 8px;
+            font-size: 14px;
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .window-button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .window-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .window-content {
+            flex-grow: 1;
+            padding: 16px;
+            overflow: auto;
+        }
+
+        .taskbar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: rgba(42, 82, 152, 0.95);
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            z-index: 9999;
+        }
+
+        .start-button {
+            background: none;
+            border: none;
+            color: white;
+            padding: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border-radius: 4px;
+        }
+
+        .start-button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .start-menu {
+            position: absolute;
+            bottom: 40px;
+            left: 0;
+            width: 300px;
+            background: white;
+            border-radius: 8px 8px 0 0;
+            box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            color: #333;
+            text-decoration: none;
+        }
+
+        .menu-item:hover {
+            background: #f0f0f0;
+        }
+
+        .taskbar-items {
+            display: flex;
+            gap: 4px;
+            margin-left: 8px;
+            flex-grow: 1;
+        }
+
+        .taskbar-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .taskbar-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .taskbar-item.active {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="desktop">
+        <!-- Ventanas -->
+        <div v-for="window in windows" 
+             :key="window.id" 
+             :class="['window', { maximized: window.isMaximized, minimized: window.isMinimized }]"
+             :style="{ 
+                 left: window.x + 'px', 
+                 top: window.y + 'px',
+                 width: window.width + 'px',
+                 height: window.height + 'px',
+                 zIndex: window.zIndex
+             }"
+             @mousedown="bringToFront(window)">
+            
+            <div class="window-header" @mousedown="startDrag($event, window)">
+                <span class="material-icons">{{ window.icon }}</span>
+                <div class="window-title">{{ window.title }}</div>
+                <div class="window-controls">
+                    <button class="window-button" @click="minimizeWindow(window.id)">
+                        <span class="material-icons">remove</span>
+                    </button>
+                    <button class="window-button" @click="maximizeWindow(window.id)">
+                        <span class="material-icons">{{ window.isMaximized ? 'crop_square' : 'crop_din' }}</span>
+                    </button>
+                    <button class="window-button" @click="closeWindow(window.id)">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="window-content">
+                {{ window.content }}
+            </div>
+        </div>
+
+        <!-- Barra de tareas -->
+        <div class="taskbar">
+            <button class="start-button" @click="toggleStartMenu">
+                <span class="material-icons">apps</span>
+                Inicio
+            </button>
+            
+            <div class="taskbar-items">
+                <div v-for="item in taskbarItems" 
+                     :key="item.id"
+                     :class="['taskbar-item', { active: activeWindow === item.id }]"
+                     @click="minimizeWindow(item.id)">
+                    <span class="material-icons">{{ item.icon }}</span>
+                    {{ item.title }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Menú de inicio -->
+        <div v-if="isStartMenuOpen" class="start-menu">
+            <a v-for="option in menuOptions" 
+               :key="option.id"
+               class="menu-item"
+               @click="openWindow(option)">
+                <span class="material-icons">{{ option.icon }}</span>
+                {{ option.title }}
+            </a>
+        </div>
+    </div>
+
+    <script src="/static/js/desktop.js"></script>
+<script src="/static/notificaciones_web.js"></script>
+</body>
+</html>

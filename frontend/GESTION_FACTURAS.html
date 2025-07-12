@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Facturas</title>
+
+    <!-- Enlace a Font Awesome (iconos) -->
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+    />
+
+    <!-- Enlace a tus hojas de estilos -->
+    <link rel="stylesheet" href="../static/styles.css">
+    <link rel="stylesheet" href="../static/notificaciones.css">
+
+</head>
+<body>
+    <div class="cabecera-ticket">
+        <div class="form-inline">
+            <div class="detalle-proforma-item">
+                <label for="fecha">Fecha</label>
+                <input type="text" id="fecha" required readonly class="readonly-field">
+            </div>
+            <div class="detalle-proforma-item">
+                <label for="numero">Factura</label>
+                <input type="text" id="numero" required readonly class="readonly-field">
+            </div>
+            <div class="detalle-proforma-item">
+                <label for="estado">Estado</label>
+                <input type="text" id="estado" readonly class="readonly-field">
+            </div>
+            <div class="detalle-proforma-item">
+                <label for="tipo-factura-select">Tipo</label>
+                <select id="tipo-factura-select" class="form-control">
+                    <option value="N">Normal (con descuentos)</option>
+                    <option value="A">Tipo A (sin descuentos)</option>
+                </select>
+            </div>
+            <div class="detalle-proforma-item">
+                <label for="total-proforma" style="text-align: right;">Total (€)</label>
+                <input type="text" id="total-proforma" value="0.00" readonly class="total-proforma-display">
+            </div>
+            <div class="detalle-proforma-item">
+                <input type="text" id="idfactura" required readonly class="hidden-field" style="display: none;">
+                <input type="hidden" id="tipo-factura" value="N">
+            </div>
+        </div>
+    </div>
+</div>
+
+    <div id="cabecera-proforma">
+        <div class="contact-info">
+            <input type="text" id="razonSocial" readonly />
+            <input type="text" id="identificador" readonly />
+            <input type="text" id="direccion" readonly />
+            <div class="cp-poblacion">
+                <p id="cp-localidad" style="margin-bottom:5px;"></p>
+            </div>
+            <input type="text" id="provincia" readonly />
+        </div>
+    </div>
+
+    <form id="form-detalle-proforma">
+      
+        <div class="detalle-proforma-container">
+            <div class="detalle-proforma-item" style="flex: 2">
+                <label for="busqueda-producto">Producto</label>
+                <input type="text" id="busqueda-producto" placeholder="Buscar producto..." style="width: 100%;">
+              </div>
+            <div class="detalle-proforma-item" style="flex: 2">
+                <select id="concepto-detalle" style="width: 100%;" required>
+                  <option value="">Seleccione un producto...</option>
+                </select>
+              </div>
+            <div id="campo-concepto-personalizado" style="display: none;">
+                <label for="concepto-input">Concepto:</label>
+                <input type="text" id="concepto-input" placeholder="Ingrese el concepto" style="width: 200px;" />
+            </div>
+            <div class="detalle-proforma-item" style="flex: 3">
+                <label for="descripcion-detalle">Descripción</label>
+                <input type="text" id="descripcion-detalle" style="width: 100%;">
+              </div>
+            <div class="detalle-proforma-item-importe" style="flex: 1">
+                <label for="cantidad-detalle">Cantidad</label>
+                <input type="number" id="cantidad-detalle" value="1" required min="0" step="1">
+              </div>
+            <div class="detalle-proforma-item-importe" style="flex: 1">
+                <input type="hidden" id="precio-detalle-orig" value="0">
+                <label for="precio-detalle">Precio</label>
+                <input type="number" id="precio-detalle" value="0" required>
+              </div>
+            <div class="detalle-proforma-item-importe" style="flex: 1">
+                <label for="impuesto-detalle">IVA (%)</label>
+                <input type="number" id="impuesto-detalle" value="21" readonly class="readonly-field">
+              </div>
+            <div class="detalle-proforma-item-importe" style="flex: 1">
+                <label for="total-detalle">Total</label>
+                <input type="number" id="total-detalle" value="0" readonly class="readonly-field">
+              </div>
+            <div class="detalle-proforma-item boton-alineado" style="flex: 1">
+                <button type="button" id="btn-agregar-detalle">Añadir</button>
+            </div>
+        </div>
+    </form>
+
+    <div id="detalle-proforma-grid">
+        <div style="max-height: 350px; overflow-y: auto;">
+            <table id="tabla-detalle-proforma">
+                <thead>
+                    <tr>
+                        <th class="columna-fija" style="width: 300px;">Concepto</th>
+                        <th class="columna-fija-descripcion" style="width: 200px;">Descripción</th>
+                        <th class="columna-fija-cantidad" style="width: 80px; text-align: right;">Cantidad</th>
+                        <th class="columna-fija-precio" style="width: 100px; text-align: right;">Precio</th>
+                        <th class="columna-fija-iva" style="width: 80px; text-align: right;">% IVA</th>
+                        <th class="columna-fija-total" style="width: 100px; text-align: right;">Total</th>
+                        <th class="columna-eliminar" style="width: 40px; text-align: center;">✕</th>
+                    </tr>
+                </thead>
+                <tbody id="detalles"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="guardar-proforma-boton">
+        <button type="button" id="btnCancelar">Volver</button>
+        <button type="button" id="btnGuardar">Guardar</button>
+        <button type="button" id="btnCobrarp">Cobrar</button>
+        <button type="button" id="btnAnular" class="btn-danger">Anular</button>
+    </div>
+
+  
+    <!-- Scripts (con type="module" si haces import/export) -->
+    <script type="module" src="../static/gestion_facturas.js" defer></script>
+
+    <!-- Contenedor para notificaciones -->
+    <div id="notificaciones-contenedor"></div>
+</body>
+</html>

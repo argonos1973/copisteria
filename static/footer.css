@@ -1,0 +1,201 @@
+/* Estilos comunes para los footers */
+.fixed-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    z-index: 1000;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* Estilos específicos para el footer de facturas/proformas */
+.fixed-footer-factura table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fixed-footer-factura td {
+    width: 100px;
+    min-width: 100px;
+    box-sizing: border-box;
+    padding: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fixed-footer-factura td[style*="width: 250px"] {
+    width: 250px;
+    min-width: 250px;
+}
+
+.fixed-footer-factura .content-cell {
+    display: inline-block;
+    transition: opacity 0.2s;
+}
+
+.fixed-footer-factura .content-cell.hidden {
+    opacity: 0;
+}
+
+.fixed-footer-factura td:last-child {
+    position: relative;
+    padding: 0;
+}
+
+.fixed-footer-factura .toggle-totals {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.fixed-footer-gastos .toggle-totals {
+    position: static !important;
+    left: 0 !important;
+    top: 0 !important;
+    transform: none !important;
+    width: 120px !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+}
+
+
+
+.fixed-footer-factura .toggle-totals i {
+    font-size: 16px;
+    color: #666;
+    transition: color 0.3s;
+}
+
+.fixed-footer-factura .toggle-totals i:hover {
+    color: #333;
+}
+
+/* Estilos específicos para el footer de gastos */
+.fixed-footer-gastos table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fixed-footer-gastos td {
+    width: 120px;
+    min-width: 100px;
+    box-sizing: border-box;
+    padding: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fixed-footer-gastos .content-cell {
+    display: inline-block;
+    transition: opacity 0.2s;
+}
+
+.fixed-footer-gastos .content-cell.hidden {
+    opacity: 0;
+}
+
+.fixed-footer-gastos td:last-child {
+    position: relative;
+    padding: 0;
+}
+
+.fixed-footer-gastos .toggle-totals {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    cursor: pointer;
+}
+
+.fixed-footer-gastos .toggle-totals i {
+    font-size: 18px;
+    color: #666;
+    transition: color 0.3s;
+}
+
+.fixed-footer-gastos .toggle-totals i:hover {
+    color: #333;
+}
+
+/* Estilos específicos para el footer de tickets */
+.fixed-footer-ticket table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.fixed-footer-ticket td {
+    width: 100px;
+    min-width: 100px;
+    box-sizing: border-box;
+    padding: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fixed-footer-ticket td[style*="width: 250px"] {
+    width: 250px;
+    min-width: 250px;
+}
+
+.fixed-footer-ticket .content-cell {
+    display: inline-block;
+    transition: opacity 0.2s;
+}
+
+.fixed-footer-ticket .content-cell.hidden {
+    opacity: 0;
+}
+
+.fixed-footer-ticket td:last-child {
+    position: relative;
+    padding: 0;
+}
+
+.fixed-footer-ticket .toggle-totals {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.fixed-footer-ticket .toggle-totals i {
+    font-size: 16px;
+    color: #666;
+    transition: color 0.3s;
+}
+
+.fixed-footer-ticket .toggle-totals i:hover {
+    color: #333;
+}

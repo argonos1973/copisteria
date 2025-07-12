@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schema xmlns="http://www.w3.org/2001/XMLSchema" 
+    xmlns:fe="http://www.facturae.es/Facturae/2014/v3.2.2/Facturae" 
+    xmlns:ds="http://www.w3.org/2000/09/xmldsig#" 
+    targetNamespace="http://www.facturae.es/Facturae/2014/v3.2.2/Facturae" 
+    elementFormDefault="unqualified">
+
+    <element name="Facturae">
+        <complexType>
+            <sequence>
+                <element name="FileHeader">
+                    <complexType>
+                        <sequence>
+                            <element name="SchemaVersion" type="string" fixed="3.2.2"/>
+                            <element name="Modality" type="string" fixed="I"/>
+                            <element name="InvoiceIssuerType" type="string" fixed="EM"/>
+                            <element name="Batch">
+                                <complexType>
+                                    <sequence>
+                                        <element name="BatchIdentifier" type="string"/>
+                                        <element name="InvoicesCount" type="int"/>
+                                        <element name="TotalInvoicesAmount">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="TotalAmount" type="decimal"/>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="TotalOutstandingAmount">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="TotalAmount" type="decimal"/>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="TotalExecutableAmount">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="TotalAmount" type="decimal"/>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="InvoiceCurrencyCode" type="string" fixed="EUR"/>
+                                    </sequence>
+                                </complexType>
+                            </element>
+                        </sequence>
+                    </complexType>
+                </element>
+                <element name="Parties">
+                    <complexType>
+                        <sequence>
+                            <element name="SellerParty">
+                                <complexType>
+                                    <sequence>
+                                        <element name="TaxIdentification">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="PersonTypeCode" type="string"/>
+                                                    <element name="ResidenceTypeCode" type="string" fixed="R"/>
+                                                    <element name="TaxIdentificationNumber" type="string"/>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="LegalEntity" minOccurs="0">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="CorporateName" type="string"/>
+                                                    <element name="AddressInSpain">
+                                                        <complexType>
+                                                            <sequence>
+                                                                <element name="Address" type="string"/>
+                                                                <element name="PostCode" type="string"/>
+                                                                <element name="Town" type="string"/>
+                                                                <element name="Province" type="string"/>
+                                                                <element name="CountryCode" type="string" fixed="ESP"/>
+                                                            </sequence>
+                                                        </complexType>
+                                                    </element>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="Individual" minOccurs="0">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="Name" type="string"/>
+                                                    <element name="FirstSurname" type="string"/>
+                                                    <element name="SecondSurname" type="string" minOccurs="0"/>
+                                                    <element name="AddressInSpain">
+                                                        <complexType>
+                                                            <sequence>
+                                                                <element name="Address" type="string"/>
+                                                                <element name="PostCode" type="string"/>
+                                                                <element name="Town" type="string"/>
+                                                                <element name="Province" type="string"/>
+                                                                <element name="CountryCode" type="string" fixed="ESP"/>
+                                                            </sequence>
+                                                        </complexType>
+                                                    </element>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                    </sequence>
+                                </complexType>
+                            </element>
+                            <element name="BuyerParty">
+                                <complexType>
+                                    <sequence>
+                                        <element name="TaxIdentification">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="PersonTypeCode" type="string"/>
+                                                    <element name="ResidenceTypeCode" type="string" fixed="R"/>
+                                                    <element name="TaxIdentificationNumber" type="string"/>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="LegalEntity" minOccurs="0">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="CorporateName" type="string"/>
+                                                    <element name="AddressInSpain">
+                                                        <complexType>
+                                                            <sequence>
+                                                                <element name="Address" type="string"/>
+                                                                <element name="PostCode" type="string"/>
+                                                                <element name="Town" type="string"/>
+                                                                <element name="Province" type="string"/>
+                                                                <element name="CountryCode" type="string" fixed="ESP"/>
+                                                            </sequence>
+                                                        </complexType>
+                                                    </element>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="Individual" minOccurs="0">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="Name" type="string"/>
+                                                    <element name="FirstSurname" type="string"/>
+                                                    <element name="SecondSurname" type="string" minOccurs="0"/>
+                                                    <element name="AddressInSpain">
+                                                        <complexType>
+                                                            <sequence>
+                                                                <element name="Address" type="string"/>
+                                                                <element name="PostCode" type="string"/>
+                                                                <element name="Town" type="string"/>
+                                                                <element name="Province" type="string"/>
+                                                                <element name="CountryCode" type="string" fixed="ESP"/>
+                                                            </sequence>
+                                                        </complexType>
+                                                    </element>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                    </sequence>
+                                </complexType>
+                            </element>
+                        </sequence>
+                    </complexType>
+                </element>
+                <element name="Invoices">
+                    <complexType>
+                        <sequence>
+                            <element name="Invoice">
+                                <complexType>
+                                    <sequence>
+                                        <element name="InvoiceHeader">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="InvoiceNumber" type="string"/>
+                                                    <element name="InvoiceSeriesCode" type="string"/>
+                                                    <element name="InvoiceDocumentType" type="string" fixed="FC"/>
+                                                    <element name="InvoiceClass" type="string" fixed="OO"/>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="InvoiceIssueData">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="IssueDate" type="date"/>
+                                                    <element name="InvoiceCurrencyCode" type="string" fixed="EUR"/>
+                                                    <element name="TaxCurrencyCode" type="string" fixed="EUR"/>
+                                                    <element name="LanguageName" type="string" fixed="es"/>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="TaxesOutputs">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="Tax">
+                                                        <complexType>
+                                                            <sequence>
+                                                                <element name="TaxTypeCode" type="string" fixed="01"/>
+                                                                <element name="TaxRate" type="decimal"/>
+                                                                <element name="TaxableBase">
+                                                                    <complexType>
+                                                                        <sequence>
+                                                                            <element name="TotalAmount" type="decimal"/>
+                                                                        </sequence>
+                                                                    </complexType>
+                                                                </element>
+                                                                <element name="TaxAmount">
+                                                                    <complexType>
+                                                                        <sequence>
+                                                                            <element name="TotalAmount" type="decimal"/>
+                                                                        </sequence>
+                                                                    </complexType>
+                                                                </element>
+                                                            </sequence>
+                                                        </complexType>
+                                                    </element>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="InvoiceTotals">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="TotalGrossAmount" type="decimal"/>
+                                                    <element name="TotalGeneralDiscounts" type="decimal" minOccurs="0"/>
+                                                    <element name="TotalGeneralSurcharges" type="decimal" minOccurs="0"/>
+                                                    <element name="TotalGrossAmountBeforeTaxes" type="decimal"/>
+                                                    <element name="TotalTaxOutputs" type="decimal"/>
+                                                    <element name="TotalTaxesWithheld" type="decimal" minOccurs="0"/>
+                                                    <element name="InvoiceTotal" type="decimal"/>
+                                                    <element name="TotalOutstandingAmount" type="decimal"/>
+                                                    <element name="TotalExecutableAmount" type="decimal"/>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                        <element name="Items">
+                                            <complexType>
+                                                <sequence>
+                                                    <element name="InvoiceLine" maxOccurs="unbounded">
+                                                        <complexType>
+                                                            <sequence>
+                                                                <element name="ItemDescription" type="string"/>
+                                                                <element name="Quantity" type="decimal"/>
+                                                                <element name="UnitPriceWithoutTax" type="decimal"/>
+                                                                <element name="TotalCost" type="decimal"/>
+                                                                <element name="GrossAmount" type="decimal"/>
+                                                                <element name="TaxesOutputs">
+                                                                    <complexType>
+                                                                        <sequence>
+                                                                            <element name="Tax">
+                                                                                <complexType>
+                                                                                    <sequence>
+                                                                                        <element name="TaxTypeCode" type="string" fixed="01"/>
+                                                                                        <element name="TaxRate" type="decimal"/>
+                                                                                        <element name="TaxableBase">
+                                                                                            <complexType>
+                                                                                                <sequence>
+                                                                                                    <element name="TotalAmount" type="decimal"/>
+                                                                                                </sequence>
+                                                                                            </complexType>
+                                                                                        </element>
+                                                                                        <element name="TaxAmount">
+                                                                                            <complexType>
+                                                                                                <sequence>
+                                                                                                    <element name="TotalAmount" type="decimal"/>
+                                                                                                </sequence>
+                                                                                            </complexType>
+                                                                                        </element>
+                                                                                    </sequence>
+                                                                                </complexType>
+                                                                            </element>
+                                                                        </sequence>
+                                                                    </complexType>
+                                                                </element>
+                                                            </sequence>
+                                                        </complexType>
+                                                    </element>
+                                                </sequence>
+                                            </complexType>
+                                        </element>
+                                    </sequence>
+                                </complexType>
+                            </element>
+                        </sequence>
+                    </complexType>
+                </element>
+            </sequence>
+        </complexType>
+    </element>
+    
+    <!-- Tipos simples -->
+    <simpleType name="DoubleTwoDecimalType">
+      <restriction base="decimal">
+         <fractionDigits value="2"/>
+      </restriction>
+    </simpleType>
+    
+    <simpleType name="DoubleSixDecimalType">
+      <restriction base="decimal">
+         <fractionDigits value="6"/>
+      </restriction>
+    </simpleType>
+</schema>
