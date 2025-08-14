@@ -2,6 +2,8 @@
  * Script para manejar la actualización del extracto bancario mediante scraping
  */
 
+import { mostrarNotificacion } from './notificaciones.js';
+
 // Variables globales
 let iconoActualizar;
 

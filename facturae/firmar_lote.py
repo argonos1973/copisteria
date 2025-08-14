@@ -16,14 +16,14 @@ módulo :pymod:`facturae`.
 """
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from datetime import datetime
-from pathlib import Path
-import logging
-
 # --- Ajuste de ruta para ejecución directa ----------------------------------
+from pathlib import Path
 from pathlib import Path as _Path
+
 _BASE_DIR = _Path(__file__).resolve().parent
 _PARENT_DIR = _BASE_DIR.parent
 if str(_PARENT_DIR) not in sys.path:
@@ -31,7 +31,7 @@ if str(_PARENT_DIR) not in sys.path:
 # -----------------------------------------------------------------------------
 
 # Dependencias internas (tras ajustar sys.path)
-from facturae import CLAVE_PRIVADA_PATH, CERTIFICADO_PATH
+from facturae import CERTIFICADO_PATH, CLAVE_PRIVADA_PATH
 from facturae.firma import firmar_xml
 
 # Alias del certificado dentro del almacén PKCS#12

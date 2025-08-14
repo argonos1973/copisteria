@@ -45,7 +45,7 @@ def crear_archivo_configuracion(ruta_config="/var/www/html/face_config.json"):
         json.dump(config, f, indent=4, ensure_ascii=False)
     
     print(f"✅ Archivo de configuración creado en: {ruta_config}")
-    print(f"⚠️ IMPORTANTE: Modifique este archivo con sus datos reales antes de enviar facturas a FACe")
+    print("⚠️ IMPORTANTE: Modifique este archivo con sus datos reales antes de enviar facturas a FACe")
     
     return True
 
@@ -64,7 +64,7 @@ def enviar_facturas_directorio(directorio, solo_validadas=True):
         print(f"❌ Error: El directorio {directorio} no existe")
         return None
     
-    print(f"\n=== ENVÍO DE FACTURAS A FACE ===")
+    print("\n=== ENVÍO DE FACTURAS A FACE ===")
     print(f"Directorio: {directorio}")
     print(f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
     
@@ -119,7 +119,7 @@ def enviar_facturas_directorio(directorio, solo_validadas=True):
             resultado = face_client.enviar_factura(factura)
             
             if resultado['numero_registro']:
-                print(f"✅ Factura enviada correctamente")
+                print("✅ Factura enviada correctamente")
                 print(f"   Número de registro: {resultado['numero_registro']}")
                 
                 resultados['enviadas'].append({
@@ -128,7 +128,7 @@ def enviar_facturas_directorio(directorio, solo_validadas=True):
                     'timestamp': resultado['timestamp']
                 })
             else:
-                print(f"❌ Error al enviar factura")
+                print("❌ Error al enviar factura")
                 print(f"   Código: {resultado['codigo_registro']} - {resultado['descripcion']}")
                 
                 resultados['errores'].append({
@@ -143,7 +143,7 @@ def enviar_facturas_directorio(directorio, solo_validadas=True):
             })
     
     # Imprimir resumen
-    print(f"\n=== RESUMEN DE ENVÍO ===")
+    print("\n=== RESUMEN DE ENVÍO ===")
     print(f"Total facturas procesadas: {len(facturas_xsig)}")
     print(f"Facturas enviadas: {len(resultados['enviadas'])}")
     print(f"Facturas con error: {len(resultados['errores'])}")
@@ -193,7 +193,7 @@ def main():
             return
             
         if not args.factura.lower().endswith('.xsig'):
-            print(f"❌ Error: La factura debe ser un archivo .xsig (firmado)")
+            print("❌ Error: La factura debe ser un archivo .xsig (firmado)")
             return
             
         print(f"📤 Enviando factura individual: {args.factura}")
@@ -204,10 +204,10 @@ def main():
             resultado = face_client.enviar_factura(args.factura)
             
             if resultado['numero_registro']:
-                print(f"✅ Factura enviada correctamente")
+                print("✅ Factura enviada correctamente")
                 print(f"   Número de registro: {resultado['numero_registro']}")
             else:
-                print(f"❌ Error al enviar factura")
+                print("❌ Error al enviar factura")
                 print(f"   Código: {resultado['codigo_registro']} - {resultado['descripcion']}")
         except Exception as e:
             print(f"❌ Error al enviar factura: {str(e)}")

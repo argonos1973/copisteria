@@ -5,8 +5,8 @@
 Módulo de validación de identificadores fiscales para Facturae.
 """
 
-import re
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 

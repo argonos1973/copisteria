@@ -201,6 +201,35 @@ def formatear_numero_documento(tipo, conn=None):
         return None
 
 # ------------------- Optimización: creación de índices ------------------- #
+
+def ensure_gastos_indices():
+    """Crea índices útiles para acelerar filtros y ordenación en la tabla gastos."""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # Índice por año+mes+día de fecha_valor para ordenar y filtrar rápido
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_gastos_fecha_valor_iso
+            ON gastos (date(substr(fecha_valor,7,4)||'-'||substr(fecha_valor,4,2)||'-'||substr(fecha_valor,1,2)))
+            """
+        )
+        # Índice por concepto en minúsculas para acelerar LIKE '%texto%'
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_gastos_concepto_lower
+            ON gastos (lower(concepto))
+            """
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"[DB_UTILS] Error al crear índices de gastos: {e}")
+    finally:
+        try:
+            conn.close()
+        except:
+            pass
+
 def ensure_factura_indices():
     """
     Crea índices que optimizan las consultas más frecuentes sobre la tabla
@@ -225,3 +254,4 @@ def ensure_factura_indices():
 
 # Ejecutar al importar el módulo para garantizar que existan
 ensure_factura_indices()
+ensure_gastos_indices()

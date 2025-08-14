@@ -8,7 +8,6 @@ para generar, registrar y enviar facturas a AEAT
 """
 
 import base64
-import hashlib
 import json
 from datetime import datetime
 
@@ -19,7 +18,6 @@ from .db.utils import get_db_connection, redondear_importe
 from .hash.sha256 import generar_hash_factura, obtener_ultimo_hash
 from .qr.generator import generar_qr_verifactu
 from .soap.client import enviar_registro_aeat
-from .xml.generator import generar_xml_para_aeat
 
 
 def generar_datos_verifactu_para_factura(factura_id):
@@ -214,6 +212,31 @@ def generar_datos_verifactu_para_factura(factura_id):
             conn.close()
         
 # ---------------------------------------------------------------------------
+
+# (Función _ensure_tickets_table_exists eliminada – la tabla tickets ya existe)
+    """Crea la tabla tickets si no existe.
+    Solo con las columnas necesarias para el flujo VERI*FACTU de tickets.
+    """
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS tickets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fecha TEXT,
+                numero TEXT,
+                importe_bruto REAL,
+                importe_impuestos REAL,
+                importe_cobrado REAL,
+                total REAL,
+                timestamp TEXT,
+                estado TEXT,
+                formaPago TEXT
+            )
+        """)
+        conn.commit()
+    except Exception as exc:
+        logger.error("No se pudo crear la tabla tickets: %s", exc)
+
 
 def generar_datos_verifactu_para_ticket(ticket_id: int, push_notif=None):
     """Flujo VERI*FACTU adaptado a tickets.

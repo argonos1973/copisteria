@@ -6,9 +6,9 @@ Replica la lógica de `verifactu.soap.client.enviar_registro_aeat` pero
 consume la tabla `tickets` y usa TipoFactura = 'S'.
 """
 
-import hashlib
 import logging
 import os
+from constantes import DB_NAME
 import sqlite3
 from datetime import datetime
 
@@ -27,13 +27,22 @@ logger = logging.getLogger("verifactu")
 
 def _locate_db() -> str | None:
     """Devuelve ruta absoluta de la base de datos aleph70.db o None."""
+    # Intentar primero la ruta definida en constantes.DB_NAME
+    if os.path.exists(DB_NAME):
+        return DB_NAME
+    logger.warning("%s no existe, buscando rutas alternativas", DB_NAME)
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    db_path = os.path.join(base_dir, "aleph70.db")
-    if os.path.exists(db_path):
-        return db_path
-    alt_path = os.path.join(os.path.dirname(base_dir), "aleph70.db")
-    if os.path.exists(alt_path):
-        return alt_path
+    # Intentar rutas relativas comunes y registrar intentos
+    candidate_paths = [
+        os.path.join(base_dir, "db", "aleph70.db"),              # /var/www/html/db/aleph70.db
+        os.path.join(base_dir, "aleph70.db"),                    # /var/www/html/aleph70.db
+        os.path.join(os.path.dirname(base_dir), "aleph70.db"),   # /var/www/aleph70.db
+    ]
+    for candidate in candidate_paths:
+        # Log de nivel INFO para que salga en producción
+        logger.info("Probando ruta de BD: %s", candidate)
+        if os.path.exists(candidate):
+            return candidate
     return None
 
 
@@ -94,29 +103,41 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
     }
 
     # Determinar primer_registro consultando la BD
-    from verifactu.db.registro import calcular_primer_registro
-    primer_registro_flag = calcular_primer_registro(
+    from verifactu.db.registro import calcular_primer_registro_exacto
+    primer_registro_flag = calcular_primer_registro_exacto(
         nif_emisor,
-        "VerifactuApp",
-        "01",
-        "1.0",
-        "0001",
-        "T",
+        numero_factura,
+        serie,
     )
+    # Guardar valor de primer_registro en la tabla
+    try:
+        from verifactu.db.registro import actualizar_huella_primer_registro
+        actualizar_huella_primer_registro(
+            nif_emisor,
+            serie,
+            numero_factura,
+            None,
+            primer_registro_flag,
+        )
+    except Exception as exc:
+        logger.warning("No se pudo actualizar primer_registro en BD (ticket): %s", exc)
+
     # huella_anterior se mantiene usando último hash del día si no es primer registro
     huella_anterior = None
     if primer_registro_flag == "N":
         fecha_emision = trow["fecha"][:10] if trow["fecha"] else None  # YYYY-MM-DD
         huella_anterior = obtener_ultimo_hash_del_dia(fecha_emision)
 
-    envelope_xml = crear_envelope_soap(
+    envelope_xml, huella_generada = crear_envelope_soap(
         "RegFactuSistemaFacturacion",
         {},
         registro_factura,
         nif_emisor,
         None,
         huella_anterior,
-        primer_registro_flag
+        primer_registro_flag,
+        False,
+        None,
     )
 
     service_url = os.environ.get(
@@ -168,8 +189,12 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
         }
 
     # --- Guardado de la respuesta SOAP ---
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    resp_dir = "/var/www/html/aeat_responses"
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d%H%M%S")
+    base_dir = "/var/www/html/aeat_responses"
+    # Organizar por año/mes: aeat_responses/YYYY/MM
+    year_dir = os.path.join(base_dir, now.strftime("%Y"))
+    resp_dir = os.path.join(year_dir, now.strftime("%m"))
     try:
         os.makedirs(resp_dir, mode=0o777, exist_ok=True)
         file_path = os.path.join(resp_dir, f"ticket_{ticket_id}_{timestamp}.xml")
@@ -193,6 +218,28 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
         logger.warning("No se pudo almacenar respuesta_xml en BBDD para ticket %s: %s", ticket_id, exc)
 
     datos_resp = parsear_respuesta_aeat(response.text)
+
+    # Guardar datos de AEAT en registro_facturacion de forma centralizada
+    try:
+        from verifactu.db.aeat import guardar_datos_aeat_en_registro
+        guardar_datos_aeat_en_registro(ticket_id, response.text)
+    except Exception as exc:
+        logger.warning("No se pudo ejecutar guardar_datos_aeat_en_registro (ticket): %s", exc)
+
+    # Persistir primer_registro calculado por si no existía
+    try:
+        from verifactu.db.registro import actualizar_primer_registro_por_id
+        actualizar_primer_registro_por_id(ticket_id, primer_registro_flag)
+    except Exception as exc:
+        logger.debug("No se pudo persistir primer_registro (ticket): %s", exc)
+
+    # Guardar huella_aeat para reenvíos futuros (huella_generada variable)
+    try:
+        if huella_generada:
+            from verifactu.db.registro import guardar_huella_aeat_por_id
+            guardar_huella_aeat_por_id(ticket_id, huella_generada)
+    except Exception as exc:
+        logger.warning("No se pudo guardar huella_aeat (ticket): %s", exc)
     csv = datos_resp.get("csv")
     if csv:
         try:
@@ -208,6 +255,7 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
             any(l.get("resultado") == "AceptadoConErrores" for l in datos_resp.get("lineas", []))
         ),
         "csv": csv,
+        "huella": huella_generada,
         "estado_envio": estado_ws,
         "response": response.text,
         "id_verificacion": datos_resp.get("id_verificacion") or "AEAT",

@@ -1,7 +1,7 @@
 /**
  * Función principal que se ejecuta al cargar la página.
  */
-import { formatearImporte } from './scripts_utils.js';
+import { formatearImporte, parsearImporte, truncarDecimales } from './scripts_utils.js';
 
 window.onload = function() {
     const idTicket = obtenerIdTicket(); // Obtener el ID del ticket desde la URL
@@ -163,24 +163,35 @@ async function rellenarFactura(datos) {
     tbody.innerHTML = ''; // Limpiar cualquier contenido existente
 
     detalles.forEach(detalle => {
+        // Asegurar números aunque vengan como string con formato europeo
+        const precioNum = (typeof detalle.precio === 'number') ? detalle.precio : parsearImporte(detalle.precio);
+        const cantidadNum = (typeof detalle.cantidad === 'number') ? detalle.cantidad : parsearImporte(detalle.cantidad);
+        const ivaNumRaw = (typeof detalle.impuestos === 'number') ? detalle.impuestos : parsearImporte(detalle.impuestos);
+        const ivaPct    = Math.round(truncarDecimales(ivaNumRaw || 0, 2));
+        // Recalcular total de la línea a partir de precio, cantidad e IVA
+        const subtotal  = (precioNum || 0) * (cantidadNum || 0);
+        const totalNum  = subtotal * (1 + (ivaNumRaw || 0) / 100);
         const fila = document.createElement('tr');
 
         // Asumiendo que los campos son 'concepto', 'precio', 'cantidad', 'impuestos', 'total'
         fila.innerHTML = `
             <td>${detalle.concepto}</td>
-            <td class="numero">${detalle.precio !== undefined ? detalle.precio.toFixed(5).replace('.', ',') : ''}€</td>
-            <td class="numero">${detalle.cantidad}</td>
-            <td class="numero">21</td>
-            <td class="numero">${formatearImporte(detalle.total)}€</td>
+            <td class="numero">${formatearImporte(precioNum)}</td>
+            <td class="numero">${cantidadNum}</td>
+            <td class="numero">${ivaPct}</td>
+            <td class="numero">${formatearImporte(totalNum)}</td>
         `;
 
         tbody.appendChild(fila);
     });
 
-    // Rellenar los totales
-     document.getElementById('base-imponible').textContent = `${formatearImporte(ticket.importe_bruto)}€`;
-     document.getElementById('iva').textContent = `${ticket.importe_impuestos.toFixed(2).replace('.', ',')}€`;
-     document.getElementById('total').textContent = `${formatearImporte(ticket.total)}€`;
+    // Rellenar los totales (parseando por si vienen como string)
+     const brutoNum = (typeof ticket.importe_bruto === 'number') ? ticket.importe_bruto : parsearImporte(ticket.importe_bruto);
+     const ivaTotNum = (typeof ticket.importe_impuestos === 'number') ? ticket.importe_impuestos : parsearImporte(ticket.importe_impuestos);
+     const totalNumTicket = (typeof ticket.total === 'number') ? ticket.total : parsearImporte(ticket.total);
+     document.getElementById('base-imponible').textContent = formatearImporte(brutoNum);
+     document.getElementById('iva').textContent = formatearImporte(ivaTotNum);
+     document.getElementById('total').textContent = formatearImporte(totalNumTicket);
 
     // Mostrar información VERI*FACTU
     const verifactuDisponible = datos.codigo_qr && datos.codigo_qr.length > 50;

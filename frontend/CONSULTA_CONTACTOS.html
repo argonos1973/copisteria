@@ -253,9 +253,9 @@
         const crearFactura = (id) => {
           console.log(`Crear Factura para el contacto ID:&& ${id}`);
           guardarFiltros();
-          // Asegurarnos de que el origen se guarda en sessionStorage
-          sessionStorage.setItem('origenProforma', 'contactos');
-          window.location.href = `GESTION_FACTURAS.html?idContacto=${id}&origen=contactos`;
+          // Guardar origen para volver a la lista de facturas
+          sessionStorage.setItem('origenFactura', 'facturas');
+          window.location.href = `GESTION_FACTURAS.html?idContacto=${id}`;
           // TODO: Implementar la creación de factura
         };
 

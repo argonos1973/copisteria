@@ -6,7 +6,6 @@ Script para validar todas las facturas XSIG existentes en el sistema
 """
 
 import json
-import os
 import sqlite3
 import sys
 from datetime import datetime
@@ -29,7 +28,7 @@ def obtener_facturas_xsig():
     return facturas
 
 def main():
-    print(f"=== VALIDACIÓN DE FACTURAS XSIG ===")
+    print("=== VALIDACIÓN DE FACTURAS XSIG ===")
     print(f"Fecha y hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 50)
     
@@ -63,7 +62,7 @@ def main():
                     datos_verifactu = generar_datos_verifactu_para_factura(factura['id'])
                     if datos_verifactu:
                         procesadas_ok += 1
-                        print(f"  ✓ Datos VERI*FACTU generados correctamente")
+                        print("  ✓ Datos VERI*FACTU generados correctamente")
                         print(f"    - Hash: {datos_verifactu['hash'][:16]}...")
                 except Exception as e:
                     print(f"  ✗ Error al generar datos VERI*FACTU: {str(e)}")

@@ -20,12 +20,13 @@
 
   <!-- Enlace al archivo de estilos externo -->
   <link rel="stylesheet" href="../static/styles.css" />
+  <link rel="stylesheet" href="../static/page_header.css" />
   <link rel="stylesheet" href="../static/notificaciones.css" />
 
-  <!-- Vue.js y Axios -->
-  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script type="module" src="../static/notificaciones.js"></script>
+  <script type="module" src="../static/gestion_contactos.js"></script>
 
 
   <style>
@@ -308,6 +309,20 @@
       gap: 15px;
     }
 
+    /* Page header bar */
+    .page-header {
+      background: #243342;
+      color: #ffffff;
+      padding: 15px 20px;
+      margin: 0 0 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .page-header h1 {
+      color: #ffffff !important;
+      font-size: 1.6em;
+      margin: 0;
+    }
+
     /* Contenedor para input y su icono */
     .input-container {
       display: flex;
@@ -320,11 +335,7 @@
     <!-- Contenedor para notificaciones -->
     <div id="notificaciones-contenedor"></div>
 
-    <form @submit.prevent="handleSubmit">
-      <!-- Encabezado -->
-      <div class="header" style="text-align: left;">
-        <h1 style="text-align: left;">Gestión de Contacto</h1>
-      </div>
+    <form id="contactForm">
       
       <!-- Fila 1: Razón social -->
       <div class="form-row">
@@ -402,21 +413,10 @@
               <input
                 type="text"
                 id="direccion"
-                v-model="contacto.direccion"
-                @input="handleDireccionInput"
                 class="form-control"
               />
               <!-- Lista de sugerencias -->
-              <div v-show="sugerenciasCarrer.length > 0" class="sugerencias-lista">
-                <div
-                  v-for="sugerencia in sugerenciasCarrer"
-                  :key="sugerencia.carrer"
-                  class="sugerencia-item"
-                  @click="seleccionarDireccion(sugerencia)"
-                >
-                  {{ sugerencia.carrer }} ({{ sugerencia.cp }})
-                </div>
-              </div>
+              <div id="sugerenciasCarrer" class="sugerencias-lista"></div>
             </div>
           </div>
         </div>
@@ -479,12 +479,11 @@
               <input
                 type="text"
                 id="cp"
-                v-model="contacto.cp"
-                maxlength="15"
-                @input="handleCP(contacto.cp)"
+                list="listaCP"
+                maxlength="5"
                 class="input-cp"
-                required
               />
+              <datalist id="listaCP"></datalist>
               <i
                 v-if="contacto.cp"
                 class="validation-icon"
@@ -549,10 +548,10 @@
 
       <!-- Botones de acción -->
       <div class="btn-container">
-        <button type="button" class="btn-primary" @click="handleSubmit">
+        <button type="button" id="btnGuardar" class="btn-primary">
           <i class="fa fa-save"></i> Guardar
         </button>
-        <button type="button" class="btn-secondary" @click="cerrarFormulario">
+        <button type="button" id="btnCancelar" class="btn-secondary">
           <i class="fa fa-times"></i> Cancelar
         </button>
       </div>
@@ -560,7 +559,7 @@
   </div>
 
   <!-- Archivo JS -->
-  <script type="module">
+  <script type="text/plain">
     import { IP_SERVER, PORT } from '../static/constantes.js';
     import { mostrarNotificacion } from '../static/notificaciones.js';
 

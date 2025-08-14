@@ -1,5 +1,5 @@
 import { IP_SERVER, PORT } from '../static/constantes.js';
-import { formatearImporte } from '../static/scripts_utils.js';
+import { formatearImporte, debounce } from '../static/scripts_utils.js';
 import { mostrarNotificacion } from '../static/notificaciones.js';
 
 const fechaInicioInput = document.getElementById('fecha-inicio');
@@ -10,6 +10,8 @@ const tipoMovimientoInput = document.getElementById('tipo-movimiento');
 const tablaBody = document.querySelector('#tabla-gastos tbody');
 const noResultados = document.getElementById('no-resultados');
 const notificacion = document.getElementById('notificacion');
+const graficoBtn = document.getElementById('btn-grafico');
+let datosConsulta = [];
 
 // Inicializar fechas con el primer y último día del mes actual
 document.addEventListener('DOMContentLoaded', () => {
@@ -68,6 +70,8 @@ function renderizarGastos(gastos) {
         return;
     }
     noResultados.classList.add('oculto');
+    // Ordenar por fecha (valor u operación) descendente
+    gastos.sort((a,b) => new Date(b.fecha_valor || b.fecha_operacion) - new Date(a.fecha_valor || a.fecha_operacion));
     gastos.forEach(gasto => {
         total += Number(gasto.importe_eur) || 0;
         const fila = document.createElement('tr');
@@ -134,7 +138,16 @@ async function buscarGastos() {
             throw new Error('Error al consultar los gastos');
         }
         const data = await response.json();
-        renderizarGastos(data.gastos || []);
+        datosConsulta = data.gastos || [];
+        renderizarGastos(datosConsulta);
+        // Mostrar / ocultar botón gráfico
+        if (graficoBtn) {
+            if (conceptoInput.value.trim() && datosConsulta.length) {
+                graficoBtn.style.display = 'flex';
+            } else {
+                graficoBtn.style.display = 'none';
+            }
+        }
         // Mostrar los totales nuevos, solo si existen los spans
         const spanIngresos = document.getElementById('totalIngresos');
         const spanGastos = document.getElementById('totalGastos');
@@ -164,16 +177,152 @@ async function buscarGastos() {
     }
 }
 
+/**
+ * Descarga un CSV con los resultados actuales de la consulta.
+ */
+async function descargarCSV() {
+    const params = new URLSearchParams();
+    if (fechaInicioInput.value) params.append('fecha_inicio', fechaInicioInput.value);
+    if (fechaFinInput.value) params.append('fecha_fin', fechaFinInput.value);
+    if (conceptoInput.value) params.append('concepto', conceptoInput.value);
+    if (tipoMovimientoInput && tipoMovimientoInput.value !== 'todos') {
+        params.append('tipo', tipoMovimientoInput.value);
+    }
+    const url = `http://${IP_SERVER}:${PORT}/api/gastos?${params.toString()}`;
+    try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Error al generar CSV');
+        const data = await res.json();
+        const gastos = data.gastos || [];
+        const SEP = ';';
+        const header = ['Fecha Operación','Fecha Valor','Concepto','Importe (€)'].join(SEP);
+        const filas = gastos.map(g => [
+            g.fecha_operacion,
+            g.fecha_valor,
+            `"${(g.concepto || '').replace(/"/g,'""')}"`,
+            (Number(g.importe_eur)||0).toString().replace('.',',')
+        ].join(SEP));
+        const csv = [header, ...filas].join('\n');
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+        const hoy = new Date().toISOString().slice(0, 10);
+        link.download = `gastos_${hoy}.csv`;
+        link.click();
+    } catch (e) {
+        mostrarNotificacion(e.message || 'Error inesperado', 'error');
+    }
+}
+
+/**
+ * Muestra un gráfico modal agrupando los importes por mes.
+ */
+function mostrarGrafico(gastos) {
+    if (!gastos || !gastos.length) {
+        mostrarNotificacion('No hay datos para graficar', 'info');
+        return;
+    }
+    const mesesNombre = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const sumMes = Array(12).fill(0);
+    gastos.forEach(g => {
+        const fechaStr = g.fecha_valor || g.fecha_operacion || '';
+        if (!fechaStr) return;
+        let mesIdx = -1;
+        // Formatos posibles: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY
+        if (/^\d{4}-\d{2}-\d{2}$/.test(fechaStr)) {
+            mesIdx = parseInt(fechaStr.slice(5,7),10) - 1;
+        } else if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/.test(fechaStr)) {
+            mesIdx = parseInt(fechaStr.slice(3,5),10) - 1;
+        }
+        if (mesIdx < 0 || mesIdx > 11 || isNaN(mesIdx)) return;
+        if (mesIdx < 0 || mesIdx > 11) return;
+        const importe = Math.abs(Number(g.importe_eur) || 0);
+        sumMes[mesIdx] += importe;
+    });
+    const pares = sumMes.map((v, i) => ({ idx: i, val: v})).filter(p => p.val > 0);
+    if (!pares.length) {
+        mostrarNotificacion('Sin datos válidos para graficar', 'info');
+        return;
+    }
+    pares.sort((a,b)=>a.idx - b.idx);
+    const labels = pares.map(p => mesesNombre[p.idx]);
+    const valores = pares.map(p => p.val);
+
+    let modal = document.getElementById('modal-gastos-grafico');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-gastos-grafico';
+        Object.assign(modal.style, {
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+            background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000
+        });
+        modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+
+        const content = document.createElement('div');
+        Object.assign(content.style, {
+            background: '#fff', padding: '20px', borderRadius: '8px', maxWidth: '800px', width: '90%',
+            maxHeight: '90%', overflow: 'auto', position: 'relative'
+        });
+        const closeBtn = document.createElement('span');
+        closeBtn.innerHTML = '&times;';
+        closeBtn.className = 'cerrar-modal';
+        Object.assign(closeBtn.style, {
+            position: 'absolute', top: '10px', right: '16px', fontSize: '28px', fontWeight: 'bold', color: '#aaa', cursor: 'pointer'
+        });
+        closeBtn.addEventListener('mouseenter', () => closeBtn.style.color = '#000');
+        closeBtn.addEventListener('mouseleave', () => closeBtn.style.color = '#aaa');
+        closeBtn.addEventListener('click', () => modal.style.display = 'none');
+        content.appendChild(closeBtn);
+
+        const canvas = document.createElement('canvas');
+        canvas.id = 'chart-gastos';
+        canvas.style.maxHeight = '500px';
+        content.appendChild(canvas);
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+    } else {
+        modal.style.display = 'flex';
+    }
+
+    const ctx = document.getElementById('chart-gastos').getContext('2d');
+    if (window.gastosChart) window.gastosChart.destroy();
+
+    window.gastosChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Importe (€)',
+                data: valores,
+                backgroundColor: '#3498db'
+            }]
+        },
+        options: {
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    ticks: {
+                        callback: value => formatearImporte(value)
+                    }
+                }
+            }
+        }
+    });
+}
+
 // Búsqueda interactiva
 fechaInicioInput.addEventListener('change', buscarGastos);
 fechaFinInput.addEventListener('change', buscarGastos);
-conceptoInput.addEventListener('input', buscarGastos);
+// Input de concepto con debounce para evitar peticiones excesivas
+conceptoInput.addEventListener('input', debounce(buscarGastos, 400));
 buscarBtn.addEventListener('click', buscarGastos);
 tipoMovimientoInput.addEventListener('change', buscarGastos);
 
 document.addEventListener('DOMContentLoaded', () => {
     inicializarFechasMesActual();
     buscarGastos();
+    document.getElementById('btn-descargar-csv')?.addEventListener('click', descargarCSV);
+    graficoBtn?.addEventListener('click', () => mostrarGrafico(datosConsulta));
     // Control de visibilidad de totales
     const toggle = document.querySelector('.fixed-footer-gastos .toggle-totals');
     let totalsVisible = sessionStorage.getItem('totalsVisibleGastos');

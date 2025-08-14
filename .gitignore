@@ -1,1 +1,13 @@
 venv/
+# Bases de datos temporales SQLite
+*.db-shm
+*.db-wal
+
+# Logs
+logs/*.log
+logs/*.html
+logs/*.png
+scraping_status.log
+
+# Ignorar todos los XML generados
+*.xml

@@ -6,9 +6,9 @@ Script de ejemplo para mostrar el uso de las funciones de validación
 de facturas Facturae en VERI*FACTU.
 """
 
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
 
 # Configurar logging
@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 # Añadir directorio raíz al path para importar módulos
 sys.path.append('/var/www/html')
 
-from facturae.validacion import validar_xml_contra_xsd, verificar_totales_factura, validar_facturae_completa
+from facturae.validacion import (validar_facturae_completa,
+                                 validar_xml_contra_xsd,
+                                 verificar_totales_factura)
 
 
 def mostrar_resultado_validacion(resultado, tipo_validacion):
@@ -99,7 +101,7 @@ def validar_directorio(directorio):
             contador['invalidos'] += 1
     
     print("\n" + "=" * 50)
-    print(f"Resumen de validación:")
+    print("Resumen de validación:")
     print(f"  - Total facturas procesadas: {contador['total']}")
     print(f"  - Facturas válidas: {contador['validos']}")
     print(f"  - Facturas con errores: {contador['invalidos']}")

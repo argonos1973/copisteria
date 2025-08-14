@@ -137,41 +137,45 @@ export function mostrarConfirmacion(mensaje) {
 }
 
 // Conexión Server-Sent Events con reconexión automática
+// Evita inicializar múltiples veces si el script se vuelve a cargar
+if (typeof window !== 'undefined' && window.__SSE_NOTIFICACIONES_INIT) {
+    console.debug('SSE ya inicializado');
+} else
 if (typeof window !== 'undefined' && 'EventSource' in window) {
-    const rutas = ['/api/notificaciones/stream', '/notificaciones/stream'];
+    const ENDPOINT_SSE = '/api/notificaciones/stream'; // única ruta estable
     let fuente = null;
-    let rutaActual = 0;
     let ultimoMensaje = null;
 
     const conectar = () => {
-        const url = rutas[rutaActual];
-        console.log('Conectando SSE a', url);
-        fuente = new EventSource(url);
+        console.debug('Conectando SSE a', ENDPOINT_SSE);
+        fuente = new EventSource(ENDPOINT_SSE);
 
         fuente.onopen = () => {
-            console.log('SSE conectado');
+            console.debug('SSE conectado');
         };
 
         fuente.onmessage = (ev) => {
             try {
                 const data = JSON.parse(ev.data);
-                if (data && data.mensaje) {
-                    if (data.mensaje !== ultimoMensaje) {
-                        ultimoMensaje = data.mensaje;
-                        mostrarNotificacion(data.mensaje, data.tipo || 'info');
-                    }
+                if (data?.mensaje && data.mensaje !== ultimoMensaje) {
+                    ultimoMensaje = data.mensaje;
+                    mostrarNotificacion(data.mensaje, data.tipo || 'info');
                 }
             } catch (e) {
                 console.error('Error parseando SSE:', e);
             }
         };
+
         fuente.onerror = (err) => {
-            console.error('Error en conexión SSE', err);
-            // alternamos ruta para el siguiente intento
-            rutaActual = (rutaActual + 1) % rutas.length;
+            console.warn('SSE desconectado, reintentando…', err);
             fuente.close();
             setTimeout(conectar, 5000);
         };
     };
+
     conectar();
+    // marcar como iniciado
+    if (typeof window !== 'undefined') {
+        window.__SSE_NOTIFICACIONES_INIT = true;
+    }
 }

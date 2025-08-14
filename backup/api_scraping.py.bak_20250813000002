@@ -1,0 +1,457 @@
+#!/var/www/html/venv/bin/python
+
+import logging
+import re
+import os
+import sys
+import time
+import random
+from datetime import datetime
+
+# Registrar inicio del script
+print("=== scrapeo.py iniciado ===")
+
+# Modo opcional: solo importar Excel y salir, controlado por la variable de entorno ONLY_IMPORT
+def _import_only():
+    try:
+        import os as _os
+        from pathlib import Path as _Path
+        env_path = _os.environ.get('DOWNLOAD_PATH')
+        posibles = []
+        if env_path:
+            p = _Path(env_path)
+            posibles.extend([p, p.with_suffix('.xlsx')])
+        posibles.extend([
+            _Path('/tmp/descarga.xlsx'),
+            _Path('/tmp/descarga'),
+            _Path.cwd() / 'descarga.xlsx',
+            _Path.cwd() / 'descarga'
+        ])
+        file_path = next((p for p in posibles if p.exists()), None)
+        if not file_path:
+            print("No se encontró el archivo de descarga (use DOWNLOAD_PATH o /tmp/descarga.xlsx)")
+            sys.exit(1)
+        if file_path.is_file() and file_path.stat().st_size == 0:
+            print(f"El archivo {file_path} está vacío")
+            sys.exit(1)
+        try:
+            import pandas as _pd
+            df = _pd.read_excel(str(file_path))
+            print(f"Importación correcta: filas={len(df)}, columnas={len(df.columns)}")
+            try:
+                cols = list(map(str, list(df.columns)[:10]))
+                if cols:
+                    print("Columnas:", ", ".join(cols))
+            except Exception:
+                pass
+            sys.exit(0)
+        except Exception:
+            pass
+        try:
+            from openpyxl import load_workbook
+            wb = load_workbook(filename=str(file_path), read_only=True, data_only=True)
+            ws = wb.active
+            n_rows = ws.max_row or 0
+            n_cols = ws.max_column or 0
+            print(f"Importación correcta (openpyxl): filas~={n_rows}, columnas~={n_cols}")
+            try:
+                headers = []
+                for c in range(1, min(n_cols, 10) + 1):
+                    v = ws.cell(row=1, column=c).value
+                    headers.append(str(v) if v is not None else '')
+                if headers:
+                    print("Columnas:", ", ".join(headers))
+            except Exception:
+                pass
+            sys.exit(0)
+        except Exception as _eox:
+            print(f"No se pudo importar el Excel: {_eox}")
+            sys.exit(1)
+    except Exception as _eimp:
+        print(f"Error en importación: {_eimp}")
+        sys.exit(1)
+
+if os.environ.get('ONLY_IMPORT', '').lower() in ('1','true','yes','on'):
+    _import_only()
+
+# Verificar dependencias
+try:
+    from playwright.sync_api import sync_playwright
+    import os
+    print("✓ Playwright importado correctamente")
+except ImportError:
+    print("✗ ERROR: Playwright no está instalado. Intentando instalar...")
+    try:
+        import subprocess
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "playwright"])
+        subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
+        from playwright.sync_api import sync_playwright
+        print("✓ Playwright instalado correctamente")
+    except Exception as e:
+        print(f"✗ ERROR: No se pudo instalar Playwright: {e}")
+        sys.exit(1)
+
+# Crear directorio para logs (se mantiene por compatibilidad, pero no se escribe nada)
+log_dir = "/home/sami/logs"
+os.makedirs(log_dir, exist_ok=True)
+
+# Anular cualquier escritura a /home/sami/logs
+import builtins as _b
+_orig_open = _b.open
+def _open_no_logs(file, mode='r', *args, **kwargs):
+    try:
+        if isinstance(file, str) and file.startswith("/home/sami/logs"):
+            class _Dummy:
+                def write(self, *a, **k):
+                    return 0
+                def __enter__(self):
+                    return self
+                def __exit__(self, *a):
+                    return False
+            return _Dummy()
+    except Exception:
+        pass
+    return _orig_open(file, mode, *args, **kwargs)
+_b.open = _open_no_logs
+
+# Deshabilitar logging a fichero y a stdout (sin logs)
+logging.disable(logging.CRITICAL)
+
+# from db_utils import get_db_connection  # Eliminado: ya no se realiza conexión a la BD
+
+MAX_LOGIN_TIME = 60  # segundos
+nif = "44007535W"
+clave = "19731898"
+
+fecha_inicio = datetime.now().replace(day=1).strftime("%d/%m/%Y")
+#fecha_inicio = "01/01/2025"
+fecha_hoy = datetime.now().strftime("%d/%m/%Y")
+
+# Guardar mes y año del filtro para comparación posterior
+mes_filtro = int(fecha_inicio[3:5])
+anio_filtro = int(fecha_inicio[6:10])
+mes_anio = f"{str(mes_filtro).zfill(2)}/{anio_filtro}"
+
+with sync_playwright() as p:
+    try:
+        # Configuración para evitar detección anti-bot más avanzada
+        browser_args = [
+            '--disable-blink-features=AutomationControlled',
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--disable-gpu',
+            '--window-size=1920,1080',
+            '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            '--disable-extensions',
+            '--disable-features=IsolateOrigins,site-per-process',
+            '--enable-features=NetworkService',
+            '--ignore-certificate-errors',
+            '--disable-web-security',
+            '--allow-running-insecure-content',
+            '--disable-webgl'
+        ]
+        
+        # Configuración para control de visibilidad del navegador
+        show_browser = os.environ.get('SHOW_BROWSER', '0').lower() in ('1', 'true', 'yes', 'on')
+        
+        # Forzar headless si se especifica en el entorno
+        if os.environ.get('HEADLESS', '').lower() in ('1', 'true', 'yes'):
+            show_browser = False
+        # Permitir forzar modo NO persistente por variable de entorno (workaround para 192.168.1.55)
+        force_non_persist = os.environ.get('PW_NO_PERSIST', '').lower() in ('1', 'true', 'yes', 'on')
+        if force_non_persist:
+            logging.info("PW_NO_PERSIST=1 -> Usando navegador NO persistente")
+            browser = p.chromium.launch(headless=not show_browser, args=browser_args, slow_mo=100 if show_browser else 0)
+            context = browser.new_context(
+                viewport={'width': 1400, 'height': 900},
+                locale='es-ES'
+            )
+        else:
+            # Directorio de perfil persistente para reutilizar cookies/sesión y reducir bloqueos de WAF
+            user_data_dir = "/var/www/html/.pw_profile_santander"
+            os.makedirs(user_data_dir, exist_ok=True)
+            # Lanzar contexto persistente directamente (evita crear new_context luego)
+            try:
+                context = p.chromium.launch_persistent_context(
+                    user_data_dir=user_data_dir,
+                    headless=not show_browser,
+                    args=browser_args,
+                    slow_mo=100 if show_browser else 0,
+                    accept_downloads=True,
+                    viewport={'width': 1920, 'height': 1080},
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    locale="es-ES",
+                    timezone_id="Europe/Madrid",
+                    permissions=['geolocation', 'notifications'],
+                    extra_http_headers={
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+                        "Accept-Language": "es-ES,es;q=0.9,en-US;q=0.8,en;q=0.7",
+                        "Cache-Control": "max-age=0",
+                        "Connection": "keep-alive",
+                        "Sec-Fetch-Dest": "document",
+                        "Sec-Fetch-Mode": "navigate",
+                        "Sec-Fetch-Site": "same-origin",
+                        "Sec-Fetch-User": "?1"
+                    }
+                )
+                logging.info("Contexto persistente iniciado (perfil reutilizable) con configuración anti-detección avanzada")
+            except Exception as e_persist:
+                logging.warning(f"No se pudo iniciar contexto persistente, usando navegador no persistente: {e_persist}")
+                # Fallback a navegador no persistente manteniendo visibilidad
+                browser = p.chromium.launch(headless=not show_browser, args=browser_args, slow_mo=100 if show_browser else 0)
+                context = browser.new_context(
+                    viewport={'width': 1400, 'height': 900},
+                    locale='es-ES'
+                )
+    except Exception as e:
+        logging.error(f"Error al iniciar el navegador: {e}")
+        sys.exit(1)
+        
+    # Contexto ya creado arriba con perfil persistente
+    # Aumentar timeout por defecto para todas las operaciones del contexto
+    context.set_default_timeout(30000)
+    # Iniciar tracing para depurar interacciones y cierres de página
+    try:
+        context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    except Exception as e:
+        logging.warning(f"No se pudo iniciar tracing de Playwright: {e}")
+    
+    # Inyectar JavaScript para evadir detección de bots (overriding navigator properties)
+    context.add_init_script('''
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });    
+    Object.defineProperty(navigator, 'languages', { get: () => ['es-ES', 'es', 'en-US', 'en'] });    
+    Object.defineProperty(navigator, 'plugins', { get: () => Array(3).fill().map((_, i) => i) });    
+    window.chrome = { runtime: {} };
+    ''')
+    
+    # Crear página con configuración avanzada
+    page = context.new_page()
+    # Bloqueo de navegación a nivel de contexto y página (red, eventos y navegación)
+    try:
+        # 1) Bloqueo de red por contexto (regex)
+        context.route(re.compile(r"asuntos-clientes", re.I), lambda route: route.abort())
+    except Exception:
+        pass
+    try:
+        # 2) Cancelar clics en anchors con href prohibidos
+        page.add_init_script(
+            """
+            (()=>{
+              const bad = /asuntos-clientes|buzon|ayuda|gestiones/i;
+              window.addEventListener('click', (ev)=>{
+                try{
+                  const a = ev.target.closest && ev.target.closest('a[href]');
+                  if (a){
+                    const href = a.getAttribute('href')||'';
+                    if (bad.test(href)){
+                      ev.preventDefault(); ev.stopPropagation(); return false;
+                    }
+                  }
+                }catch(e){}
+              }, true);
+            })();
+            """
+        )
+    except Exception:
+        pass
+    # Bloque sin try envolvente para evitar conflictos de indentación
+        # 3) Observador: si se navega fuera del detalle o a asuntos-clientes, volver atrás
+        def _nav_guard(frame):
+            try:
+                u = frame.url or ''
+            except Exception:
+                u = ''
+            try:
+                if re.search(r"asuntos-clientes", u, re.I):
+                    logging.warning(f"Intercepción de navegación a {u}; volviendo atrás")
+                    try:
+                        page.go_back()
+                    except Exception:
+                        pass
+                elif u and not re.search(r"/oneweb/nhb/cuentas/detalle", u, re.I):
+                    # Permitimos dominios intermedios si no hay cambio sustancial
+                    pass
+            except Exception:
+                pass
+        # 2.c) Enumeración de candidatos en barras de acción (con evidencias) y dentro de 'paesfr-transactions'
+        if not dl_clicked_pre:
+            try:
+                bar_sel = ".buttons, .actions, .toolbar, .san-actions, .san-toolbar, .table-actions, .actions-bar, [role='toolbar']"
+                cand_sel = f"{bar_sel} >> :is(button,a,[role=button],[aria-label],[title])"
+                scopes = [scope]
+                try:
+                    # Incluir web component si existe
+                    wcomp = scope.locator("paesfr-transactions").first
+                    if wcomp.count() > 0:
+                        scopes.append(wcomp)
+                except Exception:
+                    pass
+                for sc in scopes:
+                    loc = sc.locator(cand_sel)
+                    try:
+                        total = loc.count()
+                    except Exception:
+                        total = 0
+                    for i in range(min(total, 12)):
+                        try:
+                            el = loc.nth(i)
+                            # Extraer metadatos del candidato
+                            try:
+                                meta = el.evaluate('el => ({\n'+
+                                                   '  text: (el.innerText||"").trim(),\n'+
+                                                   '  aria: el.getAttribute && (el.getAttribute("aria-label")||""),\n'+
+                                                   '  title: el.getAttribute && (el.getAttribute("title")||""),\n'+
+                                                   '  cls: el.className||"",\n'+
+                                                   '  hasSvg: !!el.querySelector("svg"),\n'+
+                                                   '  href: (el.tagName && el.tagName.toLowerCase()==="a") ? (el.getAttribute("href")||"") : (el.closest("a") ? (el.closest("a").getAttribute("href")||"") : "")\n'+
+                                                   '})')
+                            except Exception:
+                                meta = {}
+                            txt = (meta.get('text') or '').strip()
+                            aria = meta.get('aria') or ''
+                            titl = meta.get('title') or ''
+                            # Heurísticas de descarga/exportación
+                            looks_download = bool(re.search(r"descarg|export", (txt + ' ' + aria + ' ' + titl), re.I)) or (len(txt) <= 2 and (meta.get('hasSvg') or False))
+                            if not looks_download:
+                                continue
+                            # Validaciones anti-header/menú
+                            ok = True
+                            try:
+                                ok = el.evaluate(
+                                    "el => {\n"+
+                                    "  const inBadAnc = !!el.closest('header, nav, san-sidebar-menu, #personalAreaMenu, #mailboxMenu, #helpMenu, .menu, [role=\\\"menu\\\"]');\n"+
+                                    "  if (inBadAnc) return false;\n"+
+                                    "  const a = (el.tagName && el.tagName.toLowerCase()==='a') ? el : el.closest('a');\n"+
+                                    "  const href = a && a.getAttribute && (a.getAttribute('href')||'');\n"+
+                                    "  if (href && /asuntos-clientes|buzon|ayuda|gestiones/i.test(href)) return false;\n"+
+                                    "  return true;\n"+
+                                    "}"
+                                )
+                            except Exception:
+                                ok = True
+                            if not ok:
+                                continue
+                        except Exception:
+                            continue
+            except Exception:
+                pass
+
+        # Aplicar realce visual persistente
+        try:
+            scope.evaluate(
+                """
+                sel => {
+                  const t = document.querySelector(sel);
+                  if(!t) return false;
+                  try { t.scrollIntoView({block:'center', inline:'center'}); } catch(e){}
+                  try { t.style.setProperty('transition','box-shadow .2s ease, outline .2s ease','important'); } catch(e){}
+                  try { t.style.setProperty('outline','3px solid #1e90ff','important'); } catch(e){}
+                  try { t.style.setProperty('box-shadow','0 0 0 4px rgba(30,144,255,.25), 0 0 12px 2px rgba(30,144,255,.6)','important'); } catch(e){}
+                  return true;
+                }
+                """,
+                f"[data-cascade-click='{mk}']"
+            )
+        except Exception:
+            pass
+    
+    # Clic real en el icono marcado
+    try:
+        marked_element = scope.locator(f"[data-cascade-click='{mk}']").first
+        if marked_element and marked_element.count() > 0:
+            marked_element.click(timeout=3000)
+            dl_clicked_pre = True
+            print("Icono de descarga: clic realizado exitosamente.")
+            
+            # Esperar a que la modal se abra y hacer clic en "Exportar Excel"
+            try:
+                # Esperar a que aparezca la modal (ajustar selector según estructura real)
+                modal_button = scope.get_by_text("Exportar Excel", exact=True)
+                modal_button.click(timeout=5000)
+                print("Botón 'Exportar Excel' clicado exitosamente.")
+                
+                # Esperar un momento y hacer clic en el segundo botón "descargar excel"
+                try:
+                    time.sleep(5)  # Esperar 5 segundos para asegurar que la modal se cargue completamente
+                    # Intentar localizar el botón por diferentes métodos
+                    second_button = None
+                    try:
+                        second_button = scope.get_by_text("descargar excel", exact=False)
+                    except:
+                        pass
+                    
+                    if not second_button:
+                        try:
+                            second_button = scope.get_by_text("Descargar Excel", exact=False)
+                        except:
+                            pass
+                    
+                    if not second_button:
+                        try:
+                            second_button = scope.locator("button:has-text('descargar excel'), button:has-text('Descargar Excel')").first
+                        except:
+                            pass
+                    
+                    if second_button and second_button.is_visible():
+                        # Usar expect_download para capturar la descarga
+                        # Usar page.expect_download en lugar de scope.expect_download
+                        with page.expect_download() as download_info:
+                            second_button.click(timeout=10000)  # Aumentar tiempo de espera
+                        download = download_info.value
+                        print("Segundo botón 'descargar excel' clicado exitosamente.")
+                        
+                        # Guardar el archivo descargado con el nombre 'descarga' en /tmp
+                        import pathlib, os, glob
+                        downloads_dir = "/tmp"
+                        pathlib.Path(downloads_dir).mkdir(parents=True, exist_ok=True)
+                        
+                        # Eliminar archivos previos con nombre 'descarga' en /tmp
+                        files = glob.glob(f"{downloads_dir}/descarga*.xlsx")
+                        for f in files:
+                            try:
+                                os.remove(f)
+                            except Exception as e:
+                                print(f"Error al eliminar archivo previo {f}: {e}")
+                        
+                        destino = f"{downloads_dir}/descarga.xlsx"
+                        download.save_as(destino)
+                        print(f"Archivo XLS guardado en: {destino}")
+                        
+                        # Cerrar el navegador
+                        browser.close()
+                        
+                        # Llamar a scrapeo.py para importar el Excel a la base de datos
+                        try:
+                            print("Llamando a scrapeo.py para importar el Excel a la base de datos...")
+                            import subprocess
+                            import sys
+                            result = subprocess.run([
+                                sys.executable, 
+                                "/var/www/html/scrapeo.py", 
+                                "--excel", 
+                                str(destino)
+                            ], capture_output=True, text=True, cwd="/var/www/html")
+                            
+                            if result.returncode == 0:
+                                print("Importación a la base de datos completada correctamente.")
+                                print(result.stdout)
+                            else:
+                                print(f"Error en la importación a la base de datos: {result.stderr}")
+                        except Exception as e:
+                            print(f"Error al llamar a scrapeo.py: {e}")
+                        
+                        # Cerrar el navegador
+                        browser.close()
+                        
+                        # Salir del script de forma controlada
+                        import sys
+                        sys.exit(0)
+        except Exception as e:
+            print(f"Error al hacer clic y descargar: {e}")
+
+            
+

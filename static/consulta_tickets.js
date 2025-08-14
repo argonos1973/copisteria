@@ -1,6 +1,6 @@
 import { IP_SERVER, PORT, API_URL } from './constantes.js'
 import { mostrarNotificacion } from './notificaciones.js'
-import { formatearImporte, formatearFecha } from './scripts_utils.js'
+import { formatearImporte, formatearFechaSoloDia, parsearImporte, mostrarCargando, ocultarCargando } from './scripts_utils.js'
 
 window.buscarTickets = buscarTickets;
 // Selecciona todos los botones en la página
@@ -23,6 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
         document.getElementById('endDate').value = filters.endDate || '';
         document.getElementById('status').value = filters.status || '';
         document.getElementById('ticketNumber').value = filters.ticketNumber || '';
+        document.getElementById('conceptFilter').value = filters.conceptFilter || '';
         document.getElementById('paymentMethod').value = filters.paymentMethod || '';
     } else {
         // Obtener la fecha de hoy
@@ -64,7 +65,12 @@ document.addEventListener("DOMContentLoaded", function () {
         buscarTickets();
     });
 
-    document.getElementById('ticketNumber').addEventListener('input', () => {
+    document.getElementById('ticketNumber').addEventListener('input', (event) => {
+        guardarFiltros();
+        busquedaInteractiva(event);
+    });
+
+    document.getElementById('conceptFilter').addEventListener('input', (event) => {
         guardarFiltros();
         busquedaInteractiva(event);
     });
@@ -79,6 +85,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // Función para búsqueda interactiva
 let timeoutId = null;
+let currentController = null;
 function busquedaInteractiva(event) {
     const valor = event.target.value.trim();
     const campo = event.target.id;
@@ -88,35 +95,40 @@ function busquedaInteractiva(event) {
         clearTimeout(timeoutId);
     }
 
-    // Esperar 300ms después de que el usuario deje de escribir
+    // Esperar 500 ms después de que el usuario deje de escribir
     timeoutId = setTimeout(() => {
-        // Si es campo de número de ticket, buscar con 1 o más caracteres o si está vacío
-        if (campo === 'ticketNumber' && (valor.length >= 1 || valor.length === 0)) {
+        const suficiente = valor.length === 0 || valor.length >= 3; // al menos 3 caracteres antes de buscar
+        if ((campo === 'ticketNumber' || campo === 'conceptFilter') && suficiente) {
             buscarTickets();
         }
-    }, 300);
+    }, 500);
 }
 
 function mostrarBarraDeProgreso() {
-    // Muestra el overlay y la barra de progreso
-    document.getElementById('overlay').style.display = 'flex';
+    mostrarCargando();
+}
+/* eliminado progreso local, usando spinner global
+    mostrarCargando();
+}
+    
+    
 
-    // Simulación de progreso
-    var progress = 0;
-    var progressInterval = setInterval(function() {
-        if (progress < 80) {
-            progress += 10;
-           document.querySelector('.progress-bar-fill').style.width = progress + '%';
+    
+    // Eliminado progreso porcentual
+    
+        
+            
+           
 
         }
     }, 300);
-}
+*/
 
 function ocultarBarraDeProgreso() {
-    // Oculta el overlay y la barra de progreso
-    document.getElementById('overlay').style.display = 'none';
+    ocultarCargando();
 }
-
+    
+    
 // Función para guardar los filtros en sessionStorage
 function guardarFiltros() {
     const filtros = {
@@ -124,7 +136,8 @@ function guardarFiltros() {
         endDate: document.getElementById('endDate').value,
         status: document.getElementById('status').value,
         ticketNumber: document.getElementById('ticketNumber').value,
-        paymentMethod: document.getElementById('paymentMethod').value
+        paymentMethod: document.getElementById('paymentMethod').value,
+        conceptFilter: document.getElementById('conceptFilter').value
     };
     sessionStorage.setItem('ticketFilters', JSON.stringify(filtros));
 }
@@ -133,6 +146,7 @@ async function buscarTickets() {
     mostrarBarraDeProgreso();
 
     const paymentMethod = document.getElementById('paymentMethod').value;
+    const conceptFilter = document.getElementById('conceptFilter').value;
     const startDate = document.getElementById('startDate').value;
     const endDate = document.getElementById('endDate').value;
     const status = document.getElementById('status').value;
@@ -153,10 +167,14 @@ async function buscarTickets() {
     if (status) url.searchParams.append('estado', status);
     if (ticketNumber) url.searchParams.append('numero', ticketNumber);
     if (paymentMethod) url.searchParams.append('formaPago', paymentMethod);
+    if (conceptFilter) url.searchParams.append('concepto', conceptFilter);
     
     try {
+        // Cancelar petición previa
+        if (currentController) currentController.abort();
+        currentController = new AbortController();
         console.log('Buscando tickets con URL:', url.toString());
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: currentController.signal });
         if (!response.ok) throw new Error('Error al consultar los tickets');
         
         const tickets = await response.json();
@@ -164,6 +182,10 @@ async function buscarTickets() {
         actualizarTotales(tickets);
         ocultarBarraDeProgreso();
     } catch (error) {
+        if (error.name === 'AbortError') {
+            // Petición anterior abortada: no mostrar error ni notificación
+            return;
+        }
         console.error(error);
         mostrarNotificacion('Error al consultar los tickets', 'error');
         ocultarBarraDeProgreso();
@@ -224,7 +246,7 @@ function mostrarTickets(tickets) {
 
             // Crear y añadir las celdas (td)
             const fechaCell = document.createElement('td');
-            fechaCell.textContent = `${formatearFecha(ticket.fecha)} ${formatearHora(ticket.timestamp)}`;
+            fechaCell.textContent = `${formatearFechaSoloDia(ticket.fecha)} ${formatearHora(ticket.timestamp)}`;
             row.appendChild(fechaCell);
 
             const numeroCell = document.createElement('td');
@@ -309,10 +331,10 @@ function actualizarTotales(tickets) {
         if (cells.length < 7) continue;
 
         // Obtener los valores de las celdas y convertirlos a números
-        let importeBruto = parseFloat(cells[2].textContent.replace(/\./g, '').replace(',', '.').replace('€', '').trim()) || 0;
-        let importeImpuestos = parseFloat(cells[3].textContent.replace(/\./g, '').replace(',', '.').replace('€', '').trim()) || 0;
-        let importeCobrado = parseFloat(cells[4].textContent.replace(/\./g, '').replace(',', '.').replace('€', '').trim()) || 0;
-        let total = parseFloat(cells[5].textContent.replace(/\./g, '').replace(',', '.').replace('€', '').trim()) || 0;
+        let importeBruto = parsearImporte(cells[2].textContent);
+        let importeImpuestos = parsearImporte(cells[3].textContent);
+        let importeCobrado = parsearImporte(cells[4].textContent);
+        let total = parsearImporte(cells[5].textContent);
 
         if (cells[7].textContent != '?') {
             totalImporteBruto += importeBruto;

@@ -1,8 +1,6 @@
-import os
-import hashlib
-import base64
 
-from facturae.politica import get_politica_facturae, _read_local_pdf, _compute_sha256_base64
+from facturae.politica import (_compute_sha256_base64, _read_local_pdf,
+                               get_politica_facturae)
 
 
 def test_hash_matches_pdf():

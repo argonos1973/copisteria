@@ -1,37 +1,17 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion } from './notificaciones.js';
-import { formatearImporte } from './scripts_utils.js';
+import { formatearImporte, formatearFechaSoloDia, mostrarCargando, ocultarCargando, debounce, getEstadoFormateado, getEstadoClass } from './scripts_utils.js';
 
-// Mapeo de estados específico para FACTURAS
-const ESTADOS_FACTURA = {
-    'P': 'Pendiente',
-    'C': 'Cobrada',
-    'V': 'Vencida',
-    'A': 'Anulada',
-    'RE': 'Rectificativa'
-};
-
-const getEstadoFormateado = (estado) => ESTADOS_FACTURA[estado] || estado;
-
-const getEstadoClass = (estado) => {
-    const clases = {
-        'P': 'estado-pendiente',
-        'C': 'estado-cobrado',
-        'V': 'estado-vencido',
-        'A': 'estado-anulada',
-        'RE': 'estado-rectificativa'
-    };
-    return clases[estado] || '';
-};
+// Estados y clases se importan desde scripts_utils.js
 
 // Función para mostrar el overlay de carga
 const showOverlay = () => {
-    document.getElementById('overlay').style.display = 'flex';
+    mostrarCargando();
 };
 
 // Función para ocultar el overlay de carga
 const hideOverlay = () => {
-    document.getElementById('overlay').style.display = 'none';
+    ocultarCargando();
 };
 
 // Función para actualizar los totales
@@ -67,16 +47,11 @@ function formatDate(date) {
 
 // Función para convertir fecha de YYYY-MM-DD a DD/MM/AAAA para mostrar
 function formatDateToDisplay(dateStr) {
-    if (!dateStr) return '';
-    const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year}`;
+    return formatearFechaSoloDia(dateStr);
 }
 
 // Función para convertir fecha para la API
-function convertirFechaParaAPI(fecha) {
-    if (!fecha) return '';
-    return fecha; // Ya está en formato YYYY-MM-DD
-}
+// convertirFechaParaAPI centralizado en scripts_utils.js
 
 // Las funciones getEstadoFormateado y getEstadoClass ahora se importan desde scripts_utils.js
 
@@ -85,7 +60,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
     showOverlay();
     
     try {
-        let startDate, endDate, status, facturaNumber, contacto, identificador;
+        let startDate, endDate, status, facturaNumber, contacto, identificador, conceptFilter;
         
         // Si se solicita usar filtros guardados, intentamos recuperarlos de sessionStorage
         if (usarFiltrosGuardados) {
@@ -100,7 +75,8 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 status = filtros.status;
                 facturaNumber = filtros.facturaNumber;
                 contacto = filtros.contacto;
-                identificador = filtros.identificador;
+                identificador = '';
+                conceptFilter = filtros.conceptFilter;
             } else {
                 // Si no hay filtros guardados, usamos los valores actuales del formulario
                 startDate = document.getElementById('startDate').value;
@@ -108,7 +84,8 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 status = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : document.getElementById('status').value;
                 facturaNumber = document.getElementById('facturaNumber').value.trim();
                 contacto = document.getElementById('contacto').value.trim();
-                identificador = document.getElementById('identificador').value.trim();
+                identificador = '';
+            conceptFilter = document.getElementById('conceptFilter').value.trim();
             }
         } else {
             // Obtener valores actuales del formulario
@@ -117,7 +94,8 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             status = document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : document.getElementById('status').value;
             facturaNumber = document.getElementById('facturaNumber').value.trim();
             contacto = document.getElementById('contacto').value.trim();
-            identificador = document.getElementById('identificador').value.trim();
+            identificador = '';
+            conceptFilter = document.getElementById('conceptFilter').value.trim();
         }
             
         // Guardar los filtros actuales
@@ -130,7 +108,8 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             status ||
             (facturaNumber && facturaNumber.length >= 1) ||
             (contacto && contacto.length >= 2) ||
-            (identificador && identificador.length >= 1)
+            
+            (conceptFilter && conceptFilter.length >= 3)
         );
         
         // Las fechas ya vienen en formato YYYY-MM-DD del input type="date"
@@ -158,9 +137,9 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             params.append('limit', '10');
         }
 
-        // Manejar búsqueda por identificador
-        if (identificador && identificador.length >= 1) {
-            params.append('identificador', identificador);
+        // Manejar búsqueda por concepto
+        if (conceptFilter && conceptFilter.length >= 3) {
+            params.append('concepto', conceptFilter);
             params.append('limit', '10');
         }
 
@@ -222,10 +201,10 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 <td class="text-right">${formatearImporte(total)}</td>
                 <td class="text-center ${getEstadoClass(factura.estado)}">${getEstadoFormateado(factura.estado)}</td>
                 <td class="text-center">
-                    ${(['P','A'].includes(factura.estado)) ? '' : `<i class=\"fas fa-print print-icon\" style=\"cursor: pointer;\" data-id=\"${factura.id}\"></i>`}
+                    ${(['A'].includes(factura.estado)) ? '' : `<i class=\"fas fa-print print-icon\" style=\"cursor: pointer;\" data-id=\"${factura.id}\"></i>`}
                 </td>
                 <td class="text-center">
-                    ${(['P','A'].includes(factura.estado)) ? '' : (
+                    ${(['A'].includes(factura.estado)) ? '' : (
                         factura.estado === 'V' ? 
                             `<i class="fas fa-envelope email-icon-urgent" 
                                 style="cursor: pointer; color: #dc3545; font-weight: bold;" 
@@ -312,41 +291,11 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                     
                     console.log('Correo enviado. Se refrescará la consulta de facturas en unos segundos...');
                     
-                    // Esperamos un momento y luego refrescamos la tabla completa para asegurar consistencia
-                    setTimeout(async () => {
-                        try {
-                            // Forzar una nueva búsqueda sin usar caché
-                            await buscarFacturas(true);
-                            const filtrosGuardados = sessionStorage.getItem('filtrosFacturas');
-                            if (filtrosGuardados) {
-                                console.log('Recargando con filtros guardados:', JSON.parse(filtrosGuardados));
-                                
-                                // Aplicar los filtros a los elementos visibles
-                                const filtros = JSON.parse(filtrosGuardados);
-                                if (document.getElementById('startDate')) document.getElementById('startDate').value = filtros.startDate || '';
-                                if (document.getElementById('endDate')) document.getElementById('endDate').value = filtros.endDate || '';
-                                if (document.getElementById('statusFilter')) {
-                                    document.getElementById('statusFilter').value = filtros.status || '';
-                                } else if (document.getElementById('status')) {
-                                    document.getElementById('status').value = filtros.status || '';
-                                }
-                                if (document.getElementById('facturaNumber')) document.getElementById('facturaNumber').value = filtros.facturaNumber || '';
-                                if (document.getElementById('contacto')) document.getElementById('contacto').value = filtros.contacto || '';
-                                if (document.getElementById('identificador')) document.getElementById('identificador').value = filtros.identificador || '';
-                                
-                                // Pasar true para utilizar los filtros guardados
-                                buscarFacturas(true);
-                            } else {
-                                // Si no hay filtros guardados, realizar búsqueda normal
-                                console.log('No hay filtros guardados, se usarán los valores actuales');
-                                buscarFacturas();
-                            }
-                        } catch (error) {
-                            console.error('Error al refrescar la consulta:', error);
-                            // Si hay un error, intentamos una búsqueda estándar
-                            buscarFacturas();
-                        }
-                    }, 1500); // Aumentamos el tiempo para dar más margen a la actualización de la BD
+                    // Esperamos un momento y luego refrescamos la tabla
+                    setTimeout(() => {
+                        buscarFacturas(true);
+                    }, 1500);
+                    
                 } catch (error) {
                     mostrarNotificacion('Error', error.message, 'error');
                 } finally {
@@ -379,7 +328,14 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
 // Función para búsqueda interactiva
 function busquedaInteractiva(event) {
     const input = event.target;
-    const minLength = input.id === 'contacto' ? 2 : 1;
+    let minLength;
+    if (input.id === 'contacto') {
+        minLength = 2;
+    } else if (input.id === 'conceptFilter') {
+        minLength = 3;
+    } else {
+        minLength = 1;
+    }
     
     if (input.value.length >= minLength || input.value.length === 0) {
         // Guardar los filtros antes de realizar la búsqueda
@@ -399,7 +355,8 @@ function guardarFiltros() {
         status: document.getElementById('statusFilter') ? document.getElementById('statusFilter').value : document.getElementById('status').value,
         facturaNumber: document.getElementById('facturaNumber').value,
         contacto: document.getElementById('contacto').value,
-        identificador: document.getElementById('identificador').value
+        
+        conceptFilter: document.getElementById('conceptFilter').value
     };
     console.log('Filtros a guardar:', filtros);
     sessionStorage.setItem('filtrosFacturas', JSON.stringify(filtros));
@@ -426,7 +383,10 @@ function restaurarFiltros() {
         document.getElementById('status').value = filtros.status || '';
         document.getElementById('facturaNumber').value = filtros.facturaNumber || '';
         document.getElementById('contacto').value = filtros.contacto || '';
-        document.getElementById('identificador').value = filtros.identificador || '';
+        if (document.getElementById('conceptFilter')) {
+            document.getElementById('conceptFilter').value = filtros.conceptFilter || '';
+        }
+        
         
         // Realizar búsqueda con los filtros restaurados
         buscarFacturas();
@@ -449,7 +409,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // Event listeners para búsqueda interactiva
     document.getElementById('facturaNumber').addEventListener('input', busquedaInteractiva);
     document.getElementById('contacto').addEventListener('input', busquedaInteractiva);
-    document.getElementById('identificador').addEventListener('input', busquedaInteractiva);
+    
+    // Debounce para evitar llamadas excesivas mientras se escribe el concepto
+    document.getElementById('conceptFilter').addEventListener('input', debounce(busquedaInteractiva, 400));
     
     // Event listeners para cambios en fechas y estado
     document.getElementById('startDate').addEventListener('change', () => {

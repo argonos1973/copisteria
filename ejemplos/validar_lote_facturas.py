@@ -5,16 +5,17 @@
 Script para validar un lote completo de facturas Facturae
 """
 
+import glob
+import logging
 import os
 import sys
-import glob
-from datetime import datetime
-import logging
 from collections import Counter
+from datetime import datetime
 
 # Importar el módulo de validación
 sys.path.append('/var/www/html')
 from facturae.validacion import validar_facturae_completa
+
 
 def validar_lote_facturas(directorio):
     """
@@ -39,7 +40,7 @@ def validar_lote_facturas(directorio):
     archivos_xml.sort()
     
     print(f"\n{'=' * 80}")
-    print(f"VALIDACIÓN DE LOTE DE FACTURAS")
+    print("VALIDACIÓN DE LOTE DE FACTURAS")
     print(f"Directorio: {directorio}")
     print(f"Fecha y hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Total facturas a validar: {len(archivos_xml)}")

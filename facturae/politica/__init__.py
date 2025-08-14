@@ -19,8 +19,8 @@ import hashlib
 import logging
 import os
 import urllib.request
-from typing import Dict
 from datetime import datetime
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 

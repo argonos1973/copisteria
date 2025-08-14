@@ -6,7 +6,9 @@ Script para analizar la estructura de un archivo XML de Facturae
 """
 
 import sys
+
 from lxml import etree
+
 
 def mostrar_estructura(elemento, ruta='', nivel=0):
     """Muestra la estructura jerárquica de un elemento XML con sus rutas"""

@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import os
 import sqlite3
 import sys
 from datetime import datetime, timedelta

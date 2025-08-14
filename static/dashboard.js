@@ -1,4 +1,5 @@
-import { formatearImporte, mostrarNotificacion, fetchConManejadorErrores } from './utils.js';
+import { formatearImporte, fetchConManejadorErrores } from './scripts_utils.js';
+import { mostrarNotificacion } from './notificaciones.js';
 
 // Función para obtener las estadísticas del año actual y anterior
 async function obtenerEstadisticas() {

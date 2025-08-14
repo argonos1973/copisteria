@@ -1,47 +1,41 @@
-import base64
 import csv
-import hashlib
 import os
 import sqlite3
-import tempfile
 from datetime import datetime
-from time import strftime
 
-import qrcode
-from flask import (Flask, Response, jsonify, render_template, request,
-                   send_file, stream_with_context)
-from flask_cors import CORS, cross_origin
+from flask import (Flask, Response, jsonify, request, send_file,
+                   stream_with_context)
+from flask_cors import CORS
 
 try:
     from weasyprint import CSS, HTML
 except ImportError:
     print("WeasyPrint no está instalado. La generación de PDF no estará disponible.")
 
-import base64
 import datetime
-import hashlib
-import importlib.util
-import io
 import json
-import locale
-import math
-import os
-import re
 import subprocess
-import sys
 import time
-import zipfile
-from datetime import datetime, timedelta
-
-from flask import (Flask, Response, jsonify, make_response, request, send_file,
-                   url_for)
+from datetime import datetime
 
 # Importación de módulos locales
 import contactos
 import factura
-import generar_pdf
+try:
+    import generar_pdf
+except Exception as e:
+    print(f"[AVISO] Error importando generar_pdf: {e}. Se deshabilita la generación de PDF.")
+    generar_pdf = None
 import proforma
 import verifactu
+
+# Configuración externa para habilitar o deshabilitar VeriFactu
+try:
+    from config_loader import get as get_config
+    VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", True))
+except Exception as _e:
+    print(f"[AVISO] No se pudo cargar config.json: {_e}. Suponemos VeriFactu HABILITADO")
+    VERIFACTU_HABILITADO = True
 # Nota: Los módulos recibos y usuarios no existen, se han comentado
 # import recibos
 # import usuarios
@@ -49,9 +43,8 @@ import verifactu
 from constantes import *
 from dashboard_routes import dashboard_bp
 from db_utils import (formatear_numero_documento, get_db_connection,
-                      obtener_numerador, redondear_importe)
+                      redondear_importe)
 from factura import obtener_factura_abierta
-from facturae import extraer_xml_desde_xsig
 from gastos import gastos_bp
 from proforma import obtener_proforma_abierta
 from verifactu.core import generar_datos_verifactu_para_ticket
@@ -300,6 +293,7 @@ def filtrar_contactos():
                 ) as numero_proforma_abierta
             FROM contactos c
             WHERE 1=1
+                AND COALESCE(TRIM(c.identificador), '') <> ''
         '''
         params = []
 
@@ -341,6 +335,18 @@ def search_carrer():
         return jsonify(sugerencias)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/contactos/search_cp', methods=['GET'])
+def search_cp():
+    term = request.args.get('term', '').strip()[:5]
+    if not term:
+        return jsonify([])
+    try:
+        datos = contactos.buscar_codigos_postales(term)
+        return jsonify(datos)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/contactos/get_cp', methods=['GET'])
 def get_cp():
@@ -809,6 +815,7 @@ def consulta_tickets():
         estado = request.args.get('estado')
         numero = request.args.get('numero')
         forma_pago = request.args.get('formaPago')
+        concepto = request.args.get('concepto')
 
         # Construir la consulta SQL base
         sql = '''
@@ -834,6 +841,10 @@ def consulta_tickets():
         if forma_pago:
             sql += ' AND t.formaPago = ?'
             params.append(forma_pago)
+        if concepto:
+            sql += ' AND EXISTS (SELECT 1 FROM detalle_tickets d WHERE d.id_ticket = t.id AND (lower(d.concepto) LIKE ? OR lower(d.descripcion) LIKE ?))'
+            like_val = f"%{concepto.lower()}%"
+            params.extend([like_val, like_val])
 
         sql += ' ORDER BY t.fecha DESC, t.timestamp DESC'
 
@@ -987,8 +998,8 @@ def obtener_ticket_con_detalles(id_ticket):
         resultado = {
             'ticket': ticket_dict,
             'detalles': detalles_list,
-            'codigo_qr': codigo_qr,
-            'csv': csv
+            'codigo_qr': (codigo_qr if VERIFACTU_HABILITADO else None),
+            'csv': (csv if VERIFACTU_HABILITADO else None)
         }
 
         return jsonify(resultado)
@@ -1036,8 +1047,8 @@ def consultar_ticket_detalles(id_ticket):
         resultado = {
             'ticket': ticket_dict,
             'detalles': detalles_list,
-            'codigo_qr': codigo_qr,
-            'csv': csv
+            'codigo_qr': (codigo_qr if VERIFACTU_HABILITADO else None),
+            'csv': (csv if VERIFACTU_HABILITADO else None)
         }
 
         return jsonify(resultado)
@@ -1166,7 +1177,7 @@ def actualizar_ticket():
         # Verificar el estado final
         cursor.execute('SELECT importe_cobrado, total FROM tickets WHERE id = ?', (id_ticket,))
         resultado_final = cursor.fetchone()
-        print(f"Estado final del ticket:")
+        print("Estado final del ticket:")
         print(f"Importe cobrado: {resultado_final['importe_cobrado']}")
         print(f"Total: {resultado_final['total']}")
 
@@ -1655,6 +1666,7 @@ def obtener_factura_para_imprimir(factura_id):
                 f.id,
                 f.numero,
                 f.fecha,
+                f.fvencimiento,
                 f.importe_bruto as base,
                 f.importe_impuestos as iva,
                 f.total,
@@ -1736,11 +1748,7 @@ def obtener_factura_para_imprimir(factura_id):
         # Codificar el QR en base64 si existe o generarlo si no existe
         try:
             import base64
-            import sys
-            from datetime import datetime
-            from io import BytesIO
 
-            import qrcode
             
             qr_bytes = None
             qr_code_base64 = None  # Nueva variable para mantener la representación base64 final
@@ -1799,11 +1807,13 @@ def obtener_factura_para_imprimir(factura_id):
             # 4. Guardar el QR en un archivo accesible (solo si se ha obtenido QR)
             if qr_bytes:
                 try:
-                    qr_path = '/var/www/html/static/qr_temp.png'
+                    import os
+                    qr_dir = '/var/www/html/static/tmp_qr'
+                    os.makedirs(qr_dir, exist_ok=True)
+                    qr_path = os.path.join(qr_dir, 'qr_temp.png')
                     with open(qr_path, 'wb') as f:
                         f.write(qr_bytes)
                     # Ajustar permisos para que Apache pueda leerlo
-                    import os
                     os.chmod(qr_path, 0o644)
                     print(f"[DEBUG] QR guardado en {qr_path} para verificación")
                 except Exception as e:
@@ -1828,6 +1838,7 @@ def obtener_factura_para_imprimir(factura_id):
             'id': resultados_dict[0]['id'],
             'numero': resultados_dict[0]['numero'],
             'fecha': format_date(resultados_dict[0]['fecha']),
+            'fvencimiento': format_date(resultados_dict[0]['fvencimiento']) if resultados_dict[0]['fvencimiento'] else None,
             'base': float(resultados_dict[0]['base']) if resultados_dict[0]['base'] is not None else 0.0,
             'iva': float(resultados_dict[0]['iva']) if resultados_dict[0]['iva'] is not None else 0.0,
             'total': float(resultados_dict[0]['total']) if resultados_dict[0]['total'] is not None else 0.0,
@@ -1836,8 +1847,8 @@ def obtener_factura_para_imprimir(factura_id):
             'id_factura_rectificada': resultados_dict[0]['id_factura_rectificada'],
             'formaPago': resultados_dict[0]['formaPago'],
             'importe_cobrado': float(resultados_dict[0]['importe_cobrado']) if resultados_dict[0]['importe_cobrado'] is not None else 0.0,
-            'hash_verifactu': hash_value,
-            'qr_verifactu': qr_code_base64,
+            'hash_verifactu': (hash_value if VERIFACTU_HABILITADO else None),
+            'qr_verifactu': (qr_code_base64 if VERIFACTU_HABILITADO else None),
             'contacto': {
                 'id': resultados_dict[0]['idcontacto'],
                 'razonsocial': resultados_dict[0]['razonsocial'],
@@ -1938,6 +1949,12 @@ def api_estadisticas_gastos():
     """Endpoint API para obtener estadísticas de gastos (redirección)"""
     from dashboard_routes import estadisticas_gastos
     return estadisticas_gastos()
+
+@app.route('/api/ingresos_gastos_mes', methods=['GET'])
+def api_ingresos_gastos_mes():
+    """Endpoint API para obtener ingresos y gastos por mes (redirección)"""
+    from gastos import ingresos_gastos_mes
+    return ingresos_gastos_mes()
 
 @app.route('/scraping/ejecutar_scrapeo', methods=['POST'])
 def ejecutar_scrapeo():
@@ -2083,6 +2100,7 @@ def api_notificaciones():
 
 
 @app.route('/notificaciones/stream')
+@app.route('/api/notificaciones/stream')
 def notificaciones_stream():
     """Flujo SSE para notificaciones en tiempo real"""
     def event_stream():
@@ -2277,7 +2295,6 @@ def enviar_factura_aeat(factura_id):
             'mensaje': f'Error al enviar la factura a AEAT: {str(e)}'
         }), 500
         
-# Endpoint API para enviar facturas a AEAT usando VERI*FACTU (con prefijo api)
 @app.route('/api/factura/enviar/<int:factura_id>', methods=['POST'])
 def api_enviar_factura_aeat(factura_id):
     return enviar_factura_aeat(factura_id)

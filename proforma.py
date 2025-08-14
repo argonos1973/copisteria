@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 
 from flask import Flask, jsonify, request
 
-from constantes import DB_NAME
 from db_utils import (actualizar_numerador, formatear_numero_documento,
                       get_db_connection, obtener_numerador, redondear_importe,
                       verificar_numero_proforma)
@@ -605,7 +604,7 @@ def convertir_proforma_a_factura(id_proforma):
             'mensaje': 'Proforma convertida a factura exitosamente',
             'id_proforma': id_proforma,
             'id_factura': factura_id,
-            'numero_factura': numero_factura
+            'numero_factura': numero_formateado
         })
         
     except Exception as e:

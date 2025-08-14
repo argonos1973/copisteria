@@ -9,12 +9,10 @@ import os
 import sqlite3
 import sys
 from datetime import datetime
-from pathlib import Path
 
 # Añadir el directorio actual al path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from facturae.validacion import validar_facturae_completa
 # Importar las funciones necesarias
 from verifactu import (generar_datos_verifactu_para_factura,
                        validar_factura_xml_antes_procesar)
@@ -88,7 +86,7 @@ def validar_facturas_xsig_hoy():
                 datos_verifactu = generar_datos_verifactu_para_factura(factura_id)
                 if datos_verifactu.get('correcto', False):
                     facturas_procesadas += 1
-                    print(f"  ✓ Datos VERI*FACTU generados correctamente")
+                    print("  ✓ Datos VERI*FACTU generados correctamente")
                     print(f"    - Hash: {datos_verifactu.get('hash', '')[:16]}...")
                     resultado['datos_verifactu'] = datos_verifactu
                 else:

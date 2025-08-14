@@ -3,11 +3,13 @@ import {
   PRODUCTO_ID_LIBRE,
   formatearImporte,
   formatearApunto,
+  parsearImporte,
   calcularPrecioConDescuento,
   calcularTotalDetalle,
   abrirModalPagos as abrirModal,
-  cerrarModalPagos as cerrarModal,
-  calcularCambio as calcularCambioModal
+  formatearFechaSoloDia,
+  convertirFechaParaAPI,
+  formatearFecha
 } from './scripts_utils.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
@@ -17,8 +19,6 @@ import {
   limpiarCamposDetalle,
   seleccionarProducto as seleccionarProductoCommon,
   validarDetalle,
-  formatearFecha,
-  convertirFechaParaAPI,
   redondearImporte,
   volverSegunOrigen
 } from './common.js';
@@ -432,7 +432,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (btnGuardar) {
       btnGuardar.removeEventListener('click', guardarProforma);
       btnGuardar.addEventListener('click', () => {
-        const totalProforma = parseFloat(formatearApunto(document.getElementById('total-proforma').value));
+        const totalProforma = parsearImporte(document.getElementById('total-proforma').value);
         const fechaInput = document.getElementById('fecha').value;
         
         // Convertir la fecha al formato DD/MM/AAAA si no está en ese formato
@@ -442,16 +442,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           fechaFormateada = `${dia}/${mes}/${año}`;
         }
         
-        abrirModalPagos({
+        abrirModal({
           total: totalProforma,
           fecha: fechaFormateada,
           formaPago: 'E',
           titulo: 'Procesar Pago',
-          onCobrar: (formaPago, totalPago) => {
-            // Obtener el valor del modal y asegurar formato con punto decimal
-            const modalTotal = parseFloat(document.getElementById('modal-total-ticket').value.replace(',', '.'));
-            console.log('Total a cobrar (modal):', modalTotal);
-            guardarProforma(formaPago, modalTotal, 'A');
+          onCobrar: (formaPago, totalPago, estado) => {
+            const importe = (typeof totalPago === 'number') ? totalPago : parsearImporte(totalPago);
+            console.log('Total a cobrar (modal):', importe, 'estado:', estado);
+            guardarProforma(formaPago, importe, 'A');
           }
         });
       });
@@ -519,20 +518,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById('busqueda-producto').focus();
 
     // Event listeners para el modal de pagos
-    const closeModal = document.getElementById('closeModal');
-    if (closeModal) {
-      closeModal.addEventListener('click', cerrarModal);
-    }
-
-    const totalEntregado = document.getElementById('modal-total-entregado');
-    if (totalEntregado) {
-      totalEntregado.addEventListener('input', calcularCambioModal);
-    }
-
-    const btnCobrar = document.getElementById('btn-cobrar');
-    if (btnCobrar) {
-      btnCobrar.addEventListener('click', procesarPago);
-    }
+    // Listeners de la modal se inicializan dentro de scripts_utils. No duplicar aquí.
 
     // Asociar evento al selector de tipo de proforma
     const selectorTipo = document.getElementById('tipo-proforma-select');
@@ -569,8 +555,7 @@ async function cargarProforma(id) {
     
     document.getElementById('numero').value = data.numero;
     // Convertir la fecha de YYYY-MM-DD a DD/MM/AAAA
-    const fechaFormateada = formatearFecha(data.fecha);
-    document.getElementById('fecha').value = fechaFormateada;
+    document.getElementById('fecha').value = formatearFechaSoloDia(data.fecha);
     
     console.log("Datos recibidos de la proforma:", JSON.stringify(data));
     console.log("Campos en data:", Object.keys(data));
@@ -690,7 +675,7 @@ async function buscarProformaAbierta(idContacto) {
             idProforma = data.id;
             document.getElementById('numero').value = data.numero;
             // Convertir la fecha de YYYY-MM-DD a DD/MM/AAAA
-            const fechaFormateada = formatearFecha(data.fecha);
+            const fechaFormateada = formatearFechaSoloDia(data.fecha);
             document.getElementById('fecha').value = fechaFormateada;
             document.getElementById('estado').value = data.estado === 'A' ? 'Abierta' : data.estado;
             document.getElementById('total-proforma').value = formatearImporte(data.total);
@@ -795,7 +780,6 @@ async function cargarDatosContacto(id) {
   }
 }
 
-
 /**
  * Abre el modal de pagos para proformas
  */
@@ -828,27 +812,11 @@ function abrirModalPagos() {
   });
 }
 
-function cerrarModalPagos() {
-  document.getElementById('modal-pagos').style.display = 'none';
-}
-
-function calcularCambio() {
-  const totalProforma = parseFloat(document.getElementById('modal-total-proforma').value) || 0;
-  let totalEntregado = parseFloat(document.getElementById('modal-total-entregado').value) || 0;
-
-  let totalCambio = totalEntregado - totalProforma;
-  if (totalCambio < 0) {
-    totalCambio = 0;
-  }
-  document.getElementById('modal-total-cambio').value = totalCambio.toFixed(2);
-}
-
 async function procesarPago() {
   const totalProforma = parseFloat(formatearApunto(document.getElementById('total-proforma').value));
   const totalEntregado = parseFloat(document.getElementById('modal-total-entregado').value.replace(',', '.'));
   const modalTotal = parseFloat(document.getElementById('modal-total-ticket').value.replace(',', '.'));
   let formaPago = document.getElementById('modal-metodo-pago').value;
-
 
   // Si es tarjeta, el pago es por el total de la proforma
   if (formaPago === 'T') {

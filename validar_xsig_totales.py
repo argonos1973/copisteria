@@ -8,9 +8,7 @@ Script para validar los totales de un archivo XSIG específico.
 import logging
 import os
 import sys
-import tempfile
 import xml.etree.ElementTree as ET
-from decimal import Decimal
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

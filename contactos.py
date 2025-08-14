@@ -1,8 +1,6 @@
 import sqlite3
 from functools import lru_cache
 
-from flask import current_app, jsonify
-
 from constantes import *
 
 
@@ -12,7 +10,7 @@ def get_db_connection():
         conn = sqlite3.connect(DB_NAME)
         conn.row_factory = sqlite3.Row
         return conn
-    except Exception as e:
+    except Exception:
         raise
 
 
@@ -54,7 +52,30 @@ def obtener_sugerencias_carrer(query):
         rows = cursor.fetchall()
         
         return [{'carrer': row[0], 'cp': row[1]} for row in rows]
-    except sqlite3.Error as e:
+    except sqlite3.Error:
+        return []
+    finally:
+        if 'conn' in locals() and conn:
+            conn.close()
+
+
+def buscar_codigos_postales(prefijo):
+    """Devuelve lista de CP que empiezan por *prefijo* (máx 20)."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT cp, poblacio, provincia
+            FROM codipostal
+            WHERE cp LIKE ? || '%'
+            ORDER BY cp
+            LIMIT 20
+            """,
+            (prefijo,)
+        )
+        return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.Error:
         return []
     finally:
         if 'conn' in locals() and conn:
@@ -80,9 +101,9 @@ def obtener_datos_cp(cp):
             return [dict(resultado)]  # Devuelve un array con un único resultado
         return []  # Si no hay resultados, devuelve un array vacío
 
-    except sqlite3.DatabaseError as db_error:
+    except sqlite3.DatabaseError:
         return {"error": "Error de base de datos al procesar la solicitud"}
-    except Exception as e:
+    except Exception:
         return {"error": "Error inesperado al procesar la solicitud"}
     finally:
         if 'conn' in locals() and conn:
@@ -171,9 +192,9 @@ def obtener_contacto(idContacto):
         else:
             return None
             
-    except sqlite3.Error as e:
+    except sqlite3.Error:
         raise
-    except Exception as e:
+    except Exception:
         raise
     finally:
         if 'conn' in locals():
@@ -192,7 +213,7 @@ def crear_contacto(data):
         return {"success": False, "message": "El campo 'identificador' es obligatorio."}
         
     if not es_identificador_unico(identificador):
-        return {"success": False, "message": "Ya existe un contacto con este identificador."}
+        return {"success": False, "message": "El identificador ya está registrado. Por favor introduce uno diferente o edita el contacto existente."}
         
     
     conn = get_db_connection()
@@ -250,7 +271,7 @@ def es_identificador_unico(identificador, idContacto=None):
             
             resultado = cursor.fetchone()
             return resultado is None
-    except sqlite3.Error as e:
+    except sqlite3.Error:
         return False
 
 
@@ -265,7 +286,7 @@ def actualizar_contacto(idContacto, data):
 
         
     if not es_identificador_unico(identificador, idContacto):
-            return {"success": False, "message": "Ya existe un contacto con este identificador."}
+            return {"success": False, "message": "El identificador ya está registrado. Por favor introduce uno diferente o edita el contacto existente."}
     
     
     conn = get_db_connection()

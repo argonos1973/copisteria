@@ -3,13 +3,17 @@ import {
     PRODUCTO_ID_LIBRE,
     formatearImporte,
     formatearApunto,
+    parsearImporte,
     calcularPrecioConDescuento,
     calcularTotalDetalle,
     abrirModalPagos as abrirModal,
     cerrarModalPagos as cerrarModal,
     calcularCambio as calcularCambioModal,
     getEstadoFormateado,
-    getCodigoEstado
+    getCodigoEstado,
+    formatearFechaSoloDia,
+    convertirFechaParaAPI,
+    formatearFecha
 } from './scripts_utils.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
@@ -19,8 +23,6 @@ import {
     limpiarCamposDetalle,
     seleccionarProducto as seleccionarProductoCommon,
     validarDetalle,
-    formatearFecha,
-    convertirFechaParaAPI,
     redondearImporte,
     volverSegunOrigen
 } from './common.js';
@@ -59,6 +61,20 @@ function abrirModalPagos() {
     onCobrar: (formaPago, totalPago, total) => {
        const importeCobrado = totalDiaActual;
        console.log('Importe a cobrar:', importeCobrado);
+
+       // Asegurar que la factura se guarde con la fecha actual
+       const hoyIso = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+       const fechaInput = document.getElementById('fecha');
+       if(fechaInput && !fechaInput.value){
+         fechaInput.value = hoyIso;
+       }
+       const fvencInput = document.getElementById('fvencimiento');
+       if(fvencInput && !fvencInput.value){
+         // Por defecto 15 días después
+         const venc = new Date();
+         venc.setDate(venc.getDate()+15);
+         fvencInput.value = venc.toISOString().slice(0,10);
+       }
        // Cerrar el modal antes de realizar la petición
        cerrarModal();
        guardarFactura(formaPago, importeCobrado, 'C');
@@ -74,8 +90,11 @@ function calcularTotalDetallesDiaActual() {
   // Solo sumar detalles que coincidan con el ID del día actual
   detalles.forEach(detalle => {
      
-          const subtotal = parseFloat(detalle.precio) * parseInt(detalle.cantidad);
-          const impuesto = subtotal * (parseFloat(detalle.impuestos) / 100);
+          const precio = parsearImporte(detalle.precio);
+          const cantidad = parsearImporte(detalle.cantidad);
+          const iva = parsearImporte(detalle.impuestos);
+          const subtotal = precio * cantidad;
+          const impuesto = subtotal * (iva / 100);
           
           importe_bruto += subtotal;
           importe_impuestos += impuesto;
@@ -130,7 +149,7 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
             }
             
             // Validar que totalPago sea un número válido
-            importeCobrado = parseFloat(importeCobrado);
+            importeCobrado = parsearImporte(importeCobrado);
             if (isNaN(importeCobrado) || importeCobrado < 0) {
                 console.error('importeCobrado no es válido:', importeCobrado);
                 mostrarNotificacion("El importe debe ser mayor o igual que 0", "error");
@@ -143,10 +162,12 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
             id: d.id || null,  // Mantener el ID si existe
             concepto: d.concepto,
             descripcion: d.descripcion || '',
-            cantidad: parseInt(d.cantidad),
-            precio: Number(d.precio).toFixed(5),
-            impuestos: parseFloat(d.impuestos),
-            total: redondearImporte(parseFloat(d.precio) * parseInt(d.cantidad) * (1 + parseFloat(d.impuestos)/100)),
+            cantidad: parsearImporte(d.cantidad),
+            precio: parsearImporte(d.precio).toFixed(5),
+            impuestos: parsearImporte(d.impuestos),
+            total: redondearImporte(
+              parsearImporte(d.precio) * parsearImporte(d.cantidad) * (1 + parsearImporte(d.impuestos)/100)
+            ),
             productoId: d.productoId,
             formaPago: d.formaPago,
             fechaDetalle: d.fechaDetalle || convertirFechaParaAPI(document.getElementById('fecha').value)
@@ -250,14 +271,19 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
 // Función para calcular el total bruto
 function calcularTotalBruto() {
     return detalles.reduce((total, detalle) => {
-        return total + (detalle.precio * detalle.cantidad);
+        const precio = parsearImporte(detalle.precio);
+        const cantidad = parsearImporte(detalle.cantidad);
+        return total + (precio * cantidad);
     }, 0);
 }
 
 // Función para calcular el total de impuestos
 function calcularTotalImpuestos() {
     return detalles.reduce((total, detalle) => {
-        return total + ((detalle.precio * detalle.cantidad) * (detalle.impuestos / 100));
+        const precio = parsearImporte(detalle.precio);
+        const cantidad = parsearImporte(detalle.cantidad);
+        const iva = parsearImporte(detalle.impuestos);
+        return total + ((precio * cantidad) * (iva / 100));
     }, 0);
 }
 
@@ -365,9 +391,9 @@ function seleccionarProducto() {
   }
   
   // Asegurarse de que el tipo de factura se aplica correctamente
-  const precio = parseFloat(formElements.precioDetalle.value);
-  const cantidad = parseInt(formElements.cantidadDetalle.value);
-  const impuesto = parseFloat(formElements.impuestoDetalle.value);
+  const precio = parsearImporte(formElements.precioDetalle.value);
+  const cantidad = parsearImporte(formElements.cantidadDetalle.value);
+  const impuesto = parsearImporte(formElements.impuestoDetalle.value);
   const tipoFactura = document.getElementById('tipo-factura').value || 'N';
   const precioFinal = tipoFactura === 'A' ? precio : calcularPrecioConDescuento(precio, cantidad, tipoFactura, 'factura');
   const subtotal = precioFinal * cantidad;
@@ -375,7 +401,7 @@ function seleccionarProducto() {
   const total = subtotal + impuestoTotal;
   
   formElements.precioDetalle.value = precioFinal.toFixed(5);
-  formElements.totalDetalle.value = total.toFixed(2);
+  formElements.totalDetalle.value = redondearImporte(total).toFixed(2);
   console.log(`Total calculado (tipo ${tipoFactura}): ${total.toFixed(2)}, precio: ${precioFinal.toFixed(5)}`);
   
   // No llamar a calcularTotalDetalle() aquí, ya lo hemos calculado manualmente
@@ -395,8 +421,7 @@ function actualizarTotales() {
         // Obtener la celda del total (6ª celda, índice 5)
         const celdas = fila.querySelectorAll('td');
         if (celdas.length >= 6) {
-            const totalTexto = celdas[5].textContent.trim().replace('€', '').replace(',', '.').trim();
-            const total = parseFloat(totalTexto) || 0;
+            const total = parsearImporte(celdas[5].textContent);
             
             total_factura += total;
             console.log(`Fila ${index}: Total=${total}`);
@@ -432,11 +457,11 @@ function actualizarTablaDetalles() {
         const tr = document.createElement('tr');
         
         // Asegurar que todos los valores numéricos son realmente números
-        const cantidad = parseInt(detalle.cantidad) || 0;
-        const precio = parseFloat(detalle.precio) || 0;
+        const cantidad = parsearImporte(detalle.cantidad) || 0;
+        const precio = parsearImporte(detalle.precio) || 0;
         
         // Mantener IVA en 0 si así está establecido
-        const impuestos = detalle.impuestos === 0 ? 0 : (parseFloat(detalle.impuestos) || 21);
+        const impuestos = detalle.impuestos === 0 ? 0 : (parsearImporte(detalle.impuestos) || 21);
         
         // Recalcular el total para asegurar consistencia
         const subtotal = precio * cantidad;
@@ -479,9 +504,9 @@ function validarYAgregarDetalle() {
     ? document.getElementById('descripcion-detalle').value.trim()
     : select.options[select.selectedIndex].textContent;
   let descripcion = document.getElementById('descripcion-detalle').value.trim();
-  const cantidad = parseFloat(document.getElementById('cantidad-detalle').value);
-  let precioOriginal = parseFloat(select.options[select.selectedIndex].dataset.precioOriginal) || 0;
-  let precioDetalle = parseFloat(document.getElementById('precio-detalle').value);
+  const cantidad = parsearImporte(document.getElementById('cantidad-detalle').value);
+  let precioOriginal = parsearImporte(select.options[select.selectedIndex].dataset.precioOriginal) || 0;
+  let precioDetalle = parsearImporte(document.getElementById('precio-detalle').value);
 
   if (productoId === PRODUCTO_ID_LIBRE) {
     precioOriginal = precioDetalle;
@@ -540,7 +565,7 @@ function validarYAgregarDetalle() {
       console.log("Campo IVA vacío para producto LIBRE, estableciendo 0%");
       impuestos = 0;
     } else {
-      impuestos = parseFloat(ivaInput) || 0;
+      impuestos = parsearImporte(ivaInput) || 0;
     }
   }
   
@@ -839,7 +864,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
         
-        const totalProforma = parseFloat(formatearApunto(document.getElementById('total-proforma').value));
+        const totalProforma = parsearImporte(document.getElementById('total-proforma').value);
         const fechaInput = document.getElementById('fecha').value;
         
         // Convertir la fecha al formato DD/MM/AAAA si no está en ese formato
@@ -867,12 +892,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <div class="modal-linea">
                   <div class="modal-campo">
                     <label for="modal-total-ticket">Total (€):</label>
-                    <input type="number" 
+                    <input type="text" 
                            id="modal-total-ticket" 
-                           value="${totalProforma.toFixed(2)}" 
-                           min="0"
-                           max="999999.99"
-                           class="right-aligned"
+                           value="${formatearImporte(totalProforma)}" 
+                           class="right-aligned readonly-field"
                            readonly />
                   </div>
                   <div class="modal-campo">
@@ -983,7 +1006,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           modalExistente.remove();
         }
         
-        const totalProforma = parseFloat(formatearApunto(document.getElementById('total-proforma').value));
+        const totalProforma = parsearImporte(document.getElementById('total-proforma').value) || 0;
         const fechaInput = document.getElementById('fecha').value;
         
         // Convertir la fecha al formato DD/MM/AAAA si no está en ese formato
@@ -1005,12 +1028,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="modal-linea">
           <div class="modal-campo">
             <label for="modal-total-ticket">Total (€):</label>
-            <input type="number" 
+            <input type="text" 
                    id="modal-total-ticket" 
-                   value="${totalProforma.toFixed(2)}" 
-                   min="0"
-                   max="999999.99"
-                   class="right-aligned" 
+                   value="${formatearImporte(totalProforma)}" 
+                   class="right-aligned readonly-field" 
                    readonly />
           </div>
           <div class="modal-campo">
@@ -1034,11 +1055,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div class="modal-linea">
           <div class="modal-campo">
             <label for="modal-total-entregado">Total Entregado (€):</label>
-            <input type="number" id="modal-total-entregado" value="${totalProforma.toFixed(2)}" class="right-aligned" />
+            <input type="text" id="modal-total-entregado" value="${formatearImporte(totalProforma)}" class="right-aligned" />
           </div>
           <div class="modal-campo">
             <label for="modal-cambio">Total Cambio (€):</label>
-            <input type="number" id="modal-cambio" value="0.00" readonly class="readonly-field right-aligned" />
+            <input type="text" id="modal-cambio" value="${formatearImporte(0)}" readonly class="readonly-field right-aligned" />
           </div>
           <div class="modal-campo" style="visibility: hidden;">
             <!-- Campo invisible para mantener la estructura -->
@@ -1070,10 +1091,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const totalEntregadoInput = document.getElementById('modal-total-entregado');
         if (totalEntregadoInput) {
           totalEntregadoInput.addEventListener('input', () => {
-            const totalFactura = parseFloat(document.getElementById('modal-total-ticket').value) || 0;
-            const totalEntregado = parseFloat(totalEntregadoInput.value.replace(',', '.')) || 0;
+            const totalFactura = parsearImporte(document.getElementById('modal-total-ticket').value) || 0;
+            const totalEntregado = parsearImporte(totalEntregadoInput.value) || 0;
             const cambio = totalEntregado - totalFactura;
-            document.getElementById('modal-cambio').value = cambio > 0 ? cambio.toFixed(2) : '0.00';
+            document.getElementById('modal-cambio').value = formatearImporte(cambio > 0 ? cambio : 0);
           });
         }
         
@@ -1089,8 +1110,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Configurar el botón de cobrar
         document.getElementById('btn-cobrar-modal').addEventListener('click', async () => {
           const formaPago = document.getElementById('modal-metodo-pago').value;
-          const totalEntregado = parseFloat(document.getElementById('modal-total-entregado').value.replace(',', '.')) || 0;
-          const totalFactura = parseFloat(document.getElementById('modal-total-ticket').value) || 0;
+          const totalEntregado = parsearImporte(document.getElementById('modal-total-entregado').value) || 0;
+          const totalFactura = parsearImporte(document.getElementById('modal-total-ticket').value) || 0;
           
           // Validaciones para el cobro
           if (totalEntregado < totalFactura) {
@@ -1273,7 +1294,7 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
         
         // Establecer los valores de la factura
         if (factura.modo === 'edicion') {
-            document.getElementById('fecha').value = formatearFecha(factura.fecha);
+            document.getElementById('fecha').value = formatearFechaSoloDia(factura.fecha);
             document.getElementById('numero').value = factura.numero;
             
             // Convertir el estado a formato legible usando la función centralizada
@@ -1328,8 +1349,8 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
 }
 
 async function procesarPago() {
-  const formaPago = document.getElementById('modal-forma-pago').value;
-  const totalProforma = parseFloat(document.getElementById('total-proforma').value);
+  const formaPago = document.getElementById('modal-metodo-pago').value;
+  const totalProforma = parsearImporte(document.getElementById('total-proforma').value);
 
   if (formaPago === 'T' || formaPago === 'B') {
     console.log('Pago con tarjeta/banco, importe:', totalProforma);
@@ -1340,7 +1361,7 @@ async function procesarPago() {
   }
 
   // Validar el total entregado para pagos en efectivo
-  const modalTotal = parseFloat(document.getElementById('modal-total-entregado').value.replace(',', '.'));
+  const modalTotal = parsearImporte(document.getElementById('modal-total-entregado').value);
   if (isNaN(modalTotal) || modalTotal < totalProforma) {
     mostrarNotificacion("El importe entregado debe ser igual o superior al total de la factura", "warning");
     return;
@@ -1530,10 +1551,14 @@ function cargarDetalleParaEditar(fila) {
 
 // Función para calcular el cambio
 function calcularCambio() {
-    const totalFactura = parseFloat(document.getElementById('total-factura').value) || 0;
-    const totalEntregado = parseFloat(document.getElementById('modal-total-entregado').value) || 0;
+    const totalElemFactura = document.getElementById('total-factura');
+    const totalElemProforma = document.getElementById('total-proforma');
+    const totalFactura = totalElemFactura
+        ? parsearImporte(totalElemFactura.value)
+        : (totalElemProforma ? parsearImporte(totalElemProforma.value) : 0);
+    const totalEntregado = parsearImporte(document.getElementById('modal-total-entregado').value) || 0;
     const cambio = calcularCambioModal(totalFactura, totalEntregado);
-    document.getElementById('modal-total-cambio').value = cambio.toFixed(2);
+    document.getElementById('modal-cambio').value = cambio.toFixed(2);
 }
 
 // Hacer las funciones disponibles globalmente al final del archivo

@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estadísticas</title>
-    <script type="module" src="../static/utils.js"></script>
+    
     <script src="../static/estadisticas_facturas.js?v=2" type="module"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="../static/styles.css">
@@ -258,6 +258,40 @@
             border: 2px solid #27ae60 !important;
             transition: box-shadow 0.3s, background 0.3s, border 0.3s;
         }
+        /* Modern card redesign */
+        .stats-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 1.25rem 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stats-card{position:relative;}
+        .toggle-card{background:none;border:none;cursor:pointer;margin-left:0.5rem;font-size:0.75rem;color:#6c757d;padding:0 4px;}
+        .toggle-card i{pointer-events:none;}
+        .stats-card.collapsed{padding:0.3rem 1rem;transition:none;max-height:3.2rem;overflow:hidden;}
+        .stats-card.collapsed h3{margin-bottom:0;}
+        .stats-card.collapsed .stats-content{display:none;}
+        .stats-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+
+        .stats-label {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .stats-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #212529;
+        }
     </style>
 
 <style>
@@ -270,7 +304,8 @@
     .stats-header{display:flex;flex-direction:column;gap:0.2rem;margin-bottom:1rem;}
     .header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;}
     .header-icons{display:flex;gap:0.3rem;}
-    .header-icons button{margin:0;}
+    .header-icons button{margin:0;background:#000 !important;border:none;border-radius:4px;padding:6px;}
+    .header-icons i{color:#fff !important;}
     .header-controls{display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;}
 </style>
 </head>
@@ -293,7 +328,7 @@
         <div class="stats-container">
             <!-- Estadísticas de Tickets -->
             <div class="stats-card" id="card-tickets">
-                <h3>Tickets</h3>
+                <h3>Tickets <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
                 <div class="stats-content">
                     <div class="stats-row">
                         <div class="stats-label">Total Año Actual</div>
@@ -329,13 +364,16 @@
                     <div class="stats-row">
                         <div class="stats-label">Cantidad</div>
                         <div class="stats-value" id="ticketsCantidad">0</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="ticketsCantidadPctMes">N/A</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Estadísticas de Facturas -->
             <div class="stats-card" id="card-facturas">
-                <h3>Facturas</h3>
+                <h3>Facturas <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
                 <div class="stats-content">
                     <div class="stats-row">
                         <div class="stats-label">Total Año Actual</div>
@@ -371,47 +409,17 @@
                     <div class="stats-row">
                         <div class="stats-label">Cantidad</div>
                         <div class="stats-value" id="facturasCantidad">0</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="facturasCantidadPctMes">N/A</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Estadísticas de Proformas -->
-            <div class="stats-card">
-                <h3>Proformas</h3>
-                <div class="stats-content">
-                    <div class="stats-row">
-                        <div class="stats-label">Total Año Actual</div>
-                        <div class="stats-value" id="proformasTotal">0,00 €</div>
-                        <div class="stats-comparison">
-                            <span class="stats-percentage" id="proformasPorcentaje">0%</span>
-                            <span class="stats-previous" id="proformasAnterior">Año anterior: 0,00 €</span>
-                        </div>
-                    </div>
-                    <div class="stats-row">
-                        <div class="stats-label">Media por Proforma</div>
-                        <div class="stats-value" id="proformasMedia">0,00 €</div>
-                    </div>
-                    <div class="stats-row">
-                        <div class="stats-label">Media Mensual</div>
-                        <div class="stats-value" id="proformasMediaMensual">0,00 €</div>
-                    </div>
-                    <div class="stats-row">
-                        <div class="stats-label">% Falta para Media Mensual</div>
-                        <div class="stats-value" id="proformasFaltaMediaMensual">0%</div>
-                        <div class="stats-comparison">
-                            <span class="stats-percentage" id="proformasPorcentajeFalta">0%</span>
-                        </div>
-                    </div>
-                    <div class="stats-row">
-                        <div class="stats-label">Cantidad</div>
-                        <div class="stats-value" id="proformasCantidad">0</div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Estadísticas Globales -->
             <div class="stats-card" id="card-global">
-                <h3>Total Global</h3>
+                <h3>Total Global <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
                 <div class="stats-content">
                     <div class="stats-row">
                         <div class="stats-label">Total Año Actual</div>
@@ -454,6 +462,9 @@
                     <div class="stats-row">
                         <div class="stats-label">Cantidad Total</div>
                         <div class="stats-value" id="globalCantidad">0</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalCantidadPctAnyo">N/A</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -500,30 +511,41 @@
         </div>
     </div>
     <div class="top-stats-column">
-        <div class="stats-card" id="card-gastos-kpi">
-    <div class="stats-header-row">
-        <h3>Extracto Banco (Mes Actual) <span id="btn-actualizar-extracto" class="icono-actualizar" title="Actualizar datos bancarios">↻</span></h3>
-    </div>
-    <div class="stats-content">
-        <div class="stats-row">
-            <div class="stats-label">Ingresos mes actual</div>
-            <div class="stats-value" id="kpi-ingresos-mes-actual">0,00 €</div>
-        </div>
-        <div class="stats-row">
-            <div class="stats-label">Gastos mes actual</div>
-            <div class="stats-value" id="kpi-gastos-mes-actual">0,00 €</div>
-        </div>
-        <div class="stats-row">
-            <div class="stats-label">Balance mes actual</div>
-            <div class="stats-value" id="kpi-balance-mes-actual">0,00 €</div>
-        </div>
-        <div class="stats-row">
-            <div class="stats-label">Saldo final mes actual</div>
-            <div class="stats-value" id="kpi-saldo-mes-actual">0,00 €</div>
-        </div>
-        <div class="stats-row">
-            <div class="stats-label">Última actualización</div>
-            <div class="stats-value" id="kpi-ultima-actualizacion">-</div>
+        <div class="top-gastos" style="display:none;">
+            <h2>Top 10 Gastos</h2>
+            <div class="stats-card">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Total</th>
+                            <th>Dif.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topGastosBody">
+                        <!-- Datos de gastos -->
+                    </tbody>
+                </table>
+            </div>
+        </div><!-- fin top gastos -->
+        <div class="stats-card" id="card-ingresos-gastos-totales" style="margin-top:10px;">
+            <h3>Ingresos y Gastos (Año) <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
+            <div class="stats-content">
+            <div class="stats-row">
+                <div class="stats-label">Ingresos</div>
+                <div class="stats-value importe-positivo" id="ig-total-ingresos">0,00 €</div>
+                <div class="stats-percentage positive" id="ig-pct-ingresos">0%</div>
+            </div>
+            <div class="stats-row">
+                <div class="stats-label">Gastos</div>
+                <div class="stats-value importe-negativo" id="ig-total-gastos">0,00 €</div>
+                <div class="stats-percentage negative" id="ig-pct-gastos">0%</div>
+            </div>
+            <div class="stats-row">
+                <div class="stats-label">Balance</div>
+                <div class="stats-value" id="ig-total-balance">0,00 €</div>
+            </div>
+            </div>
         </div>
     </div>
 </div>
@@ -539,6 +561,7 @@
                 <option value="global">Total Global</option>
                 <option value="tickets">Tickets</option>
                 <option value="facturas">Facturas</option>
+                <option value="ingresos_gastos">Ingresos vs Gastos</option>
             </select>
         </div>
         <canvas id="chart-estadisticas"></canvas>
@@ -549,8 +572,10 @@
 <div id="notificaciones-contenedor"></div>
 
 <!-- Scripts sin tipo module para mejor compatibilidad -->
+<!-- Bloque inline eliminado -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
+<!--
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const btnGraficos = document.getElementById("btn-graficos");
@@ -566,6 +591,7 @@
         }
     });
 </script>
-<script src="../static/extracto_scraping.js"></script>
+-->
+
 </body>
 </html>

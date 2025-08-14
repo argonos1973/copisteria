@@ -10,22 +10,55 @@ from datetime import datetime, timedelta
 from flask import Flask, jsonify, render_template, request
 from weasyprint import CSS, HTML
 
-from constantes import DB_NAME
 from db_utils import (actualizar_numerador, get_db_connection,
-                      obtener_numerador, verificar_numero_factura)
+                      verificar_numero_factura)
 from email_utils import enviar_factura_por_email
 # --- Integración Facturae ---
-from facturae_utils import generar_facturae
-from notificaciones_utils import guardar_notificacion
 from utils_emisor import cargar_datos_emisor
 
 # --- Integración VERI*FACTU ---
+import logging
+import tempfile
+
+# Helper para depuración que escribe en /tmp si /var/www/html no es escribible
+from contextlib import contextmanager
+
+@contextmanager
+def safe_append_debug(filename: str):
+    """Devuelve un context manager de archivo para logs de depuración.
+
+    Intenta abrir /var/www/html/<filename>; si falla por permisos, usa /tmp.
+    """
+    primary_path = os.path.join('/var/www/html', filename)
+    fallback_path = os.path.join(tempfile.gettempdir(), filename)
+    try:
+        os.makedirs(os.path.dirname(primary_path), exist_ok=True)
+        f = open(primary_path, 'a')
+    except (PermissionError, FileNotFoundError):
+        f = open(fallback_path, 'a')
+    try:
+        yield f
+    finally:
+        f.close()
+
+# Intentamos importar verifactu (puede no existir en entornos sin esta funcionalidad)
 try:
     import verifactu
     VERIFACTU_DISPONIBLE = True
 except ImportError:
-    import logging
     logging.warning("Módulo verifactu no disponible o con problemas de dependencias. Funcionando sin VERI*FACTU")
+    VERIFACTU_DISPONIBLE = False
+
+# Cargamos configuración externa (config.json)
+try:
+    from config_loader import get as get_config
+    VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", VERIFACTU_DISPONIBLE))
+except Exception as e:
+    logging.warning("No se pudo cargar configuración externa: %s", e)
+    VERIFACTU_HABILITADO = VERIFACTU_DISPONIBLE
+
+# Si la configuración deshabilita VERI*FACTU, forzamos su desactivación en el resto del módulo
+if not VERIFACTU_HABILITADO:
     VERIFACTU_DISPONIBLE = False
 
 
@@ -168,6 +201,15 @@ def crear_factura():
                 })
 
             # --- Generación de Facturae ---
+            if not VERIFACTU_HABILITADO:
+                push_notif("Factura guardada", tipo='success')
+                print("[FACTURA] VeriFactu deshabilitado: se omite generación XML/AEAT")
+                return jsonify({
+                    'mensaje': 'Factura guardada (VeriFactu OFF)',
+                    'id': factura_id,
+                    'notificaciones': notificaciones
+                })
+
             try:
                 print("[FACTURAE] Iniciando integración Facturae para factura_id:", factura_id)
                 push_notif("Generando XML Facturae ...")
@@ -265,7 +307,7 @@ def crear_factura():
                 campos_obligatorios = ['invoice_number', 'issue_date', 'customer_info', 'items', 'base_amount', 'taxes', 'total_amount']
                 missing_fields = [campo for campo in campos_obligatorios if campo not in datos_facturae or datos_facturae[campo] is None]
                 if missing_fields:
-                    with open('/var/www/html/facturae_debug.txt', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.txt') as log_file:
                         log_file.write(f"[VALIDACIÓN] Campos faltantes: {missing_fields}\n")
                         log_file.write(f"[VALIDACIÓN] Claves disponibles: {list(datos_facturae.keys())}\n")
                     raise ValueError(f"Campos obligatorios faltantes: {', '.join(missing_fields)}")
@@ -273,20 +315,20 @@ def crear_factura():
                 datos_facturae['total_amount'] = data['total']  # Añadimos el campo requerido
                 
                 # Añadimos campos para VERI*FACTU
-                datos_facturae['verifactu'] = True  # Indicador para generar formato compatible con VERI*FACTU
+                datos_facturae['verifactu'] = VERIFACTU_DISPONIBLE  # Se genera formato VERI*FACTU sólo si está habilitado
                 datos_facturae['factura_id'] = factura_id  # ID de factura para registro en VERI*FACTU
                 
                 print("[FACTURAE] Llamando a generar_facturae con configuración VERI*FACTU")
                 # Log detallado antes de llamar a generar_facturae
-                with open('/var/www/html/facturae_env_debug.txt', 'a') as f:
+                with safe_append_debug('facturae_env_debug.txt') as f:
                     f.write(f'[DEBUG][factura.py] datos_facturae={datos_facturae}\n')
-                    f.write(f'[DEBUG][factura.py] Integración VERI*FACTU activada\n')
+                    f.write('[DEBUG][factura.py] Integración VERI*FACTU activada\n')
                 try:
                     # Explicitamente importamos la función desde facturae.generador para evitar confusión
                     from facturae.generador import \
                         generar_facturae as generar_facturae_modular
                     
-                    push_notif("Firmando XML Facturae ...")
+                    push_notif("Firmando XML Facturae ...")  # noqa: E501
                     # Usar la versión modular que genera el XML en formato Facturae 3.2.2 compatible con VERI*FACTU
                     ruta_xml_final = generar_facturae_modular(datos_facturae)
                     print(f"[FACTURAE] Facturae 3.2.2 generada y firmada en {ruta_xml_final}")
@@ -581,13 +623,15 @@ def consultar_facturas():
         numero = request.args.get('numero', '')
         contacto = request.args.get('contacto', '')
         identificador = request.args.get('identificador', '')
+        concepto = request.args.get('concepto', '')
 
         # Comprobar si hay algún filtro adicional informado
         hay_filtros_adicionales = any([
             estado.strip(), 
             numero.strip(), 
             contacto.strip(), 
-            identificador.strip()
+            identificador.strip(),
+            concepto.strip()
         ])
 
         conn = get_db_connection()
@@ -625,7 +669,7 @@ def consultar_facturas():
         if estado:
             if estado == 'PV':  # Caso especial para Pendiente+Vencida
                 query += " AND (f.estado IN ('P', 'V'))"
-                print(f"Aplicando filtro especial PV: Pendiente o Vencida")
+                print("Aplicando filtro especial PV: Pendiente o Vencida")
             else:
                 query += " AND f.estado = ?"
                 params.append(estado)
@@ -638,6 +682,10 @@ def consultar_facturas():
         if identificador:
             query += " AND c.identificador LIKE ?"
             params.append(f"%{identificador}%")
+        if concepto:
+            query += " AND EXISTS (SELECT 1 FROM detalle_factura d WHERE d.id_factura = f.id AND (lower(d.concepto) LIKE ? OR lower(d.descripcion) LIKE ?))"
+            like_val = f"%{concepto.lower()}%"
+            params.extend([like_val, like_val])
 
         # Ordenar por fecha descendente y limitar a 100 resultados
         query += " ORDER BY f.fecha DESC LIMIT 100"
@@ -926,7 +974,7 @@ def filtrar_facturas():
         if estado:
             if estado == 'PV':  # Caso especial para Pendiente+Vencida
                 query += " AND (f.estado IN ('P', 'V'))"
-                print(f"Aplicando filtro especial PV: Pendiente o Vencida")
+                print("Aplicando filtro especial PV: Pendiente o Vencida")
             else:
                 query += " AND f.estado = ?"
                 params.append(estado)
@@ -1113,16 +1161,34 @@ def enviar_factura_email(id_factura):
         
         print("Detalles de la factura:", detalles_list)
 
-        # Usar los totales de la factura
-        base_imponible = float(factura_dict.get('importe_bruto', 0))
-        iva = float(factura_dict.get('importe_impuestos', 0))
-        total = float(factura_dict.get('total', 0))
+        # Utilidad segura para parsear importes en formato europeo o numérico
+        def _parse_euro(value):
+            if value is None:
+                return 0.0
+            if isinstance(value, (int, float)):
+                try:
+                    return float(value)
+                except Exception:
+                    return 0.0
+            s = str(value).strip()
+            # Quitar separador de miles y convertir coma a punto
+            s = s.replace('.', '').replace(',', '.')
+            try:
+                return float(s)
+            except Exception:
+                return 0.0
+
+        # Usar los totales de la factura (robusto a formato europeo)
+        base_imponible = _parse_euro(factura_dict.get('importe_bruto', 0))
+        iva = _parse_euro(factura_dict.get('importe_impuestos', 0))
+        total = _parse_euro(factura_dict.get('total', 0))
 
         print(f"Totales de factura: base={base_imponible}, iva={iva}, total={total}")
 
         # Si no hay totales en la factura, calcularlos desde los detalles
         if total == 0:
-            base_imponible = sum(float(detalle['total']) for detalle in detalles_list)
+            base_imponible = sum(_parse_euro(detalle.get('total', 0)) for detalle in detalles_list)
+            # Si cada detalle ya incluye impuestos explícitos, podríamos recalcular. Por defecto, 21% IVA
             iva = base_imponible * 0.21  # 21% IVA
             total = base_imponible + iva
             print(f"Totales calculados desde detalles: base={base_imponible}, iva={iva}, total={total}")
@@ -1190,20 +1256,34 @@ def enviar_factura_email(id_factura):
 
             # Generar el HTML con los datos ya insertados
             detalles_html = ""
+            # Helper de formateo europeo con separador de miles
+            def _fmt_euro(n, dec=2):
+                try:
+                    x = float(n)
+                except Exception:
+                    x = 0.0
+                s = f"{x:,.{dec}f}"
+                # Convertir a formato europeo: punto miles, coma decimales
+                return s.replace(',', 'X').replace('.', ',').replace('X', '.')
+
             for detalle in detalles_list:
                 descripcion_html = f"<span class='detalle-descripcion'>{detalle.get('descripcion', '')}</span>" if detalle.get('descripcion') else ''
+                _precio_num = _parse_euro(detalle.get('precio', 0))
+                _total_num = _parse_euro(detalle.get('total', 0))
+                _precio_str = _fmt_euro(_precio_num)
+                _total_str = _fmt_euro(_total_num)
                 detalles_html += f"""
                     <tr>
                         <td>
-                            <div class="detalle-concepto">
+                            <div class=\"detalle-concepto\">
                                 <span>{detalle.get('concepto', '')}</span>
                                 {descripcion_html}
                             </div>
                         </td>
-                        <td class="cantidad">{detalle.get('cantidad', 0)}</td>
-                        <td class="precio">{str(float(detalle.get('precio', 0))).rstrip('0').rstrip('.').replace('.', ',')}€</td>
-                        <td class="precio">{detalle.get('impuestos', 21)}%</td>
-                        <td class="total">{"{:.2f}".format(float(detalle.get('total', 0))).replace('.', ',')}€</td>
+                        <td class=\"cantidad\">{detalle.get('cantidad', 0)}</td>
+                        <td class=\"precio\">{_precio_str}€</td>
+                        <td class=\"precio\">{detalle.get('impuestos', 21)}%</td>
+                        <td class=\"total\">{_total_str}€</td>
                     </tr>
                 """
 
@@ -1212,11 +1292,14 @@ def enviar_factura_email(id_factura):
                 '<script type="module" src="/static/imprimir-factura.js"></script>',
                 ''
             ).replace(
-                'id="numero"></span>',
-                f'id="numero">{factura_dict["numero"]}</span>'
+                'id="numero" style="font-weight:700;"></span>',
+                f'id="numero" style="font-weight:700;">{factura_dict["numero"]}</span>'
             ).replace(
-                'id="fecha"></span>',
-                f'id="fecha">{datetime.strptime(factura_dict["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y")}</span>'
+                'id="fecha" style="font-weight:700;color:#000;"></span>',
+                f'id="fecha" style="font-weight:700;color:#000;">{datetime.strptime(factura_dict["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y")}</span>'
+            ).replace(
+                'id="fecha-vencimiento" style="font-weight:700;color:#000;"></span>',
+                f'id="fecha-vencimiento" style="font-weight:700;color:#000;">{datetime.strptime(factura_dict["fvencimiento"], "%Y-%m-%d").strftime("%d/%m/%Y") if factura_dict.get("fvencimiento") else ""}</span>'
             ).replace(
                 '<p id="emisor-nombre"></p>',
                 '<p>SAMUEL RODRIGUEZ MIQUEL</p>'
@@ -1249,17 +1332,53 @@ def enviar_factura_email(id_factura):
                 detalles_html
             ).replace(
                 'id="base"></span>',
-                f'id="base">{"{:.2f}".format(base_imponible).replace(".", ",")}€</span>'
+                f'id="base">{_fmt_euro(base_imponible)}€</span>'
             ).replace(
                 'id="iva"></span>',
-                f'id="iva">{"{:.2f}".format(iva).replace(".", ",")}€</span>'
+                f'id="iva">{_fmt_euro(iva)}€</span>'
             ).replace(
                 'id="total"></strong>',
-                f'id="total">{"{:.2f}".format(total).replace(".", ",")}€</strong>'
+                f'id="total">{_fmt_euro(total)}€</strong>'
             ).replace(
                 '<p id="forma-pago">Tarjeta</p>',
                 f'<p>{decodificar_forma_pago(factura_dict.get("formaPago", "T"))}</p>'
             )
+
+            # Reemplazos adicionales robustos usando regex por si la plantilla difiere en espacios/atributos
+            import re
+            def _safe(s):
+                return '' if s is None else str(s)
+            def set_p(html, elem_id, value):
+                pattern = rf'<p\s+id="{re.escape(elem_id)}"[^>]*>.*?</p>'
+                replacement = f'<p id="{elem_id}">{_safe(value)}</p>'
+                return re.sub(pattern, replacement, html, flags=re.DOTALL|re.IGNORECASE)
+            def set_span(html, elem_id, value):
+                pattern = rf'<span\s+id="{re.escape(elem_id)}"[^>]*>.*?</span>'
+                replacement = f'<span id="{elem_id}">{_safe(value)}</span>'
+                return re.sub(pattern, replacement, html, flags=re.DOTALL|re.IGNORECASE)
+
+            # Cliente
+            html_modificado = set_p(html_modificado, 'razonsocial', factura_dict.get('razonsocial', ''))
+            html_modificado = set_p(html_modificado, 'direccion', factura_dict.get('direccion', ''))
+            html_modificado = set_p(html_modificado, 'cp-localidad', ", ".join(filter(None, [
+                _safe(factura_dict.get('cp')), _safe(factura_dict.get('localidad')), _safe(factura_dict.get('provincia'))
+            ])))
+            html_modificado = set_p(html_modificado, 'nif', factura_dict.get('identificador', ''))
+
+            # Emisor (por si cambian atributos en plantilla)
+            html_modificado = set_p(html_modificado, 'emisor-nombre', 'SAMUEL RODRIGUEZ MIQUEL')
+            html_modificado = set_p(html_modificado, 'emisor-direccion', 'LEGALITAT, 70')
+            html_modificado = set_p(html_modificado, 'emisor-cp-ciudad', 'BARCELONA (08024), BARCELONA, España')
+            html_modificado = set_p(html_modificado, 'emisor-nif', '44007535W')
+            html_modificado = set_p(html_modificado, 'emisor-email', 'info@aleph70.com')
+
+            # Totales y fechas (span)
+            html_modificado = set_span(html_modificado, 'numero', factura_dict["numero"])
+            html_modificado = set_span(html_modificado, 'fecha', datetime.strptime(factura_dict["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y"))
+            html_modificado = set_span(html_modificado, 'fecha-vencimiento', datetime.strptime(factura_dict["fvencimiento"], "%Y-%m-%d").strftime("%d/%m/%Y") if factura_dict.get("fvencimiento") else '')
+            html_modificado = set_span(html_modificado, 'base', f"{_fmt_euro(base_imponible)}€")
+            html_modificado = set_span(html_modificado, 'iva', f"{_fmt_euro(iva)}€")
+            html_modificado = re.sub(r'<strong\s+id="total"[^>]*>.*?</strong>', f'<strong id="total">{_fmt_euro(total)}€</strong>', html_modificado, flags=re.DOTALL|re.IGNORECASE)
             
             # --- Leyenda para facturas rectificativas ---
             es_rectificativa = (
@@ -1295,7 +1414,7 @@ def enviar_factura_email(id_factura):
             with open('/tmp/html_antes.html', 'w', encoding='utf-8') as f:
                 f.write(html_modificado)
                 
-            print(f"HTML guardado en /tmp/html_antes.html")
+            print("HTML guardado en /tmp/html_antes.html")
             # Si la factura no está en registro_facturacion o el campo CSV está vacío, omitimos leyenda y QR
             import re
             csv_value = registro['csv'] if registro else None
@@ -1356,7 +1475,7 @@ def enviar_factura_email(id_factura):
             with open('/tmp/html_despues.html', 'w', encoding='utf-8') as f:
                 f.write(html_modificado)
                 
-            print(f"HTML final guardado en /tmp/html_despues.html")
+            print("HTML final guardado en /tmp/html_despues.html")
 
             print("HTML generado con totales:")
             print(f"Base imponible: {base_imponible}")
@@ -1444,7 +1563,6 @@ def crear_factura_post():
 
 def actualizar_factura(id, data):
     # Aseguramos que el módulo traceback esté disponible en toda la función para evitar UnboundLocalError
-    import traceback
 
     # NIF EMISOR obtenido desde configuración para garantizar coherencia
     try:

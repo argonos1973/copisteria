@@ -99,16 +99,21 @@ def obtener_ultimo_hash_del_dia(fecha_iso: str | None = None):
               FROM registro_facturacion
              WHERE substr(fecha_emision, 1, 10) = ?
              ORDER BY id DESC
-             LIMIT 1
+             LIMIT 2
             """,
             (fecha_iso,)
         )
-        row = cursor.fetchone()
+        rows = cursor.fetchall()
         conn.close()
 
-        if row and row["hash"]:
-            logger.info(f"Último hash del día {fecha_iso}: {row['hash'][:10]}...")
-            return row["hash"]
+        # Queremos la penúltima huella (hash anterior al registro que se está enviando ahora)
+        if len(rows) >= 2 and rows[1]["hash"]:
+            logger.info("Huella anterior del día %s: %s...", fecha_iso, rows[1]["hash"][:10])
+            return rows[1]["hash"]
+        elif rows:
+            # Solo existe un registro en el día -> no hay huella anterior
+            logger.info("No existe huella anterior para la fecha %s (solo un registro)", fecha_iso)
+            return None
         return None
     except Exception as exc:
         logger.error("Error al obtener último hash del día %s: %s", fecha_iso, exc)

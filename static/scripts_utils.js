@@ -2,6 +2,87 @@ import { IP_SERVER, PORT } from './constantes.js';
 
 export const PRODUCTO_ID_LIBRE = '94';
 
+/* ================= Loading Overlay ================= */
+let overlayDiv;
+
+function crearOverlay() {
+  if (overlayDiv) return overlayDiv; // ya existe
+  overlayDiv = document.createElement('div');
+  overlayDiv.id = 'loading-overlay';
+  overlayDiv.innerHTML = '<div class="loading-spinner"></div>';
+  overlayDiv.style.position = 'fixed';
+  overlayDiv.style.top = '0';
+  overlayDiv.style.left = '0';
+  overlayDiv.style.width = '100%';
+  overlayDiv.style.height = '100%';
+  overlayDiv.style.background = 'rgba(0,0,0,0.7)';
+  overlayDiv.style.display = 'flex';
+  overlayDiv.style.alignItems = 'center';
+  overlayDiv.style.justifyContent = 'center';
+  overlayDiv.style.zIndex = '9999';
+  overlayDiv.style.visibility = 'hidden';
+  overlayDiv.style.opacity = '0';
+  overlayDiv.style.transition = 'opacity 0.3s ease, visibility 0.3s ease';
+
+  // Estilos del spinner
+  const style = document.createElement('style');
+  style.textContent = `#loading-overlay .loading-spinner { border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%; width: 64px; height: 64px; animation: loading-spin 1s linear infinite; } @keyframes loading-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
+  document.head.appendChild(style);
+  document.body.appendChild(overlayDiv);
+  return overlayDiv;
+}
+
+export function mostrarCargando() {
+  const ov = crearOverlay();
+  ov.style.visibility = 'visible';
+  ov.style.opacity = '1';
+}
+
+export function ocultarCargando() {
+  if (!overlayDiv) return;
+  overlayDiv.style.opacity = '0';
+  overlayDiv.addEventListener('transitionend', () => {
+    overlayDiv.style.visibility = 'hidden';
+  }, { once: true });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  crearOverlay();
+  // Mostrar overlay al enviar cualquier formulario
+  document.body.addEventListener('submit', () => {
+    mostrarCargando();
+  }, true);
+});
+/* =================================================== */
+
+// === Utilidades auxiliares ===
+/**
+ * Devuelve una versión debounced de la función pasada que se ejecutará
+ * después de que no se invoque durante *delay* ms.
+ * @param {Function} fn - función original
+ * @param {number} delay - retraso en ms
+ * @returns {Function}
+ */
+export function debounce(fn, delay = 300) {
+  let timeout;
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// --- Global fetch wrapper ---
+const originalFetch = window.fetch.bind(window);
+window.fetch = async (...args) => {
+  mostrarCargando();
+  try {
+    return await originalFetch(...args);
+  } finally {
+    ocultarCargando();
+  }
+};
+// --- Fin wrapper ---
+
 export function truncarDecimales(numero, decimales) {
   const factor = Math.pow(10, decimales);
   return Math.floor(numero * factor) / factor;
@@ -26,6 +107,39 @@ export function formatearApunto(importe) {
   }
   // Si es string, limpiar el formato
   return parseFloat(importe.toString().replace(',', '.').replace(' €', '')) || 0;
+}
+
+// Convierte string con formato europeo a número, conserva números
+export function parsearImporte(valor) {
+  if (typeof valor === 'number') return valor;
+  if (typeof valor !== 'string') return 0;
+
+  // Normalizar espacios y símbolo de euro
+  let s = valor.replace(/\s|\u00A0/g, '').replace(/€|eur?/gi, '').trim();
+  if (!s) return 0;
+
+  // Si contiene ambos símbolos ',' y '.' decidir el separador decimal por la última aparición
+  const tieneComa = s.includes(',');
+  const tienePunto = s.includes('.');
+  if (tieneComa && tienePunto) {
+    const lastComma = s.lastIndexOf(',');
+    const lastDot = s.lastIndexOf('.');
+    if (lastComma > lastDot) {
+      // Coma es decimal (formato europeo: 1.234,56)
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Punto es decimal (formato americano: 1,234.56)
+      s = s.replace(/,/g, '');
+    }
+  } else if (tieneComa) {
+    // Solo coma: tratar como decimal
+    s = s.replace(',', '.');
+  } else {
+    // Solo punto o sin separadores: dejar tal cual
+  }
+
+  const n = Number(s);
+  return isNaN(n) ? 0 : n;
 }
 
 export function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoFactura = null, tipoDocumento = 'proforma') {
@@ -206,11 +320,10 @@ function crearModalPagos(titulo = 'Añadir Pago') {
         <div class="modal-linea">
           <div class="modal-campo">
             <label for="modal-total-ticket">Total (€):</label>
-            <input type="number" 
+            <input type="text" 
                    id="modal-total-ticket" 
-                   value="0.00" 
-                   min="0"
-                   max="999999.99"
+                   value="0,00" 
+                   inputmode="decimal"
                    class="right-aligned" />
           </div>
           <div class="modal-campo">
@@ -233,11 +346,11 @@ function crearModalPagos(titulo = 'Añadir Pago') {
         <div class="modal-linea">
           <div class="modal-campo">
             <label for="modal-total-entregado">Total Entregado (€):</label>
-            <input type="number" id="modal-total-entregado" value="0.00" class="right-aligned" />
+            <input type="text" id="modal-total-entregado" value="0,00" inputmode="decimal" class="right-aligned" />
           </div>
           <div class="modal-campo">
             <label for="modal-total-cambio">Total Cambio (€):</label>
-            <input type="number" id="modal-total-cambio" value="0.00" readonly class="readonly-field right-aligned" />
+            <input type="text" id="modal-total-cambio" value="0,00" inputmode="decimal" readonly class="readonly-field right-aligned" />
           </div>
           <div class="modal-campo" style="visibility: hidden;">
             <!-- Campo invisible para mantener alineamiento -->
@@ -279,11 +392,24 @@ export function abrirModalPagos({ total, fecha, formaPago = 'E', titulo = 'Añad
   const totalEntregadoInput = document.getElementById('modal-total-entregado');
   const totalCambioInput = document.getElementById('modal-total-cambio');
 
-  if (totalInput) totalInput.value = total;
+  if (totalInput) {
+    // Normalizar a número aunque llegue como string con formato europeo/€
+    const num = (typeof total === 'number') ? total : parsearImporte(total);
+    totalInput.value = new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true }).format(Number(num) || 0);
+  }
   if (fechaInput) fechaInput.value = fecha;
   if (metodoPagoInput) metodoPagoInput.value = formaPago;
-  if (totalEntregadoInput) totalEntregadoInput.value = '';
-  if (totalCambioInput) totalCambioInput.value = '0.00';
+  // Igualar 'Total Entregado' al total del ticket al abrir
+  if (totalEntregadoInput && totalInput) {
+    // Igualar con el mismo formateo europeo
+    totalEntregadoInput.value = totalInput.value;
+  } else if (totalEntregadoInput) {
+    totalEntregadoInput.value = '0,00';
+  }
+  if (totalCambioInput) totalCambioInput.value = '0,00';
+
+  // Recalcular cambio (debe ser 0 si total entregado == total)
+  try { calcularCambioModal(); } catch (_) {}
   
   // Actualizar el texto del botón según el modo
   const btnCobrar = document.getElementById('btn-cobrar');
@@ -371,8 +497,8 @@ export function inicializarEventosModal() {
  * Calcula el cambio en el modal
  */
 function calcularCambioModal() {
-  const totalTicket = parseFloat(document.getElementById('modal-total-ticket').value) || 0;
-  const totalEntregado = parseFloat(document.getElementById('modal-total-entregado').value) || 0;
+  const totalTicket = parsearImporte(document.getElementById('modal-total-ticket').value) || 0;
+  const totalEntregado = parsearImporte(document.getElementById('modal-total-entregado').value) || 0;
   const cambio = calcularCambio(totalTicket, totalEntregado);
   document.getElementById('modal-total-cambio').value = cambio.toFixed(2);
 }
@@ -383,8 +509,8 @@ function calcularCambioModal() {
 function onCobrarClick() {
   if (onCobrarCallback) {
     const formaPago = document.getElementById('modal-metodo-pago').value;
-    const totalPago = parseFloat(document.getElementById('modal-total-entregado').value) || 0;
-    const total = parseFloat(document.getElementById('modal-total-ticket').value) || 0;
+    const totalPago = parsearImporte(document.getElementById('modal-total-entregado').value) || 0;
+    const total = parsearImporte(document.getElementById('modal-total-ticket').value) || 0;
     
     // Comprobar qué modo estamos usando (guardar o cobrar)
     const btnCobrar = document.getElementById('btn-cobrar');
@@ -442,6 +568,7 @@ export const getEstadoFormateado = (estado) => {
         'P': 'Pendiente',
         'C': 'Cobrada',
         'V': 'Vencida',
+        'RE': 'Rectificativa',
         // Estados de proformas
         'A': 'Abierta',
         'F': 'Facturada'
@@ -472,30 +599,99 @@ export const getEstadoClass = (estado) => {
         'P': 'estado-pendiente',
         'C': 'estado-cobrado',
         'V': 'estado-vencido',
+        'RE': 'estado-rectificativa',
         // Estados de proformas
         'A': 'estado-pendiente',
         'F': 'estado-cobrado'     // Facturada - mismo estilo que cobrado
         // Nota: 'C' ya está definido arriba y se usa tanto para facturas (Cobrada) como para proformas (Cerrada)
     };
     return clases[estado] || '';
-}; // === Funciones añadidas automáticamente ===
+}; 
+
 /**
  * Convierte una fecha ISO (o timestamp) en formato DD/MM/YYYY HH:MM.
  */
-export function formatearFecha(fecha) {
+// Convierte diferentes formatos de fecha (con o sin hora) a YYYY-MM-DD
+// Convierte distintos formatos de fecha a YYYY-MM-DD para la API
+export function convertirFechaParaAPI(fecha) {
   if (!fecha) return '';
+  fecha = String(fecha).trim();
+  // Eliminar parte de hora en caso de venir con 'T' o espacio
+  if (fecha.includes('T')) {
+    fecha = fecha.split('T')[0];
+  } else if (fecha.includes(' ')) {
+    fecha = fecha.split(' ')[0];
+  }
+
+  // Si ya está en formato YYYY-MM-DD válido, devolver tal cual
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return fecha;
+
+  // Formato DD-MM-YYYY → YYYY-MM-DD
+  if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(fecha)) {
+    const [dia, mes, anio] = fecha.split('-');
+    return `${anio}-${mes.padStart(2,'0')}-${dia.padStart(2,'0')}`;
+  }
+
+  // Formato DD/MM/YYYY → YYYY-MM-DD
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(fecha)) {
+    const [dia, mes, anio] = fecha.split('/');
+    return `${anio}-${mes.padStart(2,'0')}-${dia.padStart(2,'0')}`;
+  }
+
+  // Como último recurso, usar el parser nativo de Date
+  const d = new Date(fecha);
+  if (!isNaN(d)) {
+    return d.toISOString().slice(0,10);
+  }
+
+  console.warn('Formato de fecha no reconocido:', fecha);
+  return '';
+}
+
+// Devuelve fecha en formato DD/MM/YYYY
+export function formatearFecha(fecha){
+  if(!fecha) return '';
+  const d = fecha instanceof Date ? fecha : new Date(fecha);
+  if(isNaN(d)) return '';
+  const pad = n=>String(n).padStart(2,'0');
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+}
+
+
+// Nueva utilidad: devuelve solo DD/MM/YYYY sin hora
+export function formatearFechaSoloDia(fecha) {
+  if (!fecha) return '';
+  // Si viene en YYYY-MM-DD o YYYY-MM-DDTHH:mm:ss, procesar rápido
+  if (typeof fecha === 'string') {
+    // Eliminar parte de hora si existe
+    const soloFecha = fecha.split('T')[0].split(' ')[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(soloFecha)) {
+      const [y, m, d] = soloFecha.split('-');
+      return `${d}/${m}/${y}`;
+    }
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(soloFecha)) {
+      // Ya viene en DD/MM/YYYY
+      return soloFecha;
+    }
+  }
+  // Fallback usando Date
   const d = fecha instanceof Date ? fecha : new Date(fecha);
   if (isNaN(d)) return '';
   const pad = n => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
 
 /**
  * Realiza un fetch con manejo de errores y devuelve JSON.
  */
 export async function fetchConManejadorErrores(url, opciones = {}) {
-  const res = await fetch(url, opciones);
-  if (!res.ok) throw new Error(`Error ${res.status}`);
-  return res.json();
+  try {
+    mostrarCargando();
+    const res = await fetch(url, opciones);
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    return await res.json();
+  } finally {
+    ocultarCargando();
+  }
 }
 // === Fin funciones añadidas ===

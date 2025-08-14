@@ -3,11 +3,9 @@ import {
   PRODUCTO_ID_LIBRE,
   truncarDecimales,
   formatearImporte,
-  formatearFecha,
   calcularPrecioConDescuento,
   calcularTotalDetalle
 } from './scripts_utils.js';
-export { formatearFecha };
 import { mostrarNotificacion } from './notificaciones.js';
 
 // Funciones comunes para manejo de productos
@@ -207,19 +205,7 @@ export function validarDetalle(detalle) {
 
 
 // Función para convertir fecha de DD/MM/AAAA a YYYY-MM-DD para la API
-export function convertirFechaParaAPI(fecha) {
-    if (!fecha) return '';
-    // Si la fecha ya está en formato YYYY-MM-DD, la devolvemos tal cual
-    if (fecha.includes('-')) return fecha;
-    
-    // Si está en formato DD/MM/AAAA, la convertimos
-    const [dia, mes, año] = fecha.split('/');
-    if (!dia || !mes || !año) {
-        console.error('Formato de fecha inválido:', fecha);
-        return '';
-    }
-    return `${año}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
-}
+// convertirFechaParaAPI centralizado en scripts_utils.js
 
 // Función para volver a la página de origen
 export function volverSegunOrigen() {

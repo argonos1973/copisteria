@@ -1323,3 +1323,559 @@ Procesando detalle #1: {"concepto": "500 TARJETAS B/N 2 CARAS (CABALLO)", "descr
 Procesando detalle #1: {"concepto": "200 TARJETAS COLOR 1 CARA(300GR)", "descripcion": "11/07/2025", "cantidad": -1, "precio": 24.79339, "impuestos": -21.0, "total": -30.0}
   - Precio encontrado: 24.79339
   - Cantidad: -1, Precio: 24.79339, Base: -24.79, IVA: -5.21
+
+[2025-07-14T11:33:09.577093] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "150 TARJETAS COLOR 1 CARA(300GR)", "descripcion": "14/07/2025", "cantidad": 1, "precio": "20.66116", "impuestos": 21, "total": 25, "productoId": "34", "formaPago": "E", "fechaDetalle": "2025-07-14"}
+  - Precio encontrado: 20.66116
+  - Cantidad: 1, Precio: 20.66116, Base: 20.66, IVA: 4.34
+
+[2025-07-14T11:34:03.921482] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "150 TARJETAS COLOR 1 CARA(300GR)", "descripcion": "14/07/2025", "cantidad": -1, "precio": 20.66116, "impuestos": -21.0, "total": -25.0}
+  - Precio encontrado: 20.66116
+  - Cantidad: -1, Precio: 20.66116, Base: -20.66, IVA: -4.34
+
+[2025-07-14T13:55:12.313797] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "100 TARJETAS COLOR 1 CARA(300GR)", "descripcion": "14/07/2025", "cantidad": 1, "precio": "16.52893", "impuestos": 21, "total": 20, "productoId": "49", "formaPago": "E", "fechaDetalle": "2025-07-14"}
+  - Precio encontrado: 16.52893
+  - Cantidad: 1, Precio: 16.52893, Base: 16.53, IVA: 3.47
+
+[2025-07-14T13:55:33.190312] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "200 TARJETAS COLOR 1 CARA(300GR)", "descripcion": "14/07/2025", "cantidad": 1, "precio": "24.79339", "impuestos": 21, "total": 30, "productoId": "45", "formaPago": "E", "fechaDetalle": "2025-07-14"}
+  - Precio encontrado: 24.79339
+  - Cantidad: 1, Precio: 24.79339, Base: 24.79, IVA: 5.21
+
+[2025-07-15T09:55:03.844928] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "200 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "15/07/2025", "cantidad": 1, "precio": "41.32231", "impuestos": 21, "total": 50, "productoId": "44", "formaPago": "E", "fechaDetalle": "2025-07-15"}
+  - Precio encontrado: 41.32231
+  - Cantidad: 1, Precio: 41.32231, Base: 41.32, IVA: 8.68
+
+[2025-07-15T09:59:14.561848] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "200 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "15/07/2025", "cantidad": -1, "precio": 41.32231, "impuestos": -21.0, "total": -50.0}
+  - Precio encontrado: 41.32231
+  - Cantidad: -1, Precio: 41.32231, Base: -41.32, IVA: -8.68
+
+[2025-07-15T10:00:20.359276] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "1000 TARJETAS B/N 2 CARAS 300GR", "descripcion": "15/07/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "30", "formaPago": "E", "fechaDetalle": "2025-07-15"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-07-17T17:19:39.220841] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS B/N 2 CARAS (CABALLO)", "descripcion": "17/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "31", "formaPago": "E", "fechaDetalle": "2025-07-17"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-23T19:41:07.934269] Actualizar Factura ID=293: estado_anterior=P, nuevo_estado=C
+Trigger generar facturae: True
+
+[2025-07-23T19:41:07.934901] Iniciando generación de factura electrónica para factura ID=293, Número=F250286
+Detalles de la factura obtenidos: [{"concepto": "11 CATALEGS COLOR", "descripcion": "11 CATALEGS COLOR", "cantidad": 11.0, "importe": 15.0263, "impuestos": 21.0, "productoId": 94}, {"concepto": "ESPIRAL MET\u00c0L\u00b7LICA 6mm", "descripcion": "22/07/2025", "cantidad": 11.0, "importe": 1.25619, "impuestos": 21.0, "productoId": 35}, {"concepto": "PORTADA GLASSY A4", "descripcion": "22/07/2025", "cantidad": 11.0, "importe": 0.66736, "impuestos": 21.0, "productoId": 106}, {"concepto": "PORTADA S\u00c0HARA TRANSPARENT A4", "descripcion": "22/07/2025", "cantidad": 11.0, "importe": 0.51033, "impuestos": 21.0, "productoId": 108}]
+Porcentaje IVA usado: 21.0%
+Datos del contacto: {"idContacto": 287, "razonsocial": "MON TO WORLD S.L.", "identificador": "B66559634", "mail": "apm2cb@hotmail.com", "telf1": null, "telf2": null, "direccion": "C/ COSTA BRAVA, 25-29 2\u00ba PLANTA - LOCAL 15", "localidad": "BARCELONA", "cp": "08030", "provincia": "BARCELONA", "tipo": ""}
+[2025-07-23T19:41:07.935734] FACTURA COMPLETA: <sqlite3.Row object at 0x72991897b190>
+VALORES DB BRUTOS: <sqlite3.Row object at 0x729918979d20>
+[factura.py] Totales de la base de datos: Bruto=192.06, Impuestos=40.33, Total=232.39
+TOTALES EXTRAÍDOS DIRECTAMENTE: Base=192.06, IVA=40.33, Total=232.39
+VALORES FINALES PARA XML: Base=192.06, IVA=40.33, Total=232.39
+TIPO DE DATOS: Base=<class 'float'>, IVA=<class 'float'>, Total=<class 'float'>
+[2025-07-23T19:41:07.935996] Procesando factura F250286
+Datos de totales recibidos: 192.06, 40.33, 232.39
+Datos para generación de factura: {"emisor": {"nif": "44007535W", "nombre": "SAMUEL RODRIGUEZ MIQUEL", "direccion": "LEGALITAT, 70", "cp": "08024", "ciudad": "BARCELONA", "provincia": "BARCELONA", "pais": "ESP", "email": "INFO@ALEPH70.COM"}, "receptor": {"nif": "B66559634", "nombre": "MON TO WORLD S.L.", "direccion": "C/ COSTA BRAVA, 25-29 2\u00ba PLANTA - LOCAL 15", "cp": "08030", "provincia": "BARCELONA", "localidad": "BARCELONA"}, "detalles": [{"concepto": "11 CATALEGS COLOR", "descripcion": "11 CATALEGS COLOR", "cantidad": 11.0, "importe": 15.0263, "impuestos": 21.0, "productoId": 94}, {"concepto": "ESPIRAL MET\u00c0L\u00b7LICA 6mm", "descripcion": "22/07/2025", "cantidad": 11.0, "importe": 1.25619, "impuestos": 21.0, "productoId": 35}, {"concepto": "PORTADA GLASSY A4", "descripcion": "22/07/2025", "cantidad": 11.0, "importe": 0.66736, "impuestos": 21.0, "productoId": 106}, {"concepto": "PORTADA S\u00c0HARA TRANSPARENT A4", "descripcion": "22/07/2025", "cantidad": 11.0, "importe": 0.51033, "impuestos": 21.0, "productoId": 108}], "fecha": "2025 02:00-07-23", "numero": "F250286", "iva": 21.0, "importe_bruto": 192.06, "importe_impuestos": 40.33, "total": 232.39}
+[factura.py] VALORES PASADOS A GENERADOR: Bruto=192.06, Impuestos=40.33, Total=232.39
+Llamando a generar_facturae_modular...
+
+[2025-07-23T19:41:07.945705] Procesando 4 detalles para la factura
+Procesando detalle #1: {"concepto": "11 CATALEGS COLOR", "descripcion": "11 CATALEGS COLOR", "cantidad": 11.0, "importe": 15.0263, "impuestos": 21.0, "productoId": 94}
+  - Precio encontrado: 15.0263
+  - Cantidad: 11.0, Precio: 15.0263, Base: 165.29, IVA: 34.71
+Procesando detalle #2: {"concepto": "ESPIRAL MET\u00c0L\u00b7LICA 6mm", "descripcion": "22/07/2025", "cantidad": 11.0, "importe": 1.25619, "impuestos": 21.0, "productoId": 35}
+  - Precio encontrado: 1.25619
+  - Cantidad: 11.0, Precio: 1.25619, Base: 13.82, IVA: 2.90
+Procesando detalle #3: {"concepto": "PORTADA GLASSY A4", "descripcion": "22/07/2025", "cantidad": 11.0, "importe": 0.66736, "impuestos": 21.0, "productoId": 106}
+  - Precio encontrado: 0.66736
+  - Cantidad: 11.0, Precio: 0.66736, Base: 7.34, IVA: 1.54
+Procesando detalle #4: {"concepto": "PORTADA S\u00c0HARA TRANSPARENT A4", "descripcion": "22/07/2025", "cantidad": 11.0, "importe": 0.51033, "impuestos": 21.0, "productoId": 108}
+  - Precio encontrado: 0.51033
+  - Cantidad: 11.0, Precio: 0.51033, Base: 5.61, IVA: 1.18
+Resultado de generar_facturae: /var/www/html/factura_e/2025 02:00/07/F250286.xml
+ERROR: No se generó archivo XSIG firmado. Resultado: /var/www/html/factura_e/2025 02:00/07/F250286.xml
+
+[2025-07-30T17:48:53.367519] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-07-30T17:52:31.465625] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T17:59:27.849698] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-07-30T18:06:10.926526] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T18:06:57.389378] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": -1, "precio": 39.66942, "impuestos": -21.0, "total": -48.0}
+  - Precio encontrado: 39.66942
+  - Cantidad: -1, Precio: 39.66942, Base: -39.67, IVA: -8.33
+
+[2025-07-30T18:20:04.680594] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T18:53:07.112933] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-07-30T19:01:09.276709] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T19:02:06.111395] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": -1, "precio": 39.66942, "impuestos": -21.0, "total": -48.0}
+  - Precio encontrado: 39.66942
+  - Cantidad: -1, Precio: 39.66942, Base: -39.67, IVA: -8.33
+
+[2025-07-30T19:02:42.919581] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-07-30T19:04:03.615153] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-07-30T19:11:03.337775] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-07-30T19:18:08.889198] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-07-30T19:34:30.938343] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T19:40:27.807300] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T19:49:53.640336] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T19:51:03.226087] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T19:55:32.731824] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T20:07:28.151229] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-07-30T20:10:06.499091] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-07-30T20:16:50.353887] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T20:20:04.955217] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T20:25:15.637405] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T20:25:54.100556] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-30"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-07-30T20:27:16.966375] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "30/07/2025", "cantidad": -1, "precio": 39.66942, "impuestos": -21.0, "total": -48.0}
+  - Precio encontrado: 39.66942
+  - Cantidad: -1, Precio: 39.66942, Base: -39.67, IVA: -8.33
+
+[2025-07-31T09:19:38.568922] Actualizar Factura ID=288: estado_anterior=P, nuevo_estado=C
+Trigger generar facturae: True
+
+[2025-07-31T09:19:38.569080] Iniciando generación de factura electrónica para factura ID=288, Número=F250281
+Detalles de la factura obtenidos: [{"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}]
+Porcentaje IVA usado: 21.0%
+Datos del contacto: {"idContacto": 20, "razonsocial": "DOCTORALIA INTERNET, S.L.", "identificador": "B62834981", "mail": "laura.nolla@docplanner.com", "telf1": null, "telf2": null, "direccion": "JOSEP PLA 2 - EDIFICIO B2, PLANTA 13", "localidad": "BARCELONA", "cp": "08019", "provincia": "BARCELONA", "tipo": "CLIENTE"}
+[2025-07-31T09:19:38.569776] FACTURA COMPLETA: <sqlite3.Row object at 0x7e4ee367fbb0>
+VALORES DB BRUTOS: <sqlite3.Row object at 0x7e4ee367f820>
+[factura.py] Totales de la base de datos: Bruto=571.0, Impuestos=119.91, Total=690.91
+TOTALES EXTRAÍDOS DIRECTAMENTE: Base=571.0, IVA=119.91, Total=690.91
+VALORES FINALES PARA XML: Base=571.0, IVA=119.91, Total=690.91
+TIPO DE DATOS: Base=<class 'float'>, IVA=<class 'float'>, Total=<class 'float'>
+[2025-07-31T09:19:38.570230] Procesando factura F250281
+Datos de totales recibidos: 571.0, 119.91, 690.91
+Datos para generación de factura: {"emisor": {"nif": "44007535W", "nombre": "SAMUEL RODRIGUEZ MIQUEL", "direccion": "LEGALITAT, 70", "cp": "08024", "ciudad": "BARCELONA", "provincia": "BARCELONA", "pais": "ESP", "email": "INFO@ALEPH70.COM"}, "receptor": {"nif": "B62834981", "nombre": "DOCTORALIA INTERNET, S.L.", "direccion": "JOSEP PLA 2 - EDIFICIO B2, PLANTA 13", "cp": "08019", "provincia": "BARCELONA", "localidad": "BARCELONA"}, "detalles": [{"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}], "fecha": "2025 02:00-07-18", "numero": "F250281", "iva": 21.0, "importe_bruto": 571.0, "importe_impuestos": 119.91, "total": 690.91}
+[factura.py] VALORES PASADOS A GENERADOR: Bruto=571.0, Impuestos=119.91, Total=690.91
+Llamando a generar_facturae_modular...
+
+[2025-07-31T09:19:38.574777] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}
+  - Precio encontrado: 11.42
+  - Cantidad: 50.0, Precio: 11.42, Base: 571.00, IVA: 119.91
+Resultado de generar_facturae: /var/www/html/factura_e/2025 02:00/07/F250281.xml
+ERROR: No se generó archivo XSIG firmado. Resultado: /var/www/html/factura_e/2025 02:00/07/F250281.xml
+
+[2025-07-31T10:36:36.625330] Actualizar Factura ID=288: estado_anterior=P, nuevo_estado=C
+Trigger generar facturae: True
+
+[2025-07-31T10:36:36.626178] Iniciando generación de factura electrónica para factura ID=288, Número=F250281
+Detalles de la factura obtenidos: [{"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}]
+Porcentaje IVA usado: 21.0%
+Datos del contacto: {"idContacto": 20, "razonsocial": "DOCTORALIA INTERNET, S.L.", "identificador": "B62834981", "mail": "laura.nolla@docplanner.com", "telf1": null, "telf2": null, "direccion": "JOSEP PLA 2 - EDIFICIO B2, PLANTA 13", "localidad": "BARCELONA", "cp": "08019", "provincia": "BARCELONA", "tipo": "CLIENTE"}
+[2025-07-31T10:36:36.627626] FACTURA COMPLETA: <sqlite3.Row object at 0x7ea30e7d4970>
+VALORES DB BRUTOS: <sqlite3.Row object at 0x7ea30e7d51e0>
+[factura.py] Totales de la base de datos: Bruto=571.0, Impuestos=119.91, Total=690.91
+TOTALES EXTRAÍDOS DIRECTAMENTE: Base=571.0, IVA=119.91, Total=690.91
+VALORES FINALES PARA XML: Base=571.0, IVA=119.91, Total=690.91
+TIPO DE DATOS: Base=<class 'float'>, IVA=<class 'float'>, Total=<class 'float'>
+[2025-07-31T10:36:36.628202] Procesando factura F250281
+Datos de totales recibidos: 571.0, 119.91, 690.91
+Datos para generación de factura: {"emisor": {"nif": "44007535W", "nombre": "SAMUEL RODRIGUEZ MIQUEL", "direccion": "LEGALITAT, 70", "cp": "08024", "ciudad": "BARCELONA", "provincia": "BARCELONA", "pais": "ESP", "email": "INFO@ALEPH70.COM"}, "receptor": {"nif": "B62834981", "nombre": "DOCTORALIA INTERNET, S.L.", "direccion": "JOSEP PLA 2 - EDIFICIO B2, PLANTA 13", "cp": "08019", "provincia": "BARCELONA", "localidad": "BARCELONA"}, "detalles": [{"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}], "fecha": "1924 00:00-01-15", "numero": "F250281", "iva": 21.0, "importe_bruto": 571.0, "importe_impuestos": 119.91, "total": 690.91}
+[factura.py] VALORES PASADOS A GENERADOR: Bruto=571.0, Impuestos=119.91, Total=690.91
+Llamando a generar_facturae_modular...
+
+[2025-07-31T10:36:36.631842] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}
+  - Precio encontrado: 11.42
+  - Cantidad: 50.0, Precio: 11.42, Base: 571.00, IVA: 119.91
+Resultado de generar_facturae: /var/www/html/factura_e/1924 00:00/01/F250281.xml
+ERROR: No se generó archivo XSIG firmado. Resultado: /var/www/html/factura_e/1924 00:00/01/F250281.xml
+
+[2025-07-31T11:02:28.956498] Actualizar Factura ID=288: estado_anterior=P, nuevo_estado=C
+Trigger generar facturae: True
+
+[2025-07-31T11:02:28.956865] Iniciando generación de factura electrónica para factura ID=288, Número=F250281
+Detalles de la factura obtenidos: [{"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}]
+Porcentaje IVA usado: 21.0%
+Datos del contacto: {"idContacto": 20, "razonsocial": "DOCTORALIA INTERNET, S.L.", "identificador": "B62834981", "mail": "laura.nolla@docplanner.com", "telf1": null, "telf2": null, "direccion": "JOSEP PLA 2 - EDIFICIO B2, PLANTA 13", "localidad": "BARCELONA", "cp": "08019", "provincia": "BARCELONA", "tipo": "CLIENTE"}
+[2025-07-31T11:02:28.957642] FACTURA COMPLETA: <sqlite3.Row object at 0x7876be0113c0>
+VALORES DB BRUTOS: <sqlite3.Row object at 0x7876be010b50>
+[factura.py] Totales de la base de datos: Bruto=571.0, Impuestos=119.91, Total=690.91
+TOTALES EXTRAÍDOS DIRECTAMENTE: Base=571.0, IVA=119.91, Total=690.91
+VALORES FINALES PARA XML: Base=571.0, IVA=119.91, Total=690.91
+TIPO DE DATOS: Base=<class 'float'>, IVA=<class 'float'>, Total=<class 'float'>
+[2025-07-31T11:02:28.957857] Procesando factura F250281
+Datos de totales recibidos: 571.0, 119.91, 690.91
+Datos para generación de factura: {"emisor": {"nif": "44007535W", "nombre": "SAMUEL RODRIGUEZ MIQUEL", "direccion": "LEGALITAT, 70", "cp": "08024", "ciudad": "BARCELONA", "provincia": "BARCELONA", "pais": "ESP", "email": "INFO@ALEPH70.COM"}, "receptor": {"nif": "B62834981", "nombre": "DOCTORALIA INTERNET, S.L.", "direccion": "JOSEP PLA 2 - EDIFICIO B2, PLANTA 13", "cp": "08019", "provincia": "BARCELONA", "localidad": "BARCELONA"}, "detalles": [{"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}], "fecha": "1924 15:00-01-01", "numero": "F250281", "iva": 21.0, "importe_bruto": 571.0, "importe_impuestos": 119.91, "total": 690.91}
+[factura.py] VALORES PASADOS A GENERADOR: Bruto=571.0, Impuestos=119.91, Total=690.91
+Llamando a generar_facturae_modular...
+
+[2025-07-31T11:02:28.961693] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}
+  - Precio encontrado: 11.42
+  - Cantidad: 50.0, Precio: 11.42, Base: 571.00, IVA: 119.91
+Resultado de generar_facturae: /var/www/html/factura_e/1924 15:00/01/F250281.xml
+ERROR: No se generó archivo XSIG firmado. Resultado: /var/www/html/factura_e/1924 15:00/01/F250281.xml
+
+[2025-07-31T11:28:27.645149] Actualizar Factura ID=288: estado_anterior=P, nuevo_estado=C
+Trigger generar facturae: True
+
+[2025-07-31T11:28:27.645335] Iniciando generación de factura electrónica para factura ID=288, Número=F250281
+Detalles de la factura obtenidos: [{"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}]
+Porcentaje IVA usado: 21.0%
+Datos del contacto: {"idContacto": 20, "razonsocial": "DOCTORALIA INTERNET, S.L.", "identificador": "B62834981", "mail": "laura.nolla@docplanner.com", "telf1": null, "telf2": null, "direccion": "JOSEP PLA 2 - EDIFICIO B2, PLANTA 13", "localidad": "BARCELONA", "cp": "08019", "provincia": "BARCELONA", "tipo": "CLIENTE"}
+[2025-07-31T11:28:27.646397] FACTURA COMPLETA: <sqlite3.Row object at 0x7ec80d4cbf70>
+VALORES DB BRUTOS: <sqlite3.Row object at 0x7ec80d4cbc10>
+[factura.py] Totales de la base de datos: Bruto=571.0, Impuestos=119.91, Total=690.91
+TOTALES EXTRAÍDOS DIRECTAMENTE: Base=571.0, IVA=119.91, Total=690.91
+VALORES FINALES PARA XML: Base=571.0, IVA=119.91, Total=690.91
+TIPO DE DATOS: Base=<class 'float'>, IVA=<class 'float'>, Total=<class 'float'>
+[2025-07-31T11:28:27.646649] Procesando factura F250281
+Datos de totales recibidos: 571.0, 119.91, 690.91
+Datos para generación de factura: {"emisor": {"nif": "44007535W", "nombre": "SAMUEL RODRIGUEZ MIQUEL", "direccion": "LEGALITAT, 70", "cp": "08024", "ciudad": "BARCELONA", "provincia": "BARCELONA", "pais": "ESP", "email": "INFO@ALEPH70.COM"}, "receptor": {"nif": "B62834981", "nombre": "DOCTORALIA INTERNET, S.L.", "direccion": "JOSEP PLA 2 - EDIFICIO B2, PLANTA 13", "cp": "08019", "provincia": "BARCELONA", "localidad": "BARCELONA"}, "detalles": [{"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}], "fecha": "2025-07-31", "numero": "F250281", "iva": 21.0, "importe_bruto": 571.0, "importe_impuestos": 119.91, "total": 690.91}
+[factura.py] VALORES PASADOS A GENERADOR: Bruto=571.0, Impuestos=119.91, Total=690.91
+Llamando a generar_facturae_modular...
+
+[2025-07-31T11:28:27.649874] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": 50.0, "importe": 11.42, "impuestos": 21.0, "productoId": 94}
+  - Precio encontrado: 11.42
+  - Cantidad: 50.0, Precio: 11.42, Base: 571.00, IVA: 119.91
+Resultado de generar_facturae: /var/www/html/factura_e/2025/07/F250281.xml
+ERROR: No se generó archivo XSIG firmado. Resultado: /var/www/html/factura_e/2025/07/F250281.xml
+
+[2025-07-31T11:33:37.035373] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "31/07/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-07-31"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-07-31T11:54:39.458927] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "31/07/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-07-31"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-07-31T11:57:43.533340] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "50 LLIBRETS COLOR", "descripcion": "50 LLIBRETS COLOR", "cantidad": -50, "precio": 11.42, "impuestos": -21.0, "total": -690.91}
+  - Precio encontrado: 11.42
+  - Cantidad: -50, Precio: 11.42, Base: -571.00, IVA: -119.91
+
+[2025-07-31T12:17:18.702594] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A4 PAQUET NAVIGATOR  80gr (500 FULLS)", "descripcion": "31/07/2025", "cantidad": 1, "precio": "5.70248", "impuestos": 21, "total": 6.9, "productoId": "99", "formaPago": "E", "fechaDetalle": "2025-07-31"}
+  - Precio encontrado: 5.70248
+  - Cantidad: 1, Precio: 5.70248, Base: 5.70, IVA: 1.20
+
+[2025-07-31T17:56:21.676250] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "31/07/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-07-31"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-06T14:18:58.877180] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "IMPRESSIO A4 BN ", "descripcion": "20/06/2025", "cantidad": -1, "precio": 0.12397, "impuestos": -21.0, "total": -0.15}
+  - Precio encontrado: 0.12397
+  - Cantidad: -1, Precio: 0.12397, Base: -0.12, IVA: -0.03
+
+[2025-08-06T14:19:57.068092] Actualizar Factura ID=306: estado_anterior=P, nuevo_estado=C
+Trigger generar facturae: True
+
+[2025-08-06T14:19:57.068204] Iniciando generación de factura electrónica para factura ID=306, Número=F250299
+Detalles de la factura obtenidos: [{"concepto": "IMPRESION SRA3 COLOR", "descripcion": " 31/07/2025 (mau.zip)", "cantidad": 28.0, "importe": 0.22314, "impuestos": 21.0, "productoId": 221}, {"concepto": "IMPRESION SRA3 COLOR", "descripcion": "31/07/2025 (ATT.ZIP)", "cantidad": 24.0, "importe": 0.22314, "impuestos": 21.0, "productoId": 221}, {"concepto": "IMPRESSIO A4 BN ", "descripcion": "31/07/2025", "cantidad": 1.0, "importe": 0.12397, "impuestos": 21.0, "productoId": 118}]
+Porcentaje IVA usado: 21.0%
+Datos del contacto: {"idContacto": 732, "razonsocial": "POL RODRIGUEZ MIQUEL", "identificador": "44015615D", "mail": "polmiquel@elssons.com", "telf1": null, "telf2": null, "direccion": "ENCARNACION 20 ENTLO 1\u00ba", "localidad": "BARCELONA", "cp": "08012", "provincia": "BARCELONA", "tipo": "1"}
+[2025-08-06T14:19:57.068840] FACTURA COMPLETA: <sqlite3.Row object at 0x7d155c3d4e20>
+VALORES DB BRUTOS: <sqlite3.Row object at 0x7d155c3d4ac0>
+[factura.py] Totales de la base de datos: Bruto=11.73, Impuestos=2.46, Total=14.19
+TOTALES EXTRAÍDOS DIRECTAMENTE: Base=11.73, IVA=2.46, Total=14.19
+VALORES FINALES PARA XML: Base=11.73, IVA=2.46, Total=14.19
+TIPO DE DATOS: Base=<class 'float'>, IVA=<class 'float'>, Total=<class 'float'>
+[2025-08-06T14:19:57.069048] Procesando factura F250299
+Datos de totales recibidos: 11.73, 2.46, 14.19
+Datos para generación de factura: {"emisor": {"nif": "44007535W", "nombre": "SAMUEL RODRIGUEZ MIQUEL", "direccion": "LEGALITAT, 70", "cp": "08024", "ciudad": "BARCELONA", "provincia": "BARCELONA", "pais": "ESP", "email": "INFO@ALEPH70.COM"}, "receptor": {"nif": "44015615D", "nombre": "POL RODRIGUEZ MIQUEL", "direccion": "ENCARNACION 20 ENTLO 1\u00ba", "cp": "08012", "provincia": "BARCELONA", "localidad": "BARCELONA"}, "detalles": [{"concepto": "IMPRESION SRA3 COLOR", "descripcion": " 31/07/2025 (mau.zip)", "cantidad": 28.0, "importe": 0.22314, "impuestos": 21.0, "productoId": 221}, {"concepto": "IMPRESION SRA3 COLOR", "descripcion": "31/07/2025 (ATT.ZIP)", "cantidad": 24.0, "importe": 0.22314, "impuestos": 21.0, "productoId": 221}, {"concepto": "IMPRESSIO A4 BN ", "descripcion": "31/07/2025", "cantidad": 1.0, "importe": 0.12397, "impuestos": 21.0, "productoId": 118}], "fecha": "2025-07-31", "numero": "F250299", "iva": 21.0, "importe_bruto": 11.73, "importe_impuestos": 2.46, "total": 14.19}
+[factura.py] VALORES PASADOS A GENERADOR: Bruto=11.73, Impuestos=2.46, Total=14.19
+Llamando a generar_facturae_modular...
+
+[2025-08-06T14:19:57.069454] Procesando 3 detalles para la factura
+Procesando detalle #1: {"concepto": "IMPRESION SRA3 COLOR", "descripcion": " 31/07/2025 (mau.zip)", "cantidad": 28.0, "importe": 0.22314, "impuestos": 21.0, "productoId": 221}
+  - Precio encontrado: 0.22314
+  - Cantidad: 28.0, Precio: 0.22314, Base: 6.25, IVA: 1.31
+Procesando detalle #2: {"concepto": "IMPRESION SRA3 COLOR", "descripcion": "31/07/2025 (ATT.ZIP)", "cantidad": 24.0, "importe": 0.22314, "impuestos": 21.0, "productoId": 221}
+  - Precio encontrado: 0.22314
+  - Cantidad: 24.0, Precio: 0.22314, Base: 5.36, IVA: 1.13
+Procesando detalle #3: {"concepto": "IMPRESSIO A4 BN ", "descripcion": "31/07/2025", "cantidad": 1.0, "importe": 0.12397, "impuestos": 21.0, "productoId": 118}
+  - Precio encontrado: 0.12397
+  - Cantidad: 1.0, Precio: 0.12397, Base: 0.12, IVA: 0.03
+Resultado de generar_facturae: /var/www/html/factura_e/2025/07/F250299.xml
+ERROR: No se generó archivo XSIG firmado. Resultado: /var/www/html/factura_e/2025/07/F250299.xml
+
+[2025-08-06T20:28:52.033573] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "06/08/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-08-06"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-08-07T08:53:08.114776] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "200 TARJETAS COLOR 1 CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "24.79339", "impuestos": 21, "total": 30, "productoId": "45", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 24.79339
+  - Cantidad: 1, Precio: 24.79339, Base: 24.79, IVA: 5.21
+
+[2025-08-07T09:34:14.026474] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "2000 TARJETAS B/N 2 CARAS 300GR", "descripcion": "07/08/2025", "cantidad": 1, "precio": "49.58678", "impuestos": 21, "total": 60, "productoId": "29", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 49.58678
+  - Cantidad: 1, Precio: 49.58678, Base: 49.59, IVA: 10.41
+
+[2025-08-07T10:22:46.539443] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-08-07T10:26:26.333785] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-08-07T10:28:51.746645] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-07T10:35:34.656211] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A4 PAQUET NAVIGATOR  80gr (500 FULLS)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "5.70248", "impuestos": 21, "total": 6.9, "productoId": "99", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 5.70248
+  - Cantidad: 1, Precio: 5.70248, Base: 5.70, IVA: 1.20
+
+[2025-08-07T11:10:13.212244] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-07T11:18:21.057147] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-07T11:20:45.603294] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-07T12:02:11.446351] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-07T12:03:28.495679] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-07T12:42:19.149985] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-07T12:54:27.291300] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-07T12:58:43.770323] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A4 PAQUET NAVIGATOR  80gr (500 FULLS)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "5.70248", "impuestos": 21, "total": 6.9, "productoId": "99", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 5.70248
+  - Cantidad: 1, Precio: 5.70248, Base: 5.70, IVA: 1.20
+
+[2025-08-07T13:04:38.193380] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-07T13:13:03.987935] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-07T13:27:16.345043] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS B/N 2 CARAS (CABALLO)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "31", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-07T13:29:04.618359] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-08-07T13:33:47.005192] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-08-07T13:35:58.017520] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "A3 PAQUET NAVIGATOR 80gr (500 FULLS)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "11.40496", "impuestos": 21, "total": 13.8, "productoId": "98", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 11.40496
+  - Cantidad: 1, Precio: 11.40496, Base: 11.40, IVA: 2.39
+
+[2025-08-07T13:41:30.835718] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-07T13:45:16.224760] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-07T13:46:21.125798] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-07T13:50:54.805036] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS B/N 1 CARA (CABALLO)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "38.01653", "impuestos": 21, "total": 46, "productoId": "32", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 38.01653
+  - Cantidad: 1, Precio: 38.01653, Base: 38.02, IVA: 7.98
+
+[2025-08-07T14:55:18.786389] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-07T18:45:29.562916] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS B/N 2 CARAS (CABALLO)", "descripcion": "07/08/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "31", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-07T21:12:10.953608] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "1000 TARJETAS B/N 2 CARAS 300GR", "descripcion": "07/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "30", "formaPago": "E", "fechaDetalle": "2025-08-07"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-08T09:38:43.743222] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "08/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-08-08"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-08T09:55:09.112776] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "500 TARJETAS COLOR 2 CARA(300GR)", "descripcion": "08/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "33", "formaPago": "E", "fechaDetalle": "2025-08-08"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-08T14:27:30.283083] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "700 TARJETAS COLOR UNA CARA(300GR)", "descripcion": "08/08/2025", "cantidad": 1, "precio": "39.66942", "impuestos": 21, "total": 48, "productoId": "2", "formaPago": "E", "fechaDetalle": "2025-08-08"}
+  - Precio encontrado: 39.66942
+  - Cantidad: 1, Precio: 39.66942, Base: 39.67, IVA: 8.33
+
+[2025-08-08T16:38:46.016735] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "1000 TARJETAS B/N 2 CARAS 300GR", "descripcion": "08/08/2025", "cantidad": 1, "precio": "37.19008", "impuestos": 21, "total": 45, "productoId": "30", "formaPago": "E", "fechaDetalle": "2025-08-08"}
+  - Precio encontrado: 37.19008
+  - Cantidad: 1, Precio: 37.19008, Base: 37.19, IVA: 7.81
+
+[2025-08-08T16:39:20.057608] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "2000 TARJETAS B/N 2 CARAS 300GR", "descripcion": "08/08/2025", "cantidad": 1, "precio": "49.58678", "impuestos": 21, "total": 60, "productoId": "29", "formaPago": "E", "fechaDetalle": "2025-08-08"}
+  - Precio encontrado: 49.58678
+  - Cantidad: 1, Precio: 49.58678, Base: 49.59, IVA: 10.41
+
+[2025-08-14T09:49:22.301424] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "IMPRESSIO A4 COLOR ", "descripcion": "14/08/2025", "cantidad": 2947, "precio": "0.31612", "impuestos": 21, "total": 1127.24, "productoId": "114", "formaPago": "E", "fechaDetalle": "2025-08-14"}
+  - Precio encontrado: 0.31612
+  - Cantidad: 2947, Precio: 0.31612, Base: 931.61, IVA: 195.64
+
+[2025-08-14T09:50:24.752176] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "IMPRESSIO A4 COLOR ", "descripcion": "14/08/2025", "cantidad": -2947, "precio": 0.31612, "impuestos": -21.0, "total": -1127.24}
+  - Precio encontrado: 0.31612
+  - Cantidad: -2947, Precio: 0.31612, Base: -931.61, IVA: -195.64
+
+[2025-08-14T09:56:33.800731] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "IMPRESSIO A4 COLOR ", "descripcion": "14/08/2025", "cantidad": 2948, "precio": "0.31612", "impuestos": 21, "total": 1127.63, "productoId": "114", "formaPago": "E", "fechaDetalle": "2025-08-14"}
+  - Precio encontrado: 0.31612
+  - Cantidad: 2948, Precio: 0.31612, Base: 931.92, IVA: 195.70
+
+[2025-08-14T10:07:47.074867] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "IMPRESSIO A4 COLOR ", "descripcion": "14/08/2025", "cantidad": 2947, "precio": "0.31612", "impuestos": 21, "total": 1127.24, "productoId": "114", "formaPago": "E", "fechaDetalle": "2025-08-14"}
+  - Precio encontrado: 0.31612
+  - Cantidad: 2947, Precio: 0.31612, Base: 931.61, IVA: 195.64
+
+[2025-08-14T11:49:05.441086] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "IMPRESSIO A4 COLOR ", "descripcion": "14/08/2025", "cantidad": 2947, "precio": "0.31612", "impuestos": 21, "total": 1127.24, "productoId": "114", "formaPago": "E", "fechaDetalle": "2025-08-14"}
+  - Precio encontrado: 0.31612
+  - Cantidad: 2947, Precio: 0.31612, Base: 931.61, IVA: 195.64

@@ -8,7 +8,6 @@ por AEAT para el sistema VERI*FACTU
 """
 
 import os
-import xml.etree.ElementTree as ET
 from datetime import datetime
 
 from lxml import etree

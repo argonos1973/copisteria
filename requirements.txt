@@ -7,3 +7,4 @@ Pillow>=9.0
 Werkzeug<3.0
 WeasyPrint==60.2
 requests>=2.31.0
+ pydyf==0.10.0

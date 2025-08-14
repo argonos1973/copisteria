@@ -1,0 +1,15 @@
+/* Page header bar consistent across pages */
+.page-header {
+    position: relative; /* para pseudo-elementos */
+    background: linear-gradient(to right, var(--color-primario, #243342) 0%, rgba(36,51,66,0.85) 30%, rgba(36,51,66,0.3) 70%, #ffffff 100%) !important;
+    color: #ffffff;
+    padding: 15px 20px;
+    margin: 0 0 20px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.page-header h1 {
+    color: #ffffff !important;
+    color: #ffffff;
+    font-size: 1.6em;
+    margin: 0;
+}

@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from flask import Flask, redirect, render_template_string, request, url_for
+from flask import Flask, render_template_string, request
 from werkzeug.utils import secure_filename
 
 UPLOAD_FOLDER = "/tmp/impresiones"

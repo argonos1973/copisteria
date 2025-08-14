@@ -6,11 +6,8 @@ Utilidades de base de datos para VERI*FACTU
 Importa funciones desde el módulo db_utils.py existente
 """
 
-import os
 # Importar funciones directamente desde el archivo db_utils.py global
 import sys
-
-from ..config import logger
 
 # Asegurar que el directorio raíz está en el path para importar db_utils.py
 sys.path.insert(0, '/var/www/html')

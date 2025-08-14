@@ -1,5 +1,5 @@
 import { IP_SERVER, PORT } from './constantes.js';
-import { formatearImporte, formatearFecha } from './scripts_utils.js';
+import { formatearImporte, formatearFecha, formatearFechaSoloDia } from './scripts_utils.js';
 
 /**
  * Función principal que se ejecuta al cargar la página.
@@ -133,7 +133,10 @@ async function rellenarFactura(datos) {
     // Actualizar el título y datos de factura
     document.title = `Factura ${factura.numero}`;
     document.getElementById('numero').textContent = factura.numero;
-    document.getElementById('fecha').textContent = formatearFecha(factura.fecha);
+    document.getElementById('fecha').textContent = formatearFechaSoloDia(factura.fecha);
+    if (factura.fvencimiento) {
+        document.getElementById('fecha-vencimiento').textContent = formatearFechaSoloDia(factura.fvencimiento);
+    }
 
     // Datos del emisor (hardcodeados por ahora)
     document.getElementById('emisor-nombre').textContent = 'SAMUEL RODRIGUEZ MIQUEL';
@@ -338,7 +341,7 @@ async function rellenarFactura(datos) {
                 
                 // Usar un timestamp para evitar la caché del navegador
                 const timestamp = new Date().getTime();
-                const imgSrc = `/static/qr_temp.png?t=${timestamp}`;
+                const imgSrc = `/static/tmp_qr/qr_temp.png?t=${timestamp}`;
                 
                 const imgElement = document.createElement('img');
                 imgElement.src = imgSrc;

@@ -12,15 +12,13 @@ librería requests para mayor control sobre el XML enviado
 import hashlib
 import logging
 import os
+from constantes import DB_NAME
 import re
 import sqlite3
 from datetime import datetime
 
 import requests
-import signxml
 from lxml import etree
-
-from verifactu.db.respuesta_xml import guardar_respuesta_xml
 
 logger = logging.getLogger('verifactu')
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -65,8 +63,11 @@ def procesar_serie_numero(numero_completo):
 
 
 
-# Directorio para certificados SSL
-cert_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'certs')
+# Directorio base del proyecto
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+
+# Directorio por defecto para certificados SSL
+cert_dir = os.path.join(BASE_DIR, 'certs')
 
 
 
@@ -167,7 +168,8 @@ def crear_envelope_soap(
     huella_anterior: str | None = None,
     primer_registro: str | None = None,
     ajuste_fecha_minuto: bool = False,
-) -> str:
+    huella_fija: str | None = None,
+) -> tuple[str, str]:  # Devuelve (envelope_xml, huella)
     """
     Devuelve el envelope SOAP con el **orden exacto de nodos** que
     exige el XSD de VERI*FACTU (evita el 4102 “Falta informar campo
@@ -250,8 +252,8 @@ def crear_envelope_soap(
             "</sf:Destinatarios>"
         )
 
-    # Omitir bloque destinatarios para tickets simplificados sin datos de cliente
-    if tipo_factura in ("S", "F2") and not nif_dest:
+    # Omitir bloque destinatarios para tickets simplificados: siempre para F2
+    if tipo_factura == "F2" or (tipo_factura == "S" and not nif_dest):
         destinatarios_xml = ""
     serie  = registro_factura.get("serie_factura", "A")
     numero = registro_factura.get("numero_factura", "000001")
@@ -290,26 +292,31 @@ def crear_envelope_soap(
     # -------------------------------------------------------------- #
     #  Cálculo de huella VERI*FACTU según XSD AEAT (v. 2024-05)
     # -------------------------------------------------------------- #
-    # tipo_factura ya definido anteriormente, se reutiliza
-    huella_valor = huella_anterior if huella_anterior else ""
-    cadena_hash = (
-        f"IDEmisorFactura={nif}&"
-        f"NumSerieFactura={serie}{numero}&"
-        f"FechaExpedicionFactura={fecha_exp}&"
-        f"TipoFactura={tipo_factura}&"
-        f"CuotaTotal={cuota:.2f}&"
-        f"ImporteTotal={total:.2f}&"
-        f"Huella={huella_valor}&"
-        f"FechaHoraHusoGenRegistro={fecha_gen}"
-    )
-    huella = hashlib.sha256(cadena_hash.encode()).hexdigest().upper()
+    if huella_fija:
+        # Reutilizar la huella previamente aceptada por AEAT para evitar
+        # duplicados en reenvíos del mismo registro.
+        huella = huella_fija.strip().upper()
+    else:
+        # tipo_factura ya definido anteriormente, se reutiliza
+        huella_valor = huella_anterior if huella_anterior else ""
+        cadena_hash = (
+            f"IDEmisorFactura={nif}&"
+            f"NumSerieFactura={serie}{numero}&"
+            f"FechaExpedicionFactura={fecha_exp}&"
+            f"TipoFactura={tipo_factura}&"
+            f"CuotaTotal={cuota:.2f}&"
+            f"ImporteTotal={total:.2f}&"
+            f"Huella={huella_valor}&"
+            f"FechaHoraHusoGenRegistro={fecha_gen}"
+        )
+        huella = hashlib.sha256(cadena_hash.encode()).hexdigest().upper()
 
     # Determinar valor de <sf:PrimerRegistro>
     primer_val = primer_registro if primer_registro in {"S","N"} else "S"
 
     # Construir bloque <sf:Encadenamiento> según si es primer registro o re-alta
     if primer_val == "S":
-        encadenamiento_xml = f"<sf:Encadenamiento><sf:PrimerRegistro>S</sf:PrimerRegistro></sf:Encadenamiento>"
+        encadenamiento_xml = "<sf:Encadenamiento><sf:PrimerRegistro>S</sf:PrimerRegistro></sf:Encadenamiento>"
     else:
         if not huella_anterior:
             logger.error("Se requiere huella_anterior para re-alta (PrimerRegistro=N)")
@@ -394,7 +401,9 @@ def crear_envelope_soap(
     </lr:RegFactuSistemaFacturacion>
   </soapenv:Body>
 </soapenv:Envelope>"""
-    return envelope
+    logger.info("[SOAP] PrimerRegistro=%s, HuellaAnterior=%s", primer_val, (huella_anterior[:10] + '...') if huella_anterior else None)
+    logger.info("[SOAP] Envelope generado (primeros 500 chars): %s", envelope[:500].replace('\n',''))
+    return envelope, huella
 
 
 
@@ -415,20 +424,26 @@ def enviar_registro_aeat(factura_id: int) -> dict:
         dict: Resultado de la operación.
     """
     logger.info("Enviando factura %s a AEAT (VERI*FACTU)", factura_id)
+    # Aseguramos que `base_dir` siempre está definido para evitar errores de variable no asociada
+    base_dir = BASE_DIR
 
     # --------------------------- Obtener datos factura --------------------
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    db_path = os.path.join(base_dir, 'aleph70.db')
-
-    # Si no existe, intentamos ruta alternativa en la raíz del proyecto
+    # Usar primero la ruta de constantes.DB_NAME
+    db_path = DB_NAME
     if not os.path.exists(db_path):
-        alt_path = os.path.join(os.path.dirname(base_dir), 'aleph70.db')
-        if os.path.exists(alt_path):
-            db_path = alt_path
-            logger.info("Usando base de datos alternativa en %s", db_path)
+        logger.warning("%s no existe, buscando rutas alternativas", db_path)
+        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        for candidate in (
+            os.path.join(base_dir, 'aleph70.db'),
+            os.path.join(os.path.dirname(base_dir), 'aleph70.db'),
+        ):
+            if os.path.exists(candidate):
+                db_path = candidate
+                logger.info("Usando base de datos alternativa en %s", db_path)
+                break
         else:
-            logger.error("Base de datos no encontrada en %s ni en %s", db_path, alt_path)
-            return {'success': False, 'message': f'Base de datos no encontrada'}
+            logger.error("Base de datos no encontrada en ninguna ruta conocida")
+            return {'success': False, 'message': 'Base de datos no encontrada'}
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
@@ -460,14 +475,15 @@ def enviar_registro_aeat(factura_id: int) -> dict:
     # Obtener NIF emisor
     nif_emisor = (row['nif_emisor'] or '').strip().upper()
 
+    # Obtener serie y número para esta factura
+    serie, numero_factura = procesar_serie_numero(row['numero_factura'])
+
     # Determinar primer_registro consultando la BD
-    from verifactu.db.registro import calcular_primer_registro
-    primer_registro = calcular_primer_registro(
+    from verifactu.db.registro import calcular_primer_registro_exacto
+    primer_registro = calcular_primer_registro_exacto(
         nif_emisor,
-        "VerifactuApp",
-        "01",
-        "1.0",
-        "0001",
+        numero_factura,
+        serie,
     )
     huella_anterior = None
     if primer_registro == 'N':
@@ -476,7 +492,21 @@ def enviar_registro_aeat(factura_id: int) -> dict:
         huella_anterior = obtener_ultimo_hash_del_dia(fecha_emision)
 
     # --------------------------- Preparar datos ---------------------------
-    serie, numero_factura = procesar_serie_numero(row['numero_factura'])
+
+    # ---------------------------------------
+    #  Persistir valor de primer_registro en BD
+    # ---------------------------------------
+    try:
+        from verifactu.db.registro import actualizar_huella_primer_registro
+        actualizar_huella_primer_registro(
+            nif_emisor,
+            serie,
+            numero_factura,
+            None,               # aún no hay huella_aeat
+            primer_registro,
+        )
+    except Exception as exc:
+        logger.warning("No se pudo actualizar primer_registro en BD: %s", exc)
 
     # Permitir override de la serie/número de factura sin tocar la BD
     override_nf = os.getenv('VERIFACTU_OVERRIDE_NUM_FACTURA')
@@ -505,8 +535,26 @@ def enviar_registro_aeat(factura_id: int) -> dict:
     cabecera = {}
 
     # --------------------------- Construir envelope -----------------------
-    envelope_xml = crear_envelope_soap(
-        'RegFactuSistemaFacturacion', cabecera, registro_factura, nif_emisor, None, huella_anterior, primer_registro
+    # Recuperar, si existe, la huella previamente guardada para este registro (reenvíos)
+    huella_guardada = None
+    try:
+        cur.execute("SELECT huella_aeat FROM registro_facturacion WHERE factura_id = ?", (factura_id,))
+        res_huella = cur.fetchone()
+        if res_huella and res_huella[0]:
+            huella_guardada = res_huella[0]
+    except Exception as exc:
+        logger.warning("No se pudo recuperar huella_aeat previa: %s", exc)
+
+    envelope_xml, huella_generada = crear_envelope_soap(
+        'RegFactuSistemaFacturacion',
+        cabecera,
+        registro_factura,
+        nif_emisor,
+        None,
+        huella_anterior,
+        primer_registro,
+        False,
+        huella_guardada,
     )
 
     # --------------------------- Enviar SOAP ------------------------------
@@ -569,8 +617,12 @@ def enviar_registro_aeat(factura_id: int) -> dict:
 
     logger.info("Envío completado correctamente (HTTP 200)")
     # --- Guardado de la respuesta SOAP ---
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    resp_dir = "/var/www/html/aeat_responses"
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d%H%M%S")
+    base_dir = "/var/www/html/aeat_responses"
+    # Organizar por año/mes: aeat_responses/YYYY/MM
+    year_dir = os.path.join(base_dir, now.strftime("%Y"))
+    resp_dir = os.path.join(year_dir, now.strftime("%m"))
     try:
         os.makedirs(resp_dir, mode=0o777, exist_ok=True)
         file_path = os.path.join(resp_dir, f"factura_{factura_id}_{timestamp}.xml")
@@ -599,7 +651,30 @@ def enviar_registro_aeat(factura_id: int) -> dict:
 
     # Parsear la respuesta SOAP para extraer el CSV si la AEAT lo proporciona
     datos_resp = parsear_respuesta_aeat(response.text)
+
+    # Almacenar de forma centralizada los datos relevantes en registro_facturacion
+    try:
+        from verifactu.db.aeat import guardar_datos_aeat_en_registro
+        guardar_datos_aeat_en_registro(factura_id, response.text)
+    except Exception as exc:
+        logger.warning("No se pudo ejecutar guardar_datos_aeat_en_registro: %s", exc)
+
+    # Asegurarnos de que el valor primer_registro calculado se almacena
+    try:
+        from verifactu.db.registro import actualizar_primer_registro_por_id
+        actualizar_primer_registro_por_id(factura_id, primer_registro)
+    except Exception as exc:
+        logger.debug("No se pudo persistir primer_registro (id): %s", exc)
+
     csv = datos_resp.get('csv')
+
+    # Guardar huella_aeat solo si el envío fue correcto
+    try:
+        if huella_generada:
+            from verifactu.db.registro import guardar_huella_aeat_por_id
+            guardar_huella_aeat_por_id(factura_id, huella_generada)
+    except Exception as exc:
+        logger.warning("No se pudo guardar huella_aeat: %s", exc)
     # Guardar CSV si procede
     if csv:
         try:
@@ -616,7 +691,8 @@ def enviar_registro_aeat(factura_id: int) -> dict:
         ),
         'status_code': 200,
         'errores': datos_resp.get('errores'),
-        'csv': csv,               # Puede ser None si la AEAT no lo devuelve
+        'csv': csv,               # Puede ser None si la AEAT no lo devuelve,
+        'huella': huella_generada,
         'estado_envio': estado_envio_ws,
         'response': response.text
     }

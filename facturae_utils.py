@@ -8,7 +8,6 @@ Se recomienda usar directamente las funciones desde los módulos específicos.
 """
 
 import logging
-import os
 import sys
 import warnings
 
@@ -39,10 +38,4 @@ except ImportError as e:
     logger.error(f"❌ ERROR: Problema con las dependencias: {e}")
     sys.exit(1)
 
-from facturae.firma import (corregir_etiqueta_n_por_name, firmar_xml,
-                            leer_contenido_xsig)
-from facturae.generador import generar_facturae
-from facturae.utils import dividir_nombre_apellidos, separar_nombre_apellidos
 # Importar todas las funcionalidades desde el nuevo paquete modular
-from facturae.validacion import es_persona_fisica, validar_nif
-from facturae.xml_template import obtener_plantilla_xml

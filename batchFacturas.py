@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import json
 import logging
 import os
 import re
 import sqlite3
 import sys
-import tempfile
 from datetime import datetime
-
-from flask import Flask
 
 import factura as factura_module  # Importar el módulo factura con un alias para evitar conflictos
 from constantes import *
-from contactos import get_db_connection, obtener_contactos
+from contactos import get_db_connection
 from email_utils import enviar_factura_por_email
 from proforma import app as proforma_app
 
@@ -403,7 +399,6 @@ def procesar_contactos_tipo_1():
     
     # Usar el contexto de aplicación Flask para las operaciones
     with proforma_app.app_context():
-        from factura import obtener_factura
         from proforma import convertir_proforma_a_factura
         
         for contacto in contactos:

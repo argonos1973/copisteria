@@ -1,8 +1,8 @@
-import subprocess
-import os
-import tempfile
-import shutil
 import logging
+import os
+import shutil
+import subprocess
+import tempfile
 
 
 def sign_with_autofirma_pem(
@@ -137,8 +137,8 @@ def firmar_xml(
     Returns:
         bytes: Contenido del fichero .xsig firmado.
     """
-    import tempfile
     import os
+    import tempfile
 
     # Crear ruta temporal para el .xsig
     with tempfile.NamedTemporaryFile(suffix=".xsig", delete=False) as tmp_out:

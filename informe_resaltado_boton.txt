@@ -1,0 +1,41 @@
+Informe: Resaltado del Botón "Descargar" del Banco Santander
+========================================================
+
+1. Objetivo
+----------
+Crear un script que resalte visualmente el botón "Descargar" en la web del Banco Santander y genere una evidencia HTML.
+
+2. Análisis Realizado
+-------------------
+- Se han creado múltiples scripts basados en la lógica extraída de api_scraping.py
+- Se ha implementado la gestión de cookies y el flujo de navegación
+- Se han probado diferentes selectores para encontrar el botón de descarga
+- Se han utilizado configuraciones para evitar la detección anti-bot
+
+3. Problemas Encontrados
+-----------------------
+Durante las pruebas se ha identificado que:
+
+a) Bloqueo por Incapsula: El sitio web del Banco Santander utiliza Incapsula, un servicio de protección anti-bot que bloquea el acceso automatizado a sus páginas.
+
+b) Contenido No Accesible: Las evidencias HTML generadas muestran únicamente una página de bloqueo de Incapsula, no el contenido real de la página de cuentas.
+
+c) Cierre del Navegador: El navegador se cierra automáticamente cuando se intenta navegar a las páginas protegidas, lo que indica que el sitio detecta y bloquea la automatización.
+
+4. Conclusión
+-----------
+No es posible resaltar el botón "Descargar" en la web del Banco Santander mediante automatización debido a las protecciones anti-bot implementadas por el banco. Estas protecciones son comunes en entornos bancarios por razones de seguridad.
+
+5. Recomendaciones
+----------------
+- Utilizar el script api_scraping.py existente que ya ha sido probado y funciona en el entorno de producción
+- Considerar alternativas de scraping manual o herramientas especializadas que puedan evadir las protecciones anti-bot (aunque esto puede violar los términos de servicio del banco)
+- Revisar si el banco ofrece APIs oficiales para acceder a los datos de las cuentas
+
+6. Archivos Generados
+--------------------
+- /var/www/html/resaltar_boton_santander_final.py: Script final con toda la lógica implementada
+- /var/www/html/analisis_cuentas.py: Script de análisis
+- /home/sami/logs/pagina_cuentas_analisis_*.html: Evidencias HTML que muestran el bloqueo de Incapsula
+
+El script resaltar_boton_santander_final.py contiene toda la lógica necesaria para resaltar el botón, pero no puede ejecutarse correctamente debido a las protecciones del sitio web.

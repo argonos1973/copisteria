@@ -4,12 +4,15 @@ import {
   truncarDecimales,
   formatearImporte,
   formatearApunto,
+  parsearImporte,
   calcularPrecioConDescuento,
   calcularTotalDetalle,
   abrirModalPagos as abrirModal,
   cerrarModalPagos as cerrarModal,
   calcularCambio as calcularCambioModal,
-  inicializarEventosModal
+  inicializarEventosModal,
+  convertirFechaParaAPI,
+  formatearFecha
 } from './scripts_utils.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
@@ -19,8 +22,6 @@ import {
   limpiarCamposDetalle,
   seleccionarProducto as seleccionarProductoCommon,
   validarDetalle,
-  formatearFecha,
-  convertirFechaParaAPI,
   redondearImporte
 } from './common.js';
 
@@ -246,7 +247,8 @@ export function volverAConsulta() {
  * Abre el modal de pagos
  */
 export function abrirModalPagos() {
-  const totalPunto = formatearApunto(document.getElementById('total-ticket').value);
+  // Tomar exactamente el valor mostrado en pantalla (formato europeo con €)
+  const totalDisplay = document.getElementById('total-ticket').value;
   const fechaInput = document.getElementById('fecha-ticket').value;
   
   // Convertir la fecha al formato DD/MM/AAAA si está en formato YYYY-MM-DD
@@ -259,7 +261,7 @@ export function abrirModalPagos() {
   const formaPago = window.ticketFormaPago || 'E';
   
   abrirModal({
-    total: totalPunto,
+    total: totalDisplay,
     fecha: fechaFormateada,
     formaPago: formaPago,
     titulo: 'Añadir Pago',
@@ -528,8 +530,8 @@ export function sumarTotales() {
 
   tbody.querySelectorAll('tr').forEach(fila => {
     const totalTexto = fila.cells[5].textContent || "0";
-    const totalLimpio = totalTexto.replace(',', '.').replace(/[^0-9.]/g, '');
-    const total = parseFloat(totalLimpio) || 0;
+    // Usar el parser centralizado para formato europeo (puntos de miles, coma decimal)
+    const total = parsearImporte(totalTexto);
     // Redondear cada subtotal a 2 decimales antes de sumar
     sumaTotal += redondearImporte(total);
   });
@@ -615,9 +617,9 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
     }
     window.isTicketSaving = true;
 
-    // Convertir y redondear los valores numéricos
-    totalPago = redondearImporte(String(totalPago).replace(',', '.'));
-    totalTicket = redondearImporte(String(totalTicket).replace(',', '.'));
+    // Convertir y redondear los valores numéricos con parser centralizado (formato europeo)
+    totalPago = redondearImporte(parsearImporte(totalPago));
+    totalTicket = redondearImporte(parsearImporte(totalTicket));
 
 
     // Obtener los elementos del DOM
@@ -904,9 +906,9 @@ export function mostrarDetallesTicket(detalles) {
  * Procesa el pago (cobrar)
  */
 export function procesarPago() {
-  var totalTicket = parseFloat(document.getElementById('total-ticket').value.replace(',', '.'));
-  var totalPago = parseFloat(document.getElementById('modal-total-ticket').value.replace(',', '.'));
-  var totalEntregado = parseFloat(document.getElementById('modal-total-entregado').value.replace(',', '.'));
+  var totalTicket = parsearImporte(document.getElementById('total-ticket').value);
+  var totalPago = parsearImporte(document.getElementById('modal-total-ticket').value);
+  var totalEntregado = parsearImporte(document.getElementById('modal-total-entregado').value);
 
   let formaPago = document.getElementById('modal-metodo-pago').value;
 

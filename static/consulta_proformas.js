@@ -1,6 +1,6 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
-import { formatearImporte, getEstadoFormateado, getEstadoClass } from './scripts_utils.js';
+import { formatearImporte, formatearFechaSoloDia, getEstadoFormateado, getEstadoClass } from './scripts_utils.js';
 
 // Función para mostrar el overlay de carga
 const showOverlay = () => {
@@ -42,16 +42,10 @@ function formatDate(date) {
 
 // Función para convertir fecha de YYYY-MM-DD a DD/MM/AAAA para mostrar
 function formatDateToDisplay(dateStr) {
-    if (!dateStr) return '';
-    const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year}`;
+    return formatearFechaSoloDia(dateStr);
 }
 
-// Función para convertir fecha para la API
-function convertirFechaParaAPI(fecha) {
-    if (!fecha) return '';
-    return fecha; // Ya está en formato YYYY-MM-DD
-}
+// convertirFechaParaAPI centralizado en scripts_utils.js
 
 // Las funciones getEstadoFormateado y getEstadoClass ahora se importan desde scripts_utils.js
 

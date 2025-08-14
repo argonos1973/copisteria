@@ -107,6 +107,13 @@ def crear_registro_facturacion(factura_id=None, nif_emisor=None, nif_receptor=No
         }
         
         metadatos_json = json.dumps(metadatos)
+        # Garantizar columnas de identificación de sistema
+        for _col in ("nombre_sistema", "id_sistema", "version_sistema", "numero_instalacion"):
+            _ensure_column_exists(_col)
+        nombre_sistema = VERIFACTU_CONSTANTS.get("nombre_sistema", "VerifactuApp")
+        id_sistema = VERIFACTU_CONSTANTS.get("id_sistema", "01")
+        version_sistema = VERIFACTU_CONSTANTS.get("version_sistema", "1.0")
+        numero_instalacion = VERIFACTU_CONSTANTS.get("numero_instalacion", "0001")
         
         # Insertar en la tabla registro_facturacion
         cursor.execute('''
@@ -114,13 +121,13 @@ def crear_registro_facturacion(factura_id=None, nif_emisor=None, nif_receptor=No
                 factura_id, ticket_id, nif_emisor, nif_receptor, fecha_emision,
                 total, hash, codigo_qr, numero_factura, serie_factura,
                 tipo_factura, cuota_impuestos, estado_envio,
-                marca_temporal
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                marca_temporal, nombre_sistema, id_sistema, version_sistema, numero_instalacion
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             factura_id, ticket_id, nif_emisor, nif_receptor, fecha,
             total, hash_factura, qr_base64, numero_factura, serie_factura,
             tipo_factura, cuota_impuestos, estado_envio,
-            timestamp
+            timestamp, nombre_sistema, id_sistema, version_sistema, numero_instalacion
         ))
         
         conn.commit()
@@ -241,58 +248,97 @@ def _ensure_column_exists(col_name: str, col_type: str = "TEXT") -> None:
             conn.close()
 
 
-def calcular_primer_registro(
-    nif_emisor: str,
-    nombre_sistema: str = "VerifactuApp",
-    id_sistema: str = "01",
-    version_sistema: str = "1.0",
-    numero_instalacion: str = "0001",
-    numero_prefijo: str | None = "F",
-) -> str:
-    """Calcula si es el *primer* registro para un emisor/sistema.
+# ---------------------------------------------------------------------------
+#  NUEVA VERSIÓN (por factura) ----------------------------------------------
+# ---------------------------------------------------------------------------
 
-    Devuelve:
-        'N'  -> ya existe al menos un registro (factura/ticket) para el emisor
-                y sistema especificados cuyo número comienza por el prefijo indicado.
-        'S'  -> no existe ninguno y, por tanto, el próximo envío debe marcarse como *PrimerRegistro*.
+def es_primer_registro_factura(
+    nif_emisor: str,
+    numero_factura: str,
+    serie_factura: str,
+) -> str:
+    """Devuelve ``'S'`` si *no* existe ninguna fila en ``registro_facturacion``
+    que coincida EXACTAMENTE con NIF emisor, serie y número de factura.
+
+    Esta variante evita la sobre-selección por prefijo y es más eficiente
+    gracias al uso de ``EXISTS`` (termina en la primera coincidencia).
     """
     _ensure_column_exists("primer_registro")
-    for _col in ("nombre_sistema", "id_sistema", "version_sistema", "numero_instalacion"):
-        _ensure_column_exists(_col)
-    conn = None
+    _ensure_column_exists("huella_aeat")
+
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        query = (
+        cur.execute(
             """
-            SELECT COUNT(*)
+             SELECT 1 FROM registro_facturacion
+              WHERE nif_emisor = ?
+                AND huella_aeat IS NOT NULL
+               LIMIT 1
+             """,
+            (nif_emisor.upper(),),
+        )
+        row = cur.fetchone()
+        return "S" if row is None else "N"
+    except Exception as exc:
+        logger.error("Error comprobando primer_registro (factura): %s", exc)
+        return "S"  # fallback conservador
+    finally:
+        if 'conn' in locals() and conn:
+            conn.close()
+
+
+
+
+
+
+# ---------------------------------------------------------------------------
+#  API PÚBLICA --------------------------------------------------------------
+# ---------------------------------------------------------------------------
+
+def calcular_primer_registro_exacto(
+    nif_emisor: str,
+    numero_factura: str,
+    serie_factura: str,
+) -> str:
+    """Devuelve 'S' si la factura indicada aún no ha sido registrada.
+
+    Consulta por NIF, número y serie en la tabla ``registro_facturacion``.
+    """
+    _ensure_column_exists("primer_registro")
+    _ensure_column_exists("huella_aeat")
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT 1
               FROM registro_facturacion
              WHERE nif_emisor = ?
-               AND nombre_sistema = ?
-               AND id_sistema = ?
-               AND version_sistema = ?
-               AND numero_instalacion = ?
-            """
+               AND huella_aeat IS NOT NULL
+             LIMIT 1
+            """,
+            (nif_emisor.upper(),),
         )
-        params = [
-            nif_emisor.upper(),
-            nombre_sistema,
-            id_sistema,
-            version_sistema,
-            numero_instalacion,
-        ]
-        if numero_prefijo:
-            query += " AND numero_factura LIKE ?"
-            params.append(f"{numero_prefijo}%")
-        cur.execute(query, params)
-        exists = cur.fetchone()[0] > 0
-        return 'N' if exists else 'S'
+        return "S" if cur.fetchone() is None else "N"
     except Exception as exc:
-        logger.error("Error calculando primer_registro: %s", exc)
-        return 'S'
+        logger.error("Error calculando primer_registro_exacto: %s", exc)
+        return "S"
     finally:
-        if conn:
+        if 'conn' in locals() and conn:
             conn.close()
+
+
+# Back-compat alias ---------------------------------------------------------
+
+def calcular_primer_registro(
+    nif_emisor: str,
+    numero_factura: str,
+    serie_factura: str,
+) -> str:
+    """Alias para :func:`calcular_primer_registro_exacto`."""
+    return calcular_primer_registro_exacto(nif_emisor, numero_factura, serie_factura)
 
 
 def guardar_csv_aeat(factura_id: int, csv: str | None) -> bool:
@@ -352,10 +398,10 @@ def actualizar_huella_primer_registro(
             UPDATE registro_facturacion
                SET huella_aeat = ?, primer_registro = ?
              WHERE nif_emisor = ?
+               AND serie_factura  = ?
                AND numero_factura = ?
-               AND serie_factura = ?
             """,
-            (huella_aeat, primer_registro, nif_emisor.upper(), numero, serie),
+            (huella_aeat, primer_registro, nif_emisor.upper(), serie, numero),
         )
         conn.commit()
         if cursor.rowcount:
@@ -378,6 +424,95 @@ def actualizar_huella_primer_registro(
         if conn:
             conn.close()
 
+
+def actualizar_primer_registro_por_id(factura_id: int, primer_registro: str | None) -> bool:
+    """Actualiza el campo *primer_registro* para la fila cuyo ``factura_id`` coincide.
+
+    Args:
+        factura_id: ID de la factura en ``registro_facturacion``.
+        primer_registro: Valor a almacenar ('S' o 'N').
+
+    Returns:
+        bool: ``True`` si la actualización se completó sin errores.
+    """
+    if primer_registro not in {"S", "N", None}:
+        logger.warning("Valor primer_registro inesperado: %s", primer_registro)
+        return False
+
+    _ensure_column_exists("primer_registro")
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE registro_facturacion
+               SET primer_registro = ?
+             WHERE factura_id = ?
+            """,
+            (primer_registro, factura_id),
+        )
+        conn.commit()
+        if cur.rowcount:
+            logger.info("Campo primer_registro actualizado para factura_id %s a %s", factura_id, primer_registro)
+        else:
+            logger.warning("No se encontró registro_facturacion para factura_id %s al guardar primer_registro", factura_id)
+        return True
+    except Exception as exc:
+        logger.error("Error al guardar primer_registro: %s", exc)
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def guardar_huella_aeat_por_id(factura_id: int, huella_aeat: str | None) -> bool:
+    """Guarda el valor de *huella_aeat* en la tabla ``registro_facturacion``
+    a partir del ``factura_id``.
+
+    Args:
+        factura_id (int): ID de la factura (clave externa de ``registro_facturacion``)
+        huella_aeat (str | None): Huella devuelta por la AEAT o calculada localmente.
+
+    Returns:
+        bool: ``True`` si la actualización se realizó con éxito, ``False`` en caso contrario.
+    """
+    _ensure_column_exists("huella_aeat")
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            UPDATE registro_facturacion
+               SET huella_aeat = ?
+             WHERE factura_id = ?
+            """,
+            (huella_aeat, factura_id),
+        )
+        conn.commit()
+        if cursor.rowcount:
+            logger.info("Huella AEAT guardada para factura_id %s", factura_id)
+        else:
+            logger.warning("No se encontró registro_facturacion para factura_id %s", factura_id)
+        return True
+    except Exception as exc:
+        logger.error("Error al guardar huella AEAT: %s", exc)
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+# ---------------------------------------------------------------------------
+#  OBTENCIÓN DE DATOS
+# ---------------------------------------------------------------------------
 
 def obtener_datos_registro(factura_id):
     """

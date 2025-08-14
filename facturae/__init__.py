@@ -6,11 +6,13 @@ Módulo principal de Facturae.
 Este módulo integra la funcionalidad de generación y firma de facturas electrónicas Facturae.
 """
 
-from facturae.validacion import es_persona_fisica, validar_nif
-from facturae.utils import separar_nombre_apellidos, dividir_nombre_apellidos
-from facturae.xml_template import obtener_plantilla_xml
+from facturae.firma import (corregir_etiqueta_n_por_name, firmar_xml,
+                            leer_contenido_xsig)
 from facturae.generador import generar_facturae
-from facturae.firma import firmar_xml, corregir_etiqueta_n_por_name, leer_contenido_xsig
+from facturae.utils import dividir_nombre_apellidos, separar_nombre_apellidos
+from facturae.validacion import es_persona_fisica, validar_nif
+from facturae.xml_template import obtener_plantilla_xml
+
 
 # Función añadida para evitar errores de importación
 def extraer_xml_desde_xsig(ruta_xsig):
@@ -22,9 +24,9 @@ def extraer_xml_desde_xsig(ruta_xsig):
     Returns:
         tuple: (éxito, ruta_archivo_temporal)
     """
-    import tempfile
-    import os
     import logging
+    import os
+    import tempfile
     
     logger = logging.getLogger(__name__)
     logger.warning("Usando versión temporal de extraer_xml_desde_xsig")

@@ -1,17 +1,143 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 import base64
-import os
 import tempfile
 import traceback
+import xml.etree.ElementTree as ET
 from datetime import datetime
-
-from flask import jsonify, send_file
 from weasyprint import CSS, HTML
-
 from db_utils import get_db_connection
+from verifactu_logger import logger  # Ajusta según tu sistema
+from verifactu_config import VERIFACTU_CONSTANTS  # si no existe, añade tú la ruta
 
+try:
+    from config_loader import get as get_config
+    VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", True))
+except Exception as _e:
+    print(f"[PDF] No se pudo cargar config.json: {_e}")
+    VERIFACTU_HABILITADO = True
+
+def extraer_huella_desde_xml(xml: str) -> str | None:
+    try:
+        ns = {
+            'env': 'http://schemas.xmlsoap.org/soap/envelope/',
+            'tikR': 'https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/RespuestaSuministro.xsd',
+            'tik': 'https://www2.agenciatributaria.gob.es/static_files/common/internet/dep/aplicaciones/es/aeat/tike/cont/ws/SuministroInformacion.xsd'
+        }
+        root = ET.fromstring(xml)
+        huella = root.find('.//tik:IdPeticionRegistroDuplicado', ns)
+        if huella is not None:
+            return huella.text.strip()
+        return None
+    except Exception as e:
+        logger.error(f"[VERIFACTU] Error al extraer huella del XML: {e}")
+        return None
+
+def guardar_datos_aeat_en_registro(factura_id: int, respuesta_xml: str) -> bool:
+    try:
+        huella = extraer_huella_desde_xml(respuesta_xml)
+        if not huella:
+            logger.warning("[VERIFACTU] No se encontró huella en el XML")
+            return False
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info(registro_facturacion)")
+        cols = [c[1] for c in cur.fetchall()]
+        if 'huella_aeat' not in cols:
+            cur.execute("ALTER TABLE registro_facturacion ADD COLUMN huella_aeat TEXT")
+        if 'primer_registro' not in cols:
+            cur.execute("ALTER TABLE registro_facturacion ADD COLUMN primer_registro TEXT")
+
+        cur.execute("""
+            UPDATE registro_facturacion
+            SET huella_aeat = ?, primer_registro = 'S'
+            WHERE factura_id = ?
+        """, (huella, factura_id))
+
+        conn.commit()
+        logger.info(f"[VERIFACTU] Huella AEAT guardada en factura {factura_id}: {huella}")
+        return True
+
+    except Exception as e:
+        logger.error(f"[VERIFACTU] Error guardando datos AEAT: {e}")
+        traceback.print_exc()
+        return False
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+def obtener_datos_para_reenvio(factura_id: int) -> tuple[str, str] | None:
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT primer_registro, huella_aeat
+            FROM registro_facturacion
+            WHERE factura_id = ?
+        """, (factura_id,))
+        row = cur.fetchone()
+        return row if row else None
+    except Exception as e:
+        logger.error(f"[VERIFACTU] Error al obtener datos para reenvío: {e}")
+        traceback.print_exc()
+        return None
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+def asegurar_columnas_aeat():
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("PRAGMA table_info(registro_facturacion)")
+        cols = [c[1] for c in cur.fetchall()]
+        if 'huella_aeat' not in cols:
+            cur.execute("ALTER TABLE registro_facturacion ADD COLUMN huella_aeat TEXT")
+        if 'primer_registro' not in cols:
+            cur.execute("ALTER TABLE registro_facturacion ADD COLUMN primer_registro TEXT")
+        conn.commit()
+    except Exception as e:
+        logger.error(f"[VERIFACTU] Error asegurando columnas AEAT: {e}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+def calcular_primer_registro_exacto(nif_emisor: str, numero_factura: str, serie_factura: str) -> str:
+    asegurar_columnas_aeat()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT COUNT(*) FROM registro_facturacion
+            WHERE nif_emisor = ? AND numero_factura = ? AND serie_factura = ?
+        """, (nif_emisor.upper(), numero_factura, serie_factura))
+        count = cur.fetchone()[0]
+        return 'S' if count == 0 else 'N'
+    except Exception as e:
+        logger.error(f"[VERIFACTU] Error en calcular_primer_registro_exacto: {e}")
+        return 'S'
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+def generar_elementos_verifactu_xml(factura_id: int) -> str:
+    try:
+        datos = obtener_datos_para_reenvio(factura_id)
+        if not datos:
+            return '<tik:PrimerRegistro>S</tik:PrimerRegistro>'
+
+        primer_registro, huella = datos
+        xml = f'<tik:PrimerRegistro>{primer_registro}</tik:PrimerRegistro>'
+        if primer_registro == 'N' and huella:
+            xml += f'<tik:Huella>{huella}</tik:Huella>'
+        return xml
+
+    except Exception as e:
+        logger.error(f"[VERIFACTU] Error generando XML VERI*FACTU: {e}")
+        return '<tik:PrimerRegistro>S</tik:PrimerRegistro>'
+
+
+# Aquí empieza la función completa para generar el PDF de la factura
 
 def generar_factura_pdf(id_factura):
     """
@@ -250,36 +376,24 @@ def generar_factura_pdf(id_factura):
             
             # Enfoque directo para insertar el hash y el QR
             hash_placeholder = '<p id="hash-factura">Hash: </p>'
-            qr_placeholder = '<div id="qr-verifactu" style="width: 150px; height: 150px; margin-left: auto;">\n                <!-- Aquí se insertará el código QR -->\n                <img src="/static/qr_temp.png" alt="Código QR VERI*FACTU" style="width: 150px; height: 150px;" onerror="this.onerror=null; this.src=\'/static/qr_temp.png?\'+new Date().getTime();">\n            </div>'
+            qr_placeholder = '<div id="qr-verifactu" style="width: 150px; height: 150px; margin-left: auto;">\n                <!-- Aquí se insertará el código QR -->\n                <img src="/static/tmp_qr/qr_temp.png" alt="Código QR VERI*FACTU" style="width: 150px; height: 150px;" onerror="this.onerror=null; this.src=\'/static/tmp_qr/qr_temp.png?\'+new Date().getTime();">\n            </div>'
             
             # Crear los contenidos de reemplazo
             hash_replacement = f'<p id="hash-factura">Hash: {hash_value}</p>'
             
             # Realizar reemplazos
-            if hash_placeholder in html_modificado:
-                html_modificado = html_modificado.replace(hash_placeholder, hash_replacement)
-                print("Hash reemplazado con éxito")
+            if not VERIFACTU_HABILITADO:
+                # Eliminar marcadores y no mostrar información VeriFactu
+                html_modificado = html_modificado.replace(hash_placeholder, '')
+                html_modificado = html_modificado.replace(qr_placeholder, '')
             else:
-                print(f"ERROR: No se encontró el marcador del hash: {hash_placeholder}")
+                if hash_placeholder in html_modificado:
+                    html_modificado = html_modificado.replace(hash_placeholder, hash_replacement)
+                    if qr_code:
+                        qr_replacement = f'<div id="qr-verifactu" style="width: 150px; height: 150px; margin-left: auto;"><img src="data:image/png;base64,{qr_code}" alt="Código QR VERI*FACTU" style="width: 150px; height: 150px;"></div>'
+                        html_modificado = html_modificado.replace(qr_placeholder, qr_replacement)
             
-            # Insertar el QR si existe
-            if qr_code:
-                qr_replacement = f'<div id="qr-verifactu" style="width: 150px; height: 150px; margin-left: auto;">\n                <img src="data:image/png;base64,{qr_code}" alt="Código QR VERI*FACTU" style="width: 150px; height: 150px;">\n            </div>'
-                
-                if qr_placeholder in html_modificado:
-                    html_modificado = html_modificado.replace(qr_placeholder, qr_replacement)
-                    print("QR insertado con éxito")
-                else:
-                    print(f"ERROR: No se encontró el marcador del QR")
-            else:
-                print("No hay código QR para insertar")
-                
-            # Guardar el HTML final en un archivo para depuración
-            with open('/tmp/html_pdf.html', 'w', encoding='utf-8') as f:
-                f.write(html_modificado)
-                
-            print(f"HTML final guardado en /tmp/html_pdf.html")
-            
+    
             # Convertir HTML a PDF usando WeasyPrint con ruta base para recursos estáticos
             HTML(
                 string=html_modificado,
@@ -290,12 +404,13 @@ def generar_factura_pdf(id_factura):
             )
             
             pdf_path = tmp.name
-            
+    
         # Cerrar la conexión a la base de datos
         if conn:
             conn.close()
-            
+
         return pdf_path
+
     except Exception as e:
         print(f"Error al generar PDF de factura: {str(e)}")
         print(traceback.format_exc())

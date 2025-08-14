@@ -5,7 +5,6 @@ import logging
 import os
 import re
 import sys
-from datetime import datetime
 
 import pdfplumber
 

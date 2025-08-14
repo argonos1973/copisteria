@@ -9,13 +9,20 @@ Se ajusta a las reglas de facturación VERI*FACTU / AEAT:
 
 Este módulo se puede invocar desde un endpoint Flask.
 """
-import traceback
 from datetime import datetime
 
 from flask import jsonify
 
 from db_utils import get_db_connection
 from utils_emisor import cargar_datos_emisor
+
+# Configuración externamente para habilitar VeriFactu
+try:
+    from config_loader import get as get_config
+    VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", True))
+except Exception as _e:
+    print(f"[ANULACION] No se pudo cargar config.json: {_e}. Suponemos VeriFactu ON")
+    VERIFACTU_HABILITADO = True
 
 try:
     from facturae.generador import generar_facturae as generar_facturae_modular
@@ -146,6 +153,14 @@ def anular_factura(id_factura: int):
         conn.commit()
 
         # 4.5) Generar XML Facturae 3.2.2 para la factura rectificativa
+        if not VERIFACTU_HABILITADO:
+            print("[ANULACION] VeriFactu deshabilitado: no se genera XML ni se envía a AEAT")
+            return jsonify({
+                'mensaje': 'Factura anulada y rectificativa creada (VeriFactu OFF)',
+                'id_rectificativa': id_rect
+            })
+
+        # Si está habilitado, continuamos:
         facturae_ruta = None
         if generar_facturae_modular:
             try:
@@ -193,6 +208,14 @@ def anular_factura(id_factura: int):
         # -------------------------------------------------------------------
         # 5) Enviar automáticamente la rectificativa a la AEAT (VERI*FACTU)
         # -------------------------------------------------------------------
+        if not VERIFACTU_HABILITADO:
+            print("[ANULACION] VeriFactu deshabilitado: no se envía a AEAT")
+            return jsonify({
+                'mensaje': 'Factura rectificativa generada (VeriFactu OFF)',
+                'id_rectificativa': id_rect
+            })
+
+        # Si está habilitado, continuamos:
         # 5) Enviar automáticamente la rectificativa a la AEAT (VERI*FACTU)
         # -------------------------------------------------------------------
         try:
@@ -205,7 +228,7 @@ def anular_factura(id_factura: int):
         if verifactu_disponible:
             try:
                 resultado_envio = verifactu.generar_datos_verifactu_para_factura(id_rect)
-            except Exception as exc_verifactu:
+            except Exception:
                 # Mostramos traza para depurar, pero no detenemos la anulación
                 traceback.print_exc()
 

@@ -46,7 +46,11 @@ VERIFACTU_CONSTANTS = {
     'qr_box_size': 8,  # Tamaño del QR (30-40mm según normativa)
     'qr_border': 4,
     'qr_error_correction': 'M',  # Nivel medio (15%)
-    'tipo_factura_default': 'FC'
+    'tipo_factura_default': 'FC',
+    'nombre_sistema': 'VerifactuApp',
+    'id_sistema': '01',
+    'version_sistema': '1.0',
+    'numero_instalacion': '0001'
 }
 
 # Códigos de error y mensajes

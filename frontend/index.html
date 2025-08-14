@@ -289,27 +289,60 @@
 
     <script src="../static/menu.js" defer></script>
     <script>
-        // Script para asegurar que el iframe tenga scroll vertical
-        document.addEventListener('DOMContentLoaded', function() {
+        // Asegurar scroll en el iframe y evitar errores de política Same-Origin
+        document.addEventListener('DOMContentLoaded', () => {
             const iframe = document.getElementById('content-frame');
-            iframe.onload = function() {
-                // Forzar scroll en el iframe
+            iframe.addEventListener('load', () => {
+                // Scroll en el propio iframe
                 iframe.style.overflow = 'auto';
                 iframe.style.overflowY = 'scroll';
-                
-                // Intentar aplicar estilos al contenido del iframe
-                try {
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    const iframeBody = iframeDoc.body;
-                    
-                    if(iframeBody) {
-                        iframeBody.style.overflowY = 'auto';
-                        iframeBody.style.minHeight = '100vh';
+
+                // --- Inyectar cabecera global en la página cargada ---
+                function injectHeader(doc){
+                    if(!doc||!doc.body) return;
+                    let header = doc.querySelector('.page-header');
+                    if(!header){
+                        const firstH1 = doc.querySelector('h1');
+                        const txt = firstH1 ? firstH1.textContent.trim() : (doc.title||'');
+                        if(firstH1) firstH1.remove();
+                        header = doc.createElement('div');
+                        header.className = 'page-header';
+                        // aplicar color de fondo inline por si CSS no carga la variable
+                        header.style.background = 'linear-gradient(to right, var(--color-primario, #243342) 0%, rgba(36,51,66,0.85) 30%, rgba(36,51,66,0.3) 70%, #ffffff 100%)';
+                        header.style.color = '#fff';
+                        const h1 = doc.createElement('h1');
+                        h1.textContent = txt;
+                        header.appendChild(h1);
+                        doc.body.insertBefore(header, doc.body.firstChild);
+                    } else {
+                        // eliminar h1 sueltos para evitar duplicados
+                        doc.querySelectorAll('h1').forEach(el=>{ if(!header.contains(el)) el.remove(); });
                     }
-                } catch(e) {
-                    console.error('No se pudo modificar el contenido del iframe:', e);
                 }
-            };
+
+                try {
+                    const iframeURL = new URL(iframe.src, window.location.href);
+                    if (iframeURL.origin === window.location.origin) {
+                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                        injectHeader(doc);
+                    }
+                } catch(_) {/* ignorar cross-origin */}
+
+
+                // Ajustar overflow del documento interno
+                try {
+                    const iframeURL = new URL(iframe.src, window.location.href);
+                    if (iframeURL.origin === window.location.origin) {
+                        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                        if (iframeDoc && iframeDoc.body) {
+                            iframeDoc.body.style.overflowY = 'auto';
+                            iframeDoc.body.style.minHeight = '100vh';
+                        }
+                    }
+                } catch (_) {
+                    /* Distinto origen: no hacemos nada para evitar SecurityError */
+                }
+            });
         });
     </script>
 </body>

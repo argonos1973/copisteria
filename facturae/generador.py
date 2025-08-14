@@ -5,19 +5,20 @@
 Módulo principal para generar facturas electrónicas Facturae.
 """
 
-import os
-import html
 import json
 import logging
-import uuid
-from decimal import Decimal, ROUND_HALF_UP
+import os
 from datetime import datetime
-from lxml import etree
+from decimal import ROUND_HALF_UP, Decimal
 
+from facturae.firma import corregir_etiqueta_n_por_name, firmar_xml
+from facturae.utils import procesar_serie_numero, separar_nombre_apellidos
 from facturae.validacion import es_persona_fisica
-from facturae.utils import separar_nombre_apellidos, procesar_serie_numero
-from facturae.xml_template import obtener_plantilla_xml, generar_party_template, generar_individual_template, generar_taxes_template, generar_item_template
-from facturae.firma import firmar_xml, corregir_etiqueta_n_por_name
+from facturae.xml_template import (generar_individual_template,
+                                   generar_item_template,
+                                   generar_party_template,
+                                   generar_taxes_template,
+                                   obtener_plantilla_xml)
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +38,6 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
         str: Ruta al archivo generado (.xml o .xsig si está firmado)
     """
     # Asegurar que tenemos acceso global a estas dependencias
-    import os
-    from datetime import datetime
     
     # Determinar ruta de salida si no se proporciona
     if not ruta_salida_xml:
@@ -315,7 +314,7 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
                         if 'datos' in datos_verifactu and 'hash' in datos_verifactu['datos']:
                             print(f"[VERIFACTU] Hash generado: {datos_verifactu['datos']['hash'][:20]}...")
                         else:
-                            print(f"[VERIFACTU] Hash no disponible en la respuesta")
+                            print("[VERIFACTU] Hash no disponible en la respuesta")
                     else:
                         print(f"[VERIFACTU] Error generando datos para VERI*FACTU, factura_id: {factura_id}")
                 except Exception as e:

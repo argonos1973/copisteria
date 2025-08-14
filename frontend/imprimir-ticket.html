@@ -40,9 +40,10 @@
         }
 
         th {
-            background-color: #007bff;
-            color: #fff;
-            text-align: left; /* Alinear encabezados a la izquierda por defecto */
+            background-color: #f8f8f8;
+            border-bottom: 1px solid #ddd;
+            color: #000;
+            text-align: left;
         }
 
         /* Clase para alinear texto a la derecha */
@@ -101,9 +102,9 @@
             }
 
             /* Opcional: mantener bordes en la tabla impresa */
-            table, th, td {
+            /* table, th, td {
                 border: 1px solid #000;
-            }
+            } */
         }
        
         /* Media Query para Responsividad (Opcional) */
@@ -112,6 +113,16 @@
                 width: 150px; /* Ajusta según sea necesario */
             }
         }
+    #titulo-principal{
+            background: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+            color:#fff;
+            font-size:24px;
+            margin:0 0 30px 0;
+            padding:4px 8px;
+        }
+        body{font-size:12px;}
+        th:first-child, td:first-child{ text-align:left; }
+        hr{display:none;border:none;height:0;}
     </style>
 </head>
 <body>

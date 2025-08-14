@@ -2,7 +2,7 @@ import sqlite3
 import traceback
 from datetime import datetime
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, jsonify, request
 
 from db_utils import get_db_connection, redondear_importe
 
@@ -87,7 +87,6 @@ def estadisticas_gastos():
             'saldo_mes_actual': redondear_importe(saldo_mes_actual) if saldo_mes_actual is not None else None
         })
     except Exception as e:
-        import traceback
         print('ERROR EN /estadisticas_gastos:', str(e))
         print(traceback.format_exc())
         return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
@@ -155,6 +154,20 @@ def get_proformas_data(year):
           AND strftime('%Y', d.fechaDetalle) = ?
     '''
     return fetch_data(query, (str(year),))
+
+def get_proformas_data_mes(year, month):
+    """Devuelve estadísticas de proformas para el mes indicado (num_documentos, total)."""
+    query = '''
+        SELECT COUNT(DISTINCT p.id) as num_documentos,
+               COALESCE(SUM(d.total), 0) as total
+        FROM proforma p
+        JOIN detalle_proforma d ON p.id = d.id_proforma
+        WHERE p.estado = 'A'
+          AND strftime('%Y', d.fechaDetalle) = ?
+          AND strftime('%m', d.fechaDetalle) = ?
+    '''
+    return fetch_data(query, (str(year), str(month).zfill(2)))
+
 
 def fetch_data(query, params=()):
     conn = get_db_connection()
@@ -239,10 +252,12 @@ def media_ventas_por_documento():
     # Obtener datos del mes actual (sin proformas)
     tickets_mes_actual = get_tickets_data_mes(año_actual, mes_actual)
     facturas_mes_actual = get_facturas_data_mes(año_actual, mes_actual)
+    proformas_mes_actual = get_proformas_data_mes(año_actual, mes_actual)
     
     # Obtener datos del período comparativo (selector)
     tickets_mes_anterior = get_tickets_data_mes(año_anterior, mes_selector)
     facturas_mes_anterior = get_facturas_data_mes(año_anterior, mes_selector)
+    proformas_mes_anterior = get_proformas_data_mes(año_anterior, mes_selector)
 
     # Calcular totales globales del mes
     global_mes_actual_total = tickets_mes_actual['total'] + facturas_mes_actual['total']
@@ -368,6 +383,68 @@ def media_ventas_por_documento():
                 'total': redondear_importe(proformas_actual['total']),
                 'media': redondear_importe(proformas_media),
                 'media_mensual': redondear_importe(proformas_media_mensual),
+                'cantidad': proformas_actual['num_documentos'],
+                'mes_actual': {
+                    'total': redondear_importe(proformas_mes_actual['total']),
+                    'cantidad': proformas_mes_actual['num_documentos']
+                }
+            },
+            'anterior': {
+                'total': redondear_importe(proformas_anterior['total']),
+                'media': redondear_importe(
+                    proformas_anterior['total'] / proformas_anterior['num_documentos'] 
+                    if proformas_anterior['num_documentos'] > 0 
+                    else 0
+                ),
+                'cantidad': proformas_anterior['num_documentos'],
+                'mismo_mes': {
+                    'total': redondear_importe(proformas_mes_anterior['total']),
+                    'cantidad': proformas_mes_anterior['num_documentos']
+                }
+            },
+            'porcentaje_diferencia': redondear_importe(
+                calcular_porcentaje(
+                    proformas_actual['total'], 
+                    proformas_anterior['total']
+                )
+            ),
+            'porcentaje_diferencia_mes': redondear_importe(
+                calcular_porcentaje(
+                    proformas_mes_actual['total'],
+                    proformas_mes_anterior['total']
+                )
+            )
+        },
+        'global': {
+            'actual': {
+                'total': redondear_importe(global_actual_total),
+                'media': redondear_importe(global_media),
+                'media_mensual': redondear_importe(global_media_mensual),
+                'cantidad': total_documentos_global,
+                'mes_actual': {
+                    'total': redondear_importe(global_mes_actual_total),
+                    'cantidad': tickets_mes_actual['num_documentos'] + facturas_mes_actual['num_documentos']
+                }
+            },
+            'anterior': {
+                'total': redondear_importe(global_anterior_total),
+                'media': redondear_importe(
+                    (tickets_anterior['total'] + facturas_anterior['total']) / (tickets_anterior['num_documentos'] + facturas_anterior['num_documentos'])
+                    if (tickets_anterior['num_documentos'] + facturas_anterior['num_documentos']) > 0 else 0
+                ),
+                'cantidad': tickets_anterior['num_documentos'] + facturas_anterior['num_documentos'],
+                'mismo_mes': {
+                    'total': redondear_importe(global_mes_anterior_total),
+                    'cantidad': tickets_mes_anterior['num_documentos'] + facturas_mes_anterior['num_documentos']
+                }
+            },
+            'porcentaje_diferencia': redondear_importe(calcular_porcentaje(global_actual_total, global_anterior_total)),
+            'porcentaje_diferencia_mes': redondear_importe(calcular_porcentaje(global_mes_actual_total, global_mes_anterior_total))
+        }
+    })
+    """
+                'media': redondear_importe(proformas_media),
+                'media_mensual': redondear_importe(proformas_media_mensual),
                 'cantidad': proformas_actual['num_documentos']
             },
             'anterior': {
@@ -380,18 +457,34 @@ def media_ventas_por_documento():
                 'cantidad': proformas_anterior['num_documentos']
             },
             'porcentaje_diferencia': redondear_importe(
-                calcular_porcentaje(
-                    proformas_actual['total'], 
-                    proformas_anterior['total']
-                )
             )
+        )
+    },
+    
+    'facturas': {
+        'actual': {
+            'total': redondear_importe(facturas_actual['total']),
+            'media': redondear_importe(facturas_media),
+            'media_mensual': redondear_importe(facturas_media_mensual),
+            'cantidad': facturas_actual['num_documentos'],
+            'mes_actual': {
+                'total': redondear_importe(facturas_mes_actual['total']),
+                'cantidad': facturas_mes_actual['num_documentos']
+            }
         },
-        
-        'global': {
-            'actual': {
-                'total': redondear_importe(global_actual_total),
-                'media': redondear_importe(global_media),
-                'media_mensual': redondear_importe(global_media_mensual),
+        'anterior': {
+            'total': redondear_importe(facturas_anterior['total']),
+            'media': redondear_importe(facturas_anterior['media']),
+            'cantidad': facturas_anterior['num_documentos'],
+            'mismo_mes': {
+                'total': redondear_importe(facturas_mes_anterior['total']),
+                'cantidad': facturas_mes_anterior['num_documentos']
+            }
+        },
+        'porcentaje_diferencia': redondear_importe(
+            calcular_porcentaje(
+                facturas_actual['total'], 
+                facturas_anterior['total']
                 'cantidad': (
                     tickets_actual['num_documentos'] + 
                     facturas_actual['num_documentos']  # Sin proformas
@@ -433,6 +526,7 @@ def media_ventas_por_documento():
         }
     })
 
+"""
 @dashboard_bp.route('/clientes/top_ventas', methods=['GET'])
 def top_clientes_ventas():
     try:
@@ -486,9 +580,9 @@ def top_clientes_ventas():
                 p.id as producto_id,
                 p.nombre as producto_nombre,
                 COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_actual,
-                COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad * df.precio ELSE 0 END), 0) as total_actual,
+                COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_actual,
                 COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_anterior,
-                COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad * df.precio ELSE 0 END), 0) as total_anterior
+                COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_anterior
             FROM productos p
             LEFT JOIN detalle_factura df ON p.id = df.productoId
             LEFT JOIN factura f ON df.id_factura = f.id AND f.estado = 'C'
@@ -534,6 +628,164 @@ def top_clientes_ventas():
         cursor.close()
         conn.close()
 
+# ----------------------- VENTAS MENSUALES POR CLIENTE ----------------------- #
+@dashboard_bp.route('/clientes/ventas_mes', methods=['GET'])
+def ventas_cliente_mes():
+    """Devuelve las ventas mensuales (facturas cobradas) de un cliente para el año dado."""
+    try:
+        cliente_id = request.args.get('cliente_id') or request.args.get('id')
+        if not cliente_id:
+            return jsonify({'error': 'Parámetro cliente_id requerido'}), 400
+
+        anio_param = request.args.get('anio')
+        ahora = datetime.now()
+        año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT strftime('%m', fecha) as mes,
+                   COALESCE(SUM(total), 0) as total
+            FROM factura
+            WHERE estado = 'C'
+              AND idContacto = ?
+              AND strftime('%Y', fecha) = ?
+            GROUP BY mes
+            ''',
+            (cliente_id, str(año))
+        )
+        filas = cursor.fetchall()
+        datos = {row['mes']: float(row['total'] or 0) for row in filas}
+        # Asegurar los 12 meses
+        datos_completos = {str(m).zfill(2): redondear_importe(datos.get(str(m).zfill(2), 0.0)) for m in range(1, 13)}
+        return jsonify(datos_completos)
+    except sqlite3.Error as e:
+        return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        try:
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass
+
+# ----------------------- VENTAS MENSUALES POR PRODUCTO ----------------------- #
+@dashboard_bp.route('/productos/ventas_mes', methods=['GET'])
+@dashboard_bp.route('/api/productos/ventas_mes', methods=['GET'])
+def ventas_producto_mes():
+    """Devuelve la cantidad vendida (unidades) de un producto para cada mes del año dado."""
+    try:
+        producto_id = request.args.get('producto_id') or request.args.get('id')
+        if not producto_id:
+            return jsonify({'error': 'Parámetro producto_id requerido'}), 400
+
+        anio_param = request.args.get('anio')
+        ahora = datetime.now()
+        año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            '''
+            SELECT mes,
+                   SUM(cantidad) AS cantidad,
+                   SUM(euros)    AS euros
+            FROM (
+                SELECT strftime('%m', f.fecha) AS mes,
+                       SUM(df.cantidad) AS cantidad,
+                       SUM(df.total)    AS euros
+                FROM detalle_factura df
+                JOIN factura f ON f.id = df.id_factura AND f.estado = 'C'
+                WHERE df.productoId = ?
+                  AND strftime('%Y', f.fecha) = ?
+                GROUP BY mes
+                UNION ALL
+                SELECT strftime('%m', t.fecha) AS mes,
+                       SUM(dt.cantidad) AS cantidad,
+                       SUM(dt.total)    AS euros
+                FROM detalle_tickets dt
+                JOIN tickets t ON t.id = dt.id_ticket AND t.estado = 'C'
+                WHERE dt.productoId = ?
+                  AND strftime('%Y', t.fecha) = ?
+                GROUP BY mes
+            )
+            GROUP BY mes
+            ''',
+            (producto_id, str(año), producto_id, str(año))
+        )
+        filas = cursor.fetchall()
+        cantidades = {row['mes']: float(row['cantidad'] or 0) for row in filas}
+        euros      = {row['mes']: float(row['euros'] or 0) for row in filas}
+
+        datos_cant = {str(m).zfill(2): cantidades.get(str(m).zfill(2), 0.0) for m in range(1, 13)}
+        datos_eur  = {str(m).zfill(2): redondear_importe(euros.get(str(m).zfill(2), 0.0)) for m in range(1, 13)}
+        return jsonify({'cantidad': datos_cant, 'euros': datos_eur})
+    except sqlite3.Error as e:
+        return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        try:
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass
+
+# ----------------------- TOP GASTOS ----------------------- #
+@dashboard_bp.route('/gastos/top_gastos', methods=['GET'])
+def top_gastos():
+    """Devuelve los 10 conceptos de gastos con mayor importe absoluto en el año
+    seleccionado y su variación respecto al año anterior."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        anio_param = request.args.get('anio')
+        ahora = datetime.now()
+        anio_actual = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
+        anio_anterior = anio_actual - 1
+
+        cursor.execute(
+            '''
+            SELECT lower(concepto) AS concepto,
+                   ABS(SUM(CASE WHEN substr(fecha_operacion, 7, 4) = ? THEN importe_eur ELSE 0 END)) AS total_actual,
+                   ABS(SUM(CASE WHEN substr(fecha_operacion, 7, 4) = ? THEN importe_eur ELSE 0 END)) AS total_anterior
+            FROM gastos
+            WHERE importe_eur < 0
+            GROUP BY lower(concepto)
+            HAVING total_actual > 0
+            ORDER BY total_actual DESC
+            LIMIT 10
+            ''', (str(anio_actual), str(anio_anterior)))
+
+        conceptos = []
+        for row in cursor.fetchall():
+            total_actual = float(row['total_actual'])
+            total_anterior = float(row['total_anterior'])
+            porcentaje = 0.0
+            if total_anterior > 0:
+                porcentaje = ((total_actual - total_anterior) / total_anterior) * 100
+            elif total_actual > 0:
+                porcentaje = 100.0
+            conceptos.append({
+                'concepto': row['concepto'],
+                'total_actual': redondear_importe(total_actual),
+                'total_anterior': redondear_importe(total_anterior),
+                'porcentaje_diferencia': redondear_importe(porcentaje)
+            })
+        return jsonify({'año_actual': anio_actual, 'año_anterior': anio_anterior, 'gastos': conceptos})
+    except Exception as e:
+        print('ERROR EN /gastos/top_gastos:', str(e))
+        print(traceback.format_exc())
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
+    finally:
+        try:
+            cursor.close()
+            conn.close()
+        except:
+            pass
+
 @dashboard_bp.route('/productos/top_ventas', methods=['GET'])
 def top_productos_ventas():
     try:
@@ -553,9 +805,9 @@ def top_productos_ventas():
                     p.id as producto_id,
                     p.nombre as producto_nombre,
                     COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_actual_f,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad * df.precio ELSE 0 END), 0) as total_actual_f,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_actual_f,
                     COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_anterior_f,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad * df.precio ELSE 0 END), 0) as total_anterior_f
+                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_anterior_f
                 FROM productos p
                 LEFT JOIN detalle_factura df ON p.id = df.productoId
                 LEFT JOIN factura f ON df.id_factura = f.id AND f.estado = 'C'
@@ -566,9 +818,9 @@ def top_productos_ventas():
                     p.id as producto_id,
                     p.nombre as producto_nombre,
                     COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.cantidad ELSE 0 END), 0) as cantidad_actual_t,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.cantidad * dt.precio ELSE 0 END), 0) as total_actual_t,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.total ELSE 0 END), 0) as total_actual_t,
                     COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.cantidad ELSE 0 END), 0) as cantidad_anterior_t,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.cantidad * dt.precio ELSE 0 END), 0) as total_anterior_t
+                    COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.total ELSE 0 END), 0) as total_anterior_t
                 FROM productos p
                 LEFT JOIN detalle_tickets dt ON p.id = dt.productoId
                 LEFT JOIN tickets t ON dt.id_ticket = t.id AND t.estado = 'C'

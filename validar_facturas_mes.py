@@ -8,7 +8,6 @@ y las valida, generando un informe de los resultados.
 
 import argparse
 import os
-import sys
 from datetime import datetime
 
 from facturae_utils import leer_contenido_xsig
@@ -217,7 +216,7 @@ def main():
         mes=args.mes
     )
     
-    print(f"\n=== VALIDADOR DE FACTURAS ELECTRÓNICAS ===")
+    print("\n=== VALIDADOR DE FACTURAS ELECTRÓNICAS ===")
     print(f"Fecha actual: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
     print(f"Directorio a procesar: {directorio}")
     
@@ -232,7 +231,7 @@ def main():
     # Generar informe
     ruta_informe = generar_informe(resultados, directorio, total, validos, invalidos)
     
-    print(f"\n=== RESUMEN DE VALIDACIÓN ===")
+    print("\n=== RESUMEN DE VALIDACIÓN ===")
     print(f"Total facturas: {total}")
     print(f"Facturas válidas: {validos} ({(validos/total*100):.1f}%)")
     print(f"Facturas inválidas: {invalidos}")
