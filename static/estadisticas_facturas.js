@@ -7,46 +7,34 @@ import { formatearFecha, formatearImporte, fetchConManejadorErrores, parsearImpo
 // ==============================
 // EVENTOS INICIALES
 // ==============================
-document.addEventListener('DOMContentLoaded', async () => {
-    const selectorFecha = document.getElementById('selector-fecha');
-    if (selectorFecha && !selectorFecha.value) {
-      const hoy = new Date();
-      selectorFecha.value = hoy.toISOString().slice(0, 7);
-    }
+// ---- Toggle visibility of card content ----
+function setCardVisibility(card, hide) {
+  const content = card.querySelector('.stats-content');
+  // Limpiar cualquier .hidden residual de versiones previas
+  if(content) content.classList.remove('hidden');
   
-    // Recalcular estadísticas tanto al cambiar como al introducir un nuevo valor
-    selectorFecha?.addEventListener('change', recargarEstadisticas);
-
-    document.getElementById('btn-descargar-csv')?.addEventListener('click', descargarCSV);
-    document.getElementById('btn-graficos')?.addEventListener('click', abrirModalGraficos);
-    document.getElementById('cerrar-modal')?.addEventListener('click', () => {
-      document.getElementById('modal-graficos').style.display = 'none';
-    });
-    document.getElementById('tipo-datos')?.addEventListener('change', abrirModalGraficos);
+  if(hide) {
+    card.classList.add('collapsed');
+    // Añadir un indicador visual para tarjetas colapsadas
+    card.style.opacity = '0.85';
+    card.style.borderLeft = '4px solid #ccc';
+  } else {
+    card.classList.remove('collapsed');
+    card.style.opacity = '1';
+    card.style.borderLeft = '';
+  }
   
-    initModalDrag();
+  const btn = card.querySelector('.toggle-card');
+  if(btn) {
+    const icon = btn.querySelector('i');
+    icon.classList.toggle('fa-eye', hide);
+    icon.classList.toggle('fa-eye-slash', !hide);
+    btn.title = hide ? 'Mostrar' : 'Ocultar';
+  }
+}
 
-
-    await recargarEstadisticas();
-  // ---- Toggle visibility of card content ----
-  const setCardVisibility = (card, hide)=>{
-    const content = card.querySelector('.stats-content');
-    // Limpiar cualquier .hidden residual de versiones previas
-    if(content) content.classList.remove('hidden');
-    if(hide){
-      card.classList.add('collapsed');
-    } else {
-      card.classList.remove('collapsed');
-    }
-    const btn = card.querySelector('.toggle-card');
-    if(btn){
-      const icon = btn.querySelector('i');
-      icon.classList.toggle('fa-eye', hide);
-      icon.classList.toggle('fa-eye-slash', !hide);
-      btn.title = hide ? 'Mostrar' : 'Ocultar';
-    }
-  };
-
+// Inicializa los controles de colapso para todas las tarjetas de estadísticas
+function initCollapseControls() {
   document.querySelectorAll('.toggle-card').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -57,12 +45,36 @@ document.addEventListener('DOMContentLoaded', async () => {
       setCardVisibility(card, newHidden);
       sessionStorage.setItem('statsHidden_'+card.id, newHidden ? '1' : '0');
     });
+    
     // aplicar estado guardado al cargar
     const card = btn.closest('.stats-card');
     const hiddenSaved = sessionStorage.getItem('statsHidden_'+card.id) === '1';
     setCardVisibility(card, hiddenSaved);
   });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const selectorFecha = document.getElementById('selector-fecha');
+  if (selectorFecha && !selectorFecha.value) {
+    const hoy = new Date();
+    selectorFecha.value = hoy.toISOString().slice(0, 7);
+  }
+
+  // Recalcular estadísticas tanto al cambiar como al introducir un nuevo valor
+  selectorFecha?.addEventListener('change', recargarEstadisticas);
+
+  document.getElementById('btn-descargar-csv')?.addEventListener('click', descargarCSV);
+  document.getElementById('btn-graficos')?.addEventListener('click', abrirModalGraficos);
+  document.getElementById('cerrar-modal')?.addEventListener('click', () => {
+    document.getElementById('modal-graficos').style.display = 'none';
   });
+  document.getElementById('tipo-datos')?.addEventListener('change', abrirModalGraficos);
+
+  initModalDrag();
+  initCollapseControls(); // Inicializar controles de colapso
+  
+  await recargarEstadisticas();
+});
   
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
@@ -193,6 +205,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   
     actualizarTopClientes(await fetchConManejadorErrores('/api/clientes/top_ventas?' + qp));
     actualizarTopProductos(await fetchConManejadorErrores('/api/productos/top_ventas?' + qp));
+    
+    // Restaurar el estado de colapso de las tarjetas después de actualizar datos
+    restaurarEstadoColapso();
+  }
+  
+  function restaurarEstadoColapso() {
+    document.querySelectorAll('.stats-card').forEach(card => {
+      const hiddenSaved = sessionStorage.getItem('statsHidden_'+card.id) === '1';
+      setCardVisibility(card, hiddenSaved);
+    });
   }
   
   function actualizarStats(prefijo, data, cardId) {
@@ -342,6 +364,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     const gastosEl   = document.getElementById('ig-total-gastos');
     if(ingresosEl) ingresosEl.textContent = formatearImporte(ingresos.total_actual);
     if(gastosEl)   gastosEl.textContent   = formatearImporte(Math.abs(gastos.total_actual));
+    
+    // Mostrar la última actualización con fecha y hora
+    const ultimaActualizacionEl = document.getElementById('ig-ultima-actualizacion');
+    if(ultimaActualizacionEl && data.ultima_actualizacion) {
+      if(data.ultima_actualizacion_completa) {
+        // Si tenemos la fecha y hora completa, la mostramos directamente
+        ultimaActualizacionEl.textContent = data.ultima_actualizacion_completa;
+      } else {
+        // Mantener compatibilidad con el formato anterior DD/MM/AAAA
+        const fechaPartes = data.ultima_actualizacion.split('/');
+        if(fechaPartes.length === 3) {
+          const fechaObj = new Date(`${fechaPartes[2]}-${fechaPartes[1]}-${fechaPartes[0]}T00:00:00`);
+          ultimaActualizacionEl.textContent = formatearFecha(fechaObj);
+        } else {
+          ultimaActualizacionEl.textContent = data.ultima_actualizacion;
+        }
+      }
+    } else if(ultimaActualizacionEl) {
+      ultimaActualizacionEl.textContent = 'No hay datos';
+    }
 
     // ---- Balance ----
     const balanceValor = ingresos.total_actual - Math.abs(gastos.total_actual);
@@ -561,6 +603,34 @@ document.addEventListener('DOMContentLoaded', async () => {
   let chartEstadisticas = null;
   let chartCliente = null;
   let chartProducto = null;
+  // Hoisted to avoid ReferenceError in abrirGraficoCliente when referenced in options
+  let countsForBars = null;
+  
+  // Plugin global para dibujar etiquetas con CANTIDAD sobre cada barra
+  // Lee counts desde options.plugins.barLabelsCounts.counts
+  const barLabelsPlugin = {
+    id: 'barLabelsCounts',
+    afterDatasetsDraw(chart, args, pluginOptions){
+      const cfg = chart.options.plugins?.barLabelsCounts;
+      const counts = cfg?.counts;
+      if (!counts || !Array.isArray(counts)) return;
+      const { ctx } = chart;
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle = '#333';
+      ctx.font = '10px sans-serif';
+      const meta = chart.getDatasetMeta(0);
+      meta.data.forEach((bar, i) => {
+        const val = counts[i];
+        if (val === null || val === undefined) return;
+        const txt = String(val);
+        const pos = bar.tooltipPosition();
+        ctx.fillText(txt, pos.x, pos.y - 4);
+      });
+      ctx.restore();
+    }
+  };
   
   async function abrirModalGraficos() {
     // Si existe gráfico de cliente, destruirlo antes de crear el general
@@ -743,32 +813,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       }
     }
-
-    // Plugin para dibujar etiquetas con CANTIDAD sobre cada barra
-    // Lee counts desde options.plugins.barLabelsCounts.counts
-    const barLabelsPlugin = {
-      id: 'barLabelsCounts',
-      afterDatasetsDraw(chart, args, pluginOptions){
-        const cfg = chart.options.plugins?.barLabelsCounts;
-        const counts = cfg?.counts;
-        if (!counts || !Array.isArray(counts)) return;
-        const { ctx } = chart;
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.fillStyle = '#333';
-        ctx.font = '10px sans-serif';
-        const meta = chart.getDatasetMeta(0);
-        meta.data.forEach((bar, i) => {
-          const val = counts[i];
-          if (val === null || val === undefined) return;
-          const txt = String(val);
-          const pos = bar.tooltipPosition();
-          ctx.fillText(txt, pos.x, pos.y - 4);
-        });
-        ctx.restore();
-      }
-    };
 
     // Construir arreglo de cantidades por mes para etiquetas si disponible
     let countsForBars = null;

@@ -11,3 +11,12 @@ scraping_status.log
 
 # Ignorar todos los XML generados
 *.xml
+.venv/
+
+# Perfiles/cachés locales del navegador (no versionar)
+.pw_profile_santander/
+
+# Bases de datos y backups locales (no versionar)
+db/*.db
+db/*.bak*
+db/*.sqbpro
