@@ -1,0 +1,1205 @@
+{
+  "to_update": 502,
+  "sample": [
+    {
+      "id_ticket": 57,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 58,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 59,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 60,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 61,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 62,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 63,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 63,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 64,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 64,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 65,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 66,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 67,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 67,
+      "productoId": 54,
+      "concepto_old": "PLASTIFICACIÒ A4 (250 ΜMS)",
+      "concepto_new": "PLASTIFICACIÒ A4 (250 µms)"
+    },
+    {
+      "id_ticket": 68,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 69,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 70,
+      "productoId": 72,
+      "concepto_old": "PLASTIFICACIÒ A3 (250 ΜMS)",
+      "concepto_new": "PLASTIFICACIÒ A3 (250 µms)"
+    },
+    {
+      "id_ticket": 71,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 72,
+      "productoId": 99,
+      "concepto_old": "PAQUET NAVIGATOR A4 80GR (500 FULLS)",
+      "concepto_new": "A4 PAQUET NAVIGATOR  80gr (500 FULLS)"
+    },
+    {
+      "id_ticket": 73,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 74,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 75,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 76,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 77,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 78,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 79,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 80,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 80,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 82,
+      "productoId": 27,
+      "concepto_old": "ESCÀNER >20 AUTOMATICO",
+      "concepto_new": "SCANNER"
+    },
+    {
+      "id_ticket": 83,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 85,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 86,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 87,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 87,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 88,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 89,
+      "productoId": 72,
+      "concepto_old": "PLASTIFICACIÒ A3 (250 ΜMS)",
+      "concepto_new": "PLASTIFICACIÒ A3 (250 µms)"
+    },
+    {
+      "id_ticket": 81,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 81,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 94,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 95,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 96,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 96,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 98,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 100,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 101,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 101,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 102,
+      "productoId": 99,
+      "concepto_old": "PAQUET NAVIGATOR A4 80GR (500 FULLS)",
+      "concepto_new": "A4 PAQUET NAVIGATOR  80gr (500 FULLS)"
+    },
+    {
+      "id_ticket": 103,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 104,
+      "productoId": 116,
+      "concepto_old": "IMPRESSIO A3 B/N (",
+      "concepto_new": "IMPRESSIO A3 BN"
+    },
+    {
+      "id_ticket": 106,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 107,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 108,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 109,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 111,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 112,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 113,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 114,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 115,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 115,
+      "productoId": 27,
+      "concepto_old": "ESCÀNER >20 AUTOMATICO",
+      "concepto_new": "SCANNER"
+    },
+    {
+      "id_ticket": 116,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 117,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 118,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 123,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 124,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 127,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 128,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 129,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 131,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 131,
+      "productoId": 27,
+      "concepto_old": "ESCÀNER >20 AUTOMATICO",
+      "concepto_new": "SCANNER"
+    },
+    {
+      "id_ticket": 132,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 132,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 133,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 133,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 134,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 134,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 135,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 140,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 139,
+      "productoId": 27,
+      "concepto_old": "ESCÀNER >20 AUTOMATICO",
+      "concepto_new": "SCANNER"
+    },
+    {
+      "id_ticket": 137,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 141,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 143,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 142,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 142,
+      "productoId": 27,
+      "concepto_old": "ESCÀNER >20 AUTOMATICO",
+      "concepto_new": "SCANNER"
+    },
+    {
+      "id_ticket": 110,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 110,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 99,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 99,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 136,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 144,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 145,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 146,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 147,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 148,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 149,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 150,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 151,
+      "productoId": 27,
+      "concepto_old": "ESCÀNER >20 AUTOMATICO",
+      "concepto_new": "SCANNER"
+    },
+    {
+      "id_ticket": 152,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 152,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 153,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 154,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 155,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 157,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 158,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 158,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 159,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 159,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 160,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 163,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 164,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 165,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 167,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 169,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 171,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 172,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 156,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 173,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 174,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 175,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 161,
+      "productoId": 110,
+      "concepto_old": "IMPRESSIO LÀSER B/N (",
+      "concepto_new": "IMPRESSIO LASER BN"
+    },
+    {
+      "id_ticket": 161,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 176,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 177,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 162,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 162,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 178,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 178,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 179,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 180,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 180,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 181,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 182,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 184,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 185,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 185,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 186,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 187,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 188,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 189,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 190,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 191,
+      "productoId": 110,
+      "concepto_old": "IMPRESSIO LÀSER B/N (",
+      "concepto_new": "IMPRESSIO LASER BN"
+    },
+    {
+      "id_ticket": 191,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 192,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 192,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 193,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 194,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 195,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 195,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 196,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 197,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 200,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 201,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 202,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 203,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 204,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 206,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 206,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 207,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 208,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 209,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 210,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 211,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 212,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 212,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 214,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 215,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 215,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 216,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 199,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 217,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 218,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 218,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 219,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 220,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 220,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 220,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 221,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 222,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 223,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 223,
+      "productoId": 185,
+      "concepto_old": "CARTOLINA COLOR COPY 300GR A4",
+      "concepto_new": "300gr CARTOLINA COLOR COPY A4"
+    },
+    {
+      "id_ticket": 224,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 225,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 226,
+      "productoId": 110,
+      "concepto_old": "IMPRESSIO LÀSER B/N (",
+      "concepto_new": "IMPRESSIO LASER BN"
+    },
+    {
+      "id_ticket": 227,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 228,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 229,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 230,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 231,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 234,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 235,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 236,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 237,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 238,
+      "productoId": 112,
+      "concepto_old": "IMPRESSIO A3 COLOR (",
+      "concepto_new": "IMPRESSIO A3 COLOR"
+    },
+    {
+      "id_ticket": 239,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 232,
+      "productoId": 71,
+      "concepto_old": "PLASTIFICACIÒ A3 (150 ΜMS)",
+      "concepto_new": "PLASTIFICACIÒ A3 (150 µms)"
+    },
+    {
+      "id_ticket": 240,
+      "productoId": 114,
+      "concepto_old": "IMPRESSIO A4 COLOR (",
+      "concepto_new": "IMPRESSIO A4 COLOR "
+    },
+    {
+      "id_ticket": 241,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 242,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 243,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 244,
+      "productoId": 118,
+      "concepto_old": "IMPRESSIO A4 B/N (1 - 49)",
+      "concepto_new": "IMPRESSIO A4 BN "
+    },
+    {
+      "id_ticket": 245,
+      "productoId": 99,
+      "concepto_old": "PAQUET NAVIGATOR A4 80GR (500 FULLS)",
+      "concepto_new": "A4 PAQUET NAVIGATOR  80gr (500 FULLS)"
+    }
+  ]
+}

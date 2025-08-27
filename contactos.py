@@ -158,6 +158,117 @@ def obtener_contactos():
         if 'conn' in locals():
             conn.close()
 
+
+def obtener_contactos_paginados(filtros, page=1, page_size=10, sort='razonsocial', order='ASC'):
+    """
+    Obtiene contactos con paginación y filtros opcionales.
+
+    Args:
+        filtros (dict): { 'razonSocial': str, 'nif': str }
+        page (int): Número de página (1-indexado)
+        page_size (int): Tamaño de página (máx 100)
+        sort (str): Campo de ordenación ('razonsocial', 'identificador', 'localidad', 'provincia')
+        order (str): 'ASC' o 'DESC'
+
+    Returns:
+        dict: {
+            'items': [ {contacto...} ],
+            'total': int,
+            'page': int,
+            'page_size': int,
+            'total_pages': int
+        }
+    """
+    try:
+        # Saneamiento de parámetros
+        try:
+            page = int(page) if int(page) > 0 else 1
+        except Exception:
+            page = 1
+        try:
+            page_size = int(page_size)
+            if page_size <= 0:
+                page_size = 10
+            page_size = min(page_size, 100)
+        except Exception:
+            page_size = 10
+
+        allowed_sort = {
+            'razonsocial': 'c.razonsocial',
+            'identificador': 'c.identificador',
+            'localidad': 'c.localidad',
+            'provincia': 'c.provincia'
+        }
+        sort_column = allowed_sort.get(str(sort).lower(), 'c.razonsocial')
+        order = 'DESC' if str(order).upper() == 'DESC' else 'ASC'
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        where_sql = 'WHERE 1=1 AND COALESCE(TRIM(c.identificador), "") <> ""'
+        params = []
+
+        if filtros.get('razonSocial'):
+            where_sql += ' AND LOWER(c.razonsocial) LIKE LOWER(?)'
+            params.append(f"%{filtros['razonSocial']}%")
+        if filtros.get('nif'):
+            where_sql += ' AND LOWER(c.identificador) LIKE LOWER(?)'
+            params.append(f"%{filtros['nif']}%")
+
+        # Conteo total
+        count_sql = f'SELECT COUNT(*) as total FROM contactos c {where_sql}'
+        cursor.execute(count_sql, params)
+        row = cursor.fetchone()
+        total = row['total'] if isinstance(row, sqlite3.Row) else (row[0] if row else 0)
+
+        offset = (page - 1) * page_size
+        sql = f'''
+            SELECT 
+                c.idContacto,
+                c.razonsocial,
+                c.identificador,
+                c.mail,
+                c.telf1,
+                c.telf2,
+                c.direccion,
+                c.localidad,
+                c.cp,
+                c.provincia,
+                c.tipo,
+                c.idContacto as id,
+                (
+                    SELECT p.numero 
+                    FROM proforma p 
+                    WHERE p.idcontacto = c.idContacto 
+                    AND p.estado = 'A'
+                    ORDER BY p.fecha DESC, p.id DESC
+                    LIMIT 1
+                ) as numero_proforma_abierta
+            FROM contactos c
+            {where_sql}
+            ORDER BY {sort_column} {order}
+            LIMIT ? OFFSET ?
+        '''
+        params_limit = params + [page_size, offset]
+        cursor.execute(sql, params_limit)
+        items = [dict(r) for r in cursor.fetchall()]
+
+        total_pages = (int(total) + page_size - 1) // page_size if page_size else 1
+
+        return {
+            'items': items,
+            'total': int(total),
+            'page': page,
+            'page_size': page_size,
+            'total_pages': int(total_pages)
+        }
+    except sqlite3.Error as e:
+        print(f"Error de base de datos en obtener_contactos_paginados: {str(e)}")
+        raise Exception(f"Error al obtener contactos paginados: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
 def obtener_contacto(idContacto):
     """
     Devuelve un contacto específico por su ID.

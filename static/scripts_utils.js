@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_PRODUCTOS, API_PRODUCTOS_FALLBACK } from './constantes.js';
 
 export const PRODUCTO_ID_LIBRE = '94';
 
@@ -142,7 +142,47 @@ export function parsearImporte(valor) {
   return isNaN(n) ? 0 : n;
 }
 
-export function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoFactura = null, tipoDocumento = 'proforma') {
+// Cache de franjas por producto
+const productDiscountBands = {};
+let fetchingBands = {};
+
+async function fetchFranjasProducto(productoId) {
+  if (!productoId) return null;
+  if (fetchingBands[productoId]) return null;
+  fetchingBands[productoId] = true;
+  const urls = [
+    `${API_PRODUCTOS}/${productoId}/franjas_descuento`,
+    `${API_PRODUCTOS_FALLBACK}/${productoId}/franjas_descuento`
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+      if (data && Array.isArray(data.franjas)) {
+        productDiscountBands[productoId] = data.franjas.map(f => ({
+          min: Number(f.min) || 0,
+          max: Number(f.max) || 0,
+          descuento: Number(f.descuento) || 0
+        }));
+        break;
+      }
+    } catch (_) { /* intentar siguiente url */ }
+  }
+  fetchingBands[productoId] = false;
+  return productDiscountBands[productoId] || null;
+}
+
+function getFranjasCached(productoId) {
+  const franjas = productDiscountBands[productoId];
+  if (!franjas) {
+    // Disparar fetch en segundo plano; primer cálculo usará fallback global
+    fetchFranjasProducto(productoId);
+  }
+  return franjas || null;
+}
+
+export function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoFactura = null, tipoDocumento = 'proforma', productoId = null) {
   // Si tipoFactura es una cadena vacía, tratarlo como 'N' (aplicar descuentos)
   if (tipoFactura === '') {
     tipoFactura = 'N';
@@ -150,7 +190,7 @@ export function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoF
   
   // En tickets siempre aplicar descuentos
   if (tipoDocumento === 'ticket') {
-    return aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad);
+    return aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
   }
   
   // En facturas nunca aplicar descuentos
@@ -164,11 +204,13 @@ export function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoF
   }
 
   // Aplicar descuento por defecto (para proformas tipo 'N' u otros casos)
-  return aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad);
+  return aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
 }
 
-function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad) {
-  const franjas = [
+function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId = null) {
+  // Intentar usar franjas específicas por producto; si no hay, usar fallback global
+  const porProducto = productoId ? getFranjasCached(productoId) : null;
+  const franjas = porProducto || [
     { min: 1, max: 10,   descuento: 0 },
     { min: 11, max: 50,  descuento: 5 },
     { min: 51, max: 99,  descuento: 10},
@@ -280,7 +322,8 @@ export function calcularTotalDetalle() {
     } else {
       // Para documentos tipo N, calcular con descuentos
       console.log('Documento tipo N: SÍ se aplican descuentos por franja');
-      precioFinal = calcularPrecioConDescuento(precioOriginal, cantidad, tipoDocumento);
+      // calcularPrecioConDescuento(precio, cantidad, tipoFactura, tipoDocumento, productoId)
+      precioFinal = calcularPrecioConDescuento(precioOriginal, cantidad, null, tipoDocumento, productoId);
     }
     
     const subtotal = precioFinal * cantidad;

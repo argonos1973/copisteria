@@ -1,0 +1,77 @@
+[
+  {
+    "id_ticket": 97,
+    "productoId": 41,
+    "concepto_detalle": "IMPRESSIO A4 B/N (+250)"
+  },
+  {
+    "id_ticket": 105,
+    "productoId": 41,
+    "concepto_detalle": "IMPRESSIO A4 B/N (+250)"
+  },
+  {
+    "id_ticket": 126,
+    "productoId": 113,
+    "concepto_detalle": "IMPRESSIO A4 COLOR (>50)"
+  },
+  {
+    "id_ticket": 125,
+    "productoId": 113,
+    "concepto_detalle": "IMPRESSIO A4 COLOR (>50)"
+  },
+  {
+    "id_ticket": 170,
+    "productoId": 37,
+    "concepto_detalle": "IMPRESSIO A4 COLOR (+500)"
+  },
+  {
+    "id_ticket": 198,
+    "productoId": 37,
+    "concepto_detalle": "IMPRESSIO A4 COLOR (+500)"
+  },
+  {
+    "id_ticket": 205,
+    "productoId": 42,
+    "concepto_detalle": "IMPRESSIO A4 B/N  (100 - 249)"
+  },
+  {
+    "id_ticket": 199,
+    "productoId": 37,
+    "concepto_detalle": "IMPRESSIO A4 COLOR (+500)"
+  },
+  {
+    "id_ticket": 232,
+    "productoId": 111,
+    "concepto_detalle": "IMPRESSIO A3 COLOR (>50)"
+  },
+  {
+    "id_ticket": 261,
+    "productoId": "",
+    "concepto_detalle": "SELECCIONE UN PRODUCTO"
+  },
+  {
+    "id_ticket": 531,
+    "productoId": "",
+    "concepto_detalle": "SELECCIONE UN PRODUCTO"
+  },
+  {
+    "id_ticket": 625,
+    "productoId": 124,
+    "concepto_detalle": "ESCÀNER >20 MANUAL"
+  },
+  {
+    "id_ticket": 859,
+    "productoId": 124,
+    "concepto_detalle": "ESCÀNER >20 MANUAL"
+  },
+  {
+    "id_ticket": 2107,
+    "productoId": "",
+    "concepto_detalle": "SELECCIONE UN PRODUCTO"
+  },
+  {
+    "id_ticket": 2464,
+    "productoId": "",
+    "concepto_detalle": "SELECCIONE UN PRODUCTO"
+  }
+]

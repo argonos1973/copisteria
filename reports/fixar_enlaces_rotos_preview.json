@@ -1,0 +1,568 @@
+{
+  "total_rotos_detectados": 93,
+  "soluciones_unicas": 0,
+  "ambiguos": 0,
+  "omitidos": 93,
+  "muestra_soluciones": [],
+  "muestra_ambiguos": [],
+  "muestra_omitidos": [
+    {
+      "id_ticket": 60,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 84,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 97,
+      "productoId_actual": 41,
+      "concepto": "IMPRESSIO A4 B/N (+250)",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 105,
+      "productoId_actual": 41,
+      "concepto": "IMPRESSIO A4 B/N (+250)",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 108,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 126,
+      "productoId_actual": 113,
+      "concepto": "IMPRESSIO A4 COLOR (>50)",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 125,
+      "productoId_actual": 113,
+      "concepto": "IMPRESSIO A4 COLOR (>50)",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 170,
+      "productoId_actual": 37,
+      "concepto": "IMPRESSIO A4 COLOR (+500)",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 198,
+      "productoId_actual": 37,
+      "concepto": "IMPRESSIO A4 COLOR (+500)",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 205,
+      "productoId_actual": 42,
+      "concepto": "IMPRESSIO A4 B/N  (100 - 249)",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 199,
+      "productoId_actual": 37,
+      "concepto": "IMPRESSIO A4 COLOR (+500)",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 233,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 232,
+      "productoId_actual": 111,
+      "concepto": "IMPRESSIO A3 COLOR (>50)",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 261,
+      "productoId_actual": "",
+      "concepto": "SELECCIONE UN PRODUCTO",
+      "reason": "concepto no utilizable"
+    },
+    {
+      "id_ticket": 277,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 291,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 315,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 325,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 331,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 344,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 355,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 356,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 366,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 374,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 437,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 442,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 443,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 446,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 503,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 531,
+      "productoId_actual": "",
+      "concepto": "SELECCIONE UN PRODUCTO",
+      "reason": "concepto no utilizable"
+    },
+    {
+      "id_ticket": 570,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 579,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 601,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 623,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 625,
+      "productoId_actual": 124,
+      "concepto": "ESCÀNER >20 MANUAL",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 662,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 671,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 673,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 691,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 705,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 713,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 721,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 785,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 793,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 820,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 859,
+      "productoId_actual": 124,
+      "concepto": "ESCÀNER >20 MANUAL",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 927,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 928,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 931,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1044,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1053,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1057,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1090,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1095,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1102,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1127,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1139,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1190,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1265,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1400,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1450,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1457,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1466,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1472,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1479,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1485,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1489,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1508,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1511,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1540,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1542,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1571,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1572,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1626,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1628,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1629,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1653,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1655,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1670,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1687,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1723,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1724,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1733,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1735,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1745,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1746,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1748,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1779,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1818,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1828,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 1859,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "reason": "sin coincidencias"
+    },
+    {
+      "id_ticket": 2107,
+      "productoId_actual": "",
+      "concepto": "SELECCIONE UN PRODUCTO",
+      "reason": "concepto no utilizable"
+    },
+    {
+      "id_ticket": 2464,
+      "productoId_actual": "",
+      "concepto": "SELECCIONE UN PRODUCTO",
+      "reason": "concepto no utilizable"
+    }
+  ]
+}

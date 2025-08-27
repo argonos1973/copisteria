@@ -13,6 +13,40 @@ const notificacion = document.getElementById('notificacion');
 const graficoBtn = document.getElementById('btn-grafico');
 let datosConsulta = [];
 
+// Controles de paginación
+const prevPageBtn = document.getElementById('prevPageGastos');
+const nextPageBtn = document.getElementById('nextPageGastos');
+const pageInfoSpan = document.getElementById('pageInfoGastos');
+const pageSizeSelect = document.getElementById('pageSizeSelectGastos');
+let page = 1;
+let pageSize = parseInt(pageSizeSelect?.value || '10', 10);
+
+function getTotalPages() {
+    if (!Array.isArray(datosConsulta) || datosConsulta.length === 0) return 1;
+    return Math.max(1, Math.ceil(datosConsulta.length / pageSize));
+}
+
+function updatePaginationUI() {
+    const totalPages = getTotalPages();
+    if (page > totalPages) page = totalPages;
+    if (page < 1) page = 1;
+    if (pageInfoSpan) pageInfoSpan.textContent = `Página ${page} de ${totalPages}`;
+    if (prevPageBtn) prevPageBtn.disabled = page <= 1;
+    if (nextPageBtn) nextPageBtn.disabled = page >= totalPages;
+}
+
+function applyPaginationAndRender() {
+    // Ordenar siempre por fecha (desc) antes de paginar para consistencia
+    const ordenados = [...(datosConsulta || [])].sort((a,b) => new Date(b.fecha_valor || b.fecha_operacion) - new Date(a.fecha_valor || a.fecha_operacion));
+    const totalPages = getTotalPages();
+    if (page > totalPages) page = totalPages;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    const paginaDatos = ordenados.slice(start, end);
+    renderizarGastos(paginaDatos);
+    updatePaginationUI();
+}
+
 // Inicializar fechas con el primer y último día del mes actual
 document.addEventListener('DOMContentLoaded', () => {
     inicializarFechasMesActual();
@@ -57,7 +91,9 @@ function renderizarGastos(gastos) {
         noResultados.classList.remove('oculto');
         const totalImporteGastos = document.getElementById('totalImporteGastos');
         if (totalImporteGastos) {
-            totalImporteGastos.textContent = formatearImporte(0);
+            // Mostrar total global (todos los resultados) aunque la página esté vacía
+            const totalGlobal = (datosConsulta || []).reduce((acc, g) => acc + (Number(g.importe_eur) || 0), 0);
+            totalImporteGastos.textContent = formatearImporte(totalGlobal);
             totalImporteGastos.classList.remove('hidden');
         }
         // Asegura que los otros totales también se ponen a 0 y se muestran
@@ -70,8 +106,7 @@ function renderizarGastos(gastos) {
         return;
     }
     noResultados.classList.add('oculto');
-    // Ordenar por fecha (valor u operación) descendente
-    gastos.sort((a,b) => new Date(b.fecha_valor || b.fecha_operacion) - new Date(a.fecha_valor || a.fecha_operacion));
+    // NOTA: El orden ya se aplicó antes de paginar
     gastos.forEach(gasto => {
         total += Number(gasto.importe_eur) || 0;
         const fila = document.createElement('tr');
@@ -86,7 +121,9 @@ function renderizarGastos(gastos) {
     });
     const totalImporteGastos = document.getElementById('totalImporteGastos');
     if (totalImporteGastos) {
-        totalImporteGastos.textContent = formatearImporte(total);
+        // Mostrar total global (todos los resultados), no solo el de la página
+        const totalGlobal = (datosConsulta || []).reduce((acc, g) => acc + (Number(g.importe_eur) || 0), 0);
+        totalImporteGastos.textContent = formatearImporte(totalGlobal);
         totalImporteGastos.classList.remove('hidden');
     }
     // Asegura que los otros totales también se muestran
@@ -139,7 +176,11 @@ async function buscarGastos() {
         }
         const data = await response.json();
         datosConsulta = data.gastos || [];
-        renderizarGastos(datosConsulta);
+        // Reiniciar a la primera página al cambiar filtros
+        page = 1;
+        // Sincronizar pageSize por si el usuario cambió el selector antes
+        pageSize = parseInt(pageSizeSelect?.value || String(pageSize), 10) || pageSize;
+        applyPaginationAndRender();
         // Mostrar / ocultar botón gráfico
         if (graficoBtn) {
             if (conceptoInput.value.trim() && datosConsulta.length) {
@@ -344,6 +385,32 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             toggle.click();
+        }
+    });
+
+    // Listeners de paginación
+    if (pageSizeSelect) {
+        // Inicializar pageSize desde el select
+        pageSize = parseInt(pageSizeSelect.value || String(pageSize), 10) || pageSize;
+        pageSizeSelect.addEventListener('change', (e) => {
+            const value = parseInt(e.target.value, 10);
+            if (!isNaN(value)) {
+                pageSize = value;
+                page = 1;
+                applyPaginationAndRender();
+            }
+        });
+    }
+    prevPageBtn?.addEventListener('click', () => {
+        if (page > 1) {
+            page -= 1;
+            applyPaginationAndRender();
+        }
+    });
+    nextPageBtn?.addEventListener('click', () => {
+        if (page < getTotalPages()) {
+            page += 1;
+            applyPaginationAndRender();
         }
     });
 });

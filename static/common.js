@@ -156,7 +156,8 @@ export function seleccionarProducto(formElements, productosOriginales) {
 
     // Calcular el precio con descuento y el total
     const cantidad = parseFloat(cantidadDetalle.value) || 1;
-    const precioConDescuento = calcularPrecioConDescuento(precioOriginal, cantidad);
+    // Aplicar franjas específicas por producto en proformas (tipoDocumento='proforma')
+    const precioConDescuento = calcularPrecioConDescuento(precioOriginal, cantidad, null, 'proforma', productoId);
     const impuestos = parseFloat(impuestoDetalle.value) || 21;
     
     precioDetalle.value = Number(precioConDescuento).toFixed(5);

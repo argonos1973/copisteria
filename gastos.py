@@ -131,10 +131,33 @@ def consulta_gastos():
 def ingresos_gastos_totales():
     """Totales anuales de ingresos y gastos y variación vs. año anterior."""
     try:
-        ahora = datetime.now()
-        anio_param = request.args.get('anio')
-        anio_actual = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
+        from datetime import datetime
+        anio_actual = int(request.args.get('anio', datetime.now().year))
+        # Si se especifica un mes, filtramos por mes. Si no, devolvemos el año completo.
+        mes = request.args.get('mes', None)
         anio_anterior = anio_actual - 1
+
+        # Verificar primero si la base de datos existe
+        import os
+        from constantes import DB_NAME
+        if not os.path.exists(DB_NAME) or os.path.getsize(DB_NAME) == 0:
+            # Base de datos no existe o está vacía, devolver una respuesta con valores por defecto
+            return jsonify({
+                'año_actual': anio_actual,
+                'año_anterior': anio_anterior,
+                'ultima_actualizacion': None,
+                'ultima_actualizacion_completa': None,
+                'ingresos': {
+                    'total_actual': 0,
+                    'total_anterior': 0,
+                    'porcentaje_diferencia': 0
+                },
+                'gastos': {
+                    'total_actual': 0,
+                    'total_anterior': 0,
+                    'porcentaje_diferencia': 0
+                }
+            })
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -155,6 +178,56 @@ def ingresos_gastos_totales():
 
         ingresos_act, gastos_act = totales(anio_actual)
         ingresos_prev, gastos_prev = totales(anio_anterior)
+        
+        # Obtener directamente el valor máximo de ts y formatearlo
+        try:
+            # Consulta para obtener el ts máximo directamente
+            cur.execute(
+                """
+                SELECT MAX(ts) AS ultima_fecha
+                FROM gastos
+                """
+            )
+            row = cur.fetchone()
+            ultima_fecha = row['ultima_fecha'] if row and row['ultima_fecha'] else None
+            
+            # Como fallback, también obtenemos la fecha_operacion
+            cur.execute(
+                """
+                SELECT MAX(fecha_operacion) as ultima_actualizacion
+                FROM gastos
+                WHERE substr(fecha_operacion, 7, 4) = ?
+                """,
+                (str(anio_actual),)
+            )
+            row_fecha = cur.fetchone()
+            ultima_actualizacion = row_fecha['ultima_actualizacion'] if row_fecha and row_fecha['ultima_actualizacion'] else None
+        except Exception as e:
+            print(f"Error al consultar la base de datos: {e}")
+            ultima_fecha = None
+            ultima_actualizacion = None
+        
+        # Crear versión con fecha y hora completa en formato dd/mm/aaaa hh:mm:ss
+        ultima_actualizacion_completa = None
+        if ultima_fecha:
+            try:
+                # La salida de SQLite para MAX(ts) ya es un string ISO, solo necesitamos reformatearla
+                fecha_dt = datetime.strptime(ultima_fecha, '%Y-%m-%d %H:%M:%S')
+                ultima_actualizacion_completa = fecha_dt.strftime('%d/%m/%Y %H:%M:%S')
+                print(f"Fecha formateada: {ultima_actualizacion_completa}")
+            except (ValueError, TypeError) as e:
+                print(f"Error al formatear fecha ts: {e}, valor recibido: {ultima_fecha}")
+                # Intentar una segunda opción
+                try:
+                    # Quizás tenga otro formato
+                    fecha_dt = datetime.fromisoformat(ultima_fecha.replace('T', ' '))
+                    ultima_actualizacion_completa = fecha_dt.strftime('%d/%m/%Y %H:%M:%S')
+                except Exception as e2:
+                    print(f"Segundo error al formatear: {e2}")
+                    ultima_actualizacion_completa = ultima_actualizacion
+        elif ultima_actualizacion:
+            # Fallback: Si no hay ts pero sí fecha_operacion
+            ultima_actualizacion_completa = ultima_actualizacion
 
         def pct(actual:float, prev:float):
             if prev == 0:
@@ -167,6 +240,8 @@ def ingresos_gastos_totales():
         return jsonify({
             'año_actual': anio_actual,
             'año_anterior': anio_anterior,
+            'ultima_actualizacion': ultima_actualizacion,
+            'ultima_actualizacion_completa': ultima_actualizacion_completa,
             'ingresos': {
                 'total_actual': ingresos_act,
                 'total_anterior': ingresos_prev,

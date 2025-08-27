@@ -55,6 +55,65 @@ function formatDateToDisplay(dateStr) {
 
 // Las funciones getEstadoFormateado y getEstadoClass ahora se importan desde scripts_utils.js
 
+// Estado de paginación
+let pagination = {
+    page: 1,
+    pageSize: 10,
+    totalPages: 1
+};
+
+function loadPaginationState() {
+    try {
+        const saved = sessionStorage.getItem('paginationFacturas');
+        if (saved) {
+            const p = JSON.parse(saved);
+            pagination.page = Math.max(parseInt(p.page || 1), 1);
+            pagination.pageSize = Math.min(Math.max(parseInt(p.pageSize || 10), 1), 100);
+            pagination.totalPages = parseInt(p.totalPages || 1) || 1;
+        }
+    } catch {}
+}
+
+function savePaginationState() {
+    sessionStorage.setItem('paginationFacturas', JSON.stringify(pagination));
+}
+
+function updatePaginationUI() {
+    const pageInfo = document.getElementById('pageInfoFacturas');
+    const prevBtn = document.getElementById('prevPageFacturas');
+    const nextBtn = document.getElementById('nextPageFacturas');
+    const pageSizeSel = document.getElementById('pageSizeSelectFacturas');
+    if (pageInfo) pageInfo.textContent = `Página ${pagination.page} de ${pagination.totalPages}`;
+    if (prevBtn) prevBtn.disabled = pagination.page <= 1;
+    if (nextBtn) nextBtn.disabled = pagination.page >= pagination.totalPages;
+    if (pageSizeSel) pageSizeSel.value = String(pagination.pageSize);
+}
+
+function handlePageSizeChange() {
+    const sel = document.getElementById('pageSizeSelectFacturas');
+    const newSize = parseInt(sel.value || '10');
+    pagination.pageSize = Math.min(Math.max(newSize, 1), 100);
+    pagination.page = 1; // reset al cambiar tamaño
+    savePaginationState();
+    buscarFacturas(true);
+}
+
+function gotoPrevPage() {
+    if (pagination.page > 1) {
+        pagination.page -= 1;
+        savePaginationState();
+        buscarFacturas(true);
+    }
+}
+
+function gotoNextPage() {
+    if (pagination.page < pagination.totalPages) {
+        pagination.page += 1;
+        savePaginationState();
+        buscarFacturas(true);
+    }
+}
+
 // Función para buscar facturas
 async function buscarFacturas(usarFiltrosGuardados = false) {
     showOverlay();
@@ -128,22 +187,25 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         // Manejar búsqueda por número de factura
         if (facturaNumber && facturaNumber.length >= 1) {
             params.append('numero', facturaNumber);
-            params.append('limit', '10');
         }
         
         // Manejar búsqueda por razón social
         if (contacto && contacto.length >= 2) {
             params.append('contacto', contacto);
-            params.append('limit', '10');
         }
 
         // Manejar búsqueda por concepto
         if (conceptFilter && conceptFilter.length >= 3) {
             params.append('concepto', conceptFilter);
-            params.append('limit', '10');
         }
 
-        const url = `http://${IP_SERVER}:${PORT}/api/facturas/consulta?${params}`;
+        // Paginación y orden
+        params.append('page', String(pagination.page));
+        params.append('page_size', String(pagination.pageSize));
+        params.append('sort', 'fecha');
+        params.append('order', 'DESC');
+
+        const url = `http://${IP_SERVER}:${PORT}/api/facturas/paginado?${params.toString()}`;
         console.log('URL de búsqueda:', url);
 
         const response = await fetch(url);
@@ -154,15 +216,17 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         
         console.log('Resultados obtenidos:', data);
 
-        if (!Array.isArray(data)) {
-            console.error('La respuesta no es un array:', data);
-            throw new Error('Formato de respuesta inválido');
-        }
+        // Estructura paginada
+        const items = Array.isArray(data.items) ? data.items : [];
+        pagination.totalPages = parseInt(data.total_pages || 1) || 1;
+        pagination.page = parseInt(data.page || pagination.page) || 1;
+        savePaginationState();
+        updatePaginationUI();
 
         const tbody = document.getElementById('gridBody');
         tbody.innerHTML = '';
 
-        if (data.length === 0) {
+        if (items.length === 0) {
             tbody.innerHTML = '<tr><td colspan="10" class="text-center">No se encontraron resultados</td></tr>';
             return;
         }
@@ -172,7 +236,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         let totalCobrado = 0;
         let totalTotal = 0;
 
-        data.forEach(factura => {
+        items.forEach(factura => {
             const row = document.createElement('tr');
             
             // Debug: verificar explícitamente el valor de enviado para cada factura
@@ -314,8 +378,8 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             totalTotal += total;
         });
 
-        // Actualizar los totales en el pie de página
-        updateTotals(data);
+        // Actualizar los totales en el pie de página (solo de la página actual)
+        updateTotals(items);
 
     } catch (error) {
         console.error('Error:', error);
@@ -342,6 +406,8 @@ function busquedaInteractiva(event) {
         guardarFiltros();
         
         // Realizar la búsqueda
+        pagination.page = 1; // reiniciar a primera página en cambios de filtros
+        savePaginationState();
         buscarFacturas();
     }
 }
@@ -388,8 +454,11 @@ function restaurarFiltros() {
         }
         
         
+        // Cargar paginación
+        loadPaginationState();
+        updatePaginationUI();
         // Realizar búsqueda con los filtros restaurados
-        buscarFacturas();
+        buscarFacturas(true);
     } else {
         // Si no hay filtros guardados, establecer fechas por defecto
         const hoy = new Date();
@@ -397,6 +466,9 @@ function restaurarFiltros() {
         document.getElementById('startDate').value = formatDate(hoy);
         document.getElementById('endDate').value = formatDate(hoy);
         
+        // Cargar paginación por defecto
+        loadPaginationState();
+        updatePaginationUI();
         // Realizar búsqueda inicial
         buscarFacturas();
     }
@@ -405,7 +477,7 @@ function restaurarFiltros() {
 document.addEventListener("DOMContentLoaded", function () {
     // Restaurar filtros guardados
     restaurarFiltros();
-    
+
     // Event listeners para búsqueda interactiva
     document.getElementById('facturaNumber').addEventListener('input', busquedaInteractiva);
     document.getElementById('contacto').addEventListener('input', busquedaInteractiva);
@@ -416,16 +488,30 @@ document.addEventListener("DOMContentLoaded", function () {
     // Event listeners para cambios en fechas y estado
     document.getElementById('startDate').addEventListener('change', () => {
         guardarFiltros();
+        pagination.page = 1;
+        savePaginationState();
         buscarFacturas();
     });
     
     document.getElementById('endDate').addEventListener('change', () => {
         guardarFiltros();
+        pagination.page = 1;
+        savePaginationState();
         buscarFacturas();
     });
     
     document.getElementById('status').addEventListener('change', () => {
         guardarFiltros();
+        pagination.page = 1;
+        savePaginationState();
         buscarFacturas();
     });
+
+    // Paginación: listeners
+    const pageSizeSel = document.getElementById('pageSizeSelectFacturas');
+    if (pageSizeSel) pageSizeSel.addEventListener('change', handlePageSizeChange);
+    const prevBtn = document.getElementById('prevPageFacturas');
+    if (prevBtn) prevBtn.addEventListener('click', (e) => { e.preventDefault(); gotoPrevPage(); });
+    const nextBtn = document.getElementById('nextPageFacturas');
+    if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); gotoNextPage(); });
 });

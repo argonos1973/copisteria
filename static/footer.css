@@ -199,3 +199,17 @@
 .fixed-footer-ticket .toggle-totals i:hover {
     color: #333;
 }
+
+/* Evitar que el footer fijo tape el contenido/paginación */
+body {
+    padding-bottom: 96px; /* espacio para el footer fijo */
+}
+
+.container {
+    padding-bottom: 96px; /* refuerzo dentro del contenedor */
+}
+
+/* Asegura separación visible con la paginación ubicada sobre el footer */
+.pagination {
+    margin-bottom: 96px;
+}

@@ -23,28 +23,20 @@ except ImportError:
     sys.modules['requests'] = requests
     logger.info("Módulo mock de requests creado satisfactoriamente")
 
-# Activar el entorno virtual usando el método más compatible
-activate_this = '/var/www/html/venv/bin/activate_this.py'
+# Ya no intentamos activar un entorno virtual que no existe
+logger.info("Usando la instalación de Python del sistema")
 
+# Asegurarse de que /var/www/html esté en el path
+if '/var/www/html' not in sys.path:
+    sys.path.insert(0, '/var/www/html')
+    logger.info("Directorio /var/www/html añadido al path")
+
+# Verificar que los módulos necesarios estén disponibles
 try:
-    with open(activate_this) as file_:
-        exec(file_.read(), dict(__file__=activate_this))
-    logger.info("Entorno virtual activado mediante activate_this.py")
-except FileNotFoundError:
-    # Alternativa si activate_this.py no existe
-    logger.info("activate_this.py no encontrado, usando método alternativo")
-    site_packages = '/var/www/html/venv/lib/python3.12/site-packages'
-    prev_sys_path = list(sys.path)
-    site.addsitedir(site_packages)
-    sys.real_prefix = sys.prefix
-    sys.prefix = '/var/www/html/venv'
-    new_sys_path = []
-    for item in list(sys.path):
-        if item not in prev_sys_path:
-            new_sys_path.append(item)
-            sys.path.remove(item)
-    sys.path[:0] = new_sys_path
-    logger.info(f"site-packages añadido: {site_packages}")
+    import flask
+    logger.info("Flask está instalado y disponible")
+except ImportError:
+    logger.error("Flask no está disponible - la aplicación podría fallar")
 
 # Añadir la ruta del proyecto
 sys.path.insert(0, '/var/www/html')

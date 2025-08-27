@@ -7,7 +7,7 @@ from datetime import datetime
 from weasyprint import CSS, HTML
 from db_utils import get_db_connection
 from verifactu_logger import logger  # Ajusta según tu sistema
-from verifactu_config import VERIFACTU_CONSTANTS  # si no existe, añade tú la ruta
+from verifactu.config import VERIFACTU_CONSTANTS  # Ruta corregida al módulo
 
 try:
     from config_loader import get as get_config

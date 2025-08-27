@@ -6,6 +6,7 @@ from datetime import datetime
 from flask import (Flask, Response, jsonify, request, send_file,
                    stream_with_context)
 from flask_cors import CORS
+import logging
 
 try:
     from weasyprint import CSS, HTML
@@ -26,6 +27,7 @@ try:
 except Exception as e:
     print(f"[AVISO] Error importando generar_pdf: {e}. Se deshabilita la generación de PDF.")
     generar_pdf = None
+import productos
 import proforma
 import verifactu
 
@@ -60,11 +62,29 @@ CORS(app, resources={
     r"/*": {"origins": "*"}  # Permitir cualquier ruta
 })
 
+# Configurar logging de aplicación a archivo (usar /tmp para evitar problemas de permisos)
+LOG_PATH = '/tmp/app_actions.log'
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_PATH, encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('app_actions')
+
 # Producción
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app.config['DEBUG'] = os.getenv('FLASK_DEBUG', 'False') == 'True'
 app.config['DATABASE'] = DB_NAME
+
+# Asegurar recursos de BD necesarios al iniciar
+try:
+    productos.ensure_tabla_descuentos_bandas()
+except Exception as e:
+    print(f"[AVISO] No se pudo asegurar la tabla de franjas de descuento: {e}")
 
 def format_date(date_value):
     """Función auxiliar para formatear fechas en formato DD/MM/AAAA"""
@@ -249,6 +269,221 @@ def exportar():
         if 'conn' in locals():
             conn.close()
 
+# ================== API: Franjas de descuento por producto ================== #
+@app.route('/api/productos/<int:producto_id>/franjas_descuento', methods=['GET'])
+@app.route('/productos/<int:producto_id>/franjas_descuento', methods=['GET'])
+def api_get_franjas_descuento_producto(producto_id):
+    try:
+        franjas = productos.obtener_franjas_descuento_por_producto(producto_id)
+        return jsonify({'producto_id': producto_id, 'franjas': franjas})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/productos/<int:producto_id>/franjas_descuento', methods=['POST', 'PUT'])
+@app.route('/productos/<int:producto_id>/franjas_descuento', methods=['POST', 'PUT'])
+def api_set_franjas_descuento_producto(producto_id):
+    try:
+        body = request.get_json() or {}
+        # Aceptar tanto {franjas:[...]} como lista directa
+        if isinstance(body, list):
+            franjas = body
+        else:
+            franjas = body.get('franjas', [])
+        if not isinstance(franjas, list):
+            return jsonify({'error': 'Formato inválido: se espera lista de franjas'}), 400
+        productos.reemplazar_franjas_descuento_producto(producto_id, franjas)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/tickets/paginado', methods=['GET'])
+def tickets_paginado():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Filtros
+        fecha_inicio = request.args.get('fecha_inicio', '').strip()
+        fecha_fin = request.args.get('fecha_fin', '').strip()
+        estado = request.args.get('estado', '').strip()
+        numero = request.args.get('numero', '').strip()
+        forma_pago = request.args.get('formaPago', '').strip()
+        concepto = request.args.get('concepto', '').strip()
+
+        # Paginación/orden
+        try:
+            page = int(request.args.get('page', 1))
+        except Exception:
+            page = 1
+        try:
+            page_size = int(request.args.get('page_size', 10))
+        except Exception:
+            page_size = 10
+        if page < 1:
+            page = 1
+        if page_size < 1:
+            page_size = 1
+        if page_size > 100:
+            page_size = 100
+
+        sort = (request.args.get('sort', 'fecha') or 'fecha').lower()
+        order = (request.args.get('order', 'DESC') or 'DESC').upper()
+        if order not in ('ASC', 'DESC'):
+            order = 'DESC'
+
+        # Whitelist de columnas ordenables
+        allowed_sorts = {
+            'fecha': 't.fecha',
+            'timestamp': 't.timestamp',
+            'numero': 't.numero',
+            'importe_bruto': 't.importe_bruto',
+            'importe_impuestos': 't.importe_impuestos',
+            'importe_cobrado': 't.importe_cobrado',
+            'total': 't.total',
+            'estado': 't.estado',
+            'formapago': 't.formaPago'
+        }
+        sort_col = allowed_sorts.get(sort, 't.fecha')
+
+        where_sql = ' WHERE 1=1'
+        params = []
+        if fecha_inicio:
+            where_sql += ' AND t.fecha >= ?'
+            params.append(fecha_inicio)
+        if fecha_fin:
+            where_sql += ' AND t.fecha <= ?'
+            params.append(fecha_fin)
+        if estado:
+            where_sql += ' AND t.estado = ?'
+            params.append(estado)
+        if numero:
+            where_sql += ' AND t.numero LIKE ?'
+            params.append(f"%{numero}%")
+        if forma_pago:
+            where_sql += ' AND t.formaPago = ?'
+            params.append(forma_pago)
+        if concepto:
+            where_sql += ' AND EXISTS (SELECT 1 FROM detalle_tickets d WHERE d.id_ticket = t.id AND (lower(d.concepto) LIKE ? OR lower(d.descripcion) LIKE ?))'
+            like_val = f"%{concepto.lower()}%"
+            params.extend([like_val, like_val])
+
+        # Total de filas
+        count_sql = f"SELECT COUNT(*) as total FROM tickets t{where_sql}"
+        cursor.execute(count_sql, params)
+        total_rows = int(cursor.fetchone()['total'])
+
+        # Datos paginados
+        offset = (page - 1) * page_size
+        order_by = f" ORDER BY {sort_col} {order}"
+        # Si el orden principal es por fecha, añadir timestamp para estabilidad
+        if sort_col == 't.fecha':
+            order_by += ", t.timestamp DESC"
+
+        data_sql = f"SELECT t.* FROM tickets t{where_sql}{order_by} LIMIT ? OFFSET ?"
+        cursor.execute(data_sql, (*params, page_size, offset))
+        items = [dict(row) for row in cursor.fetchall()]
+
+        total_pages = (total_rows + page_size - 1) // page_size if page_size else 1
+
+        return jsonify({
+            'items': items,
+            'total': total_rows,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': total_pages,
+            'sort': sort,
+            'order': order
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/api/tickets/paginado', methods=['GET'])
+def api_tickets_paginado():
+    return tickets_paginado()
+
+# ===== Alias con prefijo /api para compatibilidad con el frontend (contactos) =====
+@app.route('/api/contactos/paginado', methods=['GET'])
+def api_contactos_paginado():
+    return contactos_paginado()
+
+@app.route('/contactos/paginado', methods=['GET'])
+def contactos_paginado():
+    try:
+        # Parámetros de filtros
+        razon_social = request.args.get('razonSocial', '')
+        nif = request.args.get('nif', '')
+
+        # Parámetros de paginación/orden
+        page = request.args.get('page', 1)
+        page_size = request.args.get('page_size', 10)
+        sort = request.args.get('sort', 'razonsocial')
+        order = request.args.get('order', 'ASC')
+
+        filtros = {
+            'razonSocial': razon_social,
+            'nif': nif
+        }
+
+        resultado = contactos.obtener_contactos_paginados(
+            filtros=filtros,
+            page=page,
+            page_size=page_size,
+            sort=sort,
+            order=order
+        )
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+@app.route('/api/facturas/paginado', methods=['GET'])
+def api_facturas_paginado():
+    return facturas_paginado()
+
+
+@app.route('/facturas/paginado', methods=['GET'])
+def facturas_paginado():
+    try:
+        # Filtros de consulta
+        fecha_inicio = request.args.get('fecha_inicio', '')
+        fecha_fin = request.args.get('fecha_fin', '')
+        estado = request.args.get('estado', '')
+        numero = request.args.get('numero', '')
+        contacto = request.args.get('contacto', '')
+        identificador = request.args.get('identificador', '')
+        concepto = request.args.get('concepto', '')
+
+        # Parámetros de paginación/orden
+        page = request.args.get('page', 1)
+        page_size = request.args.get('page_size', 10)
+        sort = request.args.get('sort', 'fecha')
+        order = request.args.get('order', 'DESC')
+
+        filtros = {
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin,
+            'estado': estado,
+            'numero': numero,
+            'contacto': contacto,
+            'identificador': identificador,
+            'concepto': concepto
+        }
+
+        resultado = factura.obtener_facturas_paginadas(
+            filtros=filtros,
+            page=page,
+            page_size=page_size,
+            sort=sort,
+            order=order
+        )
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/contactos', methods=['GET'])
@@ -902,70 +1137,203 @@ def actualizar_estado_ticket(id):
 @app.route('/productos/<int:id>', methods=['GET'])
 def buscar_producto_por_id(id):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Buscar el producto por ID
-        cursor.execute('SELECT * FROM productos WHERE id = ?', (id,))
-        producto = cursor.fetchone()
-
+        producto = productos.obtener_producto(id)
         if producto:
-            return jsonify(dict(producto))
+            return jsonify(producto)
         else:
             return jsonify({'error': 'Producto no encontrado'}), 404
-
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        if 'conn' in locals():
-            conn.close()
 
 @app.route('/productos/nombre/<string:nombre>', methods=['GET'])
 def buscar_producto_por_nombre(nombre):
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Buscar productos que coincidan con el nombre
-        cursor.execute('''
-            SELECT * FROM productos 
-            WHERE LOWER(nombre) LIKE LOWER(?) 
-            ORDER BY nombre
-        ''', (f'%{nombre}%',))
-        
-        productos = cursor.fetchall()
-
-        # Convertir los resultados a una lista de diccionarios
-        productos_list = [dict(producto) for producto in productos]
-
-        return jsonify(productos_list)
-
+        resultado = productos.buscar_productos({'nombre': nombre})
+        return jsonify(resultado)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        if 'conn' in locals():
-            conn.close()
 
 @app.route('/productos', methods=['GET'])
 def listar_productos():
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Obtener todos los productos ordenados por nombre
-        cursor.execute('SELECT * FROM productos ORDER BY nombre')
-        productos = cursor.fetchall()
-
-        # Convertir los resultados a una lista de diccionarios
-        productos_list = [dict(producto) for producto in productos]
-
-        return jsonify(productos_list)
-
+        return jsonify(productos.obtener_productos())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        if 'conn' in locals():
-            conn.close()
+
+# Primera definición de crear_producto eliminada - Ver implementación más abajo
+
+# Primera definición de eliminar_producto eliminada - Ver implementación más abajo
+
+
+@app.route('/productos/buscar', methods=['GET'])
+def filtrar_productos():
+    try:
+        # Obtener parámetros de búsqueda
+        nombre = request.args.get('nombre', '')
+        descripcion = request.args.get('descripcion', '')
+        impuestos = request.args.get('impuestos')
+        
+        # Construir filtros
+        filtros = {}
+        if nombre:
+            filtros['nombre'] = nombre
+        if descripcion:
+            filtros['descripcion'] = descripcion
+        if impuestos is not None:
+            # Intentar convertir impuestos sin validación previa
+            try:
+                if impuestos.strip():
+                    filtros['impuestos'] = int(impuestos)
+            except (ValueError, TypeError, AttributeError):
+                # Si hay error de conversión, no incluir el filtro
+                print(f"Error al convertir impuestos: {impuestos}")
+                pass
+        
+        # Buscar productos con los filtros
+        resultados = productos.buscar_productos(filtros)
+        return jsonify(resultados)
+    except Exception as e:
+        print(f"Error en filtrar_productos: {str(e)}")
+        return jsonify({'error': str(e), 'message': 'Error en la búsqueda'}), 500
+
+@app.route('/productos/paginado', methods=['GET'])
+def productos_paginado():
+    try:
+        nombre = request.args.get('nombre', '').strip()
+        # Normalizar y limitar parámetros de paginación
+        try:
+            page = int(request.args.get('page', 1))
+        except Exception:
+            page = 1
+        try:
+            page_size = int(request.args.get('page_size', 10))
+        except Exception:
+            page_size = 10
+        # Límite duro: 1..100
+        if page < 1:
+            page = 1
+        if page_size < 1:
+            page_size = 1
+        if page_size > 100:
+            page_size = 100
+        sort = request.args.get('sort', 'nombre')
+        order = request.args.get('order', 'ASC')
+
+        filtros = {}
+        if nombre:
+            filtros['nombre'] = nombre
+
+        data = productos.obtener_productos_paginados(
+            filtros=filtros,
+            page=page,
+            page_size=page_size,
+            sort=sort,
+            order=order
+        )
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/productos', methods=['POST'])
+def crear_producto():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'success': False, 'message': 'No se recibieron datos'}), 400
+        resultado = productos.crear_producto(data)
+        status = 201 if resultado.get('success') else 400
+        return jsonify(resultado), status
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/productos/<int:id>', methods=['DELETE'])
+def eliminar_producto(id):
+    try:
+        resultado = productos.eliminar_producto(id)
+        status = 200 if resultado.get('success') else 400
+        return jsonify(resultado), status
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# Definición de crear_producto ya implementada anteriormente
+# Esta versión duplicada ha sido eliminada
+
+
+# ===== Alias con prefijo /api para compatibilidad con el frontend =====
+@app.route('/api/productos', methods=['GET'])
+def api_listar_productos():
+    return listar_productos()
+
+
+@app.route('/api/productos/buscar', methods=['GET'])
+def api_filtrar_productos():
+    return filtrar_productos()
+
+
+@app.route('/api/productos/paginado', methods=['GET'])
+def api_productos_paginado():
+    return productos_paginado()
+
+
+@app.route('/api/productos/<int:id>', methods=['GET'])
+def api_buscar_producto_por_id(id):
+    return buscar_producto_por_id(id)
+
+
+@app.route('/api/productos/<int:id>', methods=['PUT'])
+def api_actualizar_producto(id):
+    return actualizar_producto(id)
+
+@app.route('/api/productos', methods=['POST'])
+def api_crear_producto():
+    return crear_producto()
+
+@app.route('/api/productos/<int:id>', methods=['DELETE'])
+def api_eliminar_producto(id):
+    try:
+        logger.info(f"DELETE /api/productos/{id} desde {request.remote_addr}")
+    except Exception:
+        pass
+    # Validación defensiva del ID
+    if id is None or int(id) <= 0:
+        try:
+            logger.warning(f"Rechazado DELETE productos por ID inválido: {id}")
+        except Exception:
+            pass
+        return jsonify({"success": False, "message": "ID de producto inválido"}), 400
+    resultado = eliminar_producto(id)
+    try:
+        logger.info(f"Resultado eliminación producto {id}: {resultado}")
+    except Exception:
+        pass
+    # El helper eliminar_producto devuelve un dict con success/message; mantener mismo comportamiento HTTP
+    if isinstance(resultado, dict) and not resultado.get('success', True):
+        return jsonify(resultado), 400
+    return jsonify(resultado)
+
+
+@app.route('/productos/<int:id>', methods=['PUT'])
+def actualizar_producto(id):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No se recibieron datos'}), 400
+            
+        # Validar campos requeridos
+        if not data.get('nombre'):
+            return jsonify({'error': 'El campo nombre es requerido'}), 400
+            
+        resultado = productos.actualizar_producto(id, data)
+        if resultado['success']:
+            return jsonify(resultado)
+        else:
+            return jsonify(resultado), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# Segunda definición de eliminar_producto eliminada - Ver implementación anterior
 
 @app.route('/tickets/detalles/<int:id_ticket>', methods=['GET'])
 def obtener_ticket_con_detalles(id_ticket):
@@ -2302,6 +2670,345 @@ def api_enviar_factura_aeat(factura_id):
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5001)
 
+import traceback
+
+@app.route('/api/ventas/media_por_documento', methods=['GET'])
+def obtener_media_por_documento():
+    try:
+        # Obtener mes y año de los parámetros de consulta
+        mes = request.args.get('mes')
+        anio = request.args.get('anio', str(datetime.now().year))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Diccionario para almacenar resultados
+        resultado = {
+            'tickets': {
+                'actual': {'total': 0, 'cantidad': 0, 'media': 0, 'media_mensual': 0},
+                'anterior': {'total': 0, 'cantidad': 0, 'media': 0, 'mismo_mes': {'total': 0, 'cantidad': 0}},
+                'porcentaje_diferencia': 0,
+                'porcentaje_diferencia_mes': 0
+            },
+            'facturas': {
+                'actual': {'total': 0, 'cantidad': 0, 'media': 0, 'media_mensual': 0},
+                'anterior': {'total': 0, 'cantidad': 0, 'media': 0, 'mismo_mes': {'total': 0, 'cantidad': 0}},
+                'porcentaje_diferencia': 0,
+                'porcentaje_diferencia_mes': 0
+            },
+            'global': {
+                'actual': {'total': 0, 'cantidad': 0, 'media': 0, 'media_mensual': 0},
+                'anterior': {'total': 0, 'cantidad': 0, 'media': 0, 'mismo_mes': {'total': 0, 'cantidad': 0}},
+                'porcentaje_diferencia': 0,
+                'porcentaje_diferencia_mes': 0
+            }
+        }
+        
+        # Año anterior para comparativas
+        anio_anterior = str(int(anio) - 1)
+        
+        # Obtener datos de tickets del año actual
+        cursor.execute('''
+            SELECT 
+                SUM(total) as total_anual,
+                COUNT(*) as cantidad_anual
+            FROM tickets
+            WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+        ''', (anio,))
+        tickets_actual = cursor.fetchone()
+        
+        # Obtener datos de tickets del mes actual
+        cursor.execute('''
+            SELECT 
+                SUM(total) as total_mes,
+                COUNT(*) as cantidad_mes
+            FROM tickets
+            WHERE estado = 'C' AND strftime('%Y-%m', fecha) = ?
+        ''', (f"{anio}-{mes}",))
+        tickets_mes_actual = cursor.fetchone()
+        
+        # Obtener datos de tickets del año anterior
+        cursor.execute('''
+            SELECT 
+                SUM(total) as total_anual,
+                COUNT(*) as cantidad_anual
+            FROM tickets
+            WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+        ''', (anio_anterior,))
+        tickets_anterior = cursor.fetchone()
+        
+        # Obtener datos de tickets del mismo mes del año anterior
+        cursor.execute('''
+            SELECT 
+                SUM(total) as total_mes,
+                COUNT(*) as cantidad_mes
+            FROM tickets
+            WHERE estado = 'C' AND strftime('%Y-%m', fecha) = ?
+        ''', (f"{anio_anterior}-{mes}",))
+        tickets_mes_anterior = cursor.fetchone()
+        
+        # Obtener datos de facturas del año actual
+        cursor.execute('''
+            SELECT 
+                SUM(total) as total_anual,
+                COUNT(*) as cantidad_anual
+            FROM factura
+            WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+        ''', (anio,))
+        facturas_actual = cursor.fetchone()
+        
+        # Obtener datos de facturas del mes actual
+        cursor.execute('''
+            SELECT 
+                SUM(total) as total_mes,
+                COUNT(*) as cantidad_mes
+            FROM factura
+            WHERE estado = 'C' AND strftime('%Y-%m', fecha) = ?
+        ''', (f"{anio}-{mes}",))
+        facturas_mes_actual = cursor.fetchone()
+        
+        # Obtener datos de facturas del año anterior
+        cursor.execute('''
+            SELECT 
+                SUM(total) as total_anual,
+                COUNT(*) as cantidad_anual
+            FROM factura
+            WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+        ''', (anio_anterior,))
+        facturas_anterior = cursor.fetchone()
+        
+        # Obtener datos de facturas del mismo mes del año anterior
+        cursor.execute('''
+            SELECT 
+                SUM(total) as total_mes,
+                COUNT(*) as cantidad_mes
+            FROM factura
+            WHERE estado = 'C' AND strftime('%Y-%m', fecha) = ?
+        ''', (f"{anio_anterior}-{mes}",))
+        facturas_mes_anterior = cursor.fetchone()
+        
+        # Procesar datos de tickets
+        tickets_total_actual = float(tickets_actual['total_anual'] or 0)
+        tickets_cantidad_actual = int(tickets_actual['cantidad_anual'] or 0)
+        tickets_total_mes_actual = float(tickets_mes_actual['total_mes'] or 0)
+        tickets_cantidad_mes_actual = int(tickets_mes_actual['cantidad_mes'] or 0)
+        
+        tickets_total_anterior = float(tickets_anterior['total_anual'] or 0)
+        tickets_cantidad_anterior = int(tickets_anterior['cantidad_anual'] or 0)
+        tickets_total_mes_anterior = float(tickets_mes_anterior['total_mes'] or 0)
+        tickets_cantidad_mes_anterior = int(tickets_mes_anterior['cantidad_mes'] or 0)
+        
+        # Procesar datos de facturas
+        facturas_total_actual = float(facturas_actual['total_anual'] or 0)
+        facturas_cantidad_actual = int(facturas_actual['cantidad_anual'] or 0)
+        facturas_total_mes_actual = float(facturas_mes_actual['total_mes'] or 0)
+        facturas_cantidad_mes_actual = int(facturas_mes_actual['cantidad_mes'] or 0)
+        
+        facturas_total_anterior = float(facturas_anterior['total_anual'] or 0)
+        facturas_cantidad_anterior = int(facturas_anterior['cantidad_anual'] or 0)
+        facturas_total_mes_anterior = float(facturas_mes_anterior['total_mes'] or 0)
+        facturas_cantidad_mes_anterior = int(facturas_mes_anterior['cantidad_mes'] or 0)
+        
+        # Calcular medias y porcentajes para tickets
+        tickets_media_actual = tickets_total_actual / tickets_cantidad_actual if tickets_cantidad_actual > 0 else 0
+        tickets_media_anterior = tickets_total_anterior / tickets_cantidad_anterior if tickets_cantidad_anterior > 0 else 0
+        tickets_porcentaje_diferencia = ((tickets_total_actual - tickets_total_anterior) / tickets_total_anterior * 100) if tickets_total_anterior > 0 else 0
+        tickets_porcentaje_diferencia_mes = ((tickets_total_mes_actual - tickets_total_mes_anterior) / tickets_total_mes_anterior * 100) if tickets_total_mes_anterior > 0 else 0
+        
+        # Calcular medias y porcentajes para facturas
+        facturas_media_actual = facturas_total_actual / facturas_cantidad_actual if facturas_cantidad_actual > 0 else 0
+        facturas_media_anterior = facturas_total_anterior / facturas_cantidad_anterior if facturas_cantidad_anterior > 0 else 0
+        facturas_porcentaje_diferencia = ((facturas_total_actual - facturas_total_anterior) / facturas_total_anterior * 100) if facturas_total_anterior > 0 else 0
+        facturas_porcentaje_diferencia_mes = ((facturas_total_mes_actual - facturas_total_mes_anterior) / facturas_total_mes_anterior * 100) if facturas_total_mes_anterior > 0 else 0
+        
+        # Calcular datos globales
+        global_total_actual = tickets_total_actual + facturas_total_actual
+        global_cantidad_actual = tickets_cantidad_actual + facturas_cantidad_actual
+        global_media_actual = global_total_actual / global_cantidad_actual if global_cantidad_actual > 0 else 0
+        
+        global_total_anterior = tickets_total_anterior + facturas_total_anterior
+        global_cantidad_anterior = tickets_cantidad_anterior + facturas_cantidad_anterior
+        global_media_anterior = global_total_anterior / global_cantidad_anterior if global_cantidad_anterior > 0 else 0
+        
+        global_total_mes_actual = tickets_total_mes_actual + facturas_total_mes_actual
+        global_cantidad_mes_actual = tickets_cantidad_mes_actual + facturas_cantidad_mes_actual
+        
+        global_total_mes_anterior = tickets_total_mes_anterior + facturas_total_mes_anterior
+        global_cantidad_mes_anterior = tickets_cantidad_mes_anterior + facturas_cantidad_mes_anterior
+        
+        global_porcentaje_diferencia = ((global_total_actual - global_total_anterior) / global_total_anterior * 100) if global_total_anterior > 0 else 0
+        global_porcentaje_diferencia_mes = ((global_total_mes_actual - global_total_mes_anterior) / global_total_mes_anterior * 100) if global_total_mes_anterior > 0 else 0
+        
+        # Rellenar el diccionario resultado para tickets
+        resultado['tickets']['actual'] = {
+            'total': tickets_total_actual,
+            'cantidad': tickets_cantidad_actual,
+            'media': tickets_media_actual,
+            'mes_actual': {
+                'total': tickets_total_mes_actual,
+                'cantidad': tickets_cantidad_mes_actual
+            }
+            # La media_mensual se calcula en el frontend
+        }
+        resultado['tickets']['anterior'] = {
+            'total': tickets_total_anterior,
+            'cantidad': tickets_cantidad_anterior,
+            'media': tickets_media_anterior,
+            'mismo_mes': {
+                'total': tickets_total_mes_anterior,
+                'cantidad': tickets_cantidad_mes_anterior
+            }
+        }
+        resultado['tickets']['porcentaje_diferencia'] = tickets_porcentaje_diferencia
+        resultado['tickets']['porcentaje_diferencia_mes'] = tickets_porcentaje_diferencia_mes
+        
+        # Rellenar el diccionario resultado para facturas
+        resultado['facturas']['actual'] = {
+            'total': facturas_total_actual,
+            'cantidad': facturas_cantidad_actual,
+            'media': facturas_media_actual,
+            'mes_actual': {
+                'total': facturas_total_mes_actual,
+                'cantidad': facturas_cantidad_mes_actual
+            }
+            # La media_mensual se calcula en el frontend
+        }
+        resultado['facturas']['anterior'] = {
+            'total': facturas_total_anterior,
+            'cantidad': facturas_cantidad_anterior,
+            'media': facturas_media_anterior,
+            'mismo_mes': {
+                'total': facturas_total_mes_anterior,
+                'cantidad': facturas_cantidad_mes_anterior
+            }
+        }
+        resultado['facturas']['porcentaje_diferencia'] = facturas_porcentaje_diferencia
+        resultado['facturas']['porcentaje_diferencia_mes'] = facturas_porcentaje_diferencia_mes
+        
+        # Rellenar el diccionario resultado para global
+        resultado['global']['actual'] = {
+            'total': global_total_actual,
+            'cantidad': global_cantidad_actual,
+            'media': global_media_actual,
+            'mes_actual': {
+                'total': global_total_mes_actual,
+                'cantidad': global_cantidad_mes_actual
+            }
+            # La media_mensual se calcula en el frontend
+        }
+        resultado['global']['anterior'] = {
+            'total': global_total_anterior,
+            'cantidad': global_cantidad_anterior,
+            'media': global_media_anterior,
+            'mismo_mes': {
+                'total': global_total_mes_anterior,
+                'cantidad': global_cantidad_mes_anterior
+            }
+        }
+        resultado['global']['porcentaje_diferencia'] = global_porcentaje_diferencia
+        resultado['global']['porcentaje_diferencia_mes'] = global_porcentaje_diferencia_mes
+        
+        # Buscar si hay tabla de proformas y añadir esos datos si existe
+        try:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='proforma';")
+            if cursor.fetchone():
+                # Obtener datos de proformas del año actual
+                cursor.execute('''
+                    SELECT 
+                        SUM(total) as total_anual,
+                        COUNT(*) as cantidad_anual
+                    FROM proforma
+                    WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+                ''', (anio,))
+                proformas_actual = cursor.fetchone()
+                
+                # Obtener datos de proformas del mes actual
+                cursor.execute('''
+                    SELECT 
+                        SUM(total) as total_mes,
+                        COUNT(*) as cantidad_mes
+                    FROM proforma
+                    WHERE estado = 'C' AND strftime('%Y-%m', fecha) = ?
+                ''', (f"{anio}-{mes}",))
+                proformas_mes_actual = cursor.fetchone()
+                
+                # Obtener datos de proformas del año anterior
+                cursor.execute('''
+                    SELECT 
+                        SUM(total) as total_anual,
+                        COUNT(*) as cantidad_anual
+                    FROM proforma
+                    WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+                ''', (anio_anterior,))
+                proformas_anterior = cursor.fetchone()
+                
+                # Obtener datos de proformas del mismo mes del año anterior
+                cursor.execute('''
+                    SELECT 
+                        SUM(total) as total_mes,
+                        COUNT(*) as cantidad_mes
+                    FROM proforma
+                    WHERE estado = 'C' AND strftime('%Y-%m', fecha) = ?
+                ''', (f"{anio_anterior}-{mes}",))
+                proformas_mes_anterior = cursor.fetchone()
+                
+                # Procesar datos de proformas
+                proformas_total_actual = float(proformas_actual['total_anual'] or 0)
+                proformas_cantidad_actual = int(proformas_actual['cantidad_anual'] or 0)
+                proformas_total_mes_actual = float(proformas_mes_actual['total_mes'] or 0)
+                proformas_cantidad_mes_actual = int(proformas_mes_actual['cantidad_mes'] or 0)
+                
+                proformas_total_anterior = float(proformas_anterior['total_anual'] or 0)
+                proformas_cantidad_anterior = int(proformas_anterior['cantidad_anual'] or 0)
+                proformas_total_mes_anterior = float(proformas_mes_anterior['total_mes'] or 0)
+                proformas_cantidad_mes_anterior = int(proformas_mes_anterior['cantidad_mes'] or 0)
+                
+                # Calcular medias y porcentajes para proformas
+                proformas_media_actual = proformas_total_actual / proformas_cantidad_actual if proformas_cantidad_actual > 0 else 0
+                proformas_media_anterior = proformas_total_anterior / proformas_cantidad_anterior if proformas_cantidad_anterior > 0 else 0
+                proformas_porcentaje_diferencia = ((proformas_total_actual - proformas_total_anterior) / proformas_total_anterior * 100) if proformas_total_anterior > 0 else 0
+                proformas_porcentaje_diferencia_mes = ((proformas_total_mes_actual - proformas_total_mes_anterior) / proformas_total_mes_anterior * 100) if proformas_total_mes_anterior > 0 else 0
+                
+                # Añadir proformas al diccionario resultado
+                resultado['proformas'] = {
+                    'actual': {
+                        'total': proformas_total_actual,
+                        'cantidad': proformas_cantidad_actual,
+                        'media': proformas_media_actual,
+                        'mes_actual': {
+                            'total': proformas_total_mes_actual,
+                            'cantidad': proformas_cantidad_mes_actual
+                        }
+                        # La media_mensual se calcula en el frontend
+                    },
+                    'anterior': {
+                        'total': proformas_total_anterior,
+                        'cantidad': proformas_cantidad_anterior,
+                        'media': proformas_media_anterior,
+                        'mismo_mes': {
+                            'total': proformas_total_mes_anterior,
+                            'cantidad': proformas_cantidad_mes_anterior
+                        }
+                    },
+                    'porcentaje_diferencia': proformas_porcentaje_diferencia,
+                    'porcentaje_diferencia_mes': proformas_porcentaje_diferencia_mes
+                }
+        except Exception as e:
+            # Si hay error al buscar proformas, continuamos sin ellas
+            print(f"Error al buscar proformas: {e}")
+        
+        return jsonify(resultado)
+        
+    except Exception as e:
+        print(f"Error en obtener_media_por_documento: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'cursor' in locals() and cursor is not None:
+            cursor.close()
+        if 'conn' in locals() and conn is not None:
+            conn.close()
+
 @app.route('/api/ventas/total_mes', methods=['GET'])
 def obtener_totales_mes():
     try:
@@ -2368,3 +3075,8 @@ def obtener_totales_mes():
     finally:
         cursor.close()
         conn.close()
+
+if __name__ == '__main__':
+    # Permite ejecutar la app directamente (modo desarrollo/standalone)
+    # Escucha en 0.0.0.0:5001 para que sea accesible desde la red local
+    app.run(host='0.0.0.0', port=5001)

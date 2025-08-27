@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestión de Productos</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Enlace al archivo de estilos externo -->
+  <link rel="stylesheet" href="../static/styles.css" />
+  <link rel="stylesheet" href="../static/notificaciones.css" />
+  
+  <style>
+    /* Estilos específicos para el formulario de productos */
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    .form-group textarea {
+      height: 100px;
+      resize: vertical;
+    }
+
+    .form-buttons {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .form-buttons button {
+      margin-right: 10px;
+    }
+    
+    /* Estilos para la vista previa del precio */
+    .price-preview {
+      font-size: 1.2em;
+      font-weight: bold;
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+    }
+    
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+    }
+    
+    .price-total {
+      border-top: 1px solid #ddd;
+      padding-top: 5px;
+      margin-top: 5px;
+    }
+    
+    .required::after {
+      content: " *";
+      color: red;
+    }
+    
+    /* Indicador de campo inválido */
+    .is-invalid {
+      border: 1px solid red !important;
+    }
+    /* Fila horizontal para agrupar campos */
+    .form-row {
+      display: flex;
+      gap: 0;
+      column-gap: 0;
+      flex-wrap: nowrap;
+      align-items: flex-end;
+      justify-content: flex-start;
+      white-space: nowrap;
+    }
+
+    .form-row .col {
+      flex: 0 0 auto;
+      min-width: 0;
+      margin-right: 0;
+      padding-right: 0;
+      width: auto;
+    }
+
+    /* Columnas compactas para importes */
+    .form-row .compact-col { flex: 0 0 auto; min-width: 0; }
+    .form-row .compact-col:not(:last-child) { margin-right: 6px; }
+
+    /* Quitar márgenes verticales extra dentro de la fila */
+    .form-row .form-group { margin-bottom: 0; margin-right: 0; padding: 0; }
+    .form-row .form-group label { margin-bottom: 1px; display: inline-block; }
+
+    /* Campos de importes más compactos y alineados a la derecha */
+    .importe-input {
+      text-align: right;
+      max-width: 120px;
+      padding: 1px 3px;
+    }
+
+    .importe-select {
+      max-width: 110px;
+      padding: 1px 3px;
+    }
+
+    /* Visual: texto en mayúsculas */
+    .uppercase {
+      text-transform: uppercase;
+    }
+  </style>
+
+  <!-- Vue.js y Axios (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+  <div id="app" class="container">
+    <h1>{{ modoEdicion ? 'Editar Producto' : 'Nuevo Producto' }}</h1>
+    
+    <!-- Formulario de producto -->
+    <form @submit.prevent="guardarProducto">
+      <!-- Nombre (arriba, ancho completo) -->
+      <div class="form-group">
+        <label for="nombre" class="required">Nombre</label>
+        <input 
+          type="text" 
+          id="nombre" 
+          v-model="producto.nombre" 
+          :class="{'is-invalid': errores.nombre}"
+          required
+          ref="nombreInput"
+          class="uppercase"
+          @input="onNombreInput"
+        />
+        <div v-if="errores.nombre" class="error-message">{{ errores.nombre }}</div>
+      </div>
+
+      <!-- Descripción (debajo de nombre, alineada) -->
+      <div class="form-group">
+        <label for="descripcion">Descripción</label>
+        <textarea 
+          id="descripcion" 
+          v-model="producto.descripcion"
+          class="uppercase"
+          @input="onDescripcionInput"
+        ></textarea>
+      </div>
+
+      <!-- Debajo de descripción: importes en horizontal -->
+      <div class="form-row">
+        <div class="form-group col compact-col">
+          <label for="subtotal" class="required">Precio base (€)</label>
+          <input
+            type="number"
+            id="subtotal"
+            v-model.number="producto.subtotal"
+            step="0.0001"
+            min="0"
+            :class="{'is-invalid': errores.subtotal}"
+            @input="onSubtotalInput"
+            required
+            class="importe-input"
+          />
+          <div v-if="errores.subtotal" class="error-message">{{ errores.subtotal }}</div>
+        </div>
+
+        <div class="form-group col compact-col">
+          <label for="impuestos" class="required">% Impuestos</label>
+          <select
+            id="impuestos"
+            v-model.number="producto.impuestos"
+            @change="onImpuestosChange"
+            :class="{'is-invalid': errores.impuestos}"
+            required
+            class="importe-select"
+          >
+            <option value="0">0% (Exento)</option>
+            <option value="4">4% (Superreducido)</option>
+            <option value="10">10% (Reducido)</option>
+            <option value="21">21% (General)</option>
+          </select>
+          <div v-if="errores.impuestos" class="error-message">{{ errores.impuestos }}</div>
+        </div>
+
+        <div class="form-group col compact-col">
+          <label for="total" class="required">Total (€)</label>
+          <input
+            type="number"
+            id="total"
+            v-model.number="producto.total"
+            step="0.01"
+            min="0"
+            @input="onTotalInput"
+            required
+            class="importe-input"
+          />
+        </div>
+      </div>
+
+      <!-- Botones de acción -->
+      <div class="form-buttons">
+        <button type="submit">{{ modoEdicion ? 'Actualizar' : 'Crear' }} Producto</button>
+        <button type="button" @click="volver">Cancelar</button>
+      </div>
+    </form>
+  </div>
+
+  <script type="module" src="../static/gestion_producto.js"></script>
+  
+  <!-- Contenedor para notificaciones -->
+  <div id="notificaciones-contenedor"></div>
+</body>
+</html>

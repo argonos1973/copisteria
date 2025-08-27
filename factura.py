@@ -736,6 +736,153 @@ def consultar_facturas():
 def consultar_facturas_get():
     return consultar_facturas()
 
+def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', order='DESC'):
+    """
+    Obtiene facturas con filtros y paginación.
+
+    filtros keys esperados:
+      - fecha_inicio, fecha_fin, estado, numero, contacto, identificador, concepto
+
+    Retorna dict con:
+      { items: [...], total: int, page: int, page_size: int, total_pages: int }
+    """
+    try:
+        # Saneamiento
+        try:
+            page = int(page) if int(page) > 0 else 1
+        except Exception:
+            page = 1
+        try:
+            page_size = int(page_size)
+            if page_size <= 0:
+                page_size = 10
+            page_size = min(page_size, 100)
+        except Exception:
+            page_size = 10
+
+        allowed_sort = {
+            'fecha': 'f.fecha',
+            'numero': 'f.numero',
+            'estado': 'f.estado',
+            'total': 'f.total',
+            'razonsocial': 'c.razonsocial',
+            'id': 'f.id',
+            'timestamp': 'f.timestamp'
+        }
+        sort_col = allowed_sort.get(str(sort).lower(), 'f.fecha')
+        order_dir = 'DESC' if str(order).upper() == 'DESC' else 'ASC'
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        where_sql = 'WHERE 1=1'
+        params = []
+
+        fecha_inicio = (filtros or {}).get('fecha_inicio', '')
+        fecha_fin = (filtros or {}).get('fecha_fin', '')
+        estado = (filtros or {}).get('estado', '')
+        numero = (filtros or {}).get('numero', '')
+        contacto = (filtros or {}).get('contacto', '')
+        identificador = (filtros or {}).get('identificador', '')
+        concepto = (filtros or {}).get('concepto', '')
+
+        # Filtros (misma lógica que consultar_facturas)
+        if fecha_inicio:
+            where_sql += ' AND f.fecha >= ?'
+            params.append(fecha_inicio)
+        if fecha_fin:
+            where_sql += ' AND f.fecha <= ?'
+            params.append(fecha_fin)
+        if estado:
+            if estado == 'PV':
+                where_sql += " AND (f.estado IN ('P', 'V'))"
+            else:
+                where_sql += ' AND f.estado = ?'
+                params.append(estado)
+        if numero:
+            where_sql += ' AND f.numero LIKE ?'
+            params.append(f"%{numero}%")
+        if contacto:
+            where_sql += ' AND c.razonsocial LIKE ?'
+            params.append(f"%{contacto}%")
+        if identificador:
+            where_sql += ' AND c.identificador LIKE ?'
+            params.append(f"%{identificador}%")
+        if concepto:
+            where_sql += ' AND EXISTS (SELECT 1 FROM detalle_factura d WHERE d.id_factura = f.id AND (lower(d.concepto) LIKE ? OR lower(d.descripcion) LIKE ?))'
+            like_val = f"%{str(concepto).lower()}%"
+            params.extend([like_val, like_val])
+
+        # Conteo total
+        count_sql = f'''
+            SELECT COUNT(*) as total
+            FROM factura f
+            LEFT JOIN contactos c ON f.idcontacto = c.idContacto
+            {where_sql}
+        '''
+        cursor.execute(count_sql, params)
+        row = cursor.fetchone()
+        total = row['total'] if isinstance(row, sqlite3.Row) else (row[0] if row else 0)
+
+        # Datos paginados
+        offset = (page - 1) * page_size
+        data_sql = f'''
+            SELECT 
+                f.id, 
+                f.fecha, 
+                f.numero, 
+                f.estado, 
+                f.importe_bruto as base,
+                f.importe_impuestos as iva,
+                f.importe_cobrado,
+                f.total,
+                f.idcontacto,
+                f.tipo,
+                c.razonsocial,
+                COALESCE(c.mail, '') as mail,
+                COALESCE(f.enviado, 0) as enviado
+            FROM factura f
+            LEFT JOIN contactos c ON f.idcontacto = c.idContacto
+            {where_sql}
+            ORDER BY {sort_col} {order_dir}, f.fecha DESC, f.timestamp DESC
+            LIMIT ? OFFSET ?
+        '''
+        params_limit = params + [page_size, offset]
+        cursor.execute(data_sql, params_limit)
+        rows = cursor.fetchall()
+
+        items = []
+        if rows:
+            colnames = [desc[0] for desc in cursor.description]
+            for r in rows:
+                item = dict(zip(colnames, r))
+                if 'base' in item and item['base'] is not None:
+                    item['base'] = float(item['base'])
+                if 'iva' in item and item['iva'] is not None:
+                    item['iva'] = float(item['iva'])
+                if 'importe_cobrado' in item and item['importe_cobrado'] is not None:
+                    item['importe_cobrado'] = float(item['importe_cobrado'])
+                if 'total' in item and item['total'] is not None:
+                    item['total'] = float(item['total'])
+                if 'enviado' in item:
+                    item['enviado'] = int(item['enviado']) if item['enviado'] is not None else 0
+                items.append(item)
+
+        total = int(total or 0)
+        total_pages = (total + page_size - 1) // page_size if page_size else 1
+        return {
+            'items': items,
+            'total': total,
+            'page': page,
+            'page_size': page_size,
+            'total_pages': int(total_pages)
+        }
+    except sqlite3.Error as e:
+        raise Exception(f"Error de base de datos en obtener_facturas_paginadas: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
 def agregar_detalle_factura(id_factura, detalle):
     try:
         conn = get_db_connection()

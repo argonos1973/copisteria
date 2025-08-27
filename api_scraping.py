@@ -771,6 +771,333 @@ with sync_playwright() as p:
                     pass
                 page.wait_for_load_state("networkidle")
                 page.wait_for_timeout(1500)
+                # --- NUEVO: Pulsar botón "Descargar" (abre modal de opciones) ---
+                try:
+                    print("Buscando botón 'Descargar' (wrap-chip) …")
+                    modal_abierto = False
+                    try:
+                        # Intento 1: por rol y nombre accesible
+                        btn_desc = page.get_by_role("button", name=re.compile("Descargar", re.I)).first
+                        if btn_desc and btn_desc.count() > 0 and btn_desc.is_visible():
+                            btn_desc.click()
+                            # Esperar apertura de modal
+                            page.wait_for_timeout(500)
+                            try:
+                                dlg = page.locator(":is([role=dialog], san-modal, .modal, .cdk-overlay-container, .mat-dialog-container)")
+                                if dlg and dlg.count() > 0:
+                                    print("Modal de opciones de descarga abierto (por rol)")
+                                    modal_abierto = True
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                    if not modal_abierto:
+                        # Intento 2: selector específico del botón indicado
+                        try:
+                            btn_chip = page.locator("button.wrap-chip[aria-label*='Descargar' i]").first
+                            if btn_chip and btn_chip.count() > 0 and btn_chip.is_visible():
+                                btn_chip.click()
+                                page.wait_for_timeout(500)
+                                try:
+                                    dlg = page.locator(":is([role=dialog], san-modal, .modal, .cdk-overlay-container, .mat-dialog-container)")
+                                    if dlg and dlg.count() > 0:
+                                        print("Modal de opciones de descarga abierto (wrap-chip)")
+                                        modal_abierto = True
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                    if modal_abierto:
+                        print("Botón 'Descargar' pulsado correctamente. Buscando opción Excel...")
+                        page.wait_for_timeout(1000)  # Esperar que cargue el modal completamente
+                        descargado = False
+                        
+                        # Lista de selectores para encontrar la opción Excel - Nuevo selector específico primero
+                        excel_selectors = [
+                            "button.san-selector.checkbox:has-text('Descargar Excel')",
+                            "button[role=checkbox]:has-text('Descargar Excel')",
+                            "button.san-selector:has(p:has-text('Descargar Excel'))",
+                            "button:has(p:text('Descargar Excel'))",
+                            "[class*='san-selector' i][role='checkbox']:has-text('Descargar Excel')",
+                            "button:has-text('Excel')",
+                            "button:has-text('XLS')",
+                            "[role='button']:has-text('Excel')",
+                            "a:has-text('Excel')",
+                            ".modal button:has-text('Excel')"
+                        ]
+                        
+                        # Buscar y hacer clic en opción de Excel
+                        for selector in excel_selectors:
+                            try:
+                                excel_option = page.locator(selector).first
+                                if excel_option and excel_option.count() > 0 and excel_option.is_visible():
+                                    print(f"Opción Excel encontrada con selector: {selector}")
+                                    
+                                    # Primero hacer clic en el checkbox sin esperar descarga
+                                    print("Marcando checkbox de Excel...")
+                                    try:
+                                        # Intentar varios métodos para marcar el checkbox
+                                        try:
+                                            excel_option.check()
+                                        except Exception:
+                                            try:
+                                                # Usar la API de Playwright en lugar de evaluate con querySelectorAll
+                                                if 'has-text' in selector:
+                                                    # Usar un selector más simple
+                                                    simple_sel = "button:has-text('Excel')"
+                                                    page.locator(simple_sel).check()
+                                                else:
+                                                    # Intentar clic por JavaScript en una ubicación relativa
+                                                    box = excel_option.bounding_box()
+                                                    if box:
+                                                        page.mouse.click(box['x'] + box['width']/2, box['y'] + box['height']/2)
+                                            except Exception:
+                                                # Intentar clic por JavaScript en una ubicación relativa
+                                                box = excel_option.bounding_box()
+                                                if box:
+                                                    page.mouse.click(box['x'] + box['width']/2, box['y'] + box['height']/2)
+                                        except Exception:
+                                            # Intentar clic por JavaScript en una ubicación relativa
+                                            box = excel_option.bounding_box()
+                                            if box:
+                                                page.mouse.click(box['x'] + box['width']/2, box['y'] + box['height']/2)
+                                        # Asegurarse que el checkbox está marcado usando JavaScript sin pasar el selector
+                                        try:
+                                            # Usar una forma alternativa más compatible con cualquier tipo de checkbox
+                                            page.evaluate("""
+                                            () => {
+                                              // Buscar todos los checkboxes visibles en el modal
+                                              const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"]'));
+                                              const labels = Array.from(document.querySelectorAll('label'));
+                                              
+                                              // Buscar por texto cercano a "Excel"
+                                              let found = false;
+                                              
+                                              // 1. Buscar en checkboxes directamente
+                                              for (const cb of checkboxes) {
+                                                const label = cb.parentElement?.textContent || '';
+                                                if (label.toLowerCase().includes('excel')) {
+                                                  cb.checked = true;
+                                                  cb.dispatchEvent(new Event('change', {bubbles: true}));
+                                                  found = true;
+                                                  break;
+                                                }
+                                              }
+                                              
+                                              // 2. Buscar en labels si no se encontró
+                                              if (!found) {
+                                                for (const label of labels) {
+                                                  if (label.textContent.toLowerCase().includes('excel')) {
+                                                    const input = label.querySelector('input[type="checkbox"]');
+                                                    if (input) {
+                                                      input.checked = true;
+                                                      input.dispatchEvent(new Event('change', {bubbles: true}));
+                                                      found = true;
+                                                      break;
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                              
+                                              return found;
+                                            }
+                                            """)
+                                        except Exception as e:
+                                            print(f"Error al intentar marcar checkbox con JavaScript puro: {e}")
+                                            pass
+                                        
+                                        # Esperar a que reaccione la interfaz
+                                        page.wait_for_timeout(2000)
+                                        
+                                        # Ahora buscar el botón de aceptar/confirmar/descargar final
+                                        print("Buscando botón de confirmación para iniciar descarga...")
+                                        confirm_selectors = [
+                                            # Selector exacto del botón proporcionado
+                                            "button.san-ending-button.primary.large[aria-label='Descargar documentos seleccionados']",
+                                            "button.san-ending-button.primary",
+                                            "button[aria-label='Descargar documentos seleccionados']",
+                                            "button[aria-description*='descargar']",
+                                            # Otros selectores genéricos como fallback
+                                            "button:has-text('Aceptar')", 
+                                            "button:has-text('Confirmar')",
+                                            "button:has-text('Descargar')",
+                                            "button.primary"
+                                        ]
+                                        
+                                        confirm_clicked = False
+                                        for confirm_sel in confirm_selectors:
+                                            try:
+                                                btn = page.locator(confirm_sel).first
+                                                if btn and btn.count() > 0 and btn.is_visible():
+                                                    print(f"Encontrado botón de confirmación: {confirm_sel}")
+                                                    
+                                                    # Preparar para capturar el evento de descarga
+                                                    with page.expect_event("download", timeout=30000) as dl_info:
+                                                        # Hacer clic en el botón de confirmación
+                                                        print(f"Haciendo clic en botón: {confirm_sel}")
+                                                        btn.click()
+                                                        page.wait_for_timeout(2000)
+                                                    
+                                                    # Procesar descarga
+                                                    download = dl_info.value
+                                                    try:
+                                                        import os as _os
+                                                        # Guardar directamente en /tmp
+                                                        destino = "/tmp/descarga.xlsx"
+                                                        download.save_as(destino)
+                                                        print(f"✓ Descarga Excel guardada como: {destino}")
+                                                        descargado = True
+                                                        confirm_clicked = True
+                                                        break
+                                                    except Exception as e:
+                                                        print(f"Error al guardar descarga: {e}")
+                                                        try:
+                                                            path = download.path()
+                                                            print(f"✓ Descarga completada en ruta temporal: {path}")
+                                                            descargado = True
+                                                            confirm_clicked = True
+                                                            break
+                                                        except:
+                                                            print("No se pudo obtener la ruta de la descarga")
+                                            except Exception as e:
+                                                print(f"Error con selector {confirm_sel}: {e}")
+                                        
+                                        # Si no se encontró/hizo clic en ningún botón, intentar con el checkbox directo
+                                        if not confirm_clicked:
+                                            try:
+                                                with page.expect_event("download", timeout=10000) as dl_info:
+                                                    excel_option.click()
+                                                    page.wait_for_timeout(2000)
+                                                    
+                                                # Procesar descarga
+                                                download = dl_info.value
+                                                import os as _os
+                                                _os.makedirs('/var/www/html/descargas', exist_ok=True)
+                                                sugerido = download.suggested_filename or download.suggested_filename()
+                                                destino = f"/var/www/html/descargas/{sugerido}"
+                                                download.save_as(destino)
+                                                print(f"✓ Descarga Excel (alternativa) guardada en: {destino}")
+                                                descargado = True
+                                            except Exception as e:
+                                                print(f"No se pudo descargar directamente: {e}")
+                                    except Exception as e:
+                                        print(f"Error al procesar modal/confirmación: {e}") 
+                            except Exception as e:
+                                print(f"Error al intentar opción Excel {selector}: {e}")
+                        
+                        if not descargado:
+                            print("No se pudo seleccionar opción Excel en el modal. Intentando alternativas...")
+                            
+                            # Intentar con elementos genéricos que puedan contener "Excel"
+                            try:
+                                # Buscar cualquier elemento visible con texto "Excel" 
+                                excel_items = page.locator(":is(button,a,li,span,div):visible:has-text('Excel')").all()
+                                if excel_items and len(excel_items) > 0:
+                                    for item in excel_items[:5]:  # Limitar a los primeros 5
+                                        try:
+                                            with page.expect_event("download", timeout=10000) as dl_info:
+                                                print("Intentando clic en elemento con texto Excel...")
+                                                item.click(timeout=3000)
+                                            
+                                            download = dl_info.value
+                                            sugerido = download.suggested_filename or download.suggested_filename()
+                                            destino = f"/var/www/html/descargas/{sugerido}"
+                                            download.save_as(destino)
+                                            print(f"Descarga Excel (alternativo) guardada en: {destino}")
+                                            descargado = True
+                                            break
+                                        except Exception:
+                                            continue
+                            except Exception as e:
+                                print(f"Error en búsqueda alternativa de Excel: {e}")
+                        
+                        # Si no se logró con el modal, proceder con otros métodos
+                        if not descargado:
+                            print("No se logró descargar Excel desde el modal. Intentando fallback...")
+                    else:
+                        print("No se detectó el modal tras pulsar 'Descargar'. Se intentará descarga directa (fallback)…")
+                    
+                    # --- Fallback anterior: intentar botón/icono que dispare directamente una descarga ---
+                    print("Buscando botón/icono de descarga para descarga directa…")
+                    destinos = [page]
+                    try:
+                        for fr in page.frames:
+                            if fr != page.main_frame:
+                                destinos.append(fr)
+                    except Exception:
+                        pass
+                    sel_lista = [
+                        "button:has-text('Descargar')",
+                        "button:has-text('Download')",
+                        "[role='button']:has-text('Descargar')",
+                        "a[download]",
+                        "button[aria-label*='Descargar' i]",
+                        "button[title*='Descargar' i]",
+                        "[data-test*='download' i]",
+                        "[data-testid*='download' i]",
+                        "[class*='download' i]",
+                        "svg[*,*]>>xpath=ancestor-or-self::button|ancestor-or-self::a[contains(@class,'download') or contains(@aria-label,'Descargar') or contains(@title,'Descargar')]"
+                    ]
+                    descargado = False
+                    for ctx in destinos:
+                        for sel in sel_lista:
+                            try:
+                                loc = ctx.locator(sel).first
+                                if loc and loc.count() > 0 and loc.first.is_visible():
+                                    print(f"Intentando clic de descarga con selector: {sel}")
+                                    with page.expect_event("download", timeout=30000) as dl_info:
+                                        try:
+                                            loc.first.click(timeout=5000)
+                                        except Exception:
+                                            loc.first.click(force=True, timeout=5000)
+                                    download = dl_info.value
+                                    try:
+                                        import os as _os
+                                        _os.makedirs('/var/www/html/descargas', exist_ok=True)
+                                        sugerido = download.suggested_filename or download.suggested_filename()
+                                        destino = f"/var/www/html/descargas/{sugerido}"
+                                        download.save_as(destino)
+                                        print(f"Descarga guardada en: {destino}")
+                                    except Exception:
+                                        path = download.path()
+                                        print(f"Descarga completada. Ruta temporal: {path}")
+                                    descargado = True
+                                    break
+                            except Exception:
+                                continue
+                        if descargado:
+                            break
+                    if not descargado:
+                        print("No se encontró botón de descarga visible. Reintentando con búsqueda heurística…")
+                        try:
+                            # Heurística: buscar elementos con texto/aria/ttl que contengan 'Descarg'
+                            btns = page.locator(":is(button,a,[role=button],[aria-label],[title])").all()
+                        except Exception:
+                            btns = []
+                        for b in btns[:20]:
+                            try:
+                                meta = b.evaluate("el => ({t:(el.innerText||'').trim(), a:el.getAttribute('aria-label')||'', tt:el.getAttribute('title')||''})")
+                            except Exception:
+                                meta = {"t":"","a":"","tt":""}
+                            hay = any(s for s in [meta.get('t',''), meta.get('a',''), meta.get('tt','')] if 'descarg' in s.lower())
+                            if hay:
+                                print("Intentando clic heurístico de descarga…")
+                                try:
+                                    with page.expect_event("download", timeout=30000) as dl_info:
+                                        b.click()
+                                    d2 = dl_info.value
+                                    sugerido = d2.suggested_filename or d2.suggested_filename()
+                                    dest = f"/var/www/html/descargas/{sugerido}"
+                                    d2.save_as(dest)
+                                    print(f"Descarga guardada en: {dest}")
+                                    descargado = True
+                                    break
+                                except Exception:
+                                    continue
+                    if not descargado:
+                        print("No fue posible realizar la descarga automáticamente.")
+                except Exception as e:
+                    print(f"Error al intentar descargar: {e}")
             else:
                 print("No se encontró el elemento con texto 'SAN. ONE EMPRESA'.")
     except Exception as e:
@@ -1054,4 +1381,13 @@ with sync_playwright() as p:
         except Exception:
             pass
     print("Navegador cerrado. Script finalizado.")
+    
+    # Llamar al script scrapeo.py al finalizar
+    try:
+        import subprocess
+        print("Ejecutando scrapeo.py...")
+        # Ruta confirmada para producción
+        subprocess.call(["/var/www/html/venv/bin/python", "/var/www/html/scrapeo.py"])
+    except Exception as e:
+        print(f"Error al ejecutar scrapeo.py: {e}")
 

@@ -32,7 +32,7 @@ AEAT_CONFIG = {
     'entorno': 'test',  # Forzamos el entorno de pruebas
     'usar_sello': False,  # True para usar certificado de sello
     'verificar_ssl': True,  # Verificación SSL del servidor
-    'modo_test': True,  # Indicador explícito de modo pruebas
+    'modo_test': False,  # Indicador explícito de modo pruebas
     
     # URL para código QR
     'url_cotejo': 'https://sede.agenciatributaria.gob.es/verifactu/cotejo'

@@ -1137,6 +1137,32 @@ td .fas {
   white-space: nowrap;
 }
 
+/* Quitar bordes en las tablas del grid (solo vista pantalla) */
+.grid {
+  border: 0 !important;
+}
+.grid th,
+.grid td {
+  border: 0 !important;
+}
+
+/* Paginación: literales y controles más pequeños y compactos */
+.pagination {
+  font-size: 11px !important;
+}
+.pagination span,
+.pagination label,
+.pagination select,
+.pagination button {
+  font-size: 11px !important;
+}
+.pagination button {
+  padding: 2px 6px !important;
+}
+.pagination select {
+  padding: 1px 4px !important;
+}
+
 .fixed-footer {
   position: fixed;
   bottom: 0;
@@ -2161,10 +2187,22 @@ table:not(.fixed-footer table) tbody tr:hover {
 
 /* Contenedor de la tabla con scroll */
 .table-container {
-    max-height: 350px;
     overflow-y: auto;
     border-radius: 8px;
     background-color: var(--color-fondo);
+}
+
+/* -------------------------------------------------------------------------
+   OVERRIDES: Grid debe crecer hasta el footer fijo
+   Aplica a vistas con .table-wrapper / .table-scroll (Facturas, Tickets, etc.)
+   ------------------------------------------------------------------------- */
+.table-wrapper {
+    max-height: none !important; /* Quita límites previos (600/800px) */
+}
+
+.table-scroll {
+    max-height: none !important; /* Permite crecer hasta llenar el contenedor */
+    height: 100% !important;      /* Ocupa todo el alto disponible del wrapper */
 }
 
 /* Estilos comunes para las tablas */

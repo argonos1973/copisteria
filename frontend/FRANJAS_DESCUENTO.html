@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Franjas de Descuento por Producto</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .page-container { display: flex; flex-direction: column; height: 100vh; }
+    .controls { padding: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .table-container { flex: 1; display: flex; min-height: 0; }
+    .table-responsive { flex: 1; overflow: auto; }
+    table.grid th, table.grid td { white-space: nowrap; }
+    .actions { display: flex; gap: 6px; }
+  </style>
+</head>
+<body class="page-container">
+  <div class="controls">
+    <label for="productoSelect">Producto:</label>
+    <select id="productoSelect" style="min-width: 280px;"></select>
+    <button id="btnCargar">Cargar franjas</button>
+    <button id="btnAñadir">Añadir franja</button>
+    <button id="btnGuardar" class="btn-primary">Guardar cambios</button>
+    <span id="status" style="margin-left: 12px;"></span>
+  </div>
+
+  <div class="controls" style="border-top: 1px solid #eee; padding-top: 8px;">
+    <label for="productosMulti">Aplicar a productos:</label>
+    <select id="productosMulti" multiple size="6" style="min-width: 380px;"></select>
+    <label style="display:flex; align-items:center; gap:6px;">
+      <input type="checkbox" id="chkSelectAll" /> Seleccionar todos
+    </label>
+    <small style="opacity:0.8;">Si hay productos seleccionados aquí, Guardar aplicará estas franjas a todos ellos.</small>
+  </div>
+
+  <div class="table-container">
+    <div class="table-responsive">
+      <table class="grid" id="tablaFranjas">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Min Cantidad</th>
+            <th>Max Cantidad</th>
+            <th>% Descuento</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script type="module" src="/static/FRANJAS_DESCUENTO.js"></script>
+</body>
+</html>

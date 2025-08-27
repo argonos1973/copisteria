@@ -5,7 +5,11 @@ import { formatearImporte, formatearFechaSoloDia, parsearImporte, mostrarCargand
 window.buscarTickets = buscarTickets;
 // Selecciona todos los botones en la página
 const botones = document.querySelectorAll('button');
-const API_ENDPOINT = '/tickets/consulta'
+const API_ENDPOINT = '/tickets/paginado'
+// Estado de paginación
+let currentPageTickets = 1
+let pageSizeTickets = 10
+let totalPagesTickets = 1
 
 // Añade un evento de clic a cada botón
 botones.forEach(boton => {
@@ -52,16 +56,19 @@ document.addEventListener("DOMContentLoaded", function () {
     // Asociar eventos para búsqueda interactiva
     document.getElementById('startDate').addEventListener('change', () => {
         guardarFiltros();
+        currentPageTickets = 1;
         buscarTickets();
     });
 
     document.getElementById('endDate').addEventListener('change', () => {
         guardarFiltros();
+        currentPageTickets = 1;
         buscarTickets();
     });
 
     document.getElementById('status').addEventListener('change', () => {
         guardarFiltros();
+        currentPageTickets = 1;
         buscarTickets();
     });
 
@@ -77,9 +84,56 @@ document.addEventListener("DOMContentLoaded", function () {
 
     document.getElementById('paymentMethod').addEventListener('change', () => {
         guardarFiltros();
+        currentPageTickets = 1;
         buscarTickets();
     });
  
+    // Inicializar controles de paginación
+    const pageSizeSelect = document.getElementById('pageSizeSelectTickets')
+    const prevBtn = document.getElementById('prevPageTickets')
+    const nextBtn = document.getElementById('nextPageTickets')
+    const pageInfo = document.getElementById('pageInfoTickets')
+
+    // Restaurar tamaño por página si estaba en sessionStorage
+    const savedPageSize = sessionStorage.getItem('tickets_page_size')
+    if (savedPageSize) {
+        pageSizeTickets = parseInt(savedPageSize) || 10
+        if (pageSizeSelect) pageSizeSelect.value = String(pageSizeTickets)
+    }
+
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener('change', () => {
+            pageSizeTickets = parseInt(pageSizeSelect.value) || 10
+            sessionStorage.setItem('tickets_page_size', String(pageSizeTickets))
+            currentPageTickets = 1
+            buscarTickets()
+        })
+    }
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (currentPageTickets > 1) {
+                currentPageTickets--
+                buscarTickets()
+            }
+        })
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            if (currentPageTickets < totalPagesTickets) {
+                currentPageTickets++
+                buscarTickets()
+            }
+        })
+    }
+
+    // Guardar referencia para actualizar info de página
+    window.__updateTicketsPageInfo = function() {
+        if (!pageInfo) return
+        pageInfo.textContent = `Página ${totalPagesTickets ? currentPageTickets : 0} de ${totalPagesTickets}`
+        if (prevBtn) prevBtn.disabled = currentPageTickets <= 1
+        if (nextBtn) nextBtn.disabled = currentPageTickets >= totalPagesTickets
+    }
+
     buscarTickets();
 });
 
@@ -168,7 +222,13 @@ async function buscarTickets() {
     if (ticketNumber) url.searchParams.append('numero', ticketNumber);
     if (paymentMethod) url.searchParams.append('formaPago', paymentMethod);
     if (conceptFilter) url.searchParams.append('concepto', conceptFilter);
-    
+    // Paginación
+    url.searchParams.append('page', String(currentPageTickets));
+    url.searchParams.append('page_size', String(pageSizeTickets));
+    // Orden por defecto
+    url.searchParams.append('sort', 'fecha');
+    url.searchParams.append('order', 'DESC');
+
     try {
         // Cancelar petición previa
         if (currentController) currentController.abort();
@@ -176,10 +236,14 @@ async function buscarTickets() {
         console.log('Buscando tickets con URL:', url.toString());
         const response = await fetch(url, { signal: currentController.signal });
         if (!response.ok) throw new Error('Error al consultar los tickets');
-        
-        const tickets = await response.json();
+        const data = await response.json();
+        const tickets = Array.isArray(data) ? data : (data.items || []);
+        totalPagesTickets = Array.isArray(data) ? 1 : (data.total_pages || 1);
+        // Ajustar currentPage si excede límites tras filtros
+        if (currentPageTickets > totalPagesTickets) currentPageTickets = totalPagesTickets || 1
         mostrarTickets(tickets);
         actualizarTotales(tickets);
+        if (typeof window.__updateTicketsPageInfo === 'function') window.__updateTicketsPageInfo();
         ocultarBarraDeProgreso();
     } catch (error) {
         if (error.name === 'AbortError') {

@@ -395,7 +395,9 @@ function seleccionarProducto() {
   const cantidad = parsearImporte(formElements.cantidadDetalle.value);
   const impuesto = parsearImporte(formElements.impuestoDetalle.value);
   const tipoFactura = document.getElementById('tipo-factura').value || 'N';
-  const precioFinal = tipoFactura === 'A' ? precio : calcularPrecioConDescuento(precio, cantidad, tipoFactura, 'factura');
+  const precioFinal = tipoFactura === 'A' 
+    ? precio 
+    : calcularPrecioConDescuento(precio, cantidad, tipoFactura, 'factura', productoId);
   const subtotal = precioFinal * cantidad;
   const impuestoTotal = subtotal * (impuesto / 100);
   const total = subtotal + impuestoTotal;

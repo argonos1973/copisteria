@@ -1,6 +1,0 @@
-2025/08/13-17:23:32.793 15f5c7 Reusing MANIFEST /var/www/html/.pw_profile_santander/Default/Session Storage/MANIFEST-000001
-2025/08/13-17:23:32.793 15f5c7 Recovering log #317
-2025/08/13-17:23:32.793 15f5c7 Reusing old log /var/www/html/.pw_profile_santander/Default/Session Storage/000317.log 
-2025/08/13-17:25:32.795 15f5c8 Level-0 table #322: started
-2025/08/13-17:25:32.799 15f5c8 Level-0 table #322: 135138 bytes OK
-2025/08/13-17:25:32.800 15f5c8 Delete type=0 #317

@@ -18,10 +18,15 @@
   
   <style>
     /* Estilos personalizados para la tabla de contactos */
-    #app {
+    /* En esta vista anulamos padding inferior global y reservamos el alto del footer */
+    .contactos-page { padding-bottom: 0 !important; }
+    #app.container {
       display: flex;
       flex-direction: column;
-      height: 100vh;
+      height: calc(100vh - 96px);
+      min-height: 100vh;
+      box-sizing: border-box;
+      padding-bottom: 0 !important;
     }
     
     .table-container {
@@ -35,15 +40,21 @@
     .table-responsive {
       flex: 1;
       max-height: none !important;
+      height: 100% !important;
       overflow-y: auto;
     }
+    /* Compactar espacios para ganar área de grid */
+    h1 { margin: 6px 0; }
+    .form-inline { margin: 4px 0; }
+    .pagination { margin-top: 6px; }
+    .contactos-page .pagination { margin-bottom: 8px !important; }
   </style>
 
   <!-- Vue.js y Axios (CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
-<body>
+<body class="contactos-page">
   <div id="app" class="container">
     <h1>Contactos</h1>
     
@@ -74,10 +85,29 @@
       </div>
     </div>
 
+    <!-- Controles de paginación (debajo de filtros, compacto) -->
+    <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button @click="prevPage" :disabled="loading || pagination.page<=1" style="padding:4px 8px;font-size:12px;">⟨</button>
+        <span>Página {{ pagination.page }} de {{ pagination.totalPages }}</span>
+        <button @click="nextPage" :disabled="loading || pagination.page>=pagination.totalPages" style="padding:4px 8px;font-size:12px;">⟩</button>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+        <label>Por página:
+          <select :value="pagination.pageSize" @change="changePageSize($event.target.value)" style="padding:2px 6px;font-size:12px;">
+            <option :selected="pagination.pageSize===10" value="10">10</option>
+            <option :selected="pagination.pageSize===20" value="20">20</option>
+            <option :selected="pagination.pageSize===50" value="50">50</option>
+            <option :selected="pagination.pageSize===100" value="100">100</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
     <!-- Contenedor de la Tabla -->
-    <div>
+    <div class="table-container" style="margin-top:0; min-height:0; flex:1;">
       <div class="table-responsive">
-        <table>
+        <table class="grid">
           <thead>
             <tr>
               <th class="razon-social">Razón Social</th>
@@ -155,6 +185,7 @@
           </tbody>
         </table>
       </div>
+
     </div>
   </div>
 
@@ -178,12 +209,21 @@
 
         const contactos = ref([]);
         const loading = ref(false);
+        const pagination = reactive({
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+          sort: 'razonsocial',
+          order: 'ASC'
+        });
 
         // Función para guardar filtros en sessionStorage
         const guardarFiltros = () => {
           sessionStorage.setItem('filtrosContactos', JSON.stringify({
             razonSocial: filters.razonSocial,
-            nif: filters.nif
+            nif: filters.nif,
+            page: pagination.page,
+            pageSize: pagination.pageSize
           }));
         };
 
@@ -191,36 +231,44 @@
         const restaurarFiltros = () => {
           const filtrosGuardados = sessionStorage.getItem('filtrosContactos');
           if (filtrosGuardados) {
-            const filtrosParseados = JSON.parse(filtrosGuardados);
-            filters.razonSocial = filtrosParseados.razonSocial;
-            filters.nif = filtrosParseados.nif;
+            const f = JSON.parse(filtrosGuardados);
+            filters.razonSocial = f.razonSocial || '';
+            filters.nif = f.nif || '';
+            pagination.page = Number(f.page) > 0 ? Number(f.page) : 1;
+            pagination.pageSize = [10,20,50,100].includes(Number(f.pageSize)) ? Number(f.pageSize) : 10;
           } else {
-            // Si no hay filtros guardados, inicializar para mostrar los primeros 20 registros
             filters.razonSocial = '';
             filters.nif = '';
+            pagination.page = 1;
+            pagination.pageSize = 10;
             guardarFiltros();
           }
           fetchContactos();
         };
 
-        // Llamada a la API de contactos
+        // Llamada a la API de contactos (paginado)
         const fetchContactos = async () => {
           try {
             loading.value = true;
             const queryParams = new URLSearchParams({
               razonSocial: filters.razonSocial,
               nif: filters.nif,
-              limit: '20'
+              page: String(pagination.page),
+              page_size: String(pagination.pageSize),
+              sort: pagination.sort,
+              order: pagination.order
             });
 
-            const response = await fetch(`${API_URL}/contactos/buscar?${queryParams}`);
+            const response = await fetch(`${API_URL}/contactos/paginado?${queryParams}`);
             if (!response.ok) throw new Error('Error en la búsqueda');
             
             const data = await response.json();
-            contactos.value = data;
+            contactos.value = data.items || [];
+            pagination.totalPages = data.total_pages || 1;
           } catch (error) {
             console.error('Error:', error);
             contactos.value = [];
+            pagination.totalPages = 1;
           } finally {
             loading.value = false;
           }
@@ -286,8 +334,40 @@
         const handleSearch = () => {
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(() => {
+            pagination.page = 1; // Reiniciar a primera página al cambiar filtros
+            guardarFiltros();
             fetchContactos();
           }, 300);
+        };
+
+        const nextPage = () => {
+          if (pagination.page < pagination.totalPages) {
+            pagination.page += 1;
+            guardarFiltros();
+            fetchContactos();
+          }
+        };
+
+        const prevPage = () => {
+          if (pagination.page > 1) {
+            pagination.page -= 1;
+            guardarFiltros();
+            fetchContactos();
+          }
+        };
+
+        const handlePageSizeChange = () => {
+          if (![10,20,50,100].includes(pagination.pageSize)) {
+            pagination.pageSize = 10;
+          }
+          pagination.page = 1; // Volver a primera página al cambiar tamaño
+          guardarFiltros();
+          fetchContactos();
+        };
+
+        const changePageSize = (value) => {
+          pagination.pageSize = Number(value);
+          handlePageSizeChange();
         };
 
         // Ver contacto existente
@@ -334,7 +414,12 @@
           handleSearch,
           verContacto,
           nuevoContacto,
-          validateForm
+          validateForm,
+          pagination,
+          nextPage,
+          prevPage,
+          handlePageSizeChange
+          ,changePageSize
         };
       }
     }).mount('#app');

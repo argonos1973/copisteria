@@ -1,0 +1,1674 @@
+{
+  "total_broken": 93,
+  "sugerencias_generadas": 89,
+  "muestra": [
+    {
+      "id_ticket": 60,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 84,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 97,
+      "productoId_actual": 41,
+      "concepto": "IMPRESSIO A4 B/N (+250)",
+      "best_match": {
+        "productoId": 118,
+        "nombre": "IMPRESSIO A4 BN ",
+        "score": 0.8667
+      },
+      "candidatos": [
+        {
+          "productoId": 118,
+          "nombre": "IMPRESSIO A4 BN ",
+          "score": 0.8667
+        },
+        {
+          "productoId": 116,
+          "nombre": "IMPRESSIO A3 BN",
+          "score": 0.8
+        },
+        {
+          "productoId": 110,
+          "nombre": "IMPRESSIO LASER BN",
+          "score": 0.7273
+        },
+        {
+          "productoId": 114,
+          "nombre": "IMPRESSIO A4 COLOR ",
+          "score": 0.6667
+        },
+        {
+          "productoId": 112,
+          "nombre": "IMPRESSIO A3 COLOR",
+          "score": 0.6061
+        }
+      ]
+    },
+    {
+      "id_ticket": 105,
+      "productoId_actual": 41,
+      "concepto": "IMPRESSIO A4 B/N (+250)",
+      "best_match": {
+        "productoId": 118,
+        "nombre": "IMPRESSIO A4 BN ",
+        "score": 0.8667
+      },
+      "candidatos": [
+        {
+          "productoId": 118,
+          "nombre": "IMPRESSIO A4 BN ",
+          "score": 0.8667
+        },
+        {
+          "productoId": 116,
+          "nombre": "IMPRESSIO A3 BN",
+          "score": 0.8
+        },
+        {
+          "productoId": 110,
+          "nombre": "IMPRESSIO LASER BN",
+          "score": 0.7273
+        },
+        {
+          "productoId": 114,
+          "nombre": "IMPRESSIO A4 COLOR ",
+          "score": 0.6667
+        },
+        {
+          "productoId": 112,
+          "nombre": "IMPRESSIO A3 COLOR",
+          "score": 0.6061
+        }
+      ]
+    },
+    {
+      "id_ticket": 108,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 126,
+      "productoId_actual": 113,
+      "concepto": "IMPRESSIO A4 COLOR (>50)",
+      "best_match": {
+        "productoId": 114,
+        "nombre": "IMPRESSIO A4 COLOR ",
+        "score": 0.9143
+      },
+      "candidatos": [
+        {
+          "productoId": 114,
+          "nombre": "IMPRESSIO A4 COLOR ",
+          "score": 0.9143
+        },
+        {
+          "productoId": 112,
+          "nombre": "IMPRESSIO A3 COLOR",
+          "score": 0.8571
+        },
+        {
+          "productoId": 221,
+          "nombre": "IMPRESION SRA3 COLOR",
+          "score": 0.7568
+        },
+        {
+          "productoId": 118,
+          "nombre": "IMPRESSIO A4 BN ",
+          "score": 0.6875
+        },
+        {
+          "productoId": 53,
+          "nombre": "IMPRESSIO FOTO A COLOR A4(PAPER 300gr)",
+          "score": 0.6774
+        }
+      ]
+    },
+    {
+      "id_ticket": 125,
+      "productoId_actual": 113,
+      "concepto": "IMPRESSIO A4 COLOR (>50)",
+      "best_match": {
+        "productoId": 114,
+        "nombre": "IMPRESSIO A4 COLOR ",
+        "score": 0.9143
+      },
+      "candidatos": [
+        {
+          "productoId": 114,
+          "nombre": "IMPRESSIO A4 COLOR ",
+          "score": 0.9143
+        },
+        {
+          "productoId": 112,
+          "nombre": "IMPRESSIO A3 COLOR",
+          "score": 0.8571
+        },
+        {
+          "productoId": 221,
+          "nombre": "IMPRESION SRA3 COLOR",
+          "score": 0.7568
+        },
+        {
+          "productoId": 118,
+          "nombre": "IMPRESSIO A4 BN ",
+          "score": 0.6875
+        },
+        {
+          "productoId": 53,
+          "nombre": "IMPRESSIO FOTO A COLOR A4(PAPER 300gr)",
+          "score": 0.6774
+        }
+      ]
+    },
+    {
+      "id_ticket": 170,
+      "productoId_actual": 37,
+      "concepto": "IMPRESSIO A4 COLOR (+500)",
+      "best_match": {
+        "productoId": 114,
+        "nombre": "IMPRESSIO A4 COLOR ",
+        "score": 0.8889
+      },
+      "candidatos": [
+        {
+          "productoId": 114,
+          "nombre": "IMPRESSIO A4 COLOR ",
+          "score": 0.8889
+        },
+        {
+          "productoId": 112,
+          "nombre": "IMPRESSIO A3 COLOR",
+          "score": 0.8333
+        },
+        {
+          "productoId": 221,
+          "nombre": "IMPRESION SRA3 COLOR",
+          "score": 0.7368
+        },
+        {
+          "productoId": 53,
+          "nombre": "IMPRESSIO FOTO A COLOR A4(PAPER 300gr)",
+          "score": 0.6984
+        },
+        {
+          "productoId": 118,
+          "nombre": "IMPRESSIO A4 BN ",
+          "score": 0.6667
+        }
+      ]
+    },
+    {
+      "id_ticket": 198,
+      "productoId_actual": 37,
+      "concepto": "IMPRESSIO A4 COLOR (+500)",
+      "best_match": {
+        "productoId": 114,
+        "nombre": "IMPRESSIO A4 COLOR ",
+        "score": 0.8889
+      },
+      "candidatos": [
+        {
+          "productoId": 114,
+          "nombre": "IMPRESSIO A4 COLOR ",
+          "score": 0.8889
+        },
+        {
+          "productoId": 112,
+          "nombre": "IMPRESSIO A3 COLOR",
+          "score": 0.8333
+        },
+        {
+          "productoId": 221,
+          "nombre": "IMPRESION SRA3 COLOR",
+          "score": 0.7368
+        },
+        {
+          "productoId": 53,
+          "nombre": "IMPRESSIO FOTO A COLOR A4(PAPER 300gr)",
+          "score": 0.6984
+        },
+        {
+          "productoId": 118,
+          "nombre": "IMPRESSIO A4 BN ",
+          "score": 0.6667
+        }
+      ]
+    },
+    {
+      "id_ticket": 205,
+      "productoId_actual": 42,
+      "concepto": "IMPRESSIO A4 B/N  (100 - 249)",
+      "best_match": {
+        "productoId": 118,
+        "nombre": "IMPRESSIO A4 BN ",
+        "score": 0.8125
+      },
+      "candidatos": [
+        {
+          "productoId": 118,
+          "nombre": "IMPRESSIO A4 BN ",
+          "score": 0.8125
+        },
+        {
+          "productoId": 116,
+          "nombre": "IMPRESSIO A3 BN",
+          "score": 0.75
+        },
+        {
+          "productoId": 110,
+          "nombre": "IMPRESSIO LASER BN",
+          "score": 0.6857
+        },
+        {
+          "productoId": 114,
+          "nombre": "IMPRESSIO A4 COLOR ",
+          "score": 0.6286
+        }
+      ]
+    },
+    {
+      "id_ticket": 199,
+      "productoId_actual": 37,
+      "concepto": "IMPRESSIO A4 COLOR (+500)",
+      "best_match": {
+        "productoId": 114,
+        "nombre": "IMPRESSIO A4 COLOR ",
+        "score": 0.8889
+      },
+      "candidatos": [
+        {
+          "productoId": 114,
+          "nombre": "IMPRESSIO A4 COLOR ",
+          "score": 0.8889
+        },
+        {
+          "productoId": 112,
+          "nombre": "IMPRESSIO A3 COLOR",
+          "score": 0.8333
+        },
+        {
+          "productoId": 221,
+          "nombre": "IMPRESION SRA3 COLOR",
+          "score": 0.7368
+        },
+        {
+          "productoId": 53,
+          "nombre": "IMPRESSIO FOTO A COLOR A4(PAPER 300gr)",
+          "score": 0.6984
+        },
+        {
+          "productoId": 118,
+          "nombre": "IMPRESSIO A4 BN ",
+          "score": 0.6667
+        }
+      ]
+    },
+    {
+      "id_ticket": 233,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 232,
+      "productoId_actual": 111,
+      "concepto": "IMPRESSIO A3 COLOR (>50)",
+      "best_match": {
+        "productoId": 112,
+        "nombre": "IMPRESSIO A3 COLOR",
+        "score": 0.9143
+      },
+      "candidatos": [
+        {
+          "productoId": 112,
+          "nombre": "IMPRESSIO A3 COLOR",
+          "score": 0.9143
+        },
+        {
+          "productoId": 114,
+          "nombre": "IMPRESSIO A4 COLOR ",
+          "score": 0.8571
+        },
+        {
+          "productoId": 221,
+          "nombre": "IMPRESION SRA3 COLOR",
+          "score": 0.8108
+        },
+        {
+          "productoId": 116,
+          "nombre": "IMPRESSIO A3 BN",
+          "score": 0.6875
+        },
+        {
+          "productoId": 53,
+          "nombre": "IMPRESSIO FOTO A COLOR A4(PAPER 300gr)",
+          "score": 0.6774
+        }
+      ]
+    },
+    {
+      "id_ticket": 277,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 291,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 315,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 325,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 331,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 344,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 355,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 356,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 366,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 374,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 437,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 442,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 443,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 446,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 503,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 570,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 579,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 601,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 623,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 625,
+      "productoId_actual": 124,
+      "concepto": "ESCÀNER >20 MANUAL",
+      "best_match": null,
+      "candidatos": []
+    },
+    {
+      "id_ticket": 662,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 671,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 673,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 691,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 705,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 713,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 721,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 785,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 793,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 820,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 859,
+      "productoId_actual": 124,
+      "concepto": "ESCÀNER >20 MANUAL",
+      "best_match": null,
+      "candidatos": []
+    },
+    {
+      "id_ticket": 927,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 928,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 931,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1044,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1053,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1057,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1090,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1095,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1102,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1127,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1139,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1190,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1265,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1400,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1450,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1457,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1466,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1472,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1479,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1485,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1489,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1508,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1511,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1540,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1542,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1571,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1572,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1626,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1628,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1629,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1653,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1655,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1670,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1687,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1723,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1724,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1733,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1735,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1745,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1746,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1748,
+      "productoId_actual": 26,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1779,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1818,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1828,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    },
+    {
+      "id_ticket": 1859,
+      "productoId_actual": 125,
+      "concepto": "ESCÀNER",
+      "best_match": {
+        "productoId": 27,
+        "nombre": "SCANNER",
+        "score": 0.8571
+      },
+      "candidatos": [
+        {
+          "productoId": 27,
+          "nombre": "SCANNER",
+          "score": 0.8571
+        }
+      ]
+    }
+  ]
+}
