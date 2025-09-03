@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT, API_PRODUCTOS, API_PRODUCTOS_FALLBACK } from './constantes.js';
+import { IP_SERVER, PORT, API_PRODUCTOS, API_PRODUCTOS_FALLBACK, API_URL_PRIMARY, API_URL_FALLBACK } from './constantes.js';
 
 export const PRODUCTO_ID_LIBRE = '94';
 
@@ -71,6 +71,30 @@ export function debounce(fn, delay = 300) {
   };
 }
 
+// Compat: Promise.any para navegadores que no lo soporten
+async function promiseAnyCompat(promises) {
+  if (Promise.any) {
+    return Promise.any(promises);
+  }
+  const results = await Promise.allSettled(promises);
+  for (const r of results) {
+    if (r.status === 'fulfilled') return r.value;
+  }
+  throw new Error('All promises were rejected');
+}
+
+/**
+ * Normaliza texto a minúsculas y sin acentos para búsquedas tolerantes.
+ * @param {string} s
+ * @returns {string}
+ */
+export function norm(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
 // --- Global fetch wrapper ---
 const originalFetch = window.fetch.bind(window);
 window.fetch = async (...args) => {
@@ -88,6 +112,12 @@ export function truncarDecimales(numero, decimales) {
   return Math.floor(numero * factor) / factor;
 }
 
+// Redondeo clásico a N decimales (por defecto 4)
+export function redondearDecimales(numero, decimales = 4) {
+  const factor = Math.pow(10, decimales);
+  return Math.round(Number(numero) * factor) / factor;
+}
+
 export function formatearImporte(importe) {
  
   if (typeof importe !== 'number' || isNaN(importe)) {
@@ -97,6 +127,19 @@ export function formatearImporte(importe) {
   return importe.toLocaleString('es-ES', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
+    useGrouping: true
+  }) + ' €';
+}
+
+// Formateo con decimales variables (por defecto 2-5) para precios unitarios
+export function formatearImporteVariable(importe, minDec = 2, maxDec = 5) {
+  const n = (typeof importe === 'number') ? importe : parsearImporte(String(importe || '0'));
+  if (typeof n !== 'number' || isNaN(n)) {
+    return '0,00 €';
+  }
+  return n.toLocaleString('es-ES', {
+    minimumFractionDigits: Math.max(0, Math.min(20, minDec)),
+    maximumFractionDigits: Math.max(0, Math.min(20, maxDec)),
     useGrouping: true
   }) + ' €';
 }
@@ -146,30 +189,67 @@ export function parsearImporte(valor) {
 const productDiscountBands = {};
 let fetchingBands = {};
 
+// Fetch con timeout para evitar bloqueos largos del UI
+async function fetchConTimeout(url, { timeoutMs = 2000, options = {} } = {}) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...(options || {}), signal: controller.signal });
+  } finally {
+    clearTimeout(id);
+  }
+}
+
 async function fetchFranjasProducto(productoId) {
   if (!productoId) return null;
   if (fetchingBands[productoId]) return null;
   fetchingBands[productoId] = true;
-  const urls = [
-    `${API_PRODUCTOS}/${productoId}/franjas_descuento`,
-    `${API_PRODUCTOS_FALLBACK}/${productoId}/franjas_descuento`
+  // Política: desde el frontend SIEMPRE llamar con prefijo /api (primario y fallback)
+  const fuentes = [
+    { base: API_URL_PRIMARY, prefix: '/api' },
+    { base: API_URL_FALLBACK, prefix: '/api' },
   ];
-  for (const url of urls) {
-    try {
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const data = await res.json();
-      if (data && Array.isArray(data.franjas)) {
-        productDiscountBands[productoId] = data.franjas.map(f => ({
-          min: Number(f.min) || 0,
-          max: Number(f.max) || 0,
-          descuento: Number(f.descuento) || 0
-        }));
-        break;
+  const intents = fuentes.map(f => {
+    const url = `${f.base}${f.prefix}/productos/${productoId}/franjas_descuento`;
+    return (async () => {
+      try {
+        try { console.debug('[Franjas][Fetch][Try]', { productoId, url }); } catch (_) {}
+        const res = await fetchConTimeout(url, { timeoutMs: 2000 });
+        if (!res.ok) throw new Error(String(res.status));
+        const data = await res.json();
+        const franjas = Array.isArray(data?.franjas) ? data.franjas : null;
+        if (!franjas) throw new Error('estructura invalida');
+        try { console.debug('[Franjas][Fetch][OK]', { productoId, url, count: franjas.length }); } catch (_) {}
+        return franjas;
+      } catch (e) {
+        try { console.warn('[Franjas][Fetch][Fail]', { productoId, url, error: String(e) }); } catch (_) {}
+        throw e;
       }
-    } catch (_) { /* intentar siguiente url */ }
+    })();
+  });
+  try {
+    const franjas = await promiseAnyCompat(intents);
+    productDiscountBands[productoId] = franjas.map(f => {
+      let d = Number(f.descuento);
+      d = isNaN(d) ? 0 : d;
+      if (d > 0 && d <= 1) d = d * 100; // normalizar fracción a %
+      // Asegurar tope [0,60]
+      d = Math.max(0, Math.min(60, d));
+      return {
+        min: Number(f.min) || 0,
+        max: Number(f.max) || 0,
+        descuento: d,
+      };
+    });
+    try {
+      console.debug('[Franjas]', productoId, productDiscountBands[productoId]);
+    } catch (_) {}
+  } catch (err) {
+    // todas las fuentes fallaron; dejar sin cache para usar fallback global
+    try { console.error('[Franjas][Fetch][AllFail]', { productoId, error: String(err) }); } catch (_) {}
+  } finally {
+    fetchingBands[productoId] = false;
   }
-  fetchingBands[productoId] = false;
   return productDiscountBands[productoId] || null;
 }
 
@@ -182,20 +262,20 @@ function getFranjasCached(productoId) {
   return franjas || null;
 }
 
+// Permite precargar explícitamente las franjas de un producto
+export function preloadFranjasProducto(productoId) {
+  return fetchFranjasProducto(productoId);
+}
+
 export function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoFactura = null, tipoDocumento = 'proforma', productoId = null) {
   // Si tipoFactura es una cadena vacía, tratarlo como 'N' (aplicar descuentos)
   if (tipoFactura === '') {
     tipoFactura = 'N';
   }
   
-  // En tickets siempre aplicar descuentos
-  if (tipoDocumento === 'ticket') {
+  // En tickets y facturas aplicar descuentos por franja
+  if (tipoDocumento === 'ticket' || tipoDocumento === 'factura') {
     return aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
-  }
-  
-  // En facturas nunca aplicar descuentos
-  if (tipoDocumento === 'factura') {
-    return precioUnitarioSinIVA;
   }
   
   // En proformas, aplicar descuentos solo si el tipo NO es 'A'
@@ -204,41 +284,46 @@ export function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoF
   }
 
   // Aplicar descuento por defecto (para proformas tipo 'N' u otros casos)
-  return aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
+  const valor = aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
+  return redondearDecimales(valor, 4);
 }
 
 function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId = null) {
-  // Intentar usar franjas específicas por producto; si no hay, usar fallback global
-  const porProducto = productoId ? getFranjasCached(productoId) : null;
-  const franjas = porProducto || [
-    { min: 1, max: 10,   descuento: 0 },
-    { min: 11, max: 50,  descuento: 5 },
-    { min: 51, max: 99,  descuento: 10},
-    { min: 100, max: 200,descuento: 15},
-    { min: 201, max: 300,descuento: 20},
-    { min: 301, max: 400,descuento: 25},
-    { min: 401, max: 500,descuento: 30},
-    { min: 501, max: 600,descuento: 35},
-    { min: 601, max: 700,descuento: 40},
-    { min: 701, max: 800,descuento: 45},
-    { min: 801, max: 900,descuento: 50},
-    { min: 901, max: 9999, descuento: 55 },
-  ];
+  // Usar únicamente franjas proporcionadas por backend; sin fallback hardcodeado
+  const franjas = productoId ? getFranjasCached(productoId) : null;
+
+  // Si aún no hay franjas en caché, devolver precio original (0% descuento)
+  // y confiar en la recarga asíncrona que ya disparamos para recalcular.
+  if (!Array.isArray(franjas) || franjas.length === 0) {
+    try { console.debug('[Franjas][NoCache]', { productoId, cantidad, precioUnitarioSinIVA }); } catch (_) {}
+    return precioUnitarioSinIVA;
+  }
 
   let descuentoAplicable = 0;
+  let franjaElegida = null;
   for (let i = 0; i < franjas.length; i++) {
     const franja = franjas[i];
-    if (cantidad >= franja.min && cantidad <= franja.max) {
-      descuentoAplicable = franja.descuento;
+    if (cantidad >= Number(franja.min || 0) && cantidad <= Number(franja.max || 0)) {
+      const d = Number(franja.descuento) || 0;
+      descuentoAplicable = (d > 0 && d <= 1) ? d * 100 : d;
+      franjaElegida = { tipo: 'rango', min: Number(franja.min||0), max: Number(franja.max||0), d: descuentoAplicable };
       break;
     }
   }
-  if (cantidad > franjas[franjas.length - 1].max) {
-    descuentoAplicable = franjas[franjas.length - 1].descuento;
+  // Si la cantidad supera la mayor franja y ésta define descuento, usarla
+  const ultima = franjas[franjas.length - 1];
+  if (ultima && cantidad > Number(ultima.max || 0)) {
+    const d = Number(ultima.descuento) || 0;
+    descuentoAplicable = (d > 0 && d <= 1) ? d * 100 : d;
+    franjaElegida = { tipo: 'ultima', min: Number(ultima.min||0), max: Number(ultima.max||0), d: descuentoAplicable };
   }
 
+  // Clamp defensivo [0,60]
+  descuentoAplicable = Math.max(0, Math.min(60, descuentoAplicable));
   const factorDescuento = (100 - descuentoAplicable) / 100;
-  return precioUnitarioSinIVA * factorDescuento;
+  const resultado = precioUnitarioSinIVA * factorDescuento;
+  try { console.debug('[Franjas][Aplicada]', { productoId, cantidad, descuentoAplicable, franjaElegida, precioOriginal: precioUnitarioSinIVA, precioFinal: resultado }); } catch (_) {}
+  return resultado;
 }
 
 export function calcularTotalDetalle() {
@@ -288,49 +373,66 @@ export function calcularTotalDetalle() {
     }
   } else {
     let precioOriginal = parseFloat(selectedOption.dataset.precioOriginal) || 0;
-    
-    // Obtener el tipo de proforma o factura correcto (usar el campo oculto como fuente principal)
-    let tipoDocumento = 'N';
-    
-    // Verificar primero si estamos en una proforma
-    const tipoProformaElem = document.getElementById('tipo-proforma');
-    if (tipoProformaElem) {
-      tipoDocumento = tipoProformaElem.value;
-      console.log('Detectado tipo de proforma:', tipoDocumento);
-    } else {
-      // Si no es proforma, verificar si es una factura
-      const tipoFacturaElem = document.getElementById('tipo-factura');
-      if (tipoFacturaElem) {
-        tipoDocumento = tipoFacturaElem.value;
-        console.log('Detectado tipo de factura:', tipoDocumento);
-      } else {
-        // Si no se encuentra ningún elemento, usar el valor predeterminado
-        tipoDocumento = sessionStorage.getItem('tipoProforma') || 'N';
-        console.log('Usando tipo predeterminado:', tipoDocumento);
-      }
+
+    // Detectar contexto: ticket, proforma o factura (separando el tipo de proforma/factura)
+    let contexto = 'proforma';
+    let tipoProforma = sessionStorage.getItem('tipoProforma') || 'N';
+    let tipoFactura = null; // estado de factura (P/C/V/RE/A), no afecta descuentos
+
+    const ruta = (window.location.pathname || '').toLowerCase();
+    const isTickets = !!document.getElementById('numero-ticket') || !!document.getElementById('tabla-detalle-ticket') || ruta.includes('ticket');
+    if (isTickets) {
+      contexto = 'ticket';
+    } else if (document.getElementById('tipo-proforma')) {
+      contexto = 'proforma';
+      tipoProforma = document.getElementById('tipo-proforma').value || 'N';
+    } else if (document.getElementById('tipo-factura')) {
+      contexto = 'factura';
+      tipoFactura = document.getElementById('tipo-factura').value || null;
     }
-    
-    console.log(`Tipo de documento detectado: ${tipoDocumento}`);
-    
-    // Determinar el precio final (sin aplicar descuentos si es tipo A)
+
+    // Estado de franjas en caché para el producto
+    let franjasCached = null;
+    try { franjasCached = productoId ? getFranjasCached(productoId) : null; } catch (_) {}
+    try { console.debug('[CTX]', { contexto, tipoProforma, tipoFactura, productoId, cantidad, precioOriginal, franjasCachedLen: Array.isArray(franjasCached) ? franjasCached.length : null }); } catch (_) {}
+
+    // Determinar el precio final
     let precioFinal;
-    
-    if (tipoDocumento === 'A') {
-      // Para documentos tipo A, NO aplicar descuento (devolver precio original)
-      console.log('Documento tipo A: NO se aplican descuentos por franja');
+    if (contexto === 'proforma' && tipoProforma === 'A') {
+      // Proforma tipo A: sin descuentos
       precioFinal = precioOriginal;
+      console.log('Proforma tipo A: NO se aplican descuentos por franja');
     } else {
-      // Para documentos tipo N, calcular con descuentos
-      console.log('Documento tipo N: SÍ se aplican descuentos por franja');
-      // calcularPrecioConDescuento(precio, cantidad, tipoFactura, tipoDocumento, productoId)
-      precioFinal = calcularPrecioConDescuento(precioOriginal, cantidad, null, tipoDocumento, productoId);
+      // Ticket o Factura: siempre aplicar franjas. Proforma N: aplicar franjas.
+      precioFinal = calcularPrecioConDescuento(precioOriginal, cantidad, tipoFactura, contexto, productoId);
     }
-    
+
     const subtotal = precioFinal * cantidad;
     const total = subtotal * (1 + impuestos / 100);
 
     precioDetalleElem.value = precioFinal.toFixed(5);
     totalElem.value = total.toFixed(2);
+    try { console.debug('[Recalc]', { contexto, productoId, cantidad, impuestos, precioOriginal, precioFinal, total }); } catch (_) {}
+
+    // Si aún no había franjas en caché, precargar y recalcular al llegar
+    try {
+      const prodIdActual = productoId;
+      const selectSigue = () => select && select.options[select.selectedIndex]?.value == prodIdActual;
+      preloadFranjasProducto(prodIdActual).then(() => {
+        if (!selectSigue()) return;
+        const cant = parseFloat(cantidadElem.value) || 1;
+        const iva = parseFloat(impuestoElem.value) || 21;
+        const recalc = calcularPrecioConDescuento(precioOriginal, cant, tipoFactura, contexto, prodIdActual);
+        const nuevo = Number(recalc.toFixed(5));
+        const actual = Number(precioDetalleElem.value);
+        if (nuevo !== actual) {
+          precioDetalleElem.value = nuevo.toFixed(5);
+          const sub = nuevo * cant;
+          totalElem.value = (sub * (1 + iva / 100)).toFixed(2);
+          try { console.debug('[Recalc][PostFetch]', { productoId: prodIdActual, cant, iva, nuevo, actual }); } catch (_) {}
+        }
+      }).catch(() => {});
+    } catch (_) { /* noop */ }
   }
 }
 
@@ -651,6 +753,29 @@ export const getEstadoClass = (estado) => {
     return clases[estado] || '';
 }; 
 
+// Mapeos específicos para FACTURAS: aquí 'A' significa Anulada
+export const getEstadoFormateadoFactura = (estado) => {
+  const estados = {
+    'P': 'Pendiente',
+    'C': 'Cobrada',
+    'V': 'Vencida',
+    'RE': 'Rectificativa',
+    'A': 'Anulada'
+  };
+  return estados[estado] || estado;
+};
+
+export const getEstadoClassFactura = (estado) => {
+  const clases = {
+    'P': 'estado-pendiente',
+    'C': 'estado-cobrado',
+    'V': 'estado-vencido',
+    'RE': 'estado-rectificativa',
+    'A': 'estado-anulada'
+  };
+  return clases[estado] || '';
+};
+
 /**
  * Convierte una fecha ISO (o timestamp) en formato DD/MM/YYYY HH:MM.
  */
@@ -731,7 +856,7 @@ export async function fetchConManejadorErrores(url, opciones = {}) {
   try {
     mostrarCargando();
     const res = await fetch(url, opciones);
-    if (!res.ok) throw new Error(`Error ${res.status}`);
+    if (!res.ok) throw new Error(`Error ${res.status} ${res.statusText || ''} -> ${res.url}`.trim());
     return await res.json();
   } finally {
     ocultarCargando();

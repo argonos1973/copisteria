@@ -12,37 +12,43 @@
     .table-responsive { flex: 1; overflow: auto; }
     table.grid th, table.grid td { white-space: nowrap; }
     .actions { display: flex; gap: 6px; }
+    /* Ajustes de grid */
+    #tablaFranjas th, #tablaFranjas td { padding: 6px 8px; }
+    #tablaFranjas th:last-child, #tablaFranjas td.acciones-col { text-align: center; width: 40px; }
+    #tablaFranjas input[type="number"] { width: 90px; padding: 2px 4px; font-size: 0.9rem; }
+    #tablaFranjas input.min, #tablaFranjas input.max { width: 80px; text-align: right; }
+    #tablaFranjas td.descuento-col, #tablaFranjas th.descuento-col { text-align: right; }
+    #tablaFranjas input.descuento { width: 80px; text-align: right; padding: 2px 4px; font-size: 0.9rem; }
+    #tablaFranjas td.precio-aplicado, #tablaFranjas th.precio-aplicado { text-align: right; min-width: 110px; }
+    #tablaFranjas td.precio-iva, #tablaFranjas th.precio-iva { text-align: right; min-width: 120px; }
+    #tablaFranjas td.iva-unit, #tablaFranjas th.iva-unit { text-align: right; min-width: 110px; }
   </style>
 </head>
 <body class="page-container">
   <div class="controls">
     <label for="productoSelect">Producto:</label>
+    <input id="productoSearch" type="text" placeholder="Buscar por concepto..." style="min-width: 240px;" />
     <select id="productoSelect" style="min-width: 280px;"></select>
-    <button id="btnCargar">Cargar franjas</button>
-    <button id="btnAñadir">Añadir franja</button>
-    <button id="btnGuardar" class="btn-primary">Guardar cambios</button>
+    <button id="btnAñadir">Añadir</button>
+    <button id="btnGuardar" class="btn-primary">Guardar</button>
+    <button id="btnVolver" style="display:none; margin-left:auto;">Volver</button>
     <span id="status" style="margin-left: 12px;"></span>
   </div>
 
-  <div class="controls" style="border-top: 1px solid #eee; padding-top: 8px;">
-    <label for="productosMulti">Aplicar a productos:</label>
-    <select id="productosMulti" multiple size="6" style="min-width: 380px;"></select>
-    <label style="display:flex; align-items:center; gap:6px;">
-      <input type="checkbox" id="chkSelectAll" /> Seleccionar todos
-    </label>
-    <small style="opacity:0.8;">Si hay productos seleccionados aquí, Guardar aplicará estas franjas a todos ellos.</small>
-  </div>
+  
 
   <div class="table-container">
     <div class="table-responsive">
       <table class="grid" id="tablaFranjas">
         <thead>
           <tr>
-            <th>Producto</th>
             <th>Min Cantidad</th>
             <th>Max Cantidad</th>
-            <th>% Descuento</th>
-            <th>Acciones</th>
+            <th class="descuento-col">% Descuento</th>
+            <th class="precio-aplicado">Precio con %</th>
+            <th class="precio-iva">Precio con IVA</th>
+            <th class="iva-unit">IVA unitario</th>
+            <th title="Eliminar">✕</th>
           </tr>
         </thead>
         <tbody>

@@ -1,14 +1,16 @@
-import { API_PRODUCTOS, API_PRODUCTOS_FALLBACK } from './constantes.js';
-import { fetchConManejadorErrores } from './scripts_utils.js';
+import { API_URL_PRIMARY, API_URL_FALLBACK } from './constantes.js';
+import { fetchConManejadorErrores, debounce, norm, parsearImporte } from './scripts_utils.js';
+import { mostrarConfirmacion } from './notificaciones.js';
 
 const productoSelect = document.getElementById('productoSelect');
-const productosMulti = document.getElementById('productosMulti');
-const chkSelectAll = document.getElementById('chkSelectAll');
-const btnCargar = document.getElementById('btnCargar');
+const productoSearch = document.getElementById('productoSearch');
 const btnAñadir = document.getElementById('btnAñadir');
 const btnGuardar = document.getElementById('btnGuardar');
 const statusSpan = document.getElementById('status');
+const btnVolver = document.getElementById('btnVolver');
 const tbody = document.querySelector('#tablaFranjas tbody');
+const precioUnitIvaSpan = document.getElementById('precioUnitIva');
+const ivaUnitSpan = document.getElementById('ivaUnit');
 
 let franjas = [];
 let productosCache = [];
@@ -18,120 +20,155 @@ function setStatus(msg, ok = true) {
   statusSpan.style.color = ok ? 'green' : 'red';
 }
 
-function getEtiquetaProductoFila() {
-  const idsMulti = getSelectedProductoIdsMulti();
-  if (idsMulti && idsMulti.length > 0) return 'Múltiple';
-  const id = getSelectedProductoId();
-  return id ? String(id) : '-';
+// Asegura que el precio con IVA por franja sea estrictamente decreciente (sin repeticiones)
+function enforceStrictDecreasingPrices(listado) {
+  const base = getSelectedProductoSubtotal();
+  const impuestos = getSelectedProductoImpuestos();
+  const precioConIva = (descPct) => {
+    const aplicado = Math.max(0, base * (1 - Math.max(0, Math.min(60, descPct)) / 100));
+    return aplicado * (1 + Math.max(0, impuestos) / 100);
+  };
+  const res = listado.map(f => ({ ...f }));
+  let prevRed = null; // total anterior redondeado a 3 decimales
+  let prevRaw = null; // total anterior sin redondeo
+  const denom = base * (1 + Math.max(0, impuestos) / 100);
+  for (let i = 0; i < res.length; i++) {
+    let d = Number(res[i].descuento || 0);
+    if (d < 0) d = 0; if (d > 60) d = 60;
+    // Si es la primera franja y el descuento viene a 0, respetar 0% estrictamente
+    if (i === 0 && Math.abs(d) < 1e-9) {
+      d = 0;
+    }
+    if (i === 0) {
+      const tRaw0 = precioConIva(d);
+      const tRed0 = Number(tRaw0.toFixed(3));
+      // Si ya es 0.00€ en la primera franja, no tiene sentido más bandas
+      if (tRed0 <= 0) {
+        res[i].descuento = Math.round(d * 10000) / 10000;
+        res.length = 1;
+        break;
+      }
+      prevRaw = tRaw0;
+      prevRed = tRed0;
+    } else {
+      if (d > 60) d = 60;
+      let tRaw = precioConIva(d);
+      let tRed = Number(tRaw.toFixed(3));
+      // Si por redondeo (a 3 decimales) aún no baja, incrementar con paso mínimo hasta bajar o tope 60%
+      let guard = 0;
+      while ((tRed >= prevRed) && d < 60 && guard < 100000) {
+        d = Math.min(60, d + 0.0001);
+        tRaw = precioConIva(d);
+        tRed = Number(tRaw.toFixed(3));
+        guard++;
+      }
+      // Si llegamos al 60% y aún no baja, truncar la lista en la franja anterior para evitar repeticiones
+      if (tRed >= prevRed) {
+        // No incluimos esta franja ni las siguientes
+        res.length = i;
+        break;
+      }
+      // Si ya llegamos a 0.00€, cortar listado para no repetir 0.00€
+      if (tRed <= 0) {
+        res[i].descuento = Math.round(d * 10000) / 10000;
+        res.length = i + 1;
+        break;
+      }
+      prevRaw = tRaw;
+      prevRed = tRed;
+    }
+    res[i].descuento = Math.round(d * 10000) / 10000;
+  }
+  return res;
+}
+
+// Utilidades de normalización
+function normalizeFranjasArray(arr) {
+  const listado = Array.isArray(arr) ? [...arr] : [];
+  if (listado.length === 0) return [];
+  // Limitar descuentos y convertir a enteros positivos
+  const ordenado = listado
+    .map(f => ({
+      min: Math.max(1, Math.floor(Number(f.min) || 0)),
+      max: Math.max(1, Math.floor(Number(f.max) || 0)),
+      descuento: Math.max(0, Math.min(60, Number(f.descuento) || 0))
+    }))
+    .sort((a, b) => a.min - b.min || a.max - b.max);
+  // Asegurar continuidad desde 1 y sin solapes
+  let prevMax = 0;
+  for (let i = 0; i < ordenado.length; i++) {
+    const f = ordenado[i];
+    if (i === 0) {
+      f.min = 1;
+    } else {
+      f.min = prevMax + 1;
+    }
+    if (f.max < f.min) f.max = f.min; // evitar max < min
+    prevMax = f.max;
+  }
+  return ordenado;
+}
+
+function actualizarCabeceraPrecioIVA() {
+  const subtotal = getSelectedProductoSubtotal();
+  const impuestos = getSelectedProductoImpuestos();
+  const ivaUnit = subtotal * (impuestos / 100);
+  const totalUnit = subtotal + ivaUnit;
+  const fmt2 = (n) => Number.isFinite(n)
+    ? n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+    : '-';
+  if (precioUnitIvaSpan) precioUnitIvaSpan.textContent = `Precio con IVA: ${fmt2(totalUnit)}`;
+  if (ivaUnitSpan) ivaUnitSpan.textContent = `IVA unitario: ${fmt2(ivaUnit)}`;
 }
 
 function filaHTML(f) {
-  const etiquetaProducto = getEtiquetaProductoFila();
   return `
     <tr>
-      <td>${etiquetaProducto}</td>
       <td><input type="number" class="min" min="1" value="${f.min}" /></td>
       <td><input type="number" class="max" min="1" value="${f.max}" /></td>
-      <td><input type="number" class="descuento" step="0.01" min="0" max="100" value="${f.descuento}" /></td>
-      <td class="actions">
-        <button class="btn-delete" title="Eliminar"><i class="fas fa-trash"></i></button>
+      <td class="descuento-col"><input type="text" class="descuento" inputmode="decimal" pattern="[0-9.,]*" value="${Number(f.descuento || 0).toLocaleString('es-ES', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}" /></td>
+      <td class="precio-aplicado">-</td>
+      <td class="precio-iva">-</td>
+      <td class="iva-unit">-</td>
+      <td class="acciones-col">
+        <button class="btn-icon" title="Eliminar">✕</button>
       </td>
     </tr>
   `;
 }
 
 function renderFranjas() {
+  // Normalizar antes de renderizar para evitar huecos/solapes
+  franjas = normalizeFranjasArray(franjas);
   tbody.innerHTML = franjas.map(f => filaHTML(f)).join('');
-  tbody.querySelectorAll('.btn-delete').forEach((btn, idx) => {
-    btn.addEventListener('click', () => {
+  tbody.querySelectorAll('.btn-icon').forEach((btn, idx) => {
+    btn.addEventListener('click', async () => {
+      const ok = (typeof mostrarConfirmacion === 'function')
+        ? await mostrarConfirmacion('¿Eliminar esta franja?')
+        : window.confirm('¿Eliminar esta franja?');
+      if (!ok) return;
       franjas.splice(idx, 1);
-      renderFranjas();
+      renderFranjas(); // volverá a normalizar desde 1 consecutivo
+    });
+  });
+  // Recalcular precios y vincular listeners para % descuento
+  actualizarPreciosAplicados();
+  tbody.querySelectorAll('input.descuento').forEach((inp) => {
+    inp.addEventListener('input', () => actualizarPreciosAplicados());
+    inp.addEventListener('blur', () => {
+      let n = parsearImporte(inp.value);
+      if (!Number.isFinite(n)) n = 0;
+      // Limitar a rango [0, 60]
+      n = Math.max(0, Math.min(60, n));
+      inp.value = n.toLocaleString('es-ES', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+      actualizarPreciosAplicados();
     });
   });
 }
 
-function nombreProductoPorId(id) {
-  const p = (productosCache || []).find(x => Number(x.id) === Number(id));
-  return p ? p.nombre || String(id) : String(id);
-}
+// Eliminado el modo de tabla masiva; trabajamos solo con un producto seleccionado
 
-function filaProductoFranja(producto, min, max, descuento) {
-  const nombre = producto.nombre || `Producto ${producto.id}`;
-  return `
-    <tr data-pid="${producto.id}" data-pname="${nombre}">
-      <td>${nombre}</td>
-      <td><input type="number" class="min" min="1" value="${min}" /></td>
-      <td><input type="number" class="max" min="1" value="${max}" /></td>
-      <td><input type="number" class="descuento" step="0.01" min="0" max="100" value="${descuento}" /></td>
-      <td class="actions">
-        <button class="btn-delete" title="Eliminar"><i class="fas fa-trash"></i></button>
-      </td>
-    </tr>
-  `;
-}
-
-function renderTablaTodosProductosFranjas() {
-  if (!Array.isArray(productosCache) || productosCache.length === 0) return;
-  const filas = [];
-
-  // Mapa de franjas "globales" equivalentes a las usadas en scripts_utils.aplicarDescuentoPorFranja cuando no hay franjas por producto
-  const fallbackBands = [
-    { min: 1,   max: 10,   descuento: 0 },
-    { min: 11,  max: 50,   descuento: 5 },
-    { min: 51,  max: 99,   descuento: 10},
-    { min: 100, max: 200,  descuento: 15},
-    { min: 201, max: 300,  descuento: 20},
-    { min: 301, max: 400,  descuento: 25},
-    { min: 401, max: 500,  descuento: 30},
-  ];
-
-  const getPctForQty = (q) => {
-    for (const fr of fallbackBands) {
-      if (q >= fr.min && q <= fr.max) return fr.descuento;
-    }
-    // >500 lo maneja franja fija del 80%
-    return 0;
-  };
-
-  for (const p of productosCache) {
-    // Generar franjas de 10 en 10 desde 1..500
-    for (let start = 1; start <= 500; start += 10) {
-      const end = Math.min(start + 9, 500);
-      const pct = getPctForQty(start);
-      filas.push(filaProductoFranja(p, start, end, pct));
-    }
-    // Franja >500 con 80%
-    filas.push(filaProductoFranja(p, 501, 999999, 80));
-  }
-  tbody.innerHTML = filas.join('');
-  // activar eliminar por fila
-  tbody.querySelectorAll('.btn-delete').forEach(btn => {
-    btn.addEventListener('click', (ev) => {
-      const tr = ev.currentTarget.closest('tr');
-      if (tr) tr.remove();
-    });
-  });
-}
-
-function leerFranjasPorProductoDesdeTabla() {
-  const rows = Array.from(tbody.querySelectorAll('tr'));
-  const mapa = new Map(); // pid -> array de franjas
-  for (const tr of rows) {
-    const pid = Number(tr.getAttribute('data-pid'));
-    const min = Number(tr.querySelector('input.min')?.value || 0);
-    const max = Number(tr.querySelector('input.max')?.value || 0);
-    const descuento = Number(tr.querySelector('input.descuento')?.value || 0);
-    if (!Number.isFinite(pid) || pid <= 0) continue;
-    if (!Number.isFinite(min) || !Number.isFinite(max) || min <= 0 || max < min) continue;
-    if (!mapa.has(pid)) mapa.set(pid, []);
-    mapa.get(pid).push({ min, max, descuento });
-  }
-  // ordenar franjas por producto
-  for (const [pid, arr] of mapa.entries()) {
-    arr.sort((a, b) => a.min - b.min || a.max - b.max);
-  }
-  return mapa;
-}
+// Eliminado lector de tabla por múltiples productos
 
 function añadirFranja() {
   let maxAnterior = 0;
@@ -141,50 +178,89 @@ function añadirFranja() {
   const nueva = { min: maxAnterior + 1, max: maxAnterior + 10, descuento: 0 };
   franjas.push(nueva);
   renderFranjas();
+  // Enfocar el cursor en la última franja añadida
+  try {
+    const ultima = tbody.querySelector('tr:last-child input.descuento') || tbody.querySelector('tr:last-child input.min');
+    if (ultima && typeof ultima.focus === 'function') {
+      ultima.focus();
+      if (typeof ultima.select === 'function') ultima.select();
+    }
+  } catch (_) { /* noop */ }
 }
 
 function leerFranjasDeTabla() {
   const filas = Array.from(tbody.querySelectorAll('tr'));
   const result = [];
-  for (const tr of filas) {
+  filas.forEach((tr, idx) => {
     const min = Number(tr.querySelector('input.min')?.value || 0);
     const max = Number(tr.querySelector('input.max')?.value || 0);
-    const descuento = Number(tr.querySelector('input.descuento')?.value || 0);
+    const inputDesc = tr.querySelector('input.descuento');
+    let descuento = Number.isFinite(parsearImporte(inputDesc?.value)) ? parsearImporte(inputDesc.value) : Number(franjas[idx]?.descuento || 0);
+    if (!Number.isFinite(descuento)) descuento = 0;
+    descuento = Math.max(0, Math.min(60, descuento));
+    // Redondear a 4 decimales antes de enviar
+    descuento = Math.round(descuento * 10000) / 10000;
     if (!min || !max || max < min) {
       throw new Error(`Franja inválida: min=${min} max=${max}`);
     }
     result.push({ min, max, descuento });
-  }
+  });
   // ordenar por min y normalizar
   result.sort((a, b) => a.min - b.min || a.max - b.max);
-  return result;
+  return normalizeFranjasArray(result);
 }
 
 async function cargarProductos() {
-  // Probar varios endpoints: paginado y simple, en primario y fallback
-  const attempts = [];
-  // Intento 1: paginado en primario con tamaño grande
-  attempts.push(`${window.location.protocol}//${window.location.hostname}:${(new URL(API_PRODUCTOS)).port || '5001'}/api/productos/paginado?page=1&page_size=1000&sort=nombre&order=ASC`);
-  // Intento 2: lista simple en primario
-  attempts.push(API_PRODUCTOS);
-  // Intento 3: paginado en fallback (mismo origen)
-  const origen = `${window.location.protocol}//${window.location.hostname}${window.location.port ? ':'+window.location.port : ''}`;
-  attempts.push(`${origen}/api/productos/paginado?page=1&page_size=1000&sort=nombre&order=ASC`);
-  // Intento 4: lista simple en fallback
-  attempts.push(API_PRODUCTOS_FALLBACK);
+  // Fuentes a intentar: primario/fallback y con/si /api
+  const fuentes = [
+    { base: API_URL_PRIMARY, prefix: '/api' },
+    { base: API_URL_PRIMARY, prefix: '' },
+    { base: API_URL_FALLBACK, prefix: '/api' },
+    { base: API_URL_FALLBACK, prefix: '' },
+  ];
 
-  for (const url of attempts) {
+  // Intentar primero la ruta paginada iterando todas las páginas; si falla, caer a lista simple
+  for (const f of fuentes) {
+    // Paginado
     try {
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const data = await res.json();
-      const items = Array.isArray(data) ? data : (data.items || []);
-      if (!Array.isArray(items)) continue;
-      return items
-        .map(p => ({ id: Number(p.id || p.ID || p.producto_id || 0), nombre: p.nombre || p.Name || p.descripcion || `Producto ${p.id}` }))
+      let page = 1;
+      const pageSize = 200;
+      let totalPages = 1;
+      const acumulados = [];
+      do {
+        const url = `${f.base}${f.prefix}/productos/paginado?page=${page}&page_size=${pageSize}&sort=nombre&order=ASC`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(String(res.status));
+        const data = await res.json();
+        const items = Array.isArray(data?.items) ? data.items : [];
+        if (!Array.isArray(items)) throw new Error('estructura invalida');
+        acumulados.push(...items);
+        totalPages = Number(data?.total_pages || 1) || 1;
+        page += 1;
+      } while (page <= totalPages);
+
+      return acumulados
+        .map(p => ({ id: Number(p.id || p.ID || p.producto_id || 0), nombre: p.nombre || p.Name || p.descripcion || `Producto ${p.id}`, subtotal: Number(p.subtotal ?? p.price ?? 0), impuestos: Number(p.impuestos ?? p.vat ?? 0) }))
         .filter(p => Number.isFinite(p.id) && p.id > 0);
-    } catch (_) { /* probar siguiente */ }
+    } catch (_) {
+      // continuar a intento de lista simple en esta misma fuente
+    }
+
+    // Lista simple
+    try {
+      const url = `${f.base}${f.prefix}/productos`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : [];
+      return items
+        .map(p => ({ id: Number(p.id || p.ID || p.producto_id || 0), nombre: p.nombre || p.Name || p.descripcion || `Producto ${p.id}`, subtotal: Number(p.subtotal ?? p.price ?? 0), impuestos: Number(p.impuestos ?? p.vat ?? 0) }))
+        .filter(p => Number.isFinite(p.id) && p.id > 0);
+    } catch (_) {
+      // probar siguiente fuente
+    }
   }
+
   return [];
 }
 
@@ -194,52 +270,132 @@ function getSelectedProductoId() {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-function getSelectedProductoIdsMulti() {
-  if (!productosMulti) return [];
-  return Array.from(productosMulti.selectedOptions || [])
-    .map(opt => Number(opt.value))
-    .filter(id => Number.isFinite(id) && id > 0);
+function getSelectedProductoSubtotal() {
+  const id = getSelectedProductoId();
+  const p = (productosCache || []).find(x => Number(x.id) === Number(id));
+  const st = Number(p?.subtotal ?? 0);
+  return Number.isFinite(st) ? st : 0;
+}
+
+function getSelectedProductoImpuestos() {
+  const id = getSelectedProductoId();
+  const p = (productosCache || []).find(x => Number(x.id) === Number(id));
+  const imp = Number(p?.impuestos ?? 0);
+  return Number.isFinite(imp) ? imp : 0;
+}
+
+// Sin multiselección
+
+function actualizarPreciosAplicados() {
+  try {
+    const subtotal = getSelectedProductoSubtotal();
+    const impuestos = getSelectedProductoImpuestos();
+    const filas = Array.from(tbody.querySelectorAll('tr'));
+    for (let idx = 0; idx < filas.length; idx++) {
+      const tr = filas[idx];
+      const tdPrecio = tr.querySelector('td.precio-aplicado');
+      const tdPrecioIva = tr.querySelector('td.precio-iva');
+      const tdIvaUnit = tr.querySelector('td.iva-unit');
+      if (!tdPrecio || !tdPrecioIva || !tdIvaUnit) continue;
+      // Tomar el descuento desde el input si existe; si no, del array
+      const inputDesc = tr.querySelector('input.descuento');
+      let desc = inputDesc ? parsearImporte(inputDesc.value) : Number(franjas[idx]?.descuento || 0);
+      if (!Number.isFinite(desc)) desc = 0;
+      // Limitar a rango [0, 60]
+      desc = Math.max(0, Math.min(60, desc));
+      // Redondear a 4 decimales y sincronizar el descuento editado con el array en memoria
+      const desc4 = Math.round(desc * 10000) / 10000;
+      if (franjas[idx]) franjas[idx].descuento = desc4;
+      const base = Number(subtotal) || 0;
+      const aplicado = base > 0 ? Math.max(0, base * (1 - (Number.isFinite(desc4) ? desc4 : 0) / 100)) : 0;
+      const ivaUnit = aplicado * (Number(impuestos) / 100);
+      const totalConIva = aplicado + ivaUnit;
+      const fmt4 = (n) => Number.isFinite(n)
+        ? n.toLocaleString('es-ES', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+        : '-';
+      const fmt3 = (n) => Number.isFinite(n)
+        ? n.toLocaleString('es-ES', { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+        : '-';
+      tdPrecio.textContent = fmt4(aplicado);
+      tdPrecioIva.textContent = fmt3(totalConIva);
+      tdIvaUnit.textContent = fmt4(ivaUnit);
+    }
+  } catch (e) {
+    console.debug('actualizarPreciosAplicados error:', e);
+  }
 }
 
 async function getFranjas(productoId) {
-  const url1 = `${API_PRODUCTOS}/${productoId}/franjas_descuento`;
-  const url2 = `${API_PRODUCTOS_FALLBACK}/${productoId}/franjas_descuento`;
-  try {
-    const data = await fetchConManejadorErrores(url1);
-    return Array.isArray(data.franjas) ? data.franjas : [];
-  } catch (_) {
-    const data = await fetchConManejadorErrores(url2);
-    return Array.isArray(data.franjas) ? data.franjas : [];
+  const fuentes = [
+    { base: API_URL_PRIMARY, prefix: '/api' },
+    { base: API_URL_PRIMARY, prefix: '' },
+    { base: API_URL_FALLBACK, prefix: '/api' },
+    { base: API_URL_FALLBACK, prefix: '' },
+  ];
+  let lastError;
+  for (const f of fuentes) {
+    const url = `${f.base}${f.prefix}/productos/${productoId}/franjas_descuento`;
+    console.debug('[FRANJAS] GET intent:', url);
+    try {
+      const data = await fetchConManejadorErrores(url);
+      return Array.isArray(data.franjas) ? data.franjas : [];
+    } catch (e) {
+      lastError = e;
+      console.debug('[FRANJAS] GET fallo:', e?.message || e);
+      // probar siguiente
+    }
   }
+  if (lastError) throw lastError;
+  return [];
 }
 
 async function saveFranjas(productoId, franjasListado) {
-  const url1 = `${API_PRODUCTOS}/${productoId}/franjas_descuento`;
-  const url2 = `${API_PRODUCTOS_FALLBACK}/${productoId}/franjas_descuento`;
+  const fuentes = [
+    { base: API_URL_PRIMARY, prefix: '/api' },
+    { base: API_URL_PRIMARY, prefix: '' },
+    { base: API_URL_FALLBACK, prefix: '/api' },
+    { base: API_URL_FALLBACK, prefix: '' },
+  ];
   const payload = JSON.stringify(franjasListado);
   const headers = { 'Content-Type': 'application/json' };
-  try {
-    await fetchConManejadorErrores(url1, { method: 'POST', headers, body: payload });
-    return true;
-  } catch (_) {
-    await fetchConManejadorErrores(url2, { method: 'POST', headers, body: payload });
-    return true;
+  let lastError;
+  for (const f of fuentes) {
+    const url = `${f.base}${f.prefix}/productos/${productoId}/franjas_descuento`;
+    console.debug('[FRANJAS] POST intent:', url);
+    try {
+      await fetchConManejadorErrores(url, { method: 'POST', headers, body: payload });
+      return true;
+    } catch (e) {
+      lastError = e;
+      console.debug('[FRANJAS] POST fallo:', e?.message || e);
+    }
   }
+  if (lastError) throw lastError;
+  return false;
 }
 
-btnCargar.addEventListener('click', async () => {
+async function cargarFranjasSeleccionado() {
   const id = getSelectedProductoId();
   if (!id) { setStatus('Seleccione un producto válido', false); return; }
   setStatus('Cargando...');
   try {
-    franjas = await getFranjas(id);
+    const raw = await getFranjas(id);
+    franjas = (Array.isArray(raw) ? raw : []).map(f => {
+      const min = Number(f.min || f.min_cantidad || 0) || 0;
+      const max = Number(f.max || f.max_cantidad || 0) || 0;
+      let d = Number(f.descuento ?? f.porcentaje_descuento ?? 0) || 0;
+      // El backend ya entrega porcentaje (0-60). Limitar a rango [0, 60]
+      d = Math.max(0, Math.min(60, d));
+      return { min, max, descuento: d };
+    });
+    franjas = normalizeFranjasArray(franjas);
     renderFranjas();
     setStatus(`Cargadas ${franjas.length} franjas`);
   } catch (e) {
     console.error(e);
     setStatus(`Error al cargar: ${e.message}`, false);
   }
-});
+}
 
 btnAñadir.addEventListener('click', () => {
   añadirFranja();
@@ -247,39 +403,14 @@ btnAñadir.addEventListener('click', () => {
 
 btnGuardar.addEventListener('click', async () => {
   try {
-    // Detectar si la tabla es expandida (múltiples productos con data-pid)
-    const filasConPid = tbody.querySelector('tr[data-pid]');
-    if (filasConPid) {
-      const mapa = leerFranjasPorProductoDesdeTabla();
-      if (mapa.size === 0) { setStatus('No hay franjas válidas para guardar', false); return; }
-      setStatus(`Guardando franjas para ${mapa.size} productos...`);
-      const promesas = [];
-      for (const [pid, listado] of mapa.entries()) {
-        promesas.push(saveFranjas(pid, listado));
-      }
-      const resultados = await Promise.allSettled(promesas);
-      const ok = resultados.filter(r => r.status === 'fulfilled').length;
-      const fail = resultados.length - ok;
-      setStatus(`Guardado completado. OK: ${ok}, Errores: ${fail}`, fail === 0);
-      return;
-    }
-
-    // Modo existente: un solo producto seleccionado con posible multiselección para aplicar
     const id = getSelectedProductoId();
     if (!id) { setStatus('Seleccione un producto válido', false); return; }
-    const listado = leerFranjasDeTabla();
-    const idsSeleccionados = getSelectedProductoIdsMulti();
-    if (idsSeleccionados.length > 0) {
-      setStatus(`Guardando en ${idsSeleccionados.length} productos...`);
-      const resultados = await Promise.allSettled(idsSeleccionados.map(pid => saveFranjas(pid, listado)));
-      const ok = resultados.filter(r => r.status === 'fulfilled').length;
-      const fail = resultados.length - ok;
-      setStatus(`Guardado masivo completado. OK: ${ok}, Errores: ${fail}`, fail === 0);
-    } else {
-      await saveFranjas(id, listado);
-      franjas = listado;
-      setStatus('Guardado correctamente');
-    }
+    let listado = leerFranjasDeTabla(); // ya normalizado
+    // Asegurar precios con IVA estrictamente decrecientes sin repetición
+    listado = enforceStrictDecreasingPrices(listado);
+    await saveFranjas(id, listado);
+    franjas = listado;
+    setStatus('Guardado correctamente');
   } catch (e) {
     console.error(e);
     setStatus(`Error al guardar: ${e.message}`, false);
@@ -291,30 +422,29 @@ btnGuardar.addEventListener('click', async () => {
   try {
     setStatus('Cargando productos...');
     productosCache = await cargarProductos();
-    const opciones = productosCache.map(p => `<option value="${p.id}">${p.id} - ${p.nombre}</option>`).join('');
+    const opciones = productosCache.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
     if (productoSelect) {
       productoSelect.innerHTML = '<option value="">-- Seleccione producto --</option>' + opciones;
-    }
-    if (productosMulti) {
-      productosMulti.innerHTML = opciones;
     }
 
     const params = new URLSearchParams(window.location.search);
     const pid = Number(params.get('producto_id') || 0);
     if (pid) {
       productoSelect.value = String(pid);
+      // Mostrar botón Volver y configurar destino
+      if (btnVolver) {
+        btnVolver.style.display = '';
+        btnVolver.addEventListener('click', () => {
+          window.location.href = `GESTION_PRODUCTOS.html?id=${encodeURIComponent(pid)}`;
+        });
+      }
     }
     setStatus('');
 
     // Si hay producto preseleccionado, cargar franjas automáticamente
     if (getSelectedProductoId()) {
-      btnCargar.click();
-    } else {
-      // Insertar en la tabla todos los productos con sus franjas por defecto
-      renderTablaTodosProductosFranjas();
-      // Autoguardado siempre activo: guardar en BD para todos los productos
-      setStatus('Guardando franjas para todos los productos...', true);
-      setTimeout(() => btnGuardar.click(), 250);
+      actualizarCabeceraPrecioIVA();
+      await cargarFranjasSeleccionado();
     }
   } catch (e) {
     console.error('Error cargando productos:', e);
@@ -322,10 +452,41 @@ btnGuardar.addEventListener('click', async () => {
   }
 })();
 
-// Eventos de selección múltiple
-if (chkSelectAll && productosMulti) {
-  chkSelectAll.addEventListener('change', (e) => {
-    const checked = e.target.checked;
-    Array.from(productosMulti.options).forEach(opt => { opt.selected = checked; });
+// Buscador por concepto: filtra opciones del select
+function aplicarFiltroProductos(term) {
+  const t = norm(term).trim();
+  const prevValue = productoSelect.value || '';
+  const filtrados = productosCache.filter(p => norm(`${p.nombre}`).includes(t));
+  const opciones = filtrados
+    .map(p => `<option value="${p.id}">${p.nombre}</option>`)
+    .join('');
+  productoSelect.innerHTML = '<option value="">-- Seleccione producto --</option>' + opciones;
+  // Si había uno seleccionado y sigue estando, mantenerlo; si no, seleccionar el primero encontrado
+  if (prevValue && filtrados.some(p => String(p.id) === String(prevValue))) {
+    productoSelect.value = prevValue;
+  } else if (filtrados.length > 0) {
+    productoSelect.value = String(filtrados[0].id);
+    // disparar change para cargar franjas del primer resultado
+    productoSelect.dispatchEvent(new Event('change'));
+  }
+  actualizarCabeceraPrecioIVA();
+}
+
+if (productoSearch && productoSelect) {
+  const handleFiltroDebounced = debounce((e) => {
+    aplicarFiltroProductos(e.target.value);
+  }, 300);
+  productoSearch.addEventListener('input', handleFiltroDebounced);
+}
+
+// Al cambiar el producto, cargar sus franjas
+if (productoSelect) {
+  productoSelect.addEventListener('change', () => {
+    if (getSelectedProductoId()) {
+      actualizarCabeceraPrecioIVA();
+      cargarFranjasSeleccionado();
+    }
   });
 }
+
+//
