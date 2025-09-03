@@ -33,6 +33,347 @@ def obtener_productos():
             conn.close()
 
 
+def aplicar_franjas_a_todos(ancho: int = 10, max_unidades: int = 500, descuento_max: float = 60.0):
+    """
+    Genera e inserta franjas de descuento para TODOS los productos existentes.
+    - Bandas de `ancho` unidades (por defecto 10) hasta cubrir `max_unidades` (por defecto 500).
+    - Descuento máximo `descuento_max` (por defecto 60%).
+    - Garantiza que el precio total (con IVA) sea estrictamente decreciente entre franjas.
+
+    Retorna dict con resumen.
+    """
+    if ancho < 1:
+        ancho = 10
+    if max_unidades < ancho:
+        max_unidades = ancho
+    if descuento_max < 0:
+        descuento_max = 0.0
+    if descuento_max > 60.0:
+        descuento_max = 60.0
+
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # Obtener todos los productos con sus valores base
+        cur.execute('SELECT id, subtotal, impuestos FROM productos ORDER BY id ASC')
+        productos_rows = cur.fetchall()
+
+        total = 0
+        afectados = 0
+        errores = []
+
+        # Calcular número de bandas necesarias
+        import math
+        num_bandas = int(math.ceil(max_unidades / float(ancho)))
+        if num_bandas < 1:
+            num_bandas = 1
+
+        # Plan de descuentos lineal desde 0 hasta descuento_max en num_bandas-1 pasos
+        descuento_inicial = 0.0
+        incremento = (float(descuento_max) - descuento_inicial) / max(1, (num_bandas - 1))
+
+        ensure_tabla_descuentos_bandas()
+
+        for row in productos_rows:
+            try:
+                producto_id = int(row['id'] if isinstance(row, sqlite3.Row) else row[0])
+                base_subtotal = float(row['subtotal'] if isinstance(row, sqlite3.Row) else row[1])
+                iva_pct = float(row['impuestos'] if isinstance(row, sqlite3.Row) else row[2])
+
+                franjas_cfg = {
+                    'bandas': num_bandas,
+                    'ancho': ancho,
+                    'descuento_inicial': descuento_inicial,
+                    'incremento': incremento
+                }
+                franjas = _generar_franjas_automaticas(base_subtotal, iva_pct, franjas_cfg)
+                reemplazar_franjas_descuento_producto(producto_id, franjas)
+                afectados += 1
+            except Exception as e_prod:
+                errores.append({'producto_id': row['id'] if isinstance(row, sqlite3.Row) else row[0], 'error': str(e_prod)})
+            finally:
+                total += 1
+
+        return {
+            'success': True,
+            'procesados': total,
+            'actualizados': afectados,
+            'errores': errores
+        }
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+def _generar_franjas_automaticas(base_subtotal: float, iva_pct: float, franjas_cfg: dict):
+    """
+    Genera las franjas automáticas respetando parámetros enviados por el frontend.
+    franjas_cfg keys esperadas: bandas, ancho, descuento_inicial, incremento
+    Devuelve lista de dicts [{min, max, descuento}]
+    """
+    # Normalización de parámetros
+    bandas_val = franjas_cfg.get('bandas')
+    num_bandas = int(bandas_val) if bandas_val is not None else 3
+    ancho_val = franjas_cfg.get('ancho')
+    ancho = int(ancho_val) if ancho_val is not None else 10
+    desc_ini_val = franjas_cfg.get('descuento_inicial')
+    inc_val = franjas_cfg.get('incremento')
+    desc_inicial = float(desc_ini_val) if desc_ini_val is not None else 5.0
+    incremento = float(inc_val) if inc_val is not None else 5.0
+    if 0.0 < desc_inicial <= 1.0:
+        desc_inicial *= 100.0
+    if 0.0 < incremento <= 1.0:
+        incremento *= 100.0
+    if desc_inicial < 0.0: desc_inicial = 0.0
+    if desc_inicial > 60.0: desc_inicial = 60.0
+    if incremento < 0.0: incremento = 0.0
+    if incremento > 60.0: incremento = 60.0
+    if num_bandas < 1: num_bandas = 1
+    if num_bandas > 60: num_bandas = 60
+    if ancho < 1: ancho = 1
+
+    def precio_con_iva_por_descuento(pct_desc: float) -> float:
+        aplicado = max(0.0, base_subtotal * (1.0 - max(0.0, min(60.0, pct_desc)) / 100.0))
+        return aplicado * (1.0 + max(0.0, float(iva_pct)) / 100.0)
+
+    franjas = []
+    inicio = 1
+
+    # Precalcular precio base con IVA y objetivo final con dmax
+    base_con_iva = base_subtotal * (1.0 + max(0.0, float(iva_pct)) / 100.0)
+    dmax = min(60.0, max(0.0, desc_inicial + (num_bandas - 1) * incremento))
+    floor_con_iva = base_con_iva * (1.0 - dmax / 100.0)
+    if floor_con_iva < 0:
+        floor_con_iva = 0.0
+
+    # Distribución en MILÉSIMAS (0,001 €) para permitir más precios distintos y bajada estricta
+    base_thou = int(round(base_con_iva * 1000))
+    floor60_thou = int(round(floor_con_iva * 1000))
+    # permitir al menos 1 milésima por paso si hay margen
+    min_floor_thou = max(0, base_thou - max(0, num_bandas - 1))
+    floor_eff_thou = max(floor60_thou, min_floor_thou)
+    if floor_eff_thou > base_thou:
+        floor_eff_thou = base_thou
+
+    span_thou = max(0, base_thou - floor_eff_thou)
+    steps = []
+    if num_bandas <= 1:
+        steps = []
+    else:
+        q, r = divmod(span_thou, num_bandas - 1)
+        if span_thou >= (num_bandas - 1):
+            base_step = max(1, q)
+            steps = [base_step] * (num_bandas - 1)
+            exceso = base_step * (num_bandas - 1) - span_thou
+            idx = len(steps) - 1
+            while exceso > 0 and idx >= 0:
+                if steps[idx] > 1:
+                    steps[idx] -= 1
+                    exceso -= 1
+                idx -= 1
+        else:
+            # Distribuir 1 milésima en las primeras 'span_thou' bandas
+            steps = [0] * (num_bandas - 1)
+            for i in range(span_thou):
+                steps[i] = 1
+
+    prev_price_red = None
+    prev_pct = 0.0
+    last_overall_max = inicio + ancho * num_bandas - 1
+    for i in range(num_bandas):
+        min_c = inicio + i * ancho
+        max_c = min_c + ancho - 1
+
+        if num_bandas == 1:
+            target_price = base_con_iva
+        else:
+            drop_thou = sum(steps[:i]) if i > 0 else 0
+            target_thou = base_thou - drop_thou
+            if target_thou < 0:
+                target_thou = 0
+            if target_thou > base_thou:
+                target_thou = base_thou
+            target_price = target_thou / 1000.0  # no redondear a 2 decimales aquí
+
+        # Asegurar estricto descenso de al menos 0.001; si no es posible, fusionar resto de bandas
+        if prev_price_red is not None and target_price >= prev_price_red:
+            # ¿es posible bajar 0.001?
+            candidate = max(0.0, round(prev_price_red - 0.001, 3))
+            if candidate >= 0.0 and candidate < prev_price_red:
+                target_price = candidate
+            else:
+                # No hay margen real para bajar. Fusionar resto de bandas.
+                if franjas:
+                    franjas[-1]['max'] = last_overall_max
+                else:
+                    # Si es la primera, crear una única banda completa sin bajar precio
+                    pct_tmp = 0.0
+                    franjas.append({'min': min_c, 'max': last_overall_max, 'descuento': round(float(pct_tmp), 6)})
+                return franjas
+
+        # Convertir precio objetivo a descuento (%) respecto al base_con_iva
+        pct_raw = 0.0
+        if base_con_iva > 0:
+            pct_raw = (1.0 - (target_price / base_con_iva)) * 100.0
+        # Plan suave: no superar este máximo para la franja i
+        pct_plan_cap = min(60.0, max(0.0, desc_inicial + i * incremento))
+
+        # Forzar primera franja sin descuento
+        if i == 0:
+            pct = 0.0
+        else:
+            # Aplicar límites: [prev_pct, pct_plan_cap] y nunca > 60
+            pct = max(prev_pct, min(60.0, min(pct_raw, pct_plan_cap)))
+
+        # Si se alcanzaría el 60% antes de la última banda, fusionar resto
+        if pct >= 60.0 and i < (num_bandas - 1):
+            applied_price = precio_con_iva_por_descuento(pct)
+            prev_price_red = applied_price
+            if franjas:
+                franjas[-1]['max'] = last_overall_max
+            else:
+                franjas.append({'min': min_c, 'max': last_overall_max, 'descuento': 60.0})
+            return franjas
+
+        # Recalcular precio con ese pct para registrar prev_price_red real aplicado
+        applied_price = precio_con_iva_por_descuento(pct)
+        if prev_price_red is not None and applied_price >= prev_price_red:
+            # Intentar microajuste dentro del cap del plan para garantizar bajada >= 0.001€
+            objetivo = max(0.0, round(prev_price_red - 0.001, 3))
+            if base_con_iva > 0:
+                pct_needed = (1.0 - (objetivo / base_con_iva)) * 100.0
+                # No superar el cap del plan en esta franja
+                pct_target = min(pct_plan_cap, max(prev_pct, pct_needed))
+                # Microajuste hacia arriba en pasos de 0.0001 dentro del cap
+                guard = 0
+                while applied_price >= prev_price_red and pct < pct_target and guard < 100000:
+                    pct = min(pct_target, pct + 0.0001)
+                    applied_price = precio_con_iva_por_descuento(pct)
+                    guard += 1
+                # Si aún no baja, no forzar superar el cap: fusionar resto de bandas
+                if applied_price >= prev_price_red:
+                    if franjas:
+                        franjas[-1]['max'] = last_overall_max
+                    else:
+                        franjas.append({'min': min_c, 'max': last_overall_max, 'descuento': round(float(pct), 6)})
+                    return franjas
+
+        prev_price_red = applied_price
+        prev_pct = max(prev_pct, pct)
+        franjas.append({'min': min_c, 'max': max_c, 'descuento': round(float(pct), 6)})
+    return franjas
+
+
+def ensure_tabla_productos():
+    """
+    Crea la tabla 'productos' si no existe con un esquema mínimo requerido.
+    Asegura que 'id' sea INTEGER PRIMARY KEY AUTOINCREMENT.
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # 1) Crear si no existe con el esquema correcto
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS productos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nombre TEXT NOT NULL,
+                descripcion TEXT DEFAULT '',
+                subtotal REAL NOT NULL DEFAULT 0,
+                iva REAL NOT NULL DEFAULT 0,
+                impuestos INTEGER NOT NULL DEFAULT 21,
+                total REAL NOT NULL DEFAULT 0
+            )
+            """
+        )
+
+        # 2) Verificar si la tabla existente carece de PK en 'id'
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='productos'")
+        if cur.fetchone():
+            cur.execute('PRAGMA table_info(productos)')
+            cols = cur.fetchall()
+            pk_on_id = False
+            for c in cols:
+                # PRAGMA table_info: (cid, name, type, notnull, dflt_value, pk)
+                name = c[1] if not isinstance(c, sqlite3.Row) else c['name']
+                pkflag = c[5] if not isinstance(c, sqlite3.Row) else c['pk']
+                if str(name).lower() == 'id' and int(pkflag or 0) > 0:
+                    pk_on_id = True
+                    break
+
+            if not pk_on_id:
+                print('[PRODUCTOS][MIGRACION] Detectada tabla productos sin PRIMARY KEY en id. Iniciando migración...')
+                # Creamos tabla nueva con el esquema correcto
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS productos_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        nombre TEXT NOT NULL,
+                        descripcion TEXT DEFAULT '',
+                        subtotal REAL NOT NULL DEFAULT 0,
+                        iva REAL NOT NULL DEFAULT 0,
+                        impuestos INTEGER NOT NULL DEFAULT 21,
+                        total REAL NOT NULL DEFAULT 0
+                    )
+                    """
+                )
+                # Copiar datos (incluido id existente si lo hubiera)
+                cur.execute(
+                    """
+                    INSERT INTO productos_new (id, nombre, descripcion, subtotal, iva, impuestos, total)
+                    SELECT id, nombre, descripcion, subtotal, iva, impuestos, total FROM productos
+                    """
+                )
+                # Reemplazar tabla
+                cur.execute('DROP TABLE productos')
+                cur.execute('ALTER TABLE productos_new RENAME TO productos')
+                print('[PRODUCTOS][MIGRACION] Migración completada. Tabla productos ahora con id AUTOINCREMENT')
+
+        # 3) Índices útiles
+        cur.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_productos_nombre ON productos (nombre)
+            """
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"[PRODUCTOS] Error asegurando/migrando tabla productos: {e}")
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+# Asegurar tabla al importar el módulo
+try:
+    ensure_tabla_productos()
+except Exception as _e:
+    print(f"[PRODUCTOS] No se pudo asegurar la tabla al importar: {_e}")
+
+def regenerar_franjas_producto(producto_id: int, franjas_cfg: dict):
+    """
+    Regenera y reemplaza las franjas del producto a partir de su subtotal/iva actuales
+    y la configuración recibida.
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('SELECT subtotal, impuestos FROM productos WHERE id = ?', (producto_id,))
+        row = cur.fetchone()
+        if not row:
+            raise ValueError(f"No existe el producto {producto_id}")
+        base_subtotal = float(row['subtotal'])
+        iva_pct = float(row['impuestos'])
+        franjas = _generar_franjas_automaticas(base_subtotal, iva_pct, franjas_cfg or {})
+        ensure_tabla_descuentos_bandas()
+        reemplazar_franjas_descuento_producto(producto_id, franjas)
+        return True
+    finally:
+        if conn:
+            conn.close()
 # ===================== Franjas de descuento por producto ===================== #
 def ensure_tabla_descuentos_bandas():
     """
@@ -68,6 +409,14 @@ def ensure_tabla_descuentos_bandas():
             ON descuento_producto_franja (producto_id, min_cantidad, max_cantidad)
             """
         )
+        # Normalización preventiva: asegurar tope 60% en registros existentes
+        cur.execute(
+            """
+            UPDATE descuento_producto_franja
+            SET porcentaje_descuento = 60.0
+            WHERE porcentaje_descuento > 60.0
+            """
+        )
         conn.commit()
     except Exception as e:
         print(f"[DESCUENTOS] Error creando tabla de franjas: {e}")
@@ -101,7 +450,8 @@ def obtener_franjas_descuento_por_producto(producto_id):
             {
                 'min': int(row['min_cantidad']),
                 'max': int(row['max_cantidad']),
-                'descuento': float(row['porcentaje_descuento'])
+                # Servir 6 decimales para preservar granularidad fina
+                'descuento': round(float(row['porcentaje_descuento']), 6)
             }
             for row in filas
         ]
@@ -126,15 +476,33 @@ def reemplazar_franjas_descuento_producto(producto_id, franjas):
         for fr in franjas:
             min_c = int(fr.get('min', 0))
             max_c = int(fr.get('max', 0))
-            desc = float(fr.get('descuento', 0))
+            # Registrar valores originales recibidos
+            try:
+                original_desc = fr.get('descuento', 0)
+                desc = float(original_desc)
+            except Exception as _e:
+                print(f"[DESCUENTOS] Valor de descuento no numérico para producto {producto_id}, franja {fr}: {_e}. Se usará 0.0")
+                desc = 0.0
+                original_desc = original_desc if 'original_desc' in locals() else None
             if min_c <= 0 or max_c <= 0 or max_c < min_c:
                 raise ValueError(f"Franja inválida: {fr}")
-            if desc < 0:
-                desc = 0.0
+            # Limitar rango de porcentaje a [0, 60]
+            clamped_desc = desc
+            if clamped_desc < 0:
+                clamped_desc = 0.0
+            if clamped_desc > 60.0:
+                clamped_desc = 60.0
+            # Redondeo a 6 decimales para consistencia de almacenamiento
+            clamped_desc = round(float(clamped_desc), 6)
+            if clamped_desc != desc:
+                print(f"[DESCUENTOS] Clamp aplicado producto {producto_id}: desc_original={desc} -> desc_clamp={clamped_desc}")
+            else:
+                print(f"[DESCUENTOS] Descuento dentro de rango producto {producto_id}: desc={desc}")
             cur.execute(
                 'INSERT INTO descuento_producto_franja (producto_id, min_cantidad, max_cantidad, porcentaje_descuento) VALUES (?,?,?,?)',
-                (producto_id, min_c, max_c, desc)
+                (producto_id, min_c, max_c, clamped_desc)
             )
+            print(f"[DESCUENTOS] Insertada franja producto {producto_id}: min={min_c}, max={max_c}, desc={clamped_desc}")
         conn.commit()
         return True
     except Exception as e:
@@ -336,6 +704,13 @@ def crear_producto(data):
         dict: Resultado de la operación con mensaje de éxito/error y el ID
     """
     
+    # Asegurar existencia de tabla y log de entrada
+    try:
+        ensure_tabla_productos()
+    except Exception as e:
+        print(f"[PRODUCTOS] Error al asegurar tabla antes de crear: {e}")
+
+    print(f"[PRODUCTOS] crear_producto payload: {data}")
     # Validar campos requeridos
     nombre = data.get('nombre')
     if not nombre:
@@ -390,6 +765,30 @@ def crear_producto(data):
         
         conn.commit()
         last_id = cursor.lastrowid
+        print(f"[PRODUCTOS] Producto insertado. lastrowid={last_id}")
+        
+        # Crear franjas de descuento automáticas si se suministra configuración
+        try:
+            franjas_cfg = data.get('franjas_auto') or {}
+            # Permitir enviar plano en raíz también
+            if not franjas_cfg and any(k in data for k in ['franja_inicio', 'bandas', 'ancho', 'descuento_inicial', 'incremento']):
+                franjas_cfg = {
+                    'franja_inicio': data.get('franja_inicio'),
+                    'bandas': data.get('bandas'),
+                    'ancho': data.get('ancho'),
+                    'descuento_inicial': data.get('descuento_inicial'),
+                    'incremento': data.get('incremento')
+                }
+            # Solo proceder si se especifica al menos franja_inicio o bandas
+            if isinstance(franjas_cfg, dict) and (franjas_cfg.get('franja_inicio') is not None or franjas_cfg.get('bandas') is not None):
+                base_subtotal = float(data.get('subtotal') or 0)
+                iva_pct = float(data.get('impuestos') or 0)
+                franjas = _generar_franjas_automaticas(base_subtotal, iva_pct, franjas_cfg)
+                ensure_tabla_descuentos_bandas()
+                reemplazar_franjas_descuento_producto(last_id, franjas)
+        except Exception as e_fr:
+            # No fallar la creación de producto si las franjas fallan, solo registrar
+            print(f"[DESCUENTOS] Advertencia al crear franjas automáticas para producto {last_id}: {e_fr}")
         
         return {
             "success": True,
@@ -489,7 +888,26 @@ def actualizar_producto(id_producto, data):
         ))
         
         conn.commit()
-        
+
+        # Si llegan parámetros de franjas automáticas desde el frontend, regenerarlas respetando la config
+        try:
+            franjas_cfg = data.get('franjas_auto') or {}
+            # Permitir plano en raíz también
+            if not franjas_cfg and any(k in data for k in ['franja_inicio', 'bandas', 'ancho', 'descuento_inicial', 'incremento']):
+                franjas_cfg = {
+                    'franja_inicio': data.get('franja_inicio'),
+                    'bandas': data.get('bandas'),
+                    'ancho': data.get('ancho'),
+                    'descuento_inicial': data.get('descuento_inicial'),
+                    'incremento': data.get('incremento')
+                }
+            # Solo proceder si se especifica al menos franja_inicio o bandas
+            if isinstance(franjas_cfg, dict) and (franjas_cfg.get('franja_inicio') is not None or franjas_cfg.get('bandas') is not None):
+                regenerar_franjas_producto(id_producto, franjas_cfg)
+        except Exception as e_fr:
+            # No fallar la actualización del producto si las franjas fallan, solo registrar
+            print(f"[DESCUENTOS] Advertencia al regenerar franjas automáticas para producto {id_producto}: {e_fr}")
+
         return {
             "success": True,
             "message": "Producto actualizado exitosamente."
@@ -548,9 +966,16 @@ def eliminar_producto(id_producto):
                 "message": "No se puede eliminar el producto porque está siendo utilizado en tickets, facturas o proformas."
             }
         
-        # Eliminar el producto
-        cursor.execute('DELETE FROM productos WHERE id = ?', (id_producto,))
-        conn.commit()
+        # Eliminar franjas asociadas y el producto dentro de una transacción
+        try:
+            conn.execute('BEGIN IMMEDIATE')
+            cursor.execute('DELETE FROM descuento_producto_franja WHERE producto_id = ?', (id_producto,))
+            cursor.execute('DELETE FROM productos WHERE id = ?', (id_producto,))
+            conn.commit()
+        except Exception as e_tr:
+            if 'conn' in locals():
+                conn.rollback()
+            raise e_tr
         
         return {
             "success": True,

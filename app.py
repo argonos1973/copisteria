@@ -86,6 +86,77 @@ try:
 except Exception as e:
     print(f"[AVISO] No se pudo asegurar la tabla de franjas de descuento: {e}")
 
+# ================== API: aplicar franjas a todos los productos ================== #
+@app.route('/api/productos/aplicar_franjas', methods=['POST'])
+def api_aplicar_franjas_todos():
+    try:
+        # Permitir parámetros por query o body JSON
+        args = request.get_json(silent=True) or {}
+        ancho = request.args.get('ancho', args.get('ancho', 10))
+        max_unidades = request.args.get('max_unidades', args.get('max_unidades', 500))
+        descuento_max = request.args.get('descuento_max', args.get('descuento_max', 60))
+        try:
+            ancho = int(ancho)
+        except Exception:
+            ancho = 10
+        try:
+            max_unidades = int(max_unidades)
+        except Exception:
+            max_unidades = 500
+        try:
+            descuento_max = float(descuento_max)
+        except Exception:
+            descuento_max = 60.0
+
+        resultado = productos.aplicar_franjas_a_todos(ancho=ancho, max_unidades=max_unidades, descuento_max=descuento_max)
+        status = 200 if resultado.get('success') else 400
+        try:
+            logger.info(f"[API] aplicar_franjas todos ancho={ancho} max_unidades={max_unidades} descuento_max={descuento_max} -> {resultado}")
+        except Exception:
+            pass
+        return jsonify(resultado), status
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ================== DEBUG: esquema de la tabla productos ================== #
+@app.route('/api/debug/schema_productos', methods=['GET'])
+def debug_schema_productos():
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': 'No se pudo abrir la base de datos'}), 500
+        cur = conn.cursor()
+        # Buscar tabla productos
+        cur.execute("SELECT name, sql FROM sqlite_master WHERE type='table' AND name='productos'")
+        row = cur.fetchone()
+        exists = bool(row)
+        create_sql = row['sql'] if row and 'sql' in row.keys() else (row[1] if row else None)
+        # PRAGMA table_info
+        table_info = []
+        if exists:
+            cur.execute('PRAGMA table_info(productos)')
+            table_info = [tuple(r) for r in cur.fetchall()]
+        # Conteo/Max id
+        count_max = None
+        if exists:
+            try:
+                cur.execute('SELECT COUNT(*) as c, MAX(id) as m FROM productos')
+                r = cur.fetchone()
+                count_max = {'count': (r['c'] if 'c' in r.keys() else r[0]), 'max_id': (r['m'] if 'm' in r.keys() else r[1])}
+            except Exception:
+                count_max = None
+        return jsonify({
+            'exists': exists,
+            'create_sql': create_sql,
+            'table_info': table_info,
+            'count_max': count_max
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
 def format_date(date_value):
     """Función auxiliar para formatear fechas en formato DD/MM/AAAA"""
     if date_value is None:
@@ -275,6 +346,10 @@ def exportar():
 def api_get_franjas_descuento_producto(producto_id):
     try:
         franjas = productos.obtener_franjas_descuento_por_producto(producto_id)
+        try:
+            logger.info(f"[API] GET franjas_descuento producto_id={producto_id}, total_franjas={len(franjas)}")
+        except Exception:
+            pass
         return jsonify({'producto_id': producto_id, 'franjas': franjas})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -285,6 +360,11 @@ def api_get_franjas_descuento_producto(producto_id):
 def api_set_franjas_descuento_producto(producto_id):
     try:
         body = request.get_json() or {}
+        try:
+            body_size = len(body) if isinstance(body, list) else (len(body.get('franjas', [])) if isinstance(body, dict) else 0)
+            logger.info(f"[API] SET franjas_descuento producto_id={producto_id}, recibido_tipo={'list' if isinstance(body, list) else 'dict'}, elementos={body_size}")
+        except Exception:
+            pass
         # Aceptar tanto {franjas:[...]} como lista directa
         if isinstance(body, list):
             franjas = body
@@ -293,9 +373,16 @@ def api_set_franjas_descuento_producto(producto_id):
         if not isinstance(franjas, list):
             return jsonify({'error': 'Formato inválido: se espera lista de franjas'}), 400
         productos.reemplazar_franjas_descuento_producto(producto_id, franjas)
+        try:
+            logger.info(f"[API] OK guardadas franjas_descuento producto_id={producto_id}, total_franjas={len(franjas)}")
+        except Exception:
+            pass
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 400
+
+
+ 
 
 @app.route('/tickets/paginado', methods=['GET'])
 def tickets_paginado():

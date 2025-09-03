@@ -1,271 +1,378 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
+import { mostrarCargando, ocultarCargando } from './scripts_utils.js';
 
-const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
+// Utilidades de redondeo
+const round4 = (v) => +Number(v ?? 0).toFixed(4);
+const round2 = (v) => +Number(v ?? 0).toFixed(2);
 
-createApp({
-  setup() {
-    // Base API con prefijo /api
-    const API_BASE = `http://${IP_SERVER}:${PORT}/api`;
+document.addEventListener('DOMContentLoaded', () => {
+  const API_BASE = `http://${IP_SERVER}:${PORT}/api`;
 
-    // Estado del producto
-    const producto = reactive({
-      id: null,
-      nombre: '',
-      descripcion: '',
-      subtotal: 0,
-      impuestos: 21,
-      iva: 0,
-      total: 0
+  // Elementos
+  const titulo = document.getElementById('tituloFormulario');
+  const form = document.getElementById('formProducto');
+  const inputNombre = document.getElementById('nombre');
+  const inputDescripcion = document.getElementById('descripcion');
+  const inputSubtotal = document.getElementById('subtotal');
+  const selectImpuestos = document.getElementById('impuestos');
+  const inputTotal = document.getElementById('total');
+  const btnCancelar = document.getElementById('btnCancelar');
+  const btnGuardar = document.getElementById('btnGuardar');
+  // Bloque resumen de franjas en edición
+  const bloqueFranjasEdicion = document.getElementById('bloqueFranjasEdicion');
+  const franjasResumen = document.getElementById('franjasResumen');
+  const btnGestionarFranjas = document.getElementById('btnGestionarFranjas');
+
+  // Franjas automáticas
+  const fieldsetFranjas = document.getElementById('fieldsetFranjasAuto');
+  const chkFranjasAuto1500 = document.getElementById('chkFranjasAuto1500');
+  const inFranjaInicio = document.getElementById('franja_inicio');
+  const inBandas = document.getElementById('bandas');
+  const inAncho = document.getElementById('ancho');
+  const inDescInicial = document.getElementById('descuento_inicial');
+  const inIncremento = document.getElementById('incremento');
+
+  // Errores
+  const errNombre = document.getElementById('errorNombre');
+  const errSubtotal = document.getElementById('errorSubtotal');
+  const errImpuestos = document.getElementById('errorImpuestos');
+
+  // Estado simple
+  const state = {
+    id: null,
+    nombre: '',
+    descripcion: '',
+    subtotal: 0,
+    impuestos: 21,
+    iva: 0,
+    total: 0,
+    cargando: false,
+    modoEdicion: false,
+  };
+
+  // Valores por defecto de franjas automáticas
+  inFranjaInicio.value = 2;
+  inBandas.value = 3;
+  inAncho.value = 10;
+  inDescInicial.value = 5;
+  inIncremento.value = 5;
+
+  // Aplicar configuración automática 1-500 (50 franjas, ancho 10, 0% -> ~60%)
+  const aplicarAuto1500 = (activar) => {
+    if (!inFranjaInicio || !inBandas || !inAncho || !inDescInicial || !inIncremento) return;
+    if (activar) {
+      inFranjaInicio.value = '1';
+      inBandas.value = '50';
+      inAncho.value = '10';
+      inDescInicial.value = '0';
+      // Reducir incremento por franja para minimizar saltos (50 franjas => 50 pasos aprox.)
+      // Nota: con 60/50 la última franja queda en ~58.8% si desc_inicial=0, respetando tope 60%.
+      const inc = 60 / 50;
+      inIncremento.value = inc.toFixed(6);
+    }
+    // Habilitar/Deshabilitar controles según estado
+    inBandas.disabled = activar;
+    inAncho.disabled = activar;
+    inDescInicial.disabled = activar;
+    inIncremento.disabled = activar;
+    if (inFranjaInicio) {
+      inFranjaInicio.disabled = true; // siempre 1
+      inFranjaInicio.title = 'La franja inicial siempre es 1';
+    }
+  };
+
+  if (chkFranjasAuto1500) {
+    chkFranjasAuto1500.addEventListener('change', (e) => {
+      aplicarAuto1500(!!e.target.checked);
     });
+  }
 
-    // Estado del formulario
-    const modoEdicion = ref(false);
-    const errores = reactive({});
-    const cargando = ref(false);
-    const nombreInput = ref(null);
+  // Funciones de cálculo
+  const recalcDesdeSubtotal = () => {
+    const base = Number(inputSubtotal.value || 0);
+    const ivaPct = Number(selectImpuestos.value || 0);
+    if (isNaN(base) || isNaN(ivaPct)) return;
+    const iva = round2(base * (ivaPct / 100));
+    inputTotal.value = round2(base + iva);
+  };
 
-    // Obtener ID de URL
-    const getIdFromUrl = () => {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('id');
-    };
+  const recalcDesdeTotal = () => {
+    const total = Number(inputTotal.value || 0);
+    const ivaPct = Number(selectImpuestos.value || 0);
+    if (isNaN(total) || isNaN(ivaPct)) return;
+    const divisor = 1 + (ivaPct / 100);
+    const base = total / divisor;
+    inputSubtotal.value = round4(base);
+  };
 
-    // Formateo de precio
-    const formatearPrecio = (precio) => {
-      return precio !== undefined && precio !== null
-        ? `${Number(precio).toFixed(2)} €`
-        : '0.00 €';
-    };
+  // Uppercase en tiempo real
+  inputNombre.addEventListener('input', () => {
+    inputNombre.value = (inputNombre.value || '').toUpperCase();
+  });
+  inputDescripcion.addEventListener('input', () => {
+    inputDescripcion.value = (inputDescripcion.value || '').toUpperCase();
+  });
 
-    // Helpers redondeo
-    const round4 = (v) => +Number(v ?? 0).toFixed(4);
-    const round2 = (v) => +Number(v ?? 0).toFixed(2);
+  // Recalcular
+  inputSubtotal.addEventListener('input', recalcDesdeSubtotal);
+  inputTotal.addEventListener('input', recalcDesdeTotal);
+  selectImpuestos.addEventListener('change', recalcDesdeSubtotal);
 
-    // Cálculo de totales desde subtotal -> total
-    const calcularTotales = () => {
-      const base = Number(producto.subtotal ?? 0);
-      const ivaPct = Number(producto.impuestos ?? 0);
-      if (isNaN(base) || isNaN(ivaPct)) return;
-      producto.subtotal = round4(base);
-      producto.iva = round2(base * (ivaPct / 100));
-      producto.total = round2(base + producto.iva);
-    };
+  // Navegación
+  btnCancelar.addEventListener('click', () => {
+    window.location.href = 'CONSULTA_PRODUCTOS.html';
+  });
 
-    // Cálculo inverso desde total -> subtotal
-    const calcularDesdeTotal = () => {
-      const total = Number(producto.total ?? 0);
-      const ivaPct = Number(producto.impuestos ?? 0);
-      if (isNaN(total) || isNaN(ivaPct)) return;
-      const divisor = 1 + (ivaPct / 100);
-      const base = total / divisor;
-      producto.subtotal = round4(base);
-      producto.iva = round2(total - producto.subtotal);
-      producto.total = round2(total);
-    };
+  // Cargar si hay id en URL (sanear 'null'/'undefined')
+  const params = new URLSearchParams(window.location.search);
+  const rawId = params.get('id');
+  const id = (rawId && rawId !== 'null' && rawId !== 'undefined' && rawId.trim() !== '') ? rawId : null;
+  const accion = params.get('accion');
+  const confirmado = params.get('confirmado');
 
-    // Handlers de inputs
-    const onSubtotalInput = () => {
-      calcularTotales();
-    };
+  const cargarProducto = async (pid) => {
+    try {
+      state.cargando = true;
+      mostrarCargando();
+      const { data } = await axios.get(`${API_BASE}/productos/${pid}`);
+      state.id = data.id;
+      inputNombre.value = data.nombre || '';
+      inputDescripcion.value = data.descripcion || '';
+      selectImpuestos.value = Number(data.impuestos ?? 21);
+      inputSubtotal.value = round4(Number(data.subtotal ?? 0));
+      recalcDesdeSubtotal();
+      state.modoEdicion = true;
+      titulo.textContent = 'Editar Producto';
+      // Mantener visible el bloque de franjas automáticas también en edición para poder enviar parámetros
+      if (fieldsetFranjas) fieldsetFranjas.style.display = '';
+      if (btnGuardar) btnGuardar.textContent = 'Guardar';
 
-    const onTotalInput = () => {
-      calcularDesdeTotal();
-    };
-
-    const onImpuestosChange = () => {
-      // Recalcular en función del último campo editado; por simplicidad, desde subtotal
-      calcularTotales();
-    };
-
-    // Mayúsculas en tiempo real
-    const onNombreInput = () => {
-      if (typeof producto.nombre === 'string') {
-        producto.nombre = producto.nombre.toUpperCase();
-      }
-    };
-
-    const onDescripcionInput = () => {
-      if (typeof producto.descripcion === 'string') {
-        producto.descripcion = producto.descripcion.toUpperCase();
-      }
-    };
-
-    // Flag para ejecutar eliminación tras cargar
-    let eliminarTrasCargar = false;
-
-    // Cargar producto por ID
-    const cargarProducto = async (id) => {
+      // Cargar y mostrar resumen de franjas del producto en edición
       try {
-        cargando.value = true;
-        const response = await fetch(`${API_BASE}/productos/${id}`);
-        if (!response.ok) throw new Error(`Error al cargar producto: ${response.statusText}`);
-        const data = await response.json();
-        Object.keys(producto).forEach((k) => {
-          if (data.hasOwnProperty(k)) producto[k] = data[k];
-        });
-        modoEdicion.value = true;
-        // Si venimos con accion=eliminar, ejecutar ahora que ya tenemos el producto cargado
-        if (eliminarTrasCargar) {
-          console.debug('[GESTION_PRODUCTOS] ejecutando eliminación tras carga');
-          await eliminarProductoActual();
-          eliminarTrasCargar = false;
+        mostrarCargando();
+        const resFranjas = await axios.get(`${API_BASE}/productos/${pid}/franjas_descuento`);
+        const lista = Array.isArray(resFranjas.data?.franjas) ? resFranjas.data.franjas : [];
+        const n = lista.length;
+        if (bloqueFranjasEdicion && franjasResumen) {
+          bloqueFranjasEdicion.style.display = '';
+          if (n === 0) {
+            franjasResumen.textContent = 'Sin franjas definidas';
+          } else {
+            // Mostrar rango de cantidades y % mínimo-máximo
+            const mins = lista.map(f => Number(f.min ?? f.min_cantidad ?? 0));
+            const maxs = lista.map(f => Number(f.max ?? f.max_cantidad ?? 0));
+            const descs = lista.map(f => Number(f.descuento ?? f.porcentaje_descuento ?? 0));
+            const minMin = Math.min(...mins);
+            const maxMax = Math.max(...maxs);
+            const minDesc = Math.min(...descs);
+            const maxDesc = Math.max(...descs);
+            franjasResumen.textContent = `${n} franjas · unidades ${minMin}-${maxMax} · desc ${minDesc.toFixed(4)}%-${maxDesc.toFixed(4)}%`;
+          }
+
         }
-      } catch (error) {
-        console.error('Error al cargar el producto:', error);
-        mostrarNotificacion(`Error: ${error.message}`, 'error');
-      } finally {
-        cargando.value = false;
-      }
-    };
-
-    // Eliminar producto actual (confirmación y borrado)
-    const eliminarProductoActual = async () => {
-      if (!producto.id) {
-        mostrarNotificacion('No hay producto para eliminar', 'error');
-        return;
-      }
-      const confirmado = (typeof mostrarConfirmacion === 'function')
-        ? await mostrarConfirmacion('¿Está seguro de eliminar este producto?')
-        : window.confirm('¿Está seguro de eliminar este producto?');
-      if (!confirmado) return;
-      try {
-        cargando.value = true;
-        const response = await axios.delete(`${API_BASE}/productos/${producto.id}`);
-        if (response.data?.success) {
-          mostrarNotificacion('Producto eliminado correctamente', 'success');
-          setTimeout(() => { window.location.href = 'CONSULTA_PRODUCTOS.html'; }, 600);
-        } else {
-          mostrarNotificacion(response.data?.message || 'No se pudo eliminar el producto.', 'error');
+        if (btnGestionarFranjas) {
+          btnGestionarFranjas.onclick = () => {
+            // Abrir la pantalla dedicada con el producto preseleccionado
+            window.location.href = `FRANJAS_DESCUENTO.html?producto_id=${encodeURIComponent(pid)}`;
+          };
         }
-      } catch (error) {
-        console.error('Error al eliminar el producto:', error);
-        mostrarNotificacion(error.response?.data?.message || error.response?.data?.error || 'No se pudo eliminar el producto', 'error');
-      } finally {
-        cargando.value = false;
-      }
-    };
-
-    // Validación
-    const validarFormulario = () => {
-      errores.nombre = '';
-      errores.subtotal = '';
-      errores.impuestos = '';
-
-      if (!producto.nombre.trim()) {
-        errores.nombre = 'El nombre es obligatorio';
-        return false;
-      }
-      if (producto.subtotal === null || producto.subtotal === undefined || isNaN(producto.subtotal)) {
-        errores.subtotal = 'El precio base debe ser un número válido';
-        return false;
-      }
-      if (producto.subtotal < 0) {
-        errores.subtotal = 'El precio base no puede ser negativo';
-        return false;
-      }
-      if (producto.impuestos === null || producto.impuestos === undefined || isNaN(producto.impuestos)) {
-        errores.impuestos = 'El porcentaje de impuestos debe ser un valor válido';
-        return false;
-      }
-      return true;
-    };
-
-    // Guardar/Actualizar
-    const guardarProducto = async () => {
-      // Normalizar campos texto a MAYÚSCULAS
-      if (typeof producto.nombre === 'string') producto.nombre = producto.nombre.trim().toUpperCase();
-      if (typeof producto.descripcion === 'string') producto.descripcion = producto.descripcion.trim().toUpperCase();
-      calcularTotales();
-      if (!validarFormulario()) {
-        mostrarNotificacion('Por favor, corrija los errores del formulario', 'error');
-        return;
-      }
-      try {
-        cargando.value = true;
-        let response;
-        if (modoEdicion.value) {
-          response = await axios.put(`${API_BASE}/productos/${producto.id}`, producto);
-        } else {
-          response = await axios.post(`${API_BASE}/productos`, producto);
+      } catch (eFran) {
+        if (bloqueFranjasEdicion && franjasResumen) {
+          bloqueFranjasEdicion.style.display = '';
+          franjasResumen.textContent = 'No se pudieron cargar las franjas';
         }
-        if (response.data.success) {
-          mostrarNotificacion(modoEdicion.value ? 'Producto actualizado correctamente' : 'Producto creado correctamente', 'success');
-          setTimeout(() => { window.location.href = 'CONSULTA_PRODUCTOS.html'; }, 800);
-        } else {
-          mostrarNotificacion(response.data.message || 'Error al guardar el producto', 'error');
-        }
-      } catch (error) {
-        console.error('Error al guardar el producto:', error);
-        mostrarNotificacion(error.response?.data?.message || error.response?.data?.error || 'Error al guardar el producto', 'error');
-      } finally {
-        cargando.value = false;
-      }
-    };
+        console.warn('No se pudieron cargar las franjas:', eFran);
+      } finally { ocultarCargando(); }
+    } catch (e) {
+      console.error('Error al cargar el producto:', e);
+      const status = e?.response?.status;
+      const msg = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'No se pudo cargar';
+      mostrarNotificacion(`Error${status ? ' '+status : ''}: ${msg}`, 'error');
+    } finally {
+      state.cargando = false;
+      ocultarCargando();
+    }
+  };
 
-    // Volver
-    const volver = () => { window.location.href = 'CONSULTA_PRODUCTOS.html'; };
-
-    // onMounted
-    onMounted(async () => {
-      if (producto.impuestos == null) producto.impuestos = 21; // por defecto 21%
-      calcularTotales();
-      const params = new URLSearchParams(window.location.search);
-      const id = params.get('id');
-      const accion = params.get('accion');
-      const confirmado = params.get('confirmado');
-      console.debug('[GESTION_PRODUCTOS] params', { id, accion });
-      // Si viene con accion=eliminar, marcar para ejecutar tras cargar y preasignar id
-      if (accion === 'eliminar' && id) {
-        eliminarTrasCargar = true;
-        // Preasignar id por si la carga falla, para permitir eliminar igualmente
-        producto.id = Number(id);
+  const eliminarProductoActual = async () => {
+    if (!state.id) {
+      mostrarNotificacion('No hay producto para eliminar', 'error');
+      return;
+    }
+    const ok = (typeof mostrarConfirmacion === 'function')
+      ? await mostrarConfirmacion('¿Está seguro de eliminar este producto?')
+      : window.confirm('¿Está seguro de eliminar este producto?');
+    if (!ok) return;
+    try {
+      state.cargando = true;
+      mostrarCargando();
+      const { data } = await axios.delete(`${API_BASE}/productos/${state.id}`);
+      if (data?.success) {
+        mostrarNotificacion('Producto eliminado correctamente', 'success');
+        setTimeout(() => { window.location.href = 'CONSULTA_PRODUCTOS.html'; }, 600);
+      } else {
+        mostrarNotificacion(data?.message || 'No se pudo eliminar el producto.', 'error');
       }
-      if (id) await cargarProducto(id);
-      // Fallback: si aún está marcado, ejecutar eliminación ahora
-      if (eliminarTrasCargar) {
-        console.debug('[GESTION_PRODUCTOS] fallback: eliminación tras onMounted');
-        // Si confirmado=1, no pedir confirmación de nuevo
+    } catch (e) {
+      console.error('Error al eliminar el producto:', e);
+      mostrarNotificacion(e.response?.data?.message || e.response?.data?.error || 'No se pudo eliminar el producto', 'error');
+    } finally {
+      state.cargando = false;
+      ocultarCargando();
+    }
+  };
+
+  if (id) {
+    cargarProducto(id).then(async () => {
+      if (accion === 'eliminar') {
         if (confirmado === '1') {
-          cargando.value = true;
           try {
-            const response = await axios.delete(`${API_BASE}/productos/${producto.id}`);
-            if (response.data?.success) {
+            state.cargando = true;
+            mostrarCargando();
+            const { data } = await axios.delete(`${API_BASE}/productos/${state.id}`);
+            if (data?.success) {
               mostrarNotificacion('Producto eliminado correctamente', 'success');
               setTimeout(() => { window.location.href = 'CONSULTA_PRODUCTOS.html'; }, 600);
             } else {
-              mostrarNotificacion(response.data?.message || 'No se pudo eliminar el producto.', 'error');
+              mostrarNotificacion(data?.message || 'No se pudo eliminar el producto.', 'error');
             }
-          } catch (error) {
-            console.error('Error al eliminar el producto (confirmado=1):', error);
-            mostrarNotificacion(error.response?.data?.message || error.response?.data?.error || 'No se pudo eliminar el producto', 'error');
+          } catch (e) {
+            console.error('Error al eliminar el producto (confirmado=1):', e);
+            mostrarNotificacion(e.response?.data?.message || e.response?.data?.error || 'No se pudo eliminar el producto', 'error');
           } finally {
-            cargando.value = false;
+            state.cargando = false;
+            ocultarCargando();
           }
         } else {
           await eliminarProductoActual();
         }
-        eliminarTrasCargar = false;
       }
-      nextTick(() => { if (nombreInput.value) nombreInput.value.focus(); });
     });
-
-    return {
-      producto,
-      modoEdicion,
-      errores,
-      cargando,
-      nombreInput,
-      formatearPrecio,
-      calcularTotales,
-      onSubtotalInput,
-      onTotalInput,
-      onImpuestosChange,
-      onNombreInput,
-      onDescripcionInput,
-      guardarProducto,
-      eliminarProductoActual,
-      volver
-    };
+  } else {
+    // Modo creación
+    selectImpuestos.value = 21;
+    titulo.textContent = 'Nuevo Producto';
+    if (btnGuardar) btnGuardar.textContent = 'Crear Producto';
+    // La franja inicial siempre será 1
+    if (inFranjaInicio) {
+      inFranjaInicio.value = '1';
+      inFranjaInicio.min = '1';
+      inFranjaInicio.disabled = true;
+      inFranjaInicio.title = 'La franja inicial siempre es 1';
+    }
+    // Si el checkbox está activo al entrar, aplicar preset
+    if (chkFranjasAuto1500 && chkFranjasAuto1500.checked) {
+      aplicarAuto1500(true);
+    }
   }
-}).mount('#app');
+
+  // Validación simple
+  const validar = () => {
+    let ok = true;
+    errNombre.style.display = 'none';
+    errSubtotal.style.display = 'none';
+    errImpuestos.style.display = 'none';
+
+    if (!inputNombre.value.trim()) {
+      errNombre.textContent = 'El nombre es obligatorio';
+      errNombre.style.display = '';
+      ok = false;
+    }
+    const sb = Number(inputSubtotal.value);
+    if (isNaN(sb)) {
+      errSubtotal.textContent = 'El precio base debe ser un número válido';
+      errSubtotal.style.display = '';
+      ok = false;
+    } else if (sb < 0) {
+      errSubtotal.textContent = 'El precio base no puede ser negativo';
+      errSubtotal.style.display = '';
+      ok = false;
+    }
+    const ivaPct = Number(selectImpuestos.value);
+    if (isNaN(ivaPct)) {
+      errImpuestos.textContent = 'El porcentaje de impuestos debe ser un valor válido';
+      errImpuestos.style.display = '';
+      ok = false;
+    }
+    return ok;
+  };
+
+  // Submit
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!validar()) {
+      mostrarNotificacion('Por favor, corrija los errores del formulario', 'error');
+      return;
+    }
+
+    const payloadBase = {
+      nombre: inputNombre.value.trim().toUpperCase(),
+      descripcion: (inputDescripcion.value || '').trim().toUpperCase(),
+      subtotal: Number(Number(inputSubtotal.value || 0).toFixed(4)),
+      impuestos: Number(selectImpuestos.value || 0),
+    };
+    // Calcular totales coherentes en backend también, pero enviamos total estimado
+    const ivaCalc = round2(payloadBase.subtotal * (payloadBase.impuestos / 100));
+    const totalCalc = round2(payloadBase.subtotal + ivaCalc);
+    const payload = { ...payloadBase, iva: ivaCalc, total: totalCalc };
+
+    try {
+      state.cargando = true;
+      let resp;
+      if (state.modoEdicion && state.id) {
+        // En edición: si el preset 1–500 está activo, enviar también franjas_auto para regenerar franjas
+        if (chkFranjasAuto1500 && chkFranjasAuto1500.checked) {
+          payload.franjas_auto = {
+            franja_inicio: 1,
+            bandas: Number(inBandas.value || 0),
+            ancho: Number(inAncho.value || 0),
+            descuento_inicial: Number(inDescInicial.value || 0),
+            incremento: Number(inIncremento.value || 0)
+          };
+        }
+        mostrarCargando();
+        console.log('payload (edición)', JSON.parse(JSON.stringify(payload)));
+        resp = await axios.put(`${API_BASE}/productos/${state.id}`, payload);
+      } else {
+        // Añadir franjas_auto sólo en creación
+        payload.franjas_auto = {
+          franja_inicio: 1,
+          bandas: Number(inBandas.value || 0),
+          ancho: Number(inAncho.value || 0),
+          descuento_inicial: Number(inDescInicial.value || 0),
+          incremento: Number(inIncremento.value || 0)
+        };
+        mostrarCargando();
+        console.log('payload (creación)', JSON.parse(JSON.stringify(payload)));
+        resp = await axios.post(`${API_BASE}/productos`, payload);
+      }
+      if (resp.data?.success) {
+        if (state.modoEdicion) {
+          mostrarNotificacion('Producto actualizado correctamente', 'success');
+          setTimeout(() => { window.location.href = 'CONSULTA_PRODUCTOS.html'; }, 800);
+        } else {
+          const nuevoIdRaw = resp?.data?.id;
+          const nuevoId = parseInt(nuevoIdRaw, 10);
+          if (Number.isFinite(nuevoId) && nuevoId > 0) {
+            mostrarNotificacion(`Producto creado (ID ${nuevoId})`, 'success');
+            // Redirigir a edición del nuevo producto
+            setTimeout(() => { window.location.href = `GESTION_PRODUCTOS.html?id=${nuevoId}`; }, 600);
+          } else {
+            // Si el backend no devolviera ID por algún motivo, volver a la lista
+            mostrarNotificacion('Producto creado correctamente', 'success');
+            setTimeout(() => { window.location.href = 'CONSULTA_PRODUCTOS.html'; }, 800);
+          }
+        }
+      } else {
+        mostrarNotificacion(resp.data?.message || 'Error al guardar el producto', 'error');
+      }
+    } catch (error) {
+      console.error('Error al guardar el producto:', error);
+      mostrarNotificacion(error.response?.data?.message || error.response?.data?.error || 'Error al guardar el producto', 'error');
+    } finally {
+      state.cargando = false;
+      ocultarCargando();
+    }
+  });
+});
