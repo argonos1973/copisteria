@@ -27,3 +27,5 @@ db/*.sqbpro
  # Temporales de QR
  static/tmp_qr/
 
+ # Ignorar DB en raíz
+ basedatos.db
