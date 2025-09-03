@@ -333,7 +333,8 @@ function seleccionarProducto() {
     busquedaProducto: document.getElementById('busqueda-producto')
   };
   
-  seleccionarProductoCommon(formElements, productosOriginales);
+  // Pasar explícitamente el tipo de documento 'factura' para aplicar franjas en la primera carga
+  seleccionarProductoCommon(formElements, productosOriginales, 'factura');
   
   // Si es producto libre, hacer editable el campo total
   const productoId = formElements.conceptoDetalle.value;

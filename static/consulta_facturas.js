@@ -1,6 +1,6 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion } from './notificaciones.js';
-import { formatearImporte, formatearFechaSoloDia, mostrarCargando, ocultarCargando, debounce, getEstadoFormateado, getEstadoClass } from './scripts_utils.js';
+import { formatearImporte, formatearFechaSoloDia, mostrarCargando, ocultarCargando, debounce, getEstadoFormateadoFactura, getEstadoClassFactura } from './scripts_utils.js';
 
 // Estados y clases se importan desde scripts_utils.js
 
@@ -263,7 +263,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 <td class="text-right">${formatearImporte(iva)}</td>
                 <td class="text-right">${formatearImporte(importeCobrado)}</td>
                 <td class="text-right">${formatearImporte(total)}</td>
-                <td class="text-center ${getEstadoClass(factura.estado)}">${getEstadoFormateado(factura.estado)}</td>
+                <td class="text-center ${getEstadoClassFactura(factura.estado)}">${getEstadoFormateadoFactura(factura.estado)}</td>
                 <td class="text-center">
                     ${(['A'].includes(factura.estado)) ? '' : `<i class=\"fas fa-print print-icon\" style=\"cursor: pointer;\" data-id=\"${factura.id}\"></i>`}
                 </td>

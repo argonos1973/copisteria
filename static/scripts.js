@@ -7,6 +7,7 @@ import {
   parsearImporte,
   calcularPrecioConDescuento,
   calcularTotalDetalle,
+  debounce,
   abrirModalPagos as abrirModal,
   cerrarModalPagos as cerrarModal,
   calcularCambio as calcularCambioModal,
@@ -106,7 +107,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Agregar eventos para "concepto-input" si existe
     const conceptoInput = document.getElementById('concepto-input');
     if (conceptoInput) {
-      conceptoInput.addEventListener('input', filtrarProductos);
+      const debouncedFiltroConcepto = debounce(() => filtrarProductos(), 200);
+      conceptoInput.removeEventListener('input', debouncedFiltroConcepto);
+      conceptoInput.addEventListener('input', debouncedFiltroConcepto);
     }
 
     // Asociar evento al botón cobrar
@@ -159,7 +162,9 @@ function asociarEventos() {
   // Input "busqueda-producto" => filtrarProductos
   const busquedaProducto = document.getElementById('busqueda-producto');
   if (busquedaProducto) {
-    busquedaProducto.addEventListener('input', () => filtrarProductos());
+    const debouncedFiltro = debounce(() => filtrarProductos(), 200);
+    busquedaProducto.removeEventListener('input', debouncedFiltro);
+    busquedaProducto.addEventListener('input', debouncedFiltro);
   }
 
   // Selector "concepto-detalle" => seleccionarProducto
@@ -177,13 +182,13 @@ function asociarEventos() {
   // Campo "cantidad-detalle" => calcularTotalDetalle
   const cantidadDetalle = document.getElementById('cantidad-detalle');
   if (cantidadDetalle) {
-    cantidadDetalle.addEventListener('input', () => calcularTotalDetalle());
+    cantidadDetalle.addEventListener('input', calcularTotalDetalle);
   }
 
   // Campo "precio-detalle" => calcularTotalDetalle
   const precioDetalle = document.getElementById('precio-detalle');
   if (precioDetalle) {
-    precioDetalle.addEventListener('input', () => calcularTotalDetalle());
+    precioDetalle.addEventListener('input', calcularTotalDetalle);
   }
 
   // Modal Pagos: Botón "Cerrar"

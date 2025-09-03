@@ -14,6 +14,10 @@
   <!-- Enlace a tus hojas de estilos -->
   <link rel="stylesheet" href="../static/styles.css" />
   <link rel="stylesheet" href="../static/notificaciones.css" />
+  <style>
+    /* Ocultar literal visual "TICKET" solo en esta página */
+    .cabecera-ticket::before { content: '' !important; display: none !important; }
+  </style>
 </head>
 <body>
   <div id="cabecera-ticket" class="hidden-field">

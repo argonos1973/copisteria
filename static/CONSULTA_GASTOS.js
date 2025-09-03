@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from '../static/constantes.js';
+import { API_GASTOS } from '../static/constantes.js';
 import { formatearImporte, debounce } from '../static/scripts_utils.js';
 import { mostrarNotificacion } from '../static/notificaciones.js';
 
@@ -169,8 +169,7 @@ async function buscarGastos() {
         params.append('tipo', tipoMovimientoInput.value);
     }
     try {
-        const url = `http://${IP_SERVER}:${PORT}/api/gastos?${params.toString()}`;
-        const response = await fetch(url);
+        const response = await fetch(`${API_GASTOS}?${params.toString()}`);
         if (!response.ok) {
             throw new Error('Error al consultar los gastos');
         }
@@ -229,9 +228,8 @@ async function descargarCSV() {
     if (tipoMovimientoInput && tipoMovimientoInput.value !== 'todos') {
         params.append('tipo', tipoMovimientoInput.value);
     }
-    const url = `http://${IP_SERVER}:${PORT}/api/gastos?${params.toString()}`;
     try {
-        const res = await fetch(url);
+        const res = await fetch(`${API_GASTOS}?${params.toString()}`);
         if (!res.ok) throw new Error('Error al generar CSV');
         const data = await res.json();
         const gastos = data.gastos || [];

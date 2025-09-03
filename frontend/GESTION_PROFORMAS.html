@@ -15,6 +15,10 @@
     <link rel="stylesheet" href="../static/styles.css">
     <link rel="stylesheet" href="../static/notificaciones.css">
     <style>
+        /* Ocultar literal visual "TICKET" solo en esta página */
+        .cabecera-ticket::before { content: '' !important; display: none !important; }
+    </style>
+    <style>
         /* Estilos para el modal */
         #modal-pagos {
             display: none;

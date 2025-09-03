@@ -30,5 +30,5 @@ export const API_PROFORMAS_FALLBACK = `${API_URL_FALLBACK}/proformas`;
 
 export const API_TICKETS = `${API_URL_PRIMARY}/tickets`;
 export const API_TICKETS_FALLBACK = `${API_URL_FALLBACK}/tickets`;
-export const API_GASTOS = `${API_URL_PRIMARY}/gastos`;
-export const API_GASTOS_FALLBACK = `${API_URL_FALLBACK}/gastos`;
+export const API_GASTOS = `${API_URL_PRIMARY}/api/gastos`;
+export const API_GASTOS_FALLBACK = `${API_URL_FALLBACK}/api/gastos`;

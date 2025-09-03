@@ -1,7 +1,7 @@
 /**
  * Función principal que se ejecuta al cargar la página.
  */
-import { formatearImporte, parsearImporte, truncarDecimales } from './scripts_utils.js';
+import { formatearImporte, formatearImporteVariable, parsearImporte, truncarDecimales } from './scripts_utils.js';
 
 window.onload = function() {
     const idTicket = obtenerIdTicket(); // Obtener el ID del ticket desde la URL
@@ -176,7 +176,7 @@ async function rellenarFactura(datos) {
         // Asumiendo que los campos son 'concepto', 'precio', 'cantidad', 'impuestos', 'total'
         fila.innerHTML = `
             <td>${detalle.concepto}</td>
-            <td class="numero">${formatearImporte(precioNum)}</td>
+            <td class="numero">${formatearImporteVariable(precioNum, 2, 5)}</td>
             <td class="numero">${cantidadNum}</td>
             <td class="numero">${ivaPct}</td>
             <td class="numero">${formatearImporte(totalNum)}</td>
