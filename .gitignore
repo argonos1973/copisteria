@@ -13,6 +13,9 @@ scraping_status.log
 *.xml
 .venv/
 
+ # Cachés/compilados Python
+ __pycache__/
+ *.pyc
 # Perfiles/cachés locales del navegador (no versionar)
 .pw_profile_santander/
 
@@ -20,3 +23,7 @@ scraping_status.log
 db/*.db
 db/*.bak*
 db/*.sqbpro
+
+ # Temporales de QR
+ static/tmp_qr/
+
