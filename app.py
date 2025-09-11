@@ -28,6 +28,7 @@ except Exception as e:
     print(f"[AVISO] Error importando generar_pdf: {e}. Se deshabilita la generación de PDF.")
     generar_pdf = None
 import productos
+import productos_franjas_utils
 import proforma
 import verifactu
 
@@ -62,13 +63,11 @@ CORS(app, resources={
     r"/*": {"origins": "*"}  # Permitir cualquier ruta
 })
 
-# Configurar logging de aplicación a archivo (usar /tmp para evitar problemas de permisos)
-LOG_PATH = '/tmp/app_actions.log'
+# Configurar logging de aplicación solo a stdout (evitar escritura en disco)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
     handlers=[
-        logging.FileHandler(LOG_PATH, encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -171,7 +170,7 @@ def format_date(date_value):
             return date_value
     return date_value.strftime('%d/%m/%Y')
 
-@app.route('/exportar', methods=['GET'])
+@app.route('/api/exportar', methods=['GET'])
 def exportar():
     # Obtener parámetros de la consulta
     ejercicio = request.args.get('ejercicio')
@@ -378,6 +377,54 @@ def api_set_franjas_descuento_producto(producto_id):
         except Exception:
             pass
         return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+# ================== API: Configuración de franjas automáticas ================== #
+@app.route('/api/productos/<int:producto_id>/franjas_config', methods=['GET'])
+def api_get_franjas_config_producto(producto_id):
+    """Obtiene la configuración de franjas automáticas de un producto"""
+    try:
+        config = productos_franjas_utils.obtener_configuracion_franjas_producto(producto_id)
+        if config is None:
+            return jsonify({'error': 'Producto no encontrado'}), 404
+        return jsonify({'producto_id': producto_id, 'config': config})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/productos/<int:producto_id>/franjas_config', methods=['POST', 'PUT'])
+def api_set_franjas_config_producto(producto_id):
+    """Actualiza la configuración de franjas automáticas de un producto"""
+    try:
+        config = request.get_json() or {}
+        productos_franjas_utils.actualizar_configuracion_franjas_producto(producto_id, config)
+        return jsonify({'success': True, 'mensaje': 'Configuración actualizada correctamente'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+
+@app.route('/api/productos/<int:producto_id>/generar_franjas_automaticas', methods=['POST'])
+def api_generar_franjas_automaticas(producto_id):
+    """Genera franjas automáticas basadas en la configuración del producto"""
+    try:
+        # Obtener configuración actual
+        config = productos_franjas_utils.obtener_configuracion_franjas_producto(producto_id)
+        if config is None:
+            return jsonify({'error': 'Producto no encontrado'}), 404
+        
+        # Generar franjas automáticas
+        franjas = productos_franjas_utils.generar_franjas_automaticas(producto_id, config)
+        
+        # Reemplazar franjas existentes
+        productos.reemplazar_franjas_descuento_producto(producto_id, franjas)
+        
+        return jsonify({
+            'success': True, 
+            'mensaje': f'Se generaron {len(franjas)} franjas automáticamente',
+            'franjas': franjas
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
@@ -646,7 +693,71 @@ def filtrar_contactos():
         if 'conn' in locals():
             conn.close()
 
-@app.route('/contactos/searchCarrer', methods=['GET'])
+@app.route('/api/contactos/search', methods=['GET'])
+def search_contactos():
+    """Endpoint para búsqueda de contactos por razón social"""
+    query = request.args.get('query', '').strip()
+    sort = request.args.get('sort', 'razonsocial')
+    order = request.args.get('order', 'ASC')
+    
+    if not query:
+        return jsonify([])
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        sql = '''
+            SELECT 
+                c.idContacto,
+                c.razonsocial,
+                c.identificador,
+                c.mail,
+                c.telf1,
+                c.direccion,
+                c.cp,
+                c.localidad,
+                c.provincia
+            FROM contactos c
+            WHERE LOWER(c.razonsocial) LIKE LOWER(?)
+        '''
+        
+        params = [f'%{query}%']
+        
+        # Añadir ordenación
+        if sort == 'razonsocial':
+            sql += f' ORDER BY c.razonsocial {order}'
+        else:
+            sql += f' ORDER BY c.{sort} {order}'
+            
+        sql += ' LIMIT 50'
+        
+        cursor.execute(sql, params)
+        resultados = cursor.fetchall()
+        
+        contactos_list = []
+        for row in resultados:
+            contactos_list.append({
+                'idContacto': row[0],
+                'razonsocial': row[1],
+                'identificador': row[2],
+                'mail': row[3],
+                'telf1': row[4],
+                'direccion': row[5],
+                'cp': row[6],
+                'localidad': row[7],
+                'provincia': row[8]
+            })
+        
+        return jsonify(contactos_list)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@app.route('/api/contactos/searchCarrer', methods=['GET'])
 def search_carrer():
     query = request.args.get('query', '').strip()
     if not query:
@@ -658,7 +769,7 @@ def search_carrer():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/contactos/search_cp', methods=['GET'])
+@app.route('/api/contactos/search_cp', methods=['GET'])
 def search_cp():
     term = request.args.get('term', '').strip()[:5]
     if not term:
@@ -670,7 +781,7 @@ def search_cp():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/contactos/get_cp', methods=['GET'])
+@app.route('/api/contactos/get_cp', methods=['GET'])
 def get_cp():
     cp = request.args.get('cp', '').strip()
     if not cp:
@@ -682,7 +793,7 @@ def get_cp():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/contactos/get_contacto/<int:idContacto>', methods=['GET'])
+@app.route('/api/contactos/get_contacto/<int:idContacto>', methods=['GET'])
 def get_contacto_endpoint(idContacto):
     try:
         contacto = contactos.obtener_contacto(idContacto)
@@ -693,7 +804,7 @@ def get_contacto_endpoint(idContacto):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/contactos/create_contacto', methods=['POST'])
+@app.route('/api/contactos/create_contacto', methods=['POST'])
 def crear():
     try:
         data = request.get_json()
@@ -715,7 +826,7 @@ def crear():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/contactos/update_contacto/<int:idContacto>', methods=['PUT'])
+@app.route('/api/contactos/update_contacto/<int:idContacto>', methods=['PUT'])
 def actualizar(idContacto):
     try:
         data = request.get_json()
@@ -737,7 +848,7 @@ def actualizar(idContacto):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/contactos/eliminar_contacto/<int:idContacto>', methods=['DELETE'])
+@app.route('/api/contactos/eliminar_contacto/<int:idContacto>', methods=['DELETE'])
 def eliminar(idContacto):
     try:
         if contactos.delete_contacto(idContacto):
@@ -746,7 +857,7 @@ def eliminar(idContacto):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/tickets/obtener_numerador/<string:tipoNum>', methods=['GET'])
+@app.route('/api/tickets/obtener_numerador/<string:tipoNum>', methods=['GET'])
 def obtener_numero_ticket(tipoNum):
     try:
         conn = get_db_connection()
@@ -762,6 +873,50 @@ def obtener_numero_ticket(tipoNum):
         numerador = resultado[0]
         
         return jsonify({"numerador": numerador})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/facturas/siguiente_numero', methods=['GET'])
+def obtener_siguiente_numero_factura():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        ejercicio = datetime.now().year
+
+        cursor.execute("SELECT numerador FROM numerador WHERE tipo = ? AND ejercicio = ?", ('F', ejercicio))
+        resultado = cursor.fetchone()
+        
+        if not resultado:
+            return jsonify({"error": "No se encontró el numerador para facturas"}), 404
+
+        numerador = resultado[0]
+        
+        return jsonify({"numero": numerador})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+@app.route('/api/proformas/siguiente_numero', methods=['GET'])
+def obtener_siguiente_numero_proforma():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        ejercicio = datetime.now().year
+
+        cursor.execute("SELECT numerador FROM numerador WHERE tipo = ? AND ejercicio = ?", ('P', ejercicio))
+        resultado = cursor.fetchone()
+        
+        if not resultado:
+            return jsonify({"error": "No se encontró el numerador para proformas"}), 404
+
+        numerador = resultado[0]
+        
+        return jsonify({"numero": numerador})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
@@ -961,7 +1116,7 @@ def obtener_actualizar_numero_ticket(tipoNum):
         if conn:
             conn.close()
 
-@app.route('/tickets/guardar', methods=['POST'])
+@app.route('/api/tickets/guardar', methods=['POST'])
 def guardar_ticket():
     conn = None
     try:
@@ -1068,6 +1223,14 @@ def guardar_ticket():
 
             # Insertar los detalles en la tabla detalle_tickets
             for detalle in detalles:
+                # Recalcular el total correctamente en el backend
+                cantidad = float(detalle['cantidad'])
+                precio = float(detalle['precio'])
+                impuestos = float(detalle['impuestos'])
+                
+                subtotal = cantidad * precio
+                total_detalle = subtotal * (1 + impuestos / 100)
+                
                 cursor.execute('''
                     INSERT INTO detalle_tickets (
                         id_ticket, concepto, descripcion, cantidad, 
@@ -1077,10 +1240,10 @@ def guardar_ticket():
                     id_ticket,
                     detalle['concepto'],
                     detalle.get('descripcion', ''),
-                    detalle['cantidad'],
-                    float(detalle['precio']),
-                    float(detalle['impuestos']),
-                    redondear_importe(float(detalle['total'])),
+                    cantidad,
+                    precio,
+                    impuestos,
+                    redondear_importe(total_detalle),
                     detalle.get('productoId', None)
                 ))
 
@@ -1226,6 +1389,9 @@ def buscar_producto_por_id(id):
     try:
         producto = productos.obtener_producto(id)
         if producto:
+            # Asegurar que subtotal mantenga 5 decimales en la respuesta JSON
+            if 'subtotal' in producto:
+                producto['subtotal'] = round(float(producto['subtotal']), 5)
             return jsonify(producto)
         else:
             return jsonify({'error': 'Producto no encontrado'}), 404
@@ -1334,7 +1500,7 @@ def crear_producto():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/productos/<int:id>', methods=['DELETE'])
-def eliminar_producto(id):
+def eliminar_producto_legacy(id):
     try:
         resultado = productos.eliminar_producto(id)
         status = 200 if resultado.get('success') else 400
@@ -1348,6 +1514,12 @@ def eliminar_producto(id):
 
 
 # ===== Alias con prefijo /api para compatibilidad con el frontend =====
+@app.route('/api/clientes/ventas_mes', methods=['GET'])
+def api_ventas_cliente_mes():
+    """Alias para /clientes/ventas_mes con prefijo /api"""
+    from dashboard_routes import ventas_cliente_mes
+    return ventas_cliente_mes()
+
 @app.route('/api/productos', methods=['GET'])
 def api_listar_productos():
     return listar_productos()
@@ -1370,7 +1542,27 @@ def api_buscar_producto_por_id(id):
 
 @app.route('/api/productos/<int:id>', methods=['PUT'])
 def api_actualizar_producto(id):
-    return actualizar_producto(id)
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No se recibieron datos'}), 400
+            
+        # Validar campos requeridos
+        if not data.get('nombre'):
+            return jsonify({'error': 'El campo nombre es requerido'}), 400
+        
+        import sys
+        print(f"DEBUG api_actualizar_producto - ID: {id}", file=sys.stderr)
+        print(f"DEBUG api_actualizar_producto - Data: {data}", file=sys.stderr)
+        sys.stderr.flush()
+            
+        resultado = productos.actualizar_producto(id, data)
+        if resultado['success']:
+            return jsonify(resultado)
+        else:
+            return jsonify(resultado), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/productos', methods=['POST'])
 def api_crear_producto():
@@ -1389,7 +1581,7 @@ def api_eliminar_producto(id):
         except Exception:
             pass
         return jsonify({"success": False, "message": "ID de producto inválido"}), 400
-    resultado = eliminar_producto(id)
+    resultado = productos.eliminar_producto(id)
     try:
         logger.info(f"Resultado eliminación producto {id}: {resultado}")
     except Exception:
@@ -1410,6 +1602,11 @@ def actualizar_producto(id):
         # Validar campos requeridos
         if not data.get('nombre'):
             return jsonify({'error': 'El campo nombre es requerido'}), 400
+        
+        import sys
+        print(f"DEBUG app.py - Actualizando producto ID: {id}", file=sys.stderr)
+        print(f"DEBUG app.py - Data recibida: {data}", file=sys.stderr)
+        sys.stderr.flush()
             
         resultado = productos.actualizar_producto(id, data)
         if resultado['success']:
@@ -1465,7 +1662,7 @@ def obtener_ticket_con_detalles(id_ticket):
         if 'conn' in locals():
             conn.close()
 
-@app.route('/tickets/obtenerTicket/<int:id_ticket>', methods=['GET'])
+@app.route('/api/tickets/obtenerTicket/<int:id_ticket>', methods=['GET'])
 def consultar_ticket_detalles(id_ticket):
     try:
         conn = get_db_connection()
@@ -1640,6 +1837,14 @@ def actualizar_ticket():
         cursor.execute('DELETE FROM detalle_tickets WHERE id_ticket = ?', (id_ticket,))
 
         for detalle in detalles_finales:
+            # Recalcular el total correctamente en el backend
+            cantidad = float(detalle['cantidad'])
+            precio = float(detalle['precio'])
+            impuestos = float(detalle['impuestos'])
+            
+            subtotal = cantidad * precio
+            total_detalle = subtotal * (1 + impuestos / 100)
+            
             cursor.execute('''
                 INSERT INTO detalle_tickets (
                     id_ticket, concepto, descripcion, cantidad, 
@@ -1649,10 +1854,10 @@ def actualizar_ticket():
                 id_ticket,
                 detalle['concepto'],
                 detalle.get('descripcion', ''),
-                int(detalle['cantidad']),
-                float(detalle['precio']),
-                float(detalle['impuestos']),
-                redondear_importe(float(detalle['total'])),
+                cantidad,
+                precio,
+                impuestos,
+                redondear_importe(total_detalle),
                 detalle.get('productoId', None)
             ))
 
@@ -1703,7 +1908,7 @@ def verificar_numero_ticket(numero):
         if conn:
             conn.close()
 
-@app.route('/facturas/actualizar', methods=['PATCH'])
+@app.route('/api/facturas/actualizar', methods=['PATCH'])
 def actualizar_factura_endpoint():
     try:
         data = request.get_json()
@@ -1721,7 +1926,9 @@ def actualizar_factura_endpoint():
         # Si no es una tupla, es una respuesta exitosa
         return result
     except Exception as e:
+        import traceback
         print(f"Error en actualizar factura: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/facturas/<int:idContacto>/<int:idFactura>', methods=['GET'])
@@ -1790,14 +1997,14 @@ def buscar_factura_abierta(idContacto, idFactura):
         if conn:
             conn.close()
 
-@app.route('/facturas', methods=['POST'])
+@app.route('/api/facturas', methods=['POST'])
 def crear_factura_endpoint():
     try:
         return factura.crear_factura()
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/factura/numero', methods=['GET'])
+@app.route('/api/factura/numero', methods=['GET'])
 def obtener_numero_factura_endpoint():
     try:
       
@@ -1812,11 +2019,11 @@ def obtener_numero_factura_endpoint():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
-@app.route('/proforma/abierta/<int:idContacto>', methods=['GET'])
+@app.route('/api/proforma/abierta/<int:idContacto>', methods=['GET'])
 def buscar_proforma_abierta(idContacto):
     return obtener_proforma_abierta(idContacto)
 
-@app.route('/proforma/numero', methods=['GET'])
+@app.route('/api/proforma/numero', methods=['GET'])
 def obtener_numero_proforma_endpoint():
     try:
         numero_proforma = formatear_numero_documento('P')
@@ -1838,14 +2045,14 @@ def obtener_proforma(id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/proforma', methods=['POST'])
+@app.route('/api/proforma', methods=['POST'])
 def crear_proforma():
     try:
         return proforma.crear_proforma(request.get_json())
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/proformas/actualizar', methods=['PATCH'])
+@app.route('/api/proformas/actualizar', methods=['PATCH'])
 def actualizar_proforma():
     try:
         data = request.get_json()
@@ -2006,11 +2213,11 @@ def actualizar_proforma():
         if 'conn' in locals():
             conn.close()
 
-@app.route('/proformas/consulta', methods=['GET'])
+@app.route('/api/proformas/consulta', methods=['GET'])
 def consultar_proformas():
     return proforma.consultar_proformas()
 
-@app.route('/proformas/consulta/<int:id>', methods=['GET'])
+@app.route('/api/proformas/consulta/<int:id>', methods=['GET'])
 def consultar_proforma_por_id(id):
     try:
         conn = get_db_connection()
@@ -2036,8 +2243,8 @@ def consultar_proforma_por_id(id):
         if not proforma:
             return jsonify({'error': 'Proforma no encontrada'}), 404
 
-        # Obtener los detalles de la proforma
-        cursor.execute('SELECT * FROM detalle_proforma WHERE id_proforma = ?', (id,))
+        # Obtener los detalles de la proforma (ordenados por id)
+        cursor.execute('SELECT * FROM detalle_proforma WHERE id_proforma = ? ORDER BY id', (id,))
         detalles = cursor.fetchall()
 
         # Construir la respuesta
@@ -2076,21 +2283,21 @@ def verificar_numero_proforma_endpoint(numero):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/proformas', methods=['POST'])
+@app.route('/api/proformas', methods=['POST'])
 def crear_proforma_endpoint():
     try:
         return proforma.crear_proforma()
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/proformas/<int:id>/convertir', methods=['POST'])
+@app.route('/api/proformas/<int:id>/convertir', methods=['POST'])
 def convertir_proforma_a_factura_endpoint(id):
     try:
         return proforma.convertir_proforma_a_factura(id)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/facturas/obtener_contacto/<int:factura_id>', methods=['GET'])
+@app.route('/api/facturas/obtener_contacto/<int:factura_id>', methods=['GET'])
 def obtener_contacto_por_factura_id(factura_id):
     try:
         # Consulta para obtener solo el idContacto asociado a una factura
@@ -2112,7 +2319,7 @@ def obtener_contacto_por_factura_id(factura_id):
         if conn:
             conn.close()
 
-@app.route('/facturas/consulta/<int:factura_id>', methods=['GET'])
+@app.route('/api/facturas/consulta/<int:factura_id>', methods=['GET'])
 def obtener_factura_para_imprimir(factura_id):
     try:
         # Consulta para obtener los datos de la factura
@@ -2153,6 +2360,7 @@ def obtener_factura_para_imprimir(factura_id):
             INNER JOIN contactos c ON f.idcontacto = c.idContacto
             INNER JOIN detalle_factura d ON f.id = d.id_factura
             WHERE f.id = ?
+            ORDER BY d.id
         """
         
         # Ejecutar la consulta
@@ -2344,7 +2552,7 @@ def obtener_factura_para_imprimir(factura_id):
         print(f"Error al obtener la factura: {str(e)}")
         return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
 
-@app.route('/factura/abierta/<int:idContacto>/<int:idFactura>', methods=['GET'])
+@app.route('/api/factura/abierta/<int:idContacto>/<int:idFactura>', methods=['GET'])
 def obtener_factura_abierta_endpoint(idContacto, idFactura):
     print(f"Endpoint obtener_factura_abierta llamado con idContacto={idContacto}, idFactura={idFactura}")
     try:
@@ -2369,7 +2577,7 @@ def enviar_factura_email_route(id_factura):
         print(f"Error al enviar factura por email: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/facturas/anular/<int:id_factura>', methods=['POST'])
+@app.route('/api/facturas/anular/<int:id_factura>', methods=['POST'])
 def anular_factura_route(id_factura):
     from anulacion import anular_factura
     return anular_factura(id_factura)
@@ -3162,6 +3370,23 @@ def obtener_totales_mes():
     finally:
         cursor.close()
         conn.close()
+
+@app.route('/estadisticas.html')
+def estadisticas_html():
+    """Serve estadisticas.html with corrected paths"""
+    import os
+    try:
+        # Read the original file and fix the paths
+        with open(os.path.join(BASE_DIR, 'frontend', 'estadisticas.html'), 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Fix relative paths for root serving
+        content = content.replace('../static/', './static/')
+        
+        from flask import Response
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        return f"Error loading estadisticas.html: {str(e)}", 500
 
 if __name__ == '__main__':
     # Permite ejecutar la app directamente (modo desarrollo/standalone)

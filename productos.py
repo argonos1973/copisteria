@@ -17,7 +17,13 @@ def obtener_productos():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        cursor.execute('SELECT * FROM productos ORDER BY nombre ASC')
+        cursor.execute('''
+            SELECT *, 
+                   calculo_automatico, franja_inicial, numero_franjas, 
+                   ancho_franja, descuento_inicial, incremento_franja, no_generar_franjas
+            FROM productos 
+            ORDER BY nombre ASC
+        ''')
         productos = cursor.fetchall()
         
         return [dict(producto) for producto in productos]
@@ -121,6 +127,9 @@ def _generar_franjas_automaticas(base_subtotal: float, iva_pct: float, franjas_c
     inc_val = franjas_cfg.get('incremento')
     desc_inicial = float(desc_ini_val) if desc_ini_val is not None else 5.0
     incremento = float(inc_val) if inc_val is not None else 5.0
+    
+    print(f"[DEBUG] Parámetros recibidos: bandas={bandas_val}, ancho={ancho_val}, desc_inicial={desc_ini_val}, incremento={inc_val}")
+    print(f"[DEBUG] Valores normalizados: num_bandas={num_bandas}, ancho={ancho}, desc_inicial={desc_inicial}, incremento={incremento}")
     if 0.0 < desc_inicial <= 1.0:
         desc_inicial *= 100.0
     if 0.0 < incremento <= 1.0:
@@ -209,7 +218,7 @@ def _generar_franjas_automaticas(base_subtotal: float, iva_pct: float, franjas_c
                 else:
                     # Si es la primera, crear una única banda completa sin bajar precio
                     pct_tmp = 0.0
-                    franjas.append({'min': min_c, 'max': last_overall_max, 'descuento': round(float(pct_tmp), 6)})
+                    franjas.append({'min': min_c, 'max': last_overall_max, 'descuento': round(float(pct_tmp), 5)})
                 return franjas
 
         # Convertir precio objetivo a descuento (%) respecto al base_con_iva
@@ -219,12 +228,18 @@ def _generar_franjas_automaticas(base_subtotal: float, iva_pct: float, franjas_c
         # Plan suave: no superar este máximo para la franja i
         pct_plan_cap = min(60.0, max(0.0, desc_inicial + i * incremento))
 
-        # Forzar primera franja sin descuento
+        # Primera franja siempre 0%, siguientes incrementales desde descuento_inicial
         if i == 0:
             pct = 0.0
         else:
-            # Aplicar límites: [prev_pct, pct_plan_cap] y nunca > 60
-            pct = max(prev_pct, min(60.0, min(pct_raw, pct_plan_cap)))
+            # Usar valores con decimales significativos para generar progresión real
+            pct = desc_inicial + ((i - 1) * incremento)
+
+        # Aplicar límites: nunca > 60%
+        pct = min(60.0, max(0.0, pct))
+
+        # Asegurar precisión de 5 decimales EXACTOS
+        pct = round(float(pct), 5)
 
         # Si se alcanzaría el 60% antes de la última banda, fusionar resto
         if pct >= 60.0 and i < (num_bandas - 1):
@@ -256,12 +271,12 @@ def _generar_franjas_automaticas(base_subtotal: float, iva_pct: float, franjas_c
                     if franjas:
                         franjas[-1]['max'] = last_overall_max
                     else:
-                        franjas.append({'min': min_c, 'max': last_overall_max, 'descuento': round(float(pct), 6)})
+                        franjas.append({'min': min_c, 'max': last_overall_max, 'descuento': round(float(pct), 5)})
                     return franjas
 
         prev_price_red = applied_price
         prev_pct = max(prev_pct, pct)
-        franjas.append({'min': min_c, 'max': max_c, 'descuento': round(float(pct), 6)})
+        franjas.append({'min': min_c, 'max': max_c, 'descuento': round(float(pct), 5)})
     return franjas
 
 
@@ -351,6 +366,22 @@ try:
     ensure_tabla_productos()
 except Exception as _e:
     print(f"[PRODUCTOS] No se pudo asegurar la tabla al importar: {_e}")
+
+def eliminar_todas_franjas_producto(producto_id: int):
+    """
+    Elimina todas las franjas de descuento de un producto específico.
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('DELETE FROM descuento_producto_franja WHERE producto_id = ?', (producto_id,))
+        conn.commit()
+        print(f"[DESCUENTOS] Eliminadas {cur.rowcount} franjas del producto {producto_id}")
+        return True
+    finally:
+        if conn:
+            conn.close()
 
 def regenerar_franjas_producto(producto_id: int, franjas_cfg: dict):
     """
@@ -448,10 +479,10 @@ def obtener_franjas_descuento_por_producto(producto_id):
         filas = cur.fetchall()
         return [
             {
-                'min': int(row['min_cantidad']),
-                'max': int(row['max_cantidad']),
+                'min_cantidad': int(row[0]),
+                'max_cantidad': int(row[1]),
                 # Servir 6 decimales para preservar granularidad fina
-                'descuento': round(float(row['porcentaje_descuento']), 6)
+                'porcentaje_descuento': round(float(row[2]), 6)
             }
             for row in filas
         ]
@@ -610,8 +641,14 @@ def obtener_producto(id_producto):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Buscar el producto específico
-        query = 'SELECT * FROM productos WHERE id = ?'
+        # Buscar el producto específico incluyendo campos de franjas automáticas
+        query = '''
+            SELECT *, 
+                   calculo_automatico, franja_inicial, numero_franjas, 
+                   ancho_franja, descuento_inicial, incremento_franja, no_generar_franjas
+            FROM productos 
+            WHERE id = ?
+        '''
         cursor.execute(query, (id_producto,))
         producto = cursor.fetchone()
         
@@ -733,10 +770,10 @@ def crear_producto(data):
         else:
             total = float(data.get('total', 0))
         
-        # Redondear valores
-        subtotal = redondear_importe(subtotal)
-        iva = redondear_importe(iva)
-        total = redondear_importe(total)
+        # Redondear valores - subtotal a 5 decimales, iva y total a 2 decimales
+        subtotal = round(float(subtotal), 5)
+        iva = round(float(iva), 2)
+        total = round(float(total), 2)
         
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -750,45 +787,62 @@ def crear_producto(data):
                 "message": f"Ya existe un producto con el nombre '{nombre}'. Por favor, utilice otro nombre."
             }
         
-        # Insertar el nuevo producto
+        # Insertar el nuevo producto incluyendo configuración de franjas
+        # Usar directamente los campos del data en lugar de config_franjas anidado
         cursor.execute('''
-            INSERT INTO productos (nombre, descripcion, subtotal, iva, impuestos, total)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO productos (nombre, descripcion, subtotal, iva, impuestos, total,
+                                 calculo_automatico, franja_inicial, numero_franjas, 
+                                 ancho_franja, descuento_inicial, incremento_franja, no_generar_franjas)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             nombre,
             data.get('descripcion', ''),
             subtotal,
             iva,
             impuestos,
-            total
+            total,
+            data.get('calculo_automatico', 0),
+            data.get('franja_inicial', 1),
+            data.get('numero_franjas', 50),
+            data.get('ancho_franja', 10),
+            data.get('descuento_inicial', 5.0),
+            data.get('incremento_franja', 5.0),
+            data.get('no_generar_franjas', 0)
         ))
         
         conn.commit()
         last_id = cursor.lastrowid
         print(f"[PRODUCTOS] Producto insertado. lastrowid={last_id}")
         
-        # Crear franjas de descuento automáticas si se suministra configuración
+        # Gestionar franjas según configuración
         try:
-            franjas_cfg = data.get('franjas_auto') or {}
-            # Permitir enviar plano en raíz también
-            if not franjas_cfg and any(k in data for k in ['franja_inicio', 'bandas', 'ancho', 'descuento_inicial', 'incremento']):
+            # Si está marcado "no generar franjas", no crear franjas
+            if data.get('no_generar_franjas', 0):
+                print(f"[DESCUENTOS] No se generan franjas para producto {last_id} (no_generar_franjas=1)")
+            elif data.get('calculo_automatico', 0):
+                # Usar directamente los valores del data enviado por el usuario
                 franjas_cfg = {
-                    'franja_inicio': data.get('franja_inicio'),
-                    'bandas': data.get('bandas'),
-                    'ancho': data.get('ancho'),
-                    'descuento_inicial': data.get('descuento_inicial'),
-                    'incremento': data.get('incremento')
+                    'franja_inicio': data.get('franja_inicial', 1),
+                    'bandas': data.get('numero_franjas', 50),
+                    'ancho': data.get('ancho_franja', 10),
+                    'descuento_inicial': data.get('descuento_inicial', 5.0),
+                    'incremento': data.get('incremento_franja', 5.0)
                 }
-            # Solo proceder si se especifica al menos franja_inicio o bandas
-            if isinstance(franjas_cfg, dict) and (franjas_cfg.get('franja_inicio') is not None or franjas_cfg.get('bandas') is not None):
+                
+                print(f"[DESCUENTOS] Generando franjas con config del usuario: {franjas_cfg}")
+                
+                # Generar franjas siempre con los parámetros de configuración
                 base_subtotal = float(data.get('subtotal') or 0)
                 iva_pct = float(data.get('impuestos') or 0)
                 franjas = _generar_franjas_automaticas(base_subtotal, iva_pct, franjas_cfg)
                 ensure_tabla_descuentos_bandas()
                 reemplazar_franjas_descuento_producto(last_id, franjas)
+                print(f"[DESCUENTOS] Franjas generadas para producto {last_id} con config: {franjas_cfg}")
+            else:
+                print(f"[DESCUENTOS] No se generan franjas para producto {last_id} (calculo_automatico=0)")
         except Exception as e_fr:
             # No fallar la creación de producto si las franjas fallan, solo registrar
-            print(f"[DESCUENTOS] Advertencia al crear franjas automáticas para producto {last_id}: {e_fr}")
+            print(f"[DESCUENTOS] Advertencia al gestionar franjas automáticas para producto {last_id}: {e_fr}")
         
         return {
             "success": True,
@@ -862,12 +916,22 @@ def actualizar_producto(id_producto, data):
         else:
             total = float(data.get('total', 0))
         
-        # Redondear valores
-        subtotal = redondear_importe(subtotal)
-        iva = redondear_importe(iva)
-        total = redondear_importe(total)
+        # Redondear valores - subtotal a 5 decimales, iva y total a 2 decimales
+        subtotal = round(float(subtotal), 5)
+        iva = round(float(iva), 2)
+        total = round(float(total), 2)
         
-        # Actualizar el producto
+        # Actualizar el producto incluyendo configuración de franjas
+        config_franjas = data.get('config_franjas', {})
+        no_generar_franjas_val = 1 if config_franjas.get('no_generar_franjas') else 0
+        
+        import sys
+        print(f"DEBUG actualizar_producto - ID: {id_producto}", file=sys.stderr)
+        print(f"DEBUG config_franjas recibido: {config_franjas}", file=sys.stderr)
+        print(f"DEBUG no_generar_franjas raw: {config_franjas.get('no_generar_franjas')}", file=sys.stderr)
+        print(f"DEBUG no_generar_franjas convertido: {no_generar_franjas_val}", file=sys.stderr)
+        sys.stderr.flush()
+        
         cursor.execute('''
             UPDATE productos
             SET nombre=?,
@@ -875,7 +939,14 @@ def actualizar_producto(id_producto, data):
                 subtotal=?,
                 iva=?,
                 impuestos=?,
-                total=?
+                total=?,
+                calculo_automatico=?,
+                franja_inicial=?,
+                numero_franjas=?,
+                ancho_franja=?,
+                descuento_inicial=?,
+                incremento_franja=?,
+                no_generar_franjas=?
             WHERE id=?
         ''', (
             nombre,
@@ -884,29 +955,43 @@ def actualizar_producto(id_producto, data):
             iva,
             impuestos,
             total,
+            1 if config_franjas.get('calculo_automatico') else 0,
+            config_franjas.get('franja_inicial', 1),
+            config_franjas.get('numero_franjas', 50),
+            config_franjas.get('ancho_franja', 10),
+            config_franjas.get('descuento_inicial', 5.0),
+            config_franjas.get('incremento_franja', 5.0),
+            no_generar_franjas_val,
             id_producto
         ))
         
         conn.commit()
 
-        # Si llegan parámetros de franjas automáticas desde el frontend, regenerarlas respetando la config
+        # Gestionar franjas según configuración
         try:
-            franjas_cfg = data.get('franjas_auto') or {}
-            # Permitir plano en raíz también
-            if not franjas_cfg and any(k in data for k in ['franja_inicio', 'bandas', 'ancho', 'descuento_inicial', 'incremento']):
-                franjas_cfg = {
-                    'franja_inicio': data.get('franja_inicio'),
-                    'bandas': data.get('bandas'),
-                    'ancho': data.get('ancho'),
-                    'descuento_inicial': data.get('descuento_inicial'),
-                    'incremento': data.get('incremento')
-                }
-            # Solo proceder si se especifica al menos franja_inicio o bandas
-            if isinstance(franjas_cfg, dict) and (franjas_cfg.get('franja_inicio') is not None or franjas_cfg.get('bandas') is not None):
-                regenerar_franjas_producto(id_producto, franjas_cfg)
+            config_franjas = data.get('config_franjas', {})
+            # Verificar que hay configuración de franjas
+            if config_franjas:
+                # Si está marcado "no generar franjas", eliminar todas las franjas existentes
+                if config_franjas.get('no_generar_franjas', 0):
+                    eliminar_todas_franjas_producto(id_producto)
+                    print(f"[DESCUENTOS] Eliminadas todas las franjas del producto {id_producto}")
+                else:
+                    # Usar siempre los valores de configuración de la pantalla
+                    franjas_cfg = {
+                        'franja_inicio': config_franjas.get('franja_inicial', 1),
+                        'bandas': config_franjas.get('numero_franjas', 50),
+                        'ancho': config_franjas.get('ancho_franja', 10),
+                        'descuento_inicial': config_franjas.get('descuento_inicial', 5.0),
+                        'incremento': config_franjas.get('incremento_franja', 5.0)
+                    }
+                    
+                    # Regenerar franjas siempre con los parámetros de configuración
+                    regenerar_franjas_producto(id_producto, franjas_cfg)
+                    print(f"[DESCUENTOS] Franjas regeneradas para producto {id_producto} con config: {franjas_cfg}")
         except Exception as e_fr:
             # No fallar la actualización del producto si las franjas fallan, solo registrar
-            print(f"[DESCUENTOS] Advertencia al regenerar franjas automáticas para producto {id_producto}: {e_fr}")
+            print(f"[DESCUENTOS] Advertencia al gestionar franjas automáticas para producto {id_producto}: {e_fr}")
 
         return {
             "success": True,

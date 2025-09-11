@@ -6,10 +6,11 @@ import os
 import sys
 import time
 import random
+import subprocess
 from datetime import datetime
 
 # Registrar inicio del script
-print("=== scrapeo.py iniciado ===")
+print("=== api_scraping.py iniciado ===")
 
 # Modo opcional: solo importar Excel y salir, controlado por la variable de entorno ONLY_IMPORT
 def _import_only():
@@ -22,6 +23,7 @@ def _import_only():
             p = _Path(env_path)
             posibles.extend([p, p.with_suffix('.xlsx')])
         posibles.extend([
+            _Path('/var/www/html/descargas/descarga.xlsx'),
             _Path('/tmp/descarga.xlsx'),
             _Path('/tmp/descarga'),
             _Path.cwd() / 'descarga.xlsx',
@@ -29,7 +31,7 @@ def _import_only():
         ])
         file_path = next((p for p in posibles if p.exists()), None)
         if not file_path:
-            print("No se encontró el archivo de descarga (use DOWNLOAD_PATH o /tmp/descarga.xlsx)")
+            print("No se encontró el archivo de descarga (use DOWNLOAD_PATH o /var/www/html/descargas/descarga.xlsx)")
             sys.exit(1)
         if file_path.is_file() and file_path.stat().st_size == 0:
             print(f"El archivo {file_path} está vacío")
@@ -94,8 +96,8 @@ except ImportError:
 # Deshabilitado: no se generan logs ni evidencias
 log_dir = None
 
-# Deshabilitar logging a fichero y a stdout (sin logs)
-logging.disable(logging.CRITICAL)
+# Configurar logging básico para debug
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # from db_utils import get_db_connection  # Eliminado: ya no se realiza conexión a la BD
 
@@ -144,7 +146,7 @@ with sync_playwright() as p:
         # Permitir forzar modo NO persistente por variable de entorno (workaround para 192.168.1.55)
         force_non_persist = os.environ.get('PW_NO_PERSIST', '').lower() in ('1', 'true', 'yes', 'on')
         if force_non_persist:
-            logging.info("PW_NO_PERSIST=1 -> Usando navegador NO persistente")
+            print("PW_NO_PERSIST=1 -> Usando navegador NO persistente")
             browser = p.chromium.launch(headless=not show_browser, args=browser_args, slow_mo=100 if show_browser else 0)
             context = browser.new_context(
                 viewport={'width': 1400, 'height': 900},
@@ -152,7 +154,7 @@ with sync_playwright() as p:
             )
         else:
             # Directorio de perfil persistente para reutilizar cookies/sesión y reducir bloqueos de WAF
-            user_data_dir = "/var/www/html/.pw_profile_santander"
+            user_data_dir = "/tmp/.pw_profile_santander"
             os.makedirs(user_data_dir, exist_ok=True)
             # Lanzar contexto persistente directamente (evita crear new_context luego)
             try:
@@ -946,6 +948,21 @@ with sync_playwright() as p:
                                                         destino = "/tmp/descarga.xlsx"
                                                         download.save_as(destino)
                                                         print(f"✓ Descarga Excel guardada como: {destino}")
+                                                        # Ejecutar importación y finalizar inmediatamente
+                                                        try:
+                                                            print("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
+                                                            subprocess.run([sys.executable, "/var/www/html/scrapeo.py", destino], check=False)
+                                                        except Exception as _esub:
+                                                            print(f"Error ejecutando scrapeo.py: {_esub}")
+                                                        try:
+                                                            context.close()
+                                                        except Exception:
+                                                            pass
+                                                        try:
+                                                            browser.close()
+                                                        except Exception:
+                                                            pass
+                                                        sys.exit(0)
                                                         descargado = True
                                                         confirm_clicked = True
                                                         break
@@ -954,6 +971,21 @@ with sync_playwright() as p:
                                                         try:
                                                             path = download.path()
                                                             print(f"✓ Descarga completada en ruta temporal: {path}")
+                                                            # Ejecutar importación y finalizar inmediatamente
+                                                            try:
+                                                                print("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
+                                                                subprocess.run([sys.executable, "/var/www/html/scrapeo.py", path], check=False)
+                                                            except Exception as _esub:
+                                                                print(f"Error ejecutando scrapeo.py: {_esub}")
+                                                            try:
+                                                                context.close()
+                                                            except Exception:
+                                                                pass
+                                                            try:
+                                                                browser.close()
+                                                            except Exception:
+                                                                pass
+                                                            sys.exit(0)
                                                             descargado = True
                                                             confirm_clicked = True
                                                             break
@@ -972,11 +1004,26 @@ with sync_playwright() as p:
                                                 # Procesar descarga
                                                 download = dl_info.value
                                                 import os as _os
-                                                _os.makedirs('/var/www/html/descargas', exist_ok=True)
+                                                _os.makedirs('/tmp', exist_ok=True)
                                                 sugerido = download.suggested_filename or download.suggested_filename()
-                                                destino = f"/var/www/html/descargas/{sugerido}"
+                                                destino = "/tmp/descarga.xlsx"
                                                 download.save_as(destino)
                                                 print(f"✓ Descarga Excel (alternativa) guardada en: {destino}")
+                                                # Ejecutar importación y finalizar inmediatamente
+                                                try:
+                                                    print("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
+                                                    subprocess.run([sys.executable, "/var/www/html/scrapeo.py", destino], check=False)
+                                                except Exception as _esub:
+                                                    print(f"Error ejecutando scrapeo.py: {_esub}")
+                                                try:
+                                                    context.close()
+                                                except Exception:
+                                                    pass
+                                                try:
+                                                    browser.close()
+                                                except Exception:
+                                                    pass
+                                                sys.exit(0)
                                                 descargado = True
                                             except Exception as e:
                                                 print(f"No se pudo descargar directamente: {e}")
@@ -1001,9 +1048,24 @@ with sync_playwright() as p:
                                             
                                             download = dl_info.value
                                             sugerido = download.suggested_filename or download.suggested_filename()
-                                            destino = f"/var/www/html/descargas/{sugerido}"
+                                            destino = "/tmp/descarga.xlsx"
                                             download.save_as(destino)
                                             print(f"Descarga Excel (alternativo) guardada en: {destino}")
+                                            # Ejecutar importación y finalizar inmediatamente
+                                            try:
+                                                print("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
+                                                subprocess.run([sys.executable, "/var/www/html/scrapeo.py", destino], check=False)
+                                            except Exception as _esub:
+                                                print(f"Error ejecutando scrapeo.py: {_esub}")
+                                            try:
+                                                context.close()
+                                            except Exception:
+                                                pass
+                                            try:
+                                                browser.close()
+                                            except Exception:
+                                                pass
+                                            sys.exit(0)
                                             descargado = True
                                             break
                                         except Exception:
@@ -1053,9 +1115,9 @@ with sync_playwright() as p:
                                     download = dl_info.value
                                     try:
                                         import os as _os
-                                        _os.makedirs('/var/www/html/descargas', exist_ok=True)
+                                        _os.makedirs('/tmp', exist_ok=True)
                                         sugerido = download.suggested_filename or download.suggested_filename()
-                                        destino = f"/var/www/html/descargas/{sugerido}"
+                                        destino = "/tmp/descarga.xlsx"
                                         download.save_as(destino)
                                         print(f"Descarga guardada en: {destino}")
                                     except Exception:
@@ -1087,7 +1149,7 @@ with sync_playwright() as p:
                                         b.click()
                                     d2 = dl_info.value
                                     sugerido = d2.suggested_filename or d2.suggested_filename()
-                                    dest = f"/var/www/html/descargas/{sugerido}"
+                                    dest = "/tmp/descarga.xlsx"
                                     d2.save_as(dest)
                                     print(f"Descarga guardada en: {dest}")
                                     descargado = True
@@ -1143,20 +1205,80 @@ with sync_playwright() as p:
                   const actionContainers = Array.from(pageRoot.querySelectorAll('.buttons, .actions, .toolbar, .filters, .panel, .wrapper, [role="toolbar"], .san-actions, .san-toolbar, .table-actions, .actions-bar, .filters__actions, .san-section__actions, .san-card__actions'))
                     .filter(el => !el.closest('.header__buttons, header, nav, san-sidebar-menu, #personalAreaMenu, #mailboxMenu, #helpMenu, .menu, [role="menu"]'));
                   console.log('actionContainers encontrados:', actionContainers.length);
-                  const dlSelParts = [
-                    'a[aria-label*="Descargar" i]','button[aria-label*="Descargar" i]','[aria-label*="Exportar" i]','[title*="Descargar" i]','[title*="Exportar" i]',
-                    'button:has(san-icon[iconcontent*="download" i])','a:has(san-icon[iconcontent*="download" i])','san-icon[iconcontent*="download" i]',
-                    'button:has(san-icon[iconcontent*="arrow-down" i])','a:has(san-icon[iconcontent*="arrow-down" i])','san-icon[iconcontent*="arrow-down" i]',
-                    'em.c-sanicon__download',
-                    '[data-dtname*="download" i]','[data-dtname*="export" i]','[data-testid*="export" i]','[data-icon*="download" i]',
-                    '[class*="download" i]','[class*="export" i]','[class*="descarg" i]',
-                    'button[aria-label*="descargar" i]','a[aria-label*="descargar" i]',
-                    '.flame-icon-download',
-                    'san-chip#downloadPill'
+                  // Buscar botones de descarga con múltiples estrategias
+                  const candidates = [];
+                  
+                  // 1. Selectores por atributos aria y title
+                  const attrSelectors = [
+                    'button[aria-label*="Descargar" i]', 'a[aria-label*="Descargar" i]',
+                    'button[title*="Descargar" i]', 'a[title*="Descargar" i]',
+                    'button[aria-label*="Exportar" i]', 'a[aria-label*="Exportar" i]',
+                    '[data-testid*="download" i]', '[data-testid*="export" i]',
+                    '[data-action*="download" i]', '[data-action*="export" i]'
                   ];
-                  const collectSel = dlSelParts.join(',');
-                  console.log('Selectores a buscar:', collectSel);
-                  const all = Array.from(pageRoot.querySelectorAll(collectSel)).filter(el => {
+                  
+                  attrSelectors.forEach(sel => {
+                    try {
+                      pageRoot.querySelectorAll(sel).forEach(el => candidates.push(el));
+                    } catch(e) {}
+                  });
+                  
+                  // 2. Buscar por clases que contengan palabras clave
+                  const classSelectors = [
+                    '[class*="download" i]', '[class*="export" i]', '[class*="descarg" i]'
+                  ];
+                  
+                  classSelectors.forEach(sel => {
+                    try {
+                      pageRoot.querySelectorAll(sel).forEach(el => {
+                        if (el.tagName && ['BUTTON', 'A'].includes(el.tagName.toUpperCase())) {
+                          candidates.push(el);
+                        }
+                      });
+                    } catch(e) {}
+                  });
+                  
+                  // 3. Buscar por texto visible en botones y enlaces
+                  const textKeywords = ['descargar', 'exportar', 'excel', 'download', 'export'];
+                  pageRoot.querySelectorAll('button, a, [role="button"]').forEach(el => {
+                    const text = (el.textContent || '').toLowerCase().trim();
+                    const ariaLabel = (el.getAttribute('aria-label') || '').toLowerCase();
+                    const title = (el.getAttribute('title') || '').toLowerCase();
+                    const allText = text + ' ' + ariaLabel + ' ' + title;
+                    
+                    if (textKeywords.some(keyword => allText.includes(keyword))) {
+                      candidates.push(el);
+                    }
+                  });
+                  
+                  // 4. Buscar iconos SVG con atributos relacionados con descarga
+                  pageRoot.querySelectorAll('svg, san-icon').forEach(icon => {
+                    const iconAttrs = (icon.getAttribute('data-testid') || '') + 
+                                     (icon.getAttribute('iconcontent') || '') + 
+                                     (icon.getAttribute('name') || '') +
+                                     (icon.className || '');
+                    if (/download|arrow-down|export/i.test(iconAttrs)) {
+                      const button = icon.closest('button, a, [role="button"]');
+                      if (button) candidates.push(button);
+                    }
+                  });
+                  
+                  // 5. Selectores legacy específicos del banco
+                  const legacySelectors = [
+                    'em.c-sanicon__download', '.flame-icon-download', 'san-chip#downloadPill',
+                    '.san-chip', '.wrap-chip'
+                  ];
+                  
+                  legacySelectors.forEach(sel => {
+                    try {
+                      pageRoot.querySelectorAll(sel).forEach(el => {
+                        const button = el.tagName === 'BUTTON' ? el : el.closest('button, a, [role="button"]');
+                        if (button) candidates.push(button);
+                      });
+                    } catch(e) {}
+                  });
+                  
+                  const all = [...new Set(candidates)].filter(el => {
                     if (!el) return false;
                     const anc = el.closest('header, nav, san-sidebar-menu, #personalAreaMenu, #mailboxMenu, #helpMenu, .menu, [role="menu"]');
                     if (anc) return false;
@@ -1167,13 +1289,76 @@ with sync_playwright() as p:
                     if (st.display==='none' || st.visibility==='hidden' || parseFloat(st.opacity||'1')===0) return false;
                     return true;
                   });
-                  console.log('Elementos encontrados:', all.length);
-                  const cont = actionContainers.find(c => c.querySelector(collectSel)) || pageRoot;
+                  console.log('Elementos candidatos encontrados:', all.length);
+                  
+                  // Log detallado de cada candidato
+                  all.forEach((el, idx) => {
+                    const text = (el.textContent || '').trim().substring(0, 50);
+                    const ariaLabel = el.getAttribute('aria-label') || '';
+                    const title = el.getAttribute('title') || '';
+                    const className = el.className || '';
+                    console.log(`Candidato ${idx + 1}:`, {
+                      tag: el.tagName,
+                      text: text,
+                      ariaLabel: ariaLabel,
+                      title: title,
+                      className: className
+                    });
+                  });
+                  
+                  const cont = actionContainers.find(c => all.some(el => c.contains(el))) || pageRoot;
                   let cand = all.find(el => cont.contains(el)) || all[0] || null;
-                  console.log('Candidato encontrado:', cand);
+                  console.log('Candidato seleccionado:', cand ? {
+                    tag: cand.tagName,
+                    text: (cand.textContent || '').trim().substring(0, 50),
+                    ariaLabel: cand.getAttribute('aria-label') || '',
+                    title: cand.getAttribute('title') || '',
+                    className: cand.className || ''
+                  } : null);
                   if (!cand) {
-                    console.log('No se encontró candidato para el botón de descarga');
-                    return { mark: null };
+                    console.log('No se encontró candidato inicial. Intentando búsqueda más agresiva...');
+                    
+                    // Búsqueda de fallback más agresiva
+                    const fallbackCandidates = [];
+                    
+                    // Buscar TODOS los botones visibles y analizar su contenido
+                    pageRoot.querySelectorAll('button, a, [role="button"], [tabindex]').forEach(el => {
+                      if (!el.offsetParent) return; // Skip elementos no visibles
+                      
+                      const allContent = [
+                        el.textContent || '',
+                        el.getAttribute('aria-label') || '',
+                        el.getAttribute('title') || '',
+                        el.getAttribute('data-testid') || '',
+                        el.className || '',
+                        el.id || ''
+                      ].join(' ').toLowerCase();
+                      
+                      // Buscar cualquier referencia a descarga/exportación
+                      if (/descarg|export|excel|download|arrow.*down|save|guardar/i.test(allContent)) {
+                        // Verificar que no esté en menús principales
+                        if (!el.closest('header, nav, .menu, [role="menu"]')) {
+                          fallbackCandidates.push(el);
+                        }
+                      }
+                    });
+                    
+                    console.log('Candidatos de fallback encontrados:', fallbackCandidates.length);
+                    fallbackCandidates.forEach((el, idx) => {
+                      console.log(`Fallback ${idx + 1}:`, {
+                        tag: el.tagName,
+                        text: (el.textContent || '').trim().substring(0, 30),
+                        ariaLabel: el.getAttribute('aria-label') || '',
+                        className: el.className || ''
+                      });
+                    });
+                    
+                    cand = fallbackCandidates[0] || null;
+                    
+                    if (!cand) {
+                      console.log('No se encontró ningún candidato para el botón de descarga');
+                      return { mark: null };
+                    }
                   }
                   if (cand && cand.tagName && cand.tagName.toLowerCase()==='san-icon') {
                     const wrap = cand.closest('a,button,[role=button]');
@@ -1303,28 +1488,22 @@ with sync_playwright() as p:
                                                 continue
                                         
                                         if not found:
-                                            # Si no se encuentra el botón, mostrar un mensaje de advertencia
-                                            print("Advertencia: No se encontró el botón 'Descargar Excel' en la modal.")
-                                            # Guardar una evidencia adicional para depuración
+                                            # Si no se encuentra el botón, intentar con download directo
+                                            print("Advertencia: No se encontró el botón 'Descargar Excel'. Intentando descarga directa...")
                                             try:
-                                                page.screenshot(path="/home/sami/logs/modal_debug.png", full_page=True)
-                                                print("Evidencia adicional guardada en: /home/sami/logs/modal_debug.png")
-                                                
-                                                # Imprimir información adicional sobre los elementos en la página
-                                                try:
-                                                    buttons = page.locator("button").all()
-                                                    print(f"Total de botones encontrados en la página: {len(buttons)}")
-                                                    for i, btn in enumerate(buttons[:10]):  # Solo los primeros 10 para no sobrecargar
-                                                        try:
-                                                            text = btn.text_content()
-                                                            if text and len(text.strip()) > 0:
-                                                                print(f"  Botón {i+1}: '{text.strip()}'")
-                                                        except:
-                                                            pass
-                                                except Exception as enum_err:
-                                                    print(f"Error al enumerar botones: {enum_err}")
-                                            except Exception as screenshot_err:
-                                                print(f"No se pudo guardar la evidencia adicional: {screenshot_err}")
+                                                # Intentar hacer clic en cualquier elemento que contenga "download" o "descarga"
+                                                download_elements = page.locator("[download], [href*='download'], [onclick*='download'], [class*='download']").all()
+                                                for elem in download_elements:
+                                                    try:
+                                                        if elem.is_visible():
+                                                            elem.click()
+                                                            print("Clic realizado en elemento de descarga alternativo")
+                                                            found = True
+                                                            break
+                                                    except:
+                                                        continue
+                                            except Exception as download_err:
+                                                print(f"Error en descarga alternativa: {download_err}")
                                 except Exception as modal_err:
                                     print(f"Error al hacer clic en 'Descargar Excel': {modal_err}")
                             except Exception as click_err:
@@ -1365,10 +1544,10 @@ with sync_playwright() as p:
     except Exception as e:
         print(f"Error al guardar evidencia HTML: {e}")
     
-    # Mantener el navegador abierto para observar el resaltado
+    # Esperar a que se complete la descarga
     try:
-        print("Botón de descarga resaltado. Manteniendo navegador abierto para observación...")
-        page.wait_for_timeout(30000)  # Mantener abierto por 30 segundos para observación
+        print("Esperando completar descarga...")
+        page.wait_for_timeout(5000)  # Esperar 5 segundos para que se complete la descarga
     except Exception:
         pass
     

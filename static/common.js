@@ -4,10 +4,7 @@ import {
   truncarDecimales,
   formatearImporte,
   calcularPrecioConDescuento,
-  calcularTotalDetalle,
-  preloadFranjasProducto,
-  norm,
-  debounce
+  calcularTotalDetalle
 } from './scripts_utils.js';
 import { mostrarNotificacion } from './notificaciones.js';
 
@@ -27,47 +24,24 @@ export async function cargarProductos() {
   }
 }
 
-export const MAX_OPCIONES_SELECT = 200;
-
 export function actualizarSelectProductos(productos, selectElement) {
   if (!selectElement) return;
-
-  const total = Array.isArray(productos) ? productos.length : 0;
-  const lista = total > MAX_OPCIONES_SELECT ? productos.slice(0, MAX_OPCIONES_SELECT) : (productos || []);
-
-  // Reemplazo eficiente del contenido
-  const frag = document.createDocumentFragment();
-  const first = document.createElement('option');
-  first.value = '';
-  first.textContent = 'Seleccione un producto';
-  frag.appendChild(first);
-
-  for (const producto of lista) {
+  
+  selectElement.innerHTML = '<option value="">Seleccione un producto</option>';
+  productos.forEach(producto => {
     const option = document.createElement('option');
     option.value = producto.id;
     option.textContent = producto.nombre;
     option.dataset.descripcion = producto.descripcion;
     option.dataset.precioOriginal = producto.subtotal;
-    frag.appendChild(option);
-  }
-
-  if (total > MAX_OPCIONES_SELECT) {
-    const extra = document.createElement('option');
-    extra.value = '';
-    extra.disabled = true;
-    extra.textContent = `(+${total - MAX_OPCIONES_SELECT} más resultados, refine la búsqueda...)`;
-    frag.appendChild(extra);
-  }
-
-  // Evitar reflow excesivo
-  selectElement.innerHTML = '';
-  selectElement.appendChild(frag);
+    selectElement.appendChild(option);
+  });
 }
 
 export function filtrarProductos(busqueda, productosOriginales) {
-  const q = norm(busqueda || '');
-  if (!q) return productosOriginales || [];
-  return (productosOriginales || []).filter(p => norm(p.nombre).includes(q));
+  return productosOriginales.filter(producto =>
+    producto.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  );
 }
 
 // Funciones comunes para manejo de detalles
@@ -113,7 +87,7 @@ export function limpiarCamposDetalle(formElements) {
   if (totalDetalle) totalDetalle.removeEventListener('input', calcularTotalDetalle);
 }
 
-export function seleccionarProducto(formElements, productosOriginales, tipoDocumento = 'proforma') {
+export async function seleccionarProducto(formElements, productosOriginales, tipoDocumento = 'ticket') {
   const {
     conceptoDetalle,
     descripcionDetalle,
@@ -180,43 +154,8 @@ export function seleccionarProducto(formElements, productosOriginales, tipoDocum
     totalDetalle.readOnly = true;
     totalDetalle.style.backgroundColor = '#e9ecef';
 
-    // Calcular el precio con descuento y el total
-    const cantidad = parseFloat(cantidadDetalle.value) || 1;
-    // Aplicar franjas específicas por producto según el tipo de documento
-    // - 'proforma': respeta regla de tipo A/N
-    // - 'ticket'  : siempre aplica franjas
-    const precioConDescuento = calcularPrecioConDescuento(precioOriginal, cantidad, null, tipoDocumento, productoId);
-    const impuestos = parseFloat(impuestoDetalle.value) || 21;
-    
-    precioDetalle.value = Number(precioConDescuento).toFixed(5);
-    const subtotal = precioConDescuento * cantidad;
-    const total = subtotal * (1 + impuestos / 100);
-    totalDetalle.value = total.toFixed(2);
-
-    // Reasociar listener para recalcular al cambiar cantidad en productos NO libres
-    // (los listeners previos se removieron arriba para evitar duplicados)
-    try {
-      cantidadDetalle.addEventListener('input', calcularTotalDetalle);
-    } catch (_) { /* noop */ }
-
-    // Precargar franjas reales y recalcular si cambian
-    try {
-      preloadFranjasProducto(productoId).then(() => {
-        // Verificar que el usuario no cambió de producto mientras tanto
-        const sigueSiendoMismo = conceptoDetalle && conceptoDetalle.value == productoId;
-        if (!sigueSiendoMismo) return;
-        const cant = parseFloat(cantidadDetalle.value) || 1;
-        const iva = parseFloat(impuestoDetalle.value) || 21;
-        const precioRecalc = calcularPrecioConDescuento(precioOriginal, cant, null, tipoDocumento, productoId);
-        const precioActual = Number(precioDetalle.value);
-        const precioNuevo = Number(precioRecalc.toFixed(5));
-        if (precioActual !== precioNuevo) {
-          precioDetalle.value = precioNuevo.toFixed(5);
-          const sub = precioNuevo * cant;
-          totalDetalle.value = (sub * (1 + iva / 100)).toFixed(2);
-        }
-      }).catch(() => {});
-    } catch (_) { /* silent */ }
+    // Para productos normales, añadir listener solo en cantidad para calcular franjas
+    cantidadDetalle.addEventListener('input', calcularTotalDetalle);
 
     // Ocultar y limpiar el campo de concepto personalizado si existe
     if (conceptoInput) {
@@ -229,7 +168,14 @@ export function seleccionarProducto(formElements, productosOriginales, tipoDocum
     }
   }
 
-  calcularTotalDetalle();
+  // Solo calcular el total inicial con precio base, sin consultar franjas
+  const cantidad = parseFloat(cantidadDetalle.value) || 1;
+  const impuestos = parseFloat(impuestoDetalle.value) || 21;
+  const subtotal = precioOriginal * cantidad;
+  // Redondear IVA (base * porcentaje) a 2 decimales antes de sumar
+  const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+  const total = Number((subtotal + impuestoCalc).toFixed(2));
+  totalDetalle.value = total.toFixed(2);
 }
 
 // Funciones comunes para validación

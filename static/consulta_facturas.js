@@ -1,6 +1,6 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion } from './notificaciones.js';
-import { formatearImporte, formatearFechaSoloDia, mostrarCargando, ocultarCargando, debounce, getEstadoFormateadoFactura, getEstadoClassFactura } from './scripts_utils.js';
+import { formatearImporte, formatearFechaSoloDia, mostrarCargando, ocultarCargando, debounce, getEstadoFormateado as getEstadoFormateadoFactura, getEstadoClass as getEstadoClassFactura } from './scripts_utils.js';
 
 // Estados y clases se importan desde scripts_utils.js
 
@@ -58,7 +58,7 @@ function formatDateToDisplay(dateStr) {
 // Estado de paginación
 let pagination = {
     page: 1,
-    pageSize: 10,
+    pageSize: 20,
     totalPages: 1
 };
 
@@ -68,7 +68,7 @@ function loadPaginationState() {
         if (saved) {
             const p = JSON.parse(saved);
             pagination.page = Math.max(parseInt(p.page || 1), 1);
-            pagination.pageSize = Math.min(Math.max(parseInt(p.pageSize || 10), 1), 100);
+            pagination.pageSize = Math.min(Math.max(parseInt(p.pageSize || 20), 1), 100);
             pagination.totalPages = parseInt(p.totalPages || 1) || 1;
         }
     } catch {}
@@ -91,7 +91,7 @@ function updatePaginationUI() {
 
 function handlePageSizeChange() {
     const sel = document.getElementById('pageSizeSelectFacturas');
-    const newSize = parseInt(sel.value || '10');
+    const newSize = parseInt(sel.value || '20');
     pagination.pageSize = Math.min(Math.max(newSize, 1), 100);
     pagination.page = 1; // reset al cambiar tamaño
     savePaginationState();

@@ -4,6 +4,7 @@ import ssl
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.header import Header
 
 from dotenv import load_dotenv
 
@@ -25,10 +26,11 @@ def enviar_factura_por_email(destinatario, asunto, cuerpo, archivo_adjunto, nume
         msg = MIMEMultipart()
         msg['From'] = smtp_from
         msg['To'] = destinatario
-        msg['Subject'] = asunto
+        # Asunto en UTF-8
+        msg['Subject'] = str(Header(asunto, 'utf-8'))
 
-        # Añadir el cuerpo del mensaje
-        msg.attach(MIMEText(cuerpo, 'plain'))
+        # Añadir el cuerpo del mensaje en UTF-8
+        msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
 
         # Adjuntar el archivo PDF
         with open(archivo_adjunto, 'rb') as f:

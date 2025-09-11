@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import csv
 import logging
 import sqlite3
@@ -7,9 +8,11 @@ from datetime import datetime
 from pathlib import Path
 
 # Configuración
-CSV_BASE_PATH = "/mnt/swapbatch"
+# Permitir configurar la ruta del CSV por variable de entorno para compatibilidad con www-data
+# Por defecto, usar el punto de montaje CIFS
+CSV_BASE_PATH = os.getenv("CSV_BASE_PATH", "/mnt/swapbatch")
 ID_CONTACTO = 732
-DB_NAME = "/var/www/html/aleph70.db"  # Ajustar según tu configuración
+DB_NAME = "/var/www/html/db/aleph70.db"  # Ajustar según tu configuración
 LOG_DIR = Path("/var/www/html/logs")
 LOG_FILE = LOG_DIR / "batchPol.log"
 
@@ -63,10 +66,24 @@ def formatear_numero_documento(tipo, conn):
 def procesar_csv():
     """Procesa el archivo CSV y devuelve todas las líneas válidas"""
     try:
-        archivo_csv = Path(CSV_BASE_PATH) / f"impressions_summary_{datetime.now().strftime('%m%Y')}.csv"
-        
-        if not archivo_csv.exists():
-            raise FileNotFoundError(f"Archivo no encontrado: {archivo_csv}")
+        nombre = f"impressions_summary_{datetime.now().strftime('%m%Y')}.csv"
+        candidatos = [
+            Path(CSV_BASE_PATH) / nombre,                 # Ruta configurada (preferente)
+            Path("/mnt/swapbatch") / nombre,              # CIFS montado
+            Path("/var/www/html/descargas") / nombre,     # Copia local accesible
+            Path("/home/sami/swapBatch") / nombre,        # Ruta legacy
+        ]
+        archivo_csv = None
+        for p in candidatos:
+            try:
+                if p.exists():
+                    archivo_csv = p
+                    break
+            except PermissionError:
+                continue
+        if archivo_csv is None:
+            raise FileNotFoundError("Archivo no localizado en rutas conocidas: " + ", ".join(str(x) for x in candidatos))
+        logger.info(f"Usando CSV: {archivo_csv}")
         
         lineas_validas = []
         

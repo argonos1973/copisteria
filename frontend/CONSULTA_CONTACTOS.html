@@ -96,7 +96,7 @@
         <label>Por página:
           <select :value="pagination.pageSize" @change="changePageSize($event.target.value)" style="padding:2px 6px;font-size:12px;">
             <option :selected="pagination.pageSize===10" value="10">10</option>
-            <option :selected="pagination.pageSize===20" value="20">20</option>
+            <option :selected="pagination.pageSize===20" value="20" selected>20</option>
             <option :selected="pagination.pageSize===50" value="50">50</option>
             <option :selected="pagination.pageSize===100" value="100">100</option>
           </select>
@@ -235,12 +235,12 @@
             filters.razonSocial = f.razonSocial || '';
             filters.nif = f.nif || '';
             pagination.page = Number(f.page) > 0 ? Number(f.page) : 1;
-            pagination.pageSize = [10,20,50,100].includes(Number(f.pageSize)) ? Number(f.pageSize) : 10;
+            pagination.pageSize = [10,20,50,100].includes(Number(f.pageSize)) ? Number(f.pageSize) : 20;
           } else {
             filters.razonSocial = '';
             filters.nif = '';
             pagination.page = 1;
-            pagination.pageSize = 10;
+            pagination.pageSize = 20;
             guardarFiltros();
           }
           fetchContactos();

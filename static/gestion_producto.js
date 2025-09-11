@@ -3,8 +3,16 @@ import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import { mostrarCargando, ocultarCargando } from './scripts_utils.js';
 
 // Utilidades de redondeo
-const round4 = (v) => +Number(v ?? 0).toFixed(4);
+const round5 = (v) => Number(v ?? 0).toFixed(5);
 const round2 = (v) => +Number(v ?? 0).toFixed(2);
+
+// Función para convertir comas a puntos en importes
+const convertirComaAPunto = (valor) => {
+  if (typeof valor === 'string') {
+    return valor.replace(',', '.');
+  }
+  return valor;
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   const API_BASE = `http://${IP_SERVER}:${PORT}/api`;
@@ -27,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Franjas automáticas
   const fieldsetFranjas = document.getElementById('fieldsetFranjasAuto');
   const chkFranjasAuto1500 = document.getElementById('chkFranjasAuto1500');
+  const chkNoGenerarFranjas = document.getElementById('chkNoGenerarFranjas');
   const inFranjaInicio = document.getElementById('franja_inicio');
   const inBandas = document.getElementById('bandas');
   const inAncho = document.getElementById('ancho');
@@ -52,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   // Valores por defecto de franjas automáticas
-  inFranjaInicio.value = 2;
+  inFranjaInicio.value = 1;
   inBandas.value = 3;
   inAncho.value = 10;
   inDescInicial.value = 5;
@@ -84,13 +93,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (chkFranjasAuto1500) {
     chkFranjasAuto1500.addEventListener('change', (e) => {
-      aplicarAuto1500(!!e.target.checked);
+      const isChecked = e.target.checked;
+      console.log('Checkbox change event:', isChecked);
+      aplicarAuto1500(isChecked);
+      
+      // Si se activa franjas automáticas, desactivar "no generar franjas"
+      if (isChecked && chkNoGenerarFranjas) {
+        chkNoGenerarFranjas.checked = false;
+      }
+    });
+  }
+
+  // Función para deshabilitar/habilitar campos de configuración de franjas
+  const toggleCamposFranjas = (disabled) => {
+    if (inFranjaInicio) inFranjaInicio.disabled = disabled;
+    if (inBandas) inBandas.disabled = disabled;
+    if (inAncho) inAncho.disabled = disabled;
+    if (inDescInicial) inDescInicial.disabled = disabled;
+    if (inIncremento) inIncremento.disabled = disabled;
+  };
+
+  // Checkbox para no generar franjas
+  if (chkNoGenerarFranjas) {
+    chkNoGenerarFranjas.addEventListener('change', (e) => {
+      const isChecked = e.target.checked;
+      console.log('No generar franjas checkbox:', isChecked);
+      
+      // Si se activa "no generar franjas", desactivar franjas automáticas y deshabilitar campos
+      if (isChecked) {
+        if (chkFranjasAuto1500) {
+          chkFranjasAuto1500.checked = false;
+          aplicarAuto1500(false);
+        }
+        // Deshabilitar todos los campos de configuración de franjas
+        toggleCamposFranjas(true);
+      } else {
+        // Habilitar campos de configuración de franjas
+        toggleCamposFranjas(false);
+      }
     });
   }
 
   // Funciones de cálculo
   const recalcDesdeSubtotal = () => {
-    const base = Number(inputSubtotal.value || 0);
+    const base = Number(convertirComaAPunto(inputSubtotal.value) || 0);
     const ivaPct = Number(selectImpuestos.value || 0);
     if (isNaN(base) || isNaN(ivaPct)) return;
     const iva = round2(base * (ivaPct / 100));
@@ -98,12 +144,12 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const recalcDesdeTotal = () => {
-    const total = Number(inputTotal.value || 0);
+    const total = Number(convertirComaAPunto(inputTotal.value) || 0);
     const ivaPct = Number(selectImpuestos.value || 0);
     if (isNaN(total) || isNaN(ivaPct)) return;
     const divisor = 1 + (ivaPct / 100);
     const base = total / divisor;
-    inputSubtotal.value = round4(base);
+    inputSubtotal.value = round5(base);
   };
 
   // Uppercase en tiempo real
@@ -136,17 +182,73 @@ document.addEventListener('DOMContentLoaded', () => {
       state.cargando = true;
       mostrarCargando();
       const { data } = await axios.get(`${API_BASE}/productos/${pid}`);
+      console.log('Backend response for product:', JSON.stringify(data, null, 2));
+      console.log('Subtotal from backend:', data.subtotal, 'Type:', typeof data.subtotal);
       state.id = data.id;
       inputNombre.value = data.nombre || '';
       inputDescripcion.value = data.descripcion || '';
       selectImpuestos.value = Number(data.impuestos ?? 21);
-      inputSubtotal.value = round4(Number(data.subtotal ?? 0));
+      // Mostrar exactamente el valor recibido desde backend sin redondear ni formatear
+      inputSubtotal.value = (data.subtotal !== undefined && data.subtotal !== null) ? String(data.subtotal) : '';
+      console.log('Subtotal set from backend (no rounding):', inputSubtotal.value, 'Type:', typeof inputSubtotal.value);
       recalcDesdeSubtotal();
       state.modoEdicion = true;
-      titulo.textContent = 'Editar Producto';
+      titulo.textContent = 'Producto';
       // Mantener visible el bloque de franjas automáticas también en edición para poder enviar parámetros
       if (fieldsetFranjas) fieldsetFranjas.style.display = '';
       if (btnGuardar) btnGuardar.textContent = 'Guardar';
+
+      // Cargar configuración de franjas automáticas
+      try {
+        const configResp = await axios.get(`${API_BASE}/productos/${pid}/franjas_config`);
+        const config = configResp.data?.config || {};
+        
+        // Actualizar campos con la configuración guardada
+        if (inFranjaInicio) inFranjaInicio.value = config.franja_inicial || 1;
+        if (inBandas) inBandas.value = config.numero_franjas || 50;
+        if (inAncho) inAncho.value = config.ancho_franja || 10;
+        if (inDescInicial) inDescInicial.value = config.descuento_inicial || 5.0;
+        if (inIncremento) inIncremento.value = config.incremento_franja || 5.0;
+        
+        // Actualizar checkbox según calculo_automatico
+        if (chkFranjasAuto1500) {
+          const esAutomatico = config.calculo_automatico === 1;
+          console.log('Configuración cargada:', config);
+          console.log('calculo_automatico:', config.calculo_automatico, 'tipo:', typeof config.calculo_automatico, 'esAutomatico:', esAutomatico);
+          
+          // Forzar la actualización del checkbox
+          chkFranjasAuto1500.checked = esAutomatico;
+          
+          // Aplicar directamente sin disparar evento change para evitar bucle
+          aplicarAuto1500(esAutomatico);
+          
+          console.log('Checkbox actualizado:', chkFranjasAuto1500.checked);
+          console.log('Estado después del evento:', chkFranjasAuto1500.checked);
+        }
+        
+        // Actualizar checkbox "No generar franjas" según no_generar_franjas
+        if (chkNoGenerarFranjas) {
+          const noGenerarFranjas = config.no_generar_franjas === 1;
+          console.log('no_generar_franjas:', config.no_generar_franjas, 'tipo:', typeof config.no_generar_franjas, 'noGenerarFranjas:', noGenerarFranjas);
+          
+          // Actualizar checkbox
+          chkNoGenerarFranjas.checked = noGenerarFranjas;
+          
+          // Si está activado, deshabilitar campos de configuración
+          if (noGenerarFranjas) {
+            toggleCamposFranjas(true);
+          }
+          
+          console.log('Checkbox no generar franjas actualizado:', chkNoGenerarFranjas.checked);
+        }
+      } catch (configError) {
+        console.warn('No se pudo cargar la configuración de franjas:', configError);
+        // Usar valores por defecto si no hay configuración
+        if (chkFranjasAuto1500) {
+          chkFranjasAuto1500.checked = false;
+          aplicarAuto1500(false);
+        }
+      }
 
       // Cargar y mostrar resumen de franjas del producto en edición
       try {
@@ -167,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const maxMax = Math.max(...maxs);
             const minDesc = Math.min(...descs);
             const maxDesc = Math.max(...descs);
-            franjasResumen.textContent = `${n} franjas · unidades ${minMin}-${maxMax} · desc ${minDesc.toFixed(4)}%-${maxDesc.toFixed(4)}%`;
+            franjasResumen.textContent = `${n} franjas · unidades ${minMin}-${maxMax} · desc ${minDesc.toFixed(8)}%-${maxDesc.toFixed(8)}%`;
           }
 
         }
@@ -309,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const payloadBase = {
       nombre: inputNombre.value.trim().toUpperCase(),
       descripcion: (inputDescripcion.value || '').trim().toUpperCase(),
-      subtotal: Number(Number(inputSubtotal.value || 0).toFixed(4)),
+      subtotal: Number(Number(convertirComaAPunto(inputSubtotal.value) || 0).toFixed(5)),
       impuestos: Number(selectImpuestos.value || 0),
     };
     // Calcular totales coherentes en backend también, pero enviamos total estimado
@@ -321,28 +423,48 @@ document.addEventListener('DOMContentLoaded', () => {
       state.cargando = true;
       let resp;
       if (state.modoEdicion && state.id) {
-        // En edición: si el preset 1–500 está activo, enviar también franjas_auto para regenerar franjas
-        if (chkFranjasAuto1500 && chkFranjasAuto1500.checked) {
-          payload.franjas_auto = {
-            franja_inicio: 1,
-            bandas: Number(inBandas.value || 0),
-            ancho: Number(inAncho.value || 0),
-            descuento_inicial: Number(inDescInicial.value || 0),
-            incremento: Number(inIncremento.value || 0)
-          };
-        }
+        // Actualizar configuración de franjas automáticas
+        const configFranjas = {
+          calculo_automatico: chkFranjasAuto1500 && chkFranjasAuto1500.checked ? 1 : 0,
+          no_generar_franjas: chkNoGenerarFranjas && chkNoGenerarFranjas.checked ? 1 : 0,
+          franja_inicial: Number(convertirComaAPunto(inFranjaInicio.value) || 1),
+          numero_franjas: Number(convertirComaAPunto(inBandas.value) || 50),
+          ancho_franja: Number(convertirComaAPunto(inAncho.value) || 10),
+          descuento_inicial: Number(convertirComaAPunto(inDescInicial.value) || 5.0),
+          incremento_franja: Number(convertirComaAPunto(inIncremento.value) || 5.0)
+        };
+        
+        // Añadir configuración de franjas al payload
+        payload.config_franjas = configFranjas;
+        
+        console.log('DEBUG frontend - Enviando config_franjas (edición):', configFranjas);
+        console.log('DEBUG frontend - no_generar_franjas value:', chkNoGenerarFranjas?.checked);
+        
         mostrarCargando();
         console.log('payload (edición)', JSON.parse(JSON.stringify(payload)));
         resp = await axios.put(`${API_BASE}/productos/${state.id}`, payload);
       } else {
+        // En creación: añadir configuración de franjas directamente al payload
+        payload.calculo_automatico = chkFranjasAuto1500 && chkFranjasAuto1500.checked ? 1 : 0;
+        payload.no_generar_franjas = chkNoGenerarFranjas && chkNoGenerarFranjas.checked ? 1 : 0;
+        payload.franja_inicial = Number(convertirComaAPunto(inFranjaInicio.value) || 1);
+        payload.numero_franjas = Number(convertirComaAPunto(inBandas.value) || 50);
+        payload.ancho_franja = Number(convertirComaAPunto(inAncho.value) || 10);
+        payload.descuento_inicial = Number(convertirComaAPunto(inDescInicial.value) || 5.0);
+        payload.incremento_franja = Number(convertirComaAPunto(inIncremento.value) || 5.0);
+        
+        console.log('DEBUG frontend - calculo_automatico (creación):', payload.calculo_automatico);
+        console.log('DEBUG frontend - no_generar_franjas (creación):', payload.no_generar_franjas);
+        
         // Añadir franjas_auto sólo en creación
         payload.franjas_auto = {
           franja_inicio: 1,
-          bandas: Number(inBandas.value || 0),
-          ancho: Number(inAncho.value || 0),
-          descuento_inicial: Number(inDescInicial.value || 0),
-          incremento: Number(inIncremento.value || 0)
+          bandas: Number(convertirComaAPunto(inBandas.value) || 0),
+          ancho: Number(convertirComaAPunto(inAncho.value) || 0),
+          descuento_inicial: Number(convertirComaAPunto(inDescInicial.value) || 0),
+          incremento: Number(convertirComaAPunto(inIncremento.value) || 0)
         };
+        
         mostrarCargando();
         console.log('payload (creación)', JSON.parse(JSON.stringify(payload)));
         resp = await axios.post(`${API_BASE}/productos`, payload);

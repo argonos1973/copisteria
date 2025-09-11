@@ -9,6 +9,7 @@ gastos_bp = Blueprint('gastos', __name__)
 
 
 @gastos_bp.route('/ingresos_gastos_mes', methods=['GET'])
+@gastos_bp.route('/api/ingresos_gastos_mes', methods=['GET'])
 def ingresos_gastos_mes():
     """Devuelve los ingresos y gastos (suma de importes positivos y negativos)
     para cada mes de un año concreto. Formato de respuesta:
@@ -62,6 +63,8 @@ def ingresos_gastos_mes():
 @gastos_bp.route('/api/gastos', methods=['GET'])
 def consulta_gastos():
     try:
+        # Logs de entrada
+        print('[CONSULTA_GASTOS] Petición recibida con args:', dict(request.args))
         fecha_inicio = request.args.get('fecha_inicio', '')
         if not fecha_inicio:
             hoy = datetime.now()
@@ -89,7 +92,9 @@ def consulta_gastos():
         query += " ORDER BY date(substr(fecha_valor,7,4)||'-'||substr(fecha_valor,4,2)||'-'||substr(fecha_valor,1,2)) DESC"
 
         conn = get_db_connection()
+        print('[CONSULTA_GASTOS] Ejecutando consulta SQL con params:', params)
         gastos = conn.execute(query, params).fetchall()
+        print(f"[CONSULTA_GASTOS] Filas devueltas: {len(gastos)}")
         conn.close()
         # Validar y limpiar resultados
         gastos_list = []
@@ -111,12 +116,18 @@ def consulta_gastos():
                 'importe_eur': importe
             })
         diferencia = total_positivos + total_negativos
-        return jsonify({
+        respuesta = {
             'gastos': gastos_list,
             'total_negativos': total_negativos,
             'total_positivos': total_positivos,
             'diferencia': diferencia
+        }
+        print('[CONSULTA_GASTOS] Resumen totales:', {
+            'total_negativos': total_negativos,
+            'total_positivos': total_positivos,
+            'diferencia': diferencia
         })
+        return jsonify(respuesta)
     except Exception as e:
         print('ERROR EN CONSULTA_GASTOS:', str(e))
         print(format_exc())
@@ -210,21 +221,27 @@ def ingresos_gastos_totales():
         # Crear versión con fecha y hora completa en formato dd/mm/aaaa hh:mm:ss
         ultima_actualizacion_completa = None
         if ultima_fecha:
+            fecha_dt = None
+            # Intentar ISO primero (incluyendo fracciones y 'T')
             try:
-                # La salida de SQLite para MAX(ts) ya es un string ISO, solo necesitamos reformatearla
-                fecha_dt = datetime.strptime(ultima_fecha, '%Y-%m-%d %H:%M:%S')
-                ultima_actualizacion_completa = fecha_dt.strftime('%d/%m/%Y %H:%M:%S')
-                print(f"Fecha formateada: {ultima_actualizacion_completa}")
-            except (ValueError, TypeError) as e:
-                print(f"Error al formatear fecha ts: {e}, valor recibido: {ultima_fecha}")
-                # Intentar una segunda opción
+                s = str(ultima_fecha).replace('Z', '')
+                fecha_dt = datetime.fromisoformat(s)
+            except Exception:
+                # Intentar con 'T' reemplazada por espacio
                 try:
-                    # Quizás tenga otro formato
-                    fecha_dt = datetime.fromisoformat(ultima_fecha.replace('T', ' '))
-                    ultima_actualizacion_completa = fecha_dt.strftime('%d/%m/%Y %H:%M:%S')
-                except Exception as e2:
-                    print(f"Segundo error al formatear: {e2}")
-                    ultima_actualizacion_completa = ultima_actualizacion
+                    s2 = str(ultima_fecha).replace('T', ' ')
+                    fecha_dt = datetime.fromisoformat(s2)
+                except Exception:
+                    # Intentar formato clásico sin fracciones
+                    try:
+                        fecha_dt = datetime.strptime(str(ultima_fecha), '%Y-%m-%d %H:%M:%S')
+                    except Exception:
+                        fecha_dt = None
+            if fecha_dt:
+                ultima_actualizacion_completa = fecha_dt.strftime('%d/%m/%Y %H:%M:%S')
+            else:
+                # Fallback: usar fecha_operacion si está disponible
+                ultima_actualizacion_completa = ultima_actualizacion
         elif ultima_actualizacion:
             # Fallback: Si no hay ts pero sí fecha_operacion
             ultima_actualizacion_completa = ultima_actualizacion

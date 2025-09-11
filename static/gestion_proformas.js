@@ -3,6 +3,7 @@ import {
   PRODUCTO_ID_LIBRE,
   formatearImporte,
   formatearApunto,
+  formatearImporteVariable,
   parsearImporte,
   calcularPrecioConDescuento,
   calcularTotalDetalle,
@@ -19,9 +20,9 @@ import {
   limpiarCamposDetalle,
   seleccionarProducto as seleccionarProductoCommon,
   validarDetalle,
-  redondearImporte,
   volverSegunOrigen
 } from './common.js';
+import { redondearImporte } from './common.js';
 
 // Variables globales
 let detalles = [];
@@ -51,7 +52,7 @@ async function cargarProductos() {
   actualizarSelectProductos(productosOriginales, document.getElementById('concepto-detalle'));
 }
 
-function seleccionarProducto() {
+async function seleccionarProducto() {
   const formElements = {
     conceptoDetalle: document.getElementById('concepto-detalle'),
     descripcionDetalle: document.getElementById('descripcion-detalle'),
@@ -62,21 +63,26 @@ function seleccionarProducto() {
     conceptoInput: document.getElementById('concepto-input'),
     busquedaProducto: document.getElementById('busqueda-producto')
   };
-  
-  // Obtenemos el tipo de proforma del formulario
+
+  // Obtener el tipo de proforma del formulario
   const formulario = document.getElementById('proforma-form');
   const tipoProforma = formulario ? formulario.dataset.tipoProforma : null;
-  
+
   console.log('Tipo de proforma detectado:', tipoProforma);
-  
-  // Si es una proforma tipo 'A', manejamos el producto sin descuentos
+
+  // Establecer cantidad por defecto antes de llamar a seleccionarProductoCommon
+  if (formElements.cantidadDetalle) {
+    formElements.cantidadDetalle.value = 1;
+  }
+
   if (tipoProforma === 'A') {
-    console.log('Usando manejo SIN descuentos por franja');
-    manejarProductoSinDescuentos(formElements);
+    // Para proformas tipo A, usar el precio original sin descuentos
+    console.log('Proforma tipo A: NO se aplican descuentos por franja');
+    await seleccionarProductoCommon(formElements, productosOriginales, 'proforma');
   } else {
     // Comportamiento normal para otros tipos de proformas
     console.log('Usando manejo normal CON descuentos por franja');
-    seleccionarProductoCommon(formElements, productosOriginales);
+    await seleccionarProductoCommon(formElements, productosOriginales);
   }
 
    // Si es producto libre, hacer editable el campo total
@@ -119,7 +125,7 @@ function manejarProductoSinDescuentos(formElements) {
   descripcionDetalle.value = descripcion;
   
   // Usar el precio original sin aplicar descuentos por franja
-  precioDetalle.value = Number(precioOriginal).toFixed(5);
+  precioDetalle.value = Number(precioOriginal).toFixed(5).replace('.', ',');
   impuestoDetalle.value = 21;
 
   // Configurar el campo de impuesto como readonly
@@ -130,22 +136,15 @@ function manejarProductoSinDescuentos(formElements) {
   const cantidad = parseFloat(cantidadDetalle.value) || 0;
   const subtotal = precioOriginal * cantidad;
   const total = subtotal * (1 + (parseFloat(impuestoDetalle.value) || 0) / 100);
-  totalDetalle.value = total.toFixed(2);
+  totalDetalle.value = total.toFixed(2).replace('.', ',');
 
   // Primero removemos todos los event listeners anteriores
   precioDetalle.removeEventListener('input', calcularTotalDetalle);
   cantidadDetalle.removeEventListener('input', calcularTotalDetalle);
   totalDetalle.removeEventListener('input', calcularTotalDetalle);
 
-  // Agregar listeners para recalcular el total sin descuentos
-  cantidadDetalle.addEventListener('input', () => {
-    const cantidad = parseFloat(cantidadDetalle.value) || 0;
-    const precio = parseFloat(precioDetalle.value) || 0;
-    const impuestos = parseFloat(impuestoDetalle.value) || 0;
-    const subtotal = precio * cantidad;
-    const total = subtotal * (1 + impuestos / 100);
-    totalDetalle.value = total.toFixed(2);
-  });
+  // Agregar listener para cantidad que usa el sistema de franjas
+  cantidadDetalle.addEventListener('input', calcularTotalDetalle);
 
   if (productoId === PRODUCTO_ID_LIBRE) {
     // Para productos libres, permitir edición del precio
@@ -190,7 +189,7 @@ function actualizarTotales() {
     // Calcular el total de TODOS los detalles para la proforma
     detalles.forEach(detalle => {
         const subtotal = parseFloat(detalle.precio) * parseInt(detalle.cantidad);
-        const impuesto = subtotal * (parseFloat(detalle.impuestos) / 100);
+        const impuesto = redondearImporte(subtotal * (parseFloat(detalle.impuestos) / 100));
         
         importe_bruto += subtotal;
         importe_impuestos += impuesto;
@@ -216,7 +215,7 @@ function calcularTotalDetallesDiaActual() {
     detalles.forEach(detalle => {
         if (detalle.detalleId === idHoy) {
             const subtotal = parseFloat(detalle.precio) * parseInt(detalle.cantidad);
-            const impuesto = subtotal * (parseFloat(detalle.impuestos) / 100);
+            const impuesto = redondearImporte(subtotal * (parseFloat(detalle.impuestos) / 100));
             
             importe_bruto += subtotal;
             importe_impuestos += impuesto;
@@ -247,8 +246,8 @@ function actualizarTablaDetalles() {
     
     detalles.forEach((detalle, index) => {
         const tr = document.createElement('tr');
-        // Formatear el precio con 5 decimales y el total con 2
-        const precioFormateado = Number(detalle.precio).toFixed(5).replace('.', ',') + ' €';
+        // Formatear el precio con máximo 5 decimales y el total con 2
+        const precioFormateado = formatearImporteVariable(Number(detalle.precio), 0, 5);
 
         detalle.total = parseFloat(detalle.total);     
         const totalFormateado = formatearImporte(detalle.total);
@@ -288,7 +287,7 @@ function actualizarTablaDetalles() {
     actualizarTotales();
 }
 
-function filtrarProductos() {
+async function filtrarProductos() {
   const busquedaProducto = document.getElementById('busqueda-producto').value;
   const productosFiltrados = filtrarProductosCommon(busquedaProducto, productosOriginales);
   actualizarSelectProductos(productosFiltrados, document.getElementById('concepto-detalle'));
@@ -296,7 +295,7 @@ function filtrarProductos() {
   if (productosFiltrados.length > 0) {
     const selectProducto = document.getElementById('concepto-detalle');
     selectProducto.value = productosFiltrados[0].id;
-    seleccionarProducto();
+    await seleccionarProducto();
   }
 }
 
@@ -474,13 +473,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       btnAgregarDetalle.addEventListener('click', () => validarYAgregarDetalle());
     }
 
-    // Campos numéricos => calcularTotalDetalle
-    ['cantidad-detalle', 'precio-detalle'].forEach(id => {
-      const elemento = document.getElementById(id);
-      if (elemento) {
-        elemento.addEventListener('input', () => calcularTotalDetalle());
-      }
-    });
+    // Los event listeners se configuran en seleccionarProducto() para evitar duplicados
 
     // Configurar el campo de impuesto como readonly
     const impuestoDetalle = document.getElementById('impuesto-detalle');
@@ -903,7 +896,7 @@ async function guardarProforma(formaPago = 'E', totalPago = 0, estado = 'A') {
 
         const importe_impuestos = redondearImporte(detalles.reduce((sum, d) => {
             const subtotal = parseFloat(d.precio) * parseInt(d.cantidad);
-            const impuesto = subtotal * (parseFloat(d.impuestos) / 100);
+            const impuesto = redondearImporte(subtotal * (parseFloat(d.impuestos) / 100));
             return sum + impuesto;
         }, 0));
 
@@ -924,8 +917,11 @@ async function guardarProforma(formaPago = 'E', totalPago = 0, estado = 'A') {
             cantidad: parseInt(detalle.cantidad),
             precio: Number(detalle.precio).toFixed(5),
             impuestos: parseFloat(detalle.impuestos),
-            total: redondearImporte(parseFloat(detalle.precio) * parseInt(detalle.cantidad) * (1 + parseFloat(detalle.impuestos)/100)),
-            productoId: detalle.productoId,
+            total: (() => {
+              const sub = parseFloat(detalle.precio) * parseInt(detalle.cantidad);
+              const ivaCalc = redondearImporte(sub * (parseFloat(detalle.impuestos) / 100), 2);
+              return redondearImporte(sub + ivaCalc);
+            })(),
             formaPago: detalle.id ? detalle.formaPago : formaPago,  // Mantener formaPago original si es detalle existente
             fechaDetalle: detalle.fechaDetalle || fechaAPI
         }));

@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estadísticas</title>
+    
+    <script src="./static/estadisticas_facturas.js?v=20250911_0852" type="module"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="./static/styles.css">
+    <link rel="stylesheet" href="./static/notificaciones.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            height: 100%;
+            margin: 0;
+        }
+        
+        html {
+            height: 100%;
+        }
+        
+        .container {
+            max-height: 100vh;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .stats-header {
+            margin-bottom: 1rem;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            margin-top: -0.5rem;
+        }
+        
+        .stats-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 1rem;
+        }
+        
+        .stats-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 1rem;
+        }
+        
+        .btn-actualizar {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        
+        .btn-actualizar:hover {
+            background-color: #45a049;
+        }
+        
+        .btn-descargar {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        .btn-descargar:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-actualizar:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .icono-actualizar {
+            color: #4CAF50;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: color 0.3s;
+            display: inline-flex;
+            margin-left: 8px;
+        }
+        
+        .icono-actualizar:hover {
+            color: #45a049;
+        }
+        
+        .icono-actualizar.disabled {
+            color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .icono-actualizar-girar {
+            animation: girar 1s linear infinite;
+        }
+        
+        @keyframes girar {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .stats-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.4rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .stats-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .stats-row {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .stats-label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 0.25rem;
+        }
+        
+        .stats-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stats-comparison {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
+        }
+        
+        .stats-percentage {
+            font-size: 0.9rem;
+            font-weight: bold;
+        }
+        
+        .stats-percentage.positive {
+            color: #27ae60;
+        }
+        
+        .stats-percentage.negative {
+            color: #e74c3c;
+        }
+        
+        .stats-previous {
+            font-size: 0.8rem;
+            color: #95a5a6;
+        }
+        
+        .monthly-stats {
+            margin-top: 2rem;
+        }
+        
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        
+        .stats-table th, .stats-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .stats-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            padding-top: 0.15rem;
+            padding-bottom: 0.15rem;
+        }
+        
+        .stats-table tr:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .stats-table tbody tr {
+            height: 1.5rem;
+        }
+        
+        .top-stats-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            margin-top: -0.5rem;
+        }
+        
+        .top-stats-column {
+            flex: 1;
+            min-width: 250px;
+            max-width: 450px;
+        }
+        
+        .top-clientes, .top-productos {
+            height: 100%;
+        }
+        
+        .top-clientes .stats-card, .top-productos .stats-card {
+            height: auto;
+            overflow-y: visible;
+            padding: 0.7rem;
+        }
+        
+        .top-clientes h2, .top-productos h2 {
+            font-size: 1rem;
+            margin-top: 0;
+            margin-bottom: 0.3rem;
+        }
+        
+        .stats-table {
+            font-size: 0.7rem;
+            line-height: 1;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        
+        .stats-table th, .stats-table td {
+            padding: 0.2rem 0.3rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .stats-superado {
+            box-shadow: 0 0 0 4px #b5f5c6;
+            background: linear-gradient(90deg, #e6ffe6 60%, #fff 100%);
+            border: 2px solid #27ae60 !important;
+            transition: box-shadow 0.3s, background 0.3s, border 0.3s;
+        }
+        /* Modern card redesign */
+        .stats-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            padding: 1.25rem 1.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stats-card{position:relative;}
+        .toggle-card{background:none;border:none;cursor:pointer;margin-left:0.5rem;font-size:0.9rem;color:#6c757d;padding:2px 6px;border-radius:3px;transition:all 0.2s ease;}        
+        .toggle-card:hover{background:rgba(0,0,0,0.05);color:#495057;}
+        .stats-card.collapsed .toggle-card{background:#f1f1f1;border:1px solid #e0e0e0;}
+        .toggle-card i{pointer-events:none;}
+        .stats-card.collapsed{padding:0.3rem 1rem;transition:none;max-height:3.2rem;overflow:hidden;}
+        .stats-card.collapsed h3{margin-bottom:0;}
+        .stats-card.collapsed .stats-content{display:none;}
+        .stats-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        }
+
+        .stats-label {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+        }
+
+        .stats-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #212529;
+        }
+    </style>
+
+<style>
+    /* Modal para gráficos */
+    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background-color:rgba(0,0,0,0.4);} 
+    .modal-content{background:#fff;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px;border-radius:8px;width:90%;max-width:900px;cursor:move;}
+    .cerrar-modal{color:#aaa;float:right;font-size:28px;font-weight:bold;cursor:pointer;}
+    .cerrar-modal:hover{color:#000;}
+    /* Header layout */
+    .stats-header{display:flex;flex-direction:column;gap:0.2rem;margin-bottom:1rem;}
+    .header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;}
+    .header-icons{display:flex;gap:0.3rem;}
+    .header-icons button{margin:0;background:#000 !important;border:none;border-radius:4px;padding:6px;}
+    .header-icons i{color:#fff !important;}
+    .header-controls{display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;}
+</style>
+</head>
+<body>
+    <div class="container">
+        <div class="stats-header">
+            <div class="header-top">
+                <h1>Estadísticas de Ventas <span id="year-indicator" style="font-size:0.6em;color:#7f8c8d;"></span></h1>
+                <div class="header-icons">
+                    <button id="btn-descargar-csv" class="btn-descargar" title="Descargar CSV"><i class="fas fa-download"></i></button>
+                    <button id="btn-graficos" class="btn-descargar" title="Ver Gráficos"><i class="fas fa-chart-bar"></i></button>
+                </div>
+            </div>
+            <div class="header-controls">
+                <label for="selector-fecha">Mes:</label>
+                <input type="month" id="selector-fecha" style="padding:4px;">
+            </div>
+        </div>
+
+        <div class="stats-container">
+            <!-- Estadísticas de Tickets -->
+            <div class="stats-card" id="card-tickets">
+                <h3>Tickets <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
+                <div class="stats-content">
+                    <div class="stats-row">
+                        <div class="stats-label">Total Año Actual</div>
+                        <div class="stats-value" id="ticketsTotal">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="ticketsPorcentaje">0%</span>
+                            <span class="stats-previous" id="ticketsAnterior">Año anterior: 0,00 €</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Total Mes Actual</div>
+                        <div class="stats-value" id="ticketsTotalMes">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="ticketsPorcentajeMes">0%</span>
+                            <span class="stats-previous" id="ticketsMesAnterior">Mismo mes año anterior: 0,00 €</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Media por Ticket</div>
+                        <div class="stats-value" id="ticketsMedia">0,00 €</div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Media Mensual</div>
+                        <div class="stats-value" id="ticketsMediaMensual">0,00 €</div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">% Falta para Media Mensual</div>
+                        <div class="stats-value" id="ticketsFaltaMediaMensual">0%</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="ticketsPorcentajeFalta">0%</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Cantidad</div>
+                        <div class="stats-value" id="ticketsCantidad">0</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="ticketsCantidadPctMes">N/A</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estadísticas de Facturas -->
+            <div class="stats-card" id="card-facturas">
+                <h3>Facturas <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
+                <div class="stats-content">
+                    <div class="stats-row">
+                        <div class="stats-label">Total Año Actual</div>
+                        <div class="stats-value" id="facturasTotal">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="facturasPorcentaje">0%</span>
+                            <span class="stats-previous" id="facturasAnterior">Año anterior: 0,00 €</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Total Mes Actual</div>
+                        <div class="stats-value" id="facturasTotalMes">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="facturasPorcentajeMes">0%</span>
+                            <span class="stats-previous" id="facturasMesAnterior">Mismo mes año anterior: 0,00 €</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Media por Factura</div>
+                        <div class="stats-value" id="facturasMedia">0,00 €</div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Media Mensual</div>
+                        <div class="stats-value" id="facturasMediaMensual">0,00 €</div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">% Falta para Media Mensual</div>
+                        <div class="stats-value" id="facturasFaltaMediaMensual">0%</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="facturasPorcentajeFalta">0%</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Cantidad</div>
+                        <div class="stats-value" id="facturasCantidad">0</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="facturasCantidadPctMes">N/A</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Estadísticas Globales -->
+            <div class="stats-card" id="card-global">
+                <h3>Total Global <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
+                <div class="stats-content">
+                    <div class="stats-row">
+                        <div class="stats-label">Total Año Actual</div>
+                        <div class="stats-value" id="globalTotal">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalPorcentaje">0%</span>
+                            <span class="stats-previous" id="globalAnterior">Año anterior: 0,00 €</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Total Previsto Año</div>
+                        <div class="stats-value" id="globalTotalPrevisto">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalPorcentajePrevistoAnyo">0%</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Total Mes Actual</div>
+                        <div class="stats-value" id="globalTotalMes">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalPorcentajeMes">0%</span>
+                            <span class="stats-previous" id="globalMesAnterior">Mismo mes año anterior: 0,00 €</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Media Global</div>
+                        <div class="stats-value" id="globalMedia">0,00 €</div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Media Mensual</div>
+                        <div class="stats-value" id="globalMediaMensual">0,00 €</div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">% Falta para Media Mensual</div>
+                        <div class="stats-value" id="globalFaltaMediaMensual">0%</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalPorcentajeFalta">0%</span>
+                        </div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-label">Cantidad Total</div>
+                        <div class="stats-value" id="globalCantidad">0</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalCantidadPctAnyo">N/A</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="top-stats-container">
+    <div class="top-stats-column">
+        <div class="top-clientes">
+            <h2>Top 10 Clientes</h2>
+            <div class="stats-card">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Total</th>
+                            <th>Dif.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topClientesBody">
+                        <!-- Los datos de clientes se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="top-stats-column">
+        <div class="top-productos">
+            <h2>Top 10 Productos</h2>
+            <div class="stats-card">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Cant.</th>
+                            <th>Total</th>
+                            <th>Dif.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topProductosBody">
+                        <!-- Los datos de productos se cargarán aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="top-stats-column">
+        <div class="top-gastos" style="display:none;">
+            <h2>Top 10 Gastos</h2>
+            <div class="stats-card">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Total</th>
+                            <th>Dif.</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topGastosBody">
+                        <!-- Datos de gastos -->
+                    </tbody>
+                </table>
+            </div>
+        </div><!-- fin top gastos -->
+        <div class="stats-card" id="card-ingresos-gastos-totales" style="margin-top:10px;">
+            <h3>Ingresos y Gastos (Año) <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
+            <div class="stats-content">
+            <div class="stats-row">
+                <div class="stats-label">Ingresos</div>
+                <div class="stats-value importe-positivo" id="ig-total-ingresos">0,00 €</div>
+                <div class="stats-percentage positive" id="ig-pct-ingresos">0%</div>
+            </div>
+            <div class="stats-row">
+                <div class="stats-label">Gastos</div>
+                <div class="stats-value importe-negativo" id="ig-total-gastos">0,00 €</div>
+                <div class="stats-percentage negative" id="ig-pct-gastos">0%</div>
+            </div>
+            <div class="stats-row">
+                <div class="stats-label">Balance</div>
+                <div class="stats-value" id="ig-total-balance">0,00 €</div>
+            </div>
+            <div class="stats-row">
+                <div class="stats-label">Última actualización</div>
+                <div class="stats-value" id="ig-ultima-actualizacion" style="font-size: 0.9rem; color: #666;">-</div>
+            </div>
+            </div>
+        </div>
+    </div>
+</div>
+    </div>
+</div>
+
+<div id="modal-graficos" class="modal">
+    <div class="modal-content">
+        <span class="cerrar-modal" id="cerrar-modal">&times;</span>
+        <div class="chart-controls" style="margin-bottom: 20px; text-align: center;">
+            <label for="tipo-datos" style="margin-right: 10px;">Mostrar:</label>
+            <select id="tipo-datos" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
+                <option value="global">Total Global</option>
+                <option value="tickets">Tickets</option>
+                <option value="facturas">Facturas</option>
+                <option value="ingresos_gastos">Ingresos vs Gastos</option>
+            </select>
+        </div>
+        <canvas id="chart-estadisticas"></canvas>
+    </div>
+</div>
+</div>
+
+<div id="notificaciones-contenedor"></div>
+
+<!-- Scripts sin tipo module para mejor compatibilidad -->
+<!-- Bloque inline eliminado -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!--
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const btnGraficos = document.getElementById("btn-graficos");
+        if (btnGraficos) {
+            btnGraficos.addEventListener("click", abrirModalGraficos);
+        }
+        
+        const cerrarModal = document.getElementById("cerrar-modal");
+        if (cerrarModal) {
+            cerrarModal.addEventListener("click", function() {
+                document.getElementById("modal-graficos").style.display = "none";
+            });
+        }
+    });
+</script>
+-->
+
+</body>
+</html>

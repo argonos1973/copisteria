@@ -137,14 +137,12 @@ export function mostrarConfirmacion(mensaje) {
 }
 
 // Conexión Server-Sent Events con reconexión automática
-import { API_URL_PRIMARY } from '../static/constantes.js';
 // Evita inicializar múltiples veces si el script se vuelve a cargar
 if (typeof window !== 'undefined' && window.__SSE_NOTIFICACIONES_INIT) {
     console.debug('SSE ya inicializado');
 } else
 if (typeof window !== 'undefined' && 'EventSource' in window) {
-    // Forzar a puerto 5001 (API_URL_PRIMARY) para evitar Connection Refused en origen 80
-    const ENDPOINT_SSE = `${API_URL_PRIMARY}/api/notificaciones/stream`;
+    const ENDPOINT_SSE = '/api/notificaciones/stream'; // única ruta estable
     let fuente = null;
     let ultimoMensaje = null;
 

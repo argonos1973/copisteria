@@ -15,10 +15,6 @@
     <link rel="stylesheet" href="../static/styles.css">
     <link rel="stylesheet" href="../static/notificaciones.css">
     <style>
-        /* Ocultar literal visual "TICKET" solo en esta página */
-        .cabecera-ticket::before { content: '' !important; display: none !important; }
-    </style>
-    <style>
         /* Estilos para el modal */
         #modal-pagos {
             display: none;
@@ -167,7 +163,7 @@
             <div class="detalle-proforma-item-importe" style="flex: 1">
                 <input type="hidden" id="precio-detalle-orig" value="0">
                 <label for="precio-detalle">Precio</label>
-                <input type="number" id="precio-detalle" value="0" required>
+                <input type="number" id="precio-detalle" value="0" required step="0.00001" min="0" inputmode="decimal">
               </div>
             <div class="detalle-proforma-item-importe" style="flex: 1">
                 <label for="impuesto-detalle">IVA (%)</label>

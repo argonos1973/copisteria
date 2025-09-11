@@ -22,6 +22,13 @@ from facturae.xml_template import (generar_individual_template,
 
 logger = logging.getLogger(__name__)
 
+# Helper de depuración sin escritura a disco
+def dbg(msg: str):
+    try:
+        print(str(msg))
+    except Exception:
+        pass
+
 # Rutas por defecto para certificados
 CLAVE_PRIVADA_PATH = "/var/www/html/certs/clave_privada.key"
 CERTIFICADO_PATH = "/var/www/html/certs/certificado.crt"
@@ -51,7 +58,7 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
             
         # Usar la ruta de producción para guardar las facturas
         dir_destino = f"/var/www/html/factura_e/{ano}/{mes}"
-        print(f"📁 Usando directorio de salida: {dir_destino}")
+        print(f"Usando directorio de salida: {dir_destino}")
         os.makedirs(dir_destino, exist_ok=True)
         ruta_salida_xml = os.path.join(dir_destino, f"{numero}.xml")
     else:
@@ -69,14 +76,14 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
         nif_emisor_check = emisor.get('nif', '')
         nif_receptor_check = receptor.get('nif', '')
         if nif_emisor_check and nif_receptor_check and nif_emisor_check == nif_receptor_check:
-            print(f"⚠️ ADVERTENCIA: NIF emisor ({nif_emisor_check}) es igual al NIF receptor ({nif_receptor_check}).")
+            print(f"ADVERTENCIA: NIF emisor ({nif_emisor_check}) es igual al NIF receptor ({nif_receptor_check}).")
             
         # Verificar si emisor y receptor son personas físicas o jurídicas
         es_emisor_persona_fisica = es_persona_fisica(emisor.get('nif', ''))
-        print(f"⚠️ Tipo de emisor: {'PERSONA FÍSICA' if es_emisor_persona_fisica else 'PERSONA JURÍDICA'}")
+        print(f"Tipo de emisor: {'PERSONA FISICA' if es_emisor_persona_fisica else 'PERSONA JURIDICA'}")
         
         es_receptor_persona_fisica = es_persona_fisica(receptor.get('nif', ''))
-        print(f"⚠️ Tipo de receptor: {'PERSONA FÍSICA' if es_receptor_persona_fisica else 'PERSONA JURÍDICA'}")
+        print(f"Tipo de receptor: {'PERSONA FISICA' if es_receptor_persona_fisica else 'PERSONA JURIDICA'}")
         
         # Usar los totales proporcionados directamente desde el frontend en lugar de recalcular
         base_imponible_total = Decimal(str(datos_factura.get('base_amount', '0.00')))
@@ -109,7 +116,7 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
         cuota_iva = cuota_iva.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         total_factura = total_factura.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         
-        print(f"📊 Usando importes del frontend: Base={base_imponible_total}, IVA={cuota_iva}, Total={total_factura}")
+        print(f"Usando importes del frontend: Base={base_imponible_total}, IVA={cuota_iva}, Total={total_factura}")
         
         # Crear las secciones del XML
         xml_plantilla = obtener_plantilla_xml()
@@ -181,13 +188,11 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
         # Preparar los ítems
         items_xml = []
         # Registrar el número total de detalles que se procesarán
-        with open('/var/www/html/facturae_debug.log', 'a') as log_file:
-            log_file.write(f"\n[{datetime.now().isoformat()}] Procesando {len(detalles)} detalles para la factura\n")
+        dbg(f"[generador] Procesando {len(detalles)} detalles para la factura a las {datetime.now().isoformat()}")
             
         for idx, detalle in enumerate(detalles):
             # Registrar cada detalle para depuración
-            with open('/var/www/html/facturae_debug.log', 'a') as log_file:
-                log_file.write(f"Procesando detalle #{idx+1}: {json.dumps(detalle, default=str)}\n")
+            dbg(f"[generador] Detalle #{idx+1}: {json.dumps(detalle, default=str)}")
             
             cantidad = Decimal(str(detalle.get('cantidad', 1)))
             
@@ -200,8 +205,7 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
                 importe = Decimal('0')
                 
             # Registrar para depuración
-            with open('/var/www/html/facturae_debug.log', 'a') as log_file:
-                log_file.write(f"  - Precio encontrado: {importe}\n")
+            dbg(f"[generador]  - Precio encontrado: {importe}")
                 
             # Calcular base
             base_item = cantidad * importe
@@ -211,8 +215,7 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
             iva_item = (base_item * Decimal(str(porcentaje_iva)) / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             
             # Registrar los cálculos para depuración
-            with open('/var/www/html/facturae_debug.log', 'a') as log_file:
-                log_file.write(f"  - Cantidad: {cantidad}, Precio: {importe}, Base: {base_item}, IVA: {iva_item}\n")
+            dbg(f"[generador]  - Cantidad: {cantidad}, Precio: {importe}, Base: {base_item}, IVA: {iva_item}")
             
             # Añadir a la lista
             # Formato correcto para cada campo según el tipo en el XSD de Facturae

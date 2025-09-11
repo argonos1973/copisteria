@@ -8,7 +8,20 @@ import traceback
 from datetime import datetime, timedelta
 
 from flask import Flask, jsonify, render_template, request
-from weasyprint import CSS, HTML
+try:
+    from weasyprint import CSS, HTML
+except ImportError:
+    print("WeasyPrint no está instalado. La generación de PDF no estará disponible.")
+    # Mock classes to prevent import errors
+    class CSS:
+        def __init__(self, *args, **kwargs):
+            pass
+    class HTML:
+        def __init__(self, *args, **kwargs):
+            pass
+        def write_pdf(self, *args, **kwargs):
+            raise ImportError("WeasyPrint no está disponible")
+from decimal import Decimal, ROUND_HALF_UP
 
 from db_utils import (actualizar_numerador, get_db_connection,
                       verificar_numero_factura)
@@ -29,13 +42,9 @@ def safe_append_debug(filename: str):
 
     Intenta abrir /var/www/html/<filename>; si falla por permisos, usa /tmp.
     """
-    primary_path = os.path.join('/var/www/html', filename)
-    fallback_path = os.path.join(tempfile.gettempdir(), filename)
-    try:
-        os.makedirs(os.path.dirname(primary_path), exist_ok=True)
-        f = open(primary_path, 'a')
-    except (PermissionError, FileNotFoundError):
-        f = open(fallback_path, 'a')
+    # Redirigir cualquier log a /dev/null para evitar escrituras en disco
+    devnull = os.devnull
+    f = open(devnull, 'a', encoding='utf-8')
     try:
         yield f
     finally:
@@ -486,8 +495,8 @@ def obtener_factura(idContacto, id):
         factura_dict = dict(zip(columnas, factura))
         print("Factura dict:", factura_dict)  # Debug
         
-        # Obtener detalles
-        cursor.execute('SELECT * FROM detalle_factura WHERE id_factura = ?', (id,))
+        # Obtener detalles ordenados por id
+        cursor.execute('SELECT * FROM detalle_factura WHERE id_factura = ? ORDER BY id', (id,))
         detalles = cursor.fetchall()
         print(f"Detalles encontrados: {len(detalles)}")  # Debug
         
@@ -568,6 +577,7 @@ def obtener_factura_abierta(idContacto,idFactura):
                        productoId, fechaDetalle
                 FROM detalle_factura 
                 WHERE id_factura = ?
+                ORDER BY id
             ''', (factura_dict['id'],))
             detalles = cursor.fetchall()
             print(f"Detalles encontrados: {[dict(d) for d in detalles]}")
@@ -673,6 +683,9 @@ def consultar_facturas():
             else:
                 query += " AND f.estado = ?"
                 params.append(estado)
+        else:
+            # Si no se filtra por estado explícitamente, excluir anuladas por defecto
+            query += " AND f.estado <> 'A'"
         if numero:
             query += " AND f.numero LIKE ?"
             params.append(f"%{numero}%")
@@ -1403,21 +1416,50 @@ def enviar_factura_email(id_factura):
 
             # Generar el HTML con los datos ya insertados
             detalles_html = ""
-            # Helper de formateo europeo con separador de miles
+            # Helper de formateo europeo con separador de miles (totales: 2 decimales fijos)
             def _fmt_euro(n, dec=2):
                 try:
                     x = float(n)
                 except Exception:
                     x = 0.0
                 s = f"{x:,.{dec}f}"
-                # Convertir a formato europeo: punto miles, coma decimales
                 return s.replace(',', 'X').replace('.', ',').replace('X', '.')
+
+            # Formateo variable con Decimal: entre 2 y 5 decimales (para precio unitario)
+            def _fmt_euro_var(value, min_dec=2, max_dec=5):
+                # Convertir a Decimal de forma segura desde posibles formatos europeos
+                try:
+                    if value is None:
+                        d = Decimal('0')
+                    elif isinstance(value, (int, float, Decimal)):
+                        d = Decimal(str(value))
+                    else:
+                        s = str(value).strip().replace('.', '').replace(',', '.')
+                        d = Decimal(s)
+                except Exception:
+                    d = Decimal('0')
+                # Redondear a un máximo de "max_dec" decimales
+                quant = Decimal('1').scaleb(-max_dec)  # 10^-max_dec
+                d_q = d.quantize(quant, rounding=ROUND_HALF_UP)
+                # Construir string con coma decimal, recortando ceros hasta min_dec
+                s = f"{d_q:,.{max_dec}f}"  # con separadores y max_dec
+                s = s.replace(',', 'X').replace('.', ',').replace('X', '.')
+                # Separar parte entera y decimal
+                if ',' in s:
+                    entero, decs = s.split(',', 1)
+                    # Recortar ceros a la derecha manteniendo mínimo min_dec
+                    decs_trim = decs.rstrip('0')
+                    if len(decs_trim) < min_dec:
+                        decs_trim = decs[:min_dec]
+                    s = f"{entero},{decs_trim}"
+                return s
 
             for detalle in detalles_list:
                 descripcion_html = f"<span class='detalle-descripcion'>{detalle.get('descripcion', '')}</span>" if detalle.get('descripcion') else ''
-                _precio_num = _parse_euro(detalle.get('precio', 0))
+                _precio_raw = detalle.get('precio', 0)
                 _total_num = _parse_euro(detalle.get('total', 0))
-                _precio_str = _fmt_euro(_precio_num)
+                # Precio unitario: mismo comportamiento que impresión (2-5 decimales)
+                _precio_str = _fmt_euro_var(_precio_raw, min_dec=2, max_dec=5)
                 _total_str = _fmt_euro(_total_num)
                 detalles_html += f"""
                     <tr>
@@ -1500,9 +1542,9 @@ def enviar_factura_email(id_factura):
                 replacement = f'<p id="{elem_id}">{_safe(value)}</p>'
                 return re.sub(pattern, replacement, html, flags=re.DOTALL|re.IGNORECASE)
             def set_span(html, elem_id, value):
-                pattern = rf'<span\s+id="{re.escape(elem_id)}"[^>]*>.*?</span>'
-                replacement = f'<span id="{elem_id}">{_safe(value)}</span>'
-                return re.sub(pattern, replacement, html, flags=re.DOTALL|re.IGNORECASE)
+                # Preservar atributos existentes y reemplazar solo el contenido usando función para evitar backrefs
+                pattern = rf'(<span\s+id="{re.escape(elem_id)}"[^>]*>)(.*?)(</span>)'
+                return re.sub(pattern, lambda m: m.group(1) + _safe(value) + m.group(3), html, flags=re.DOTALL|re.IGNORECASE)
 
             # Cliente
             html_modificado = set_p(html_modificado, 'razonsocial', factura_dict.get('razonsocial', ''))
@@ -1557,18 +1599,15 @@ def enviar_factura_email(id_factura):
             print("Modificando el HTML para insertar hash y QR VERI*FACTU...")
             
             # Enfoque directo para insertar el hash y el QR
-            # 1. Guardar el HTML modificado hasta ahora en un archivo temporal para depuración
-            with open('/tmp/html_antes.html', 'w', encoding='utf-8') as f:
-                f.write(html_modificado)
-                
-            print("HTML guardado en /tmp/html_antes.html")
-            # Si la factura no está en registro_facturacion o el campo CSV está vacío, omitimos leyenda y QR
+            # 1. (Deshabilitado) No escribir HTML temporal en disco
+            # print("HTML temporal omitido (/tmp/html_antes.html)")
+            # Si la configuración deshabilita VERI*FACTU, omitimos leyenda y QR
             import re
             csv_value = registro['csv'] if registro else None
             has_csv = bool(csv_value and str(csv_value).strip())
-            if not has_csv:
+            if not has_csv or not VERIFACTU_HABILITADO:
                 qr_code = None
-                print("Factura sin CSV VERI*FACTU - se omite leyenda y QR.")
+                print("Factura sin CSV VERI*FACTU o VERIFACTU deshabilitado - se omite leyenda y QR.")
                 # Eliminar leyenda y QR relativos a VERI*FACTU
                 html_modificado = html_modificado.replace('<p id="hash-factura">Hash: </p>', '')
                 # Eliminar también cualquier div del QR VERI*FACTU completo
@@ -1618,17 +1657,10 @@ def enviar_factura_email(id_factura):
             else:
                 print("No hay código QR para insertar")
                 
-            # 6. Guardar el HTML final en un archivo para depuración
-            with open('/tmp/html_despues.html', 'w', encoding='utf-8') as f:
-                f.write(html_modificado)
-                
-            print("HTML final guardado en /tmp/html_despues.html")
+            # 6. (Deshabilitado) No escribir HTML final en disco
+            # print("HTML final omitido (/tmp/html_despues.html)")
 
-            print("HTML generado con totales:")
-            print(f"Base imponible: {base_imponible}")
-            print(f"IVA: {iva}")
-            print(f"Total: {total}")
-            
+
             print("Convirtiendo HTML a PDF")
             # Convertir HTML a PDF usando WeasyPrint con ruta base para recursos estáticos
             HTML(
@@ -1640,16 +1672,21 @@ def enviar_factura_email(id_factura):
             )
             
             print("Preparando correo")
-            # Preparar el correo
-            asunto = f"Factura {factura_dict['numero']}"
-            cuerpo = f"""
-            Estimado cliente,
-
-            Adjunto encontrará la factura {factura_dict['numero']} con fecha {datetime.strptime(factura_dict['fecha'], "%Y-%m-%d").strftime("%d/%m/%Y")}.
-
-            Saludos cordiales,
-            SAMUEL RODRIGUEZ MIQUEL
-            """
+            # Preparar el correo (incluir fecha y vencimiento)
+            fecha_fmt = datetime.strptime(factura_dict["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y") if factura_dict.get("fecha") else ""
+            fvenc_fmt = (
+                datetime.strptime(factura_dict["fvencimiento"], "%Y-%m-%d").strftime("%d/%m/%Y")
+                if factura_dict.get("fvencimiento") else ""
+            )
+            asunto = f"Factura {factura_dict['numero']} - {fecha_fmt}"
+            cuerpo = (
+                "Estimado cliente,\n\n"
+                f"Adjunto encontrará la factura {factura_dict['numero']}.\n"
+                f"Fecha de la factura: {fecha_fmt}\n"
+                f"Fecha de vencimiento: {fvenc_fmt}\n\n"
+                "Saludos cordiales,\n"
+                "SAMUEL RODRIGUEZ MIQUEL\n"
+            )
 
             print(f"Enviando correo a {factura_dict['mail']}")
             # Enviar el correo
@@ -1827,14 +1864,14 @@ def actualizar_factura(id, data):
 
         # ---- DEBUG estados ----
         try:
-            with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+            with safe_append_debug('facturae_debug.log') as log_file:
                 log_file.write(f"\n[{datetime.now().isoformat()}] Actualizar Factura ID={id}: estado_anterior={estado_anterior}, nuevo_estado={estado}\n")
         except Exception:
             pass
         # Detectar si debemos generar Facturae/VERI*FACTU tras la actualización
         trigger_generar_facturae = (estado == 'C' and estado_anterior == 'P')
         try:
-            with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+            with safe_append_debug('facturae_debug.log') as log_file:
                 log_file.write(f"Trigger generar facturae: {trigger_generar_facturae}\n")
         except Exception:
             pass
@@ -1848,7 +1885,7 @@ def actualizar_factura(id, data):
         if trigger_generar_facturae:
             try:
                 # Crear un archivo de log para seguir este proceso
-                with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                with safe_append_debug('facturae_debug.log') as log_file:
                     log_file.write(f"\n[{datetime.now().isoformat()}] Iniciando generación de factura electrónica para factura ID={id}, Número={data['numero']}\n")
                 
                 # Obtener todos los detalles de la factura desde la base de datos
@@ -1880,7 +1917,7 @@ def actualizar_factura(id, data):
                     }
                     detalles.append(detalle)
                 
-                with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                with safe_append_debug('facturae_debug.log') as log_file:
                     log_file.write(f"Detalles de la factura obtenidos: {json.dumps(detalles, default=str)}\n")
                     log_file.write(f"Porcentaje IVA usado: {porcentaje_iva}%\n")
                     
@@ -1891,7 +1928,7 @@ def actualizar_factura(id, data):
                     contacto_dict = dict(contacto_row)
                     
                     # Crear log de los datos del contacto
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"Datos del contacto: {json.dumps(contacto_dict, default=str)}\n")
                     
                     # Leer datos del emisor desde emisor_config.json
@@ -1905,7 +1942,7 @@ def actualizar_factura(id, data):
                     factura_completa = cursor.fetchone()
                     
                     # Registrar la factura completa para depuración
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"[{datetime.now().isoformat()}] FACTURA COMPLETA: {factura_completa}\n")
                     
                     # Obtener los totales directamente desde la consulta SQL
@@ -1921,11 +1958,11 @@ def actualizar_factura(id, data):
                     totales_db = cursor.fetchone()
                     
                     # Registrar los valores brutos obtenidos
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"VALORES DB BRUTOS: {totales_db}\n")
                     
                     # Debug: registrar los valores recuperados de la base de datos
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"[factura.py] Totales de la base de datos: Bruto={totales_db[0]}, Impuestos={totales_db[1]}, Total={totales_db[2]}\n")
                     
                     # Garantizar que siempre tengamos valores numéricos válidos
@@ -1939,15 +1976,15 @@ def actualizar_factura(id, data):
                             
                             # Verificación adicional para no permitir valores cero si hay datos en la DB
                             if base_imponible == 0 and totales_db[0] != 0 and totales_db[0] is not None:
-                                with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                                with safe_append_debug('facturae_debug.log') as log_file:
                                     log_file.write(f"ADVERTENCIA: base_imponible se convirtió a cero pero el valor original era {totales_db[0]}\n")
                                     
                             if impuestos == 0 and totales_db[1] != 0 and totales_db[1] is not None:
-                                with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                                with safe_append_debug('facturae_debug.log') as log_file:
                                     log_file.write(f"ADVERTENCIA: impuestos se convirtió a cero pero el valor original era {totales_db[1]}\n")
                         except (ValueError, TypeError) as e:
                             # En caso de error, log detallado y asignar valores predeterminados
-                            with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                            with safe_append_debug('facturae_debug.log') as log_file:
                                 log_file.write(f"ERROR al convertir totales de BD: {e}, valores: {totales_db}\n")
                             # Usar valores por defecto en caso de error
                             base_imponible = 0.0
@@ -1955,13 +1992,13 @@ def actualizar_factura(id, data):
                             total = 0.0
                     else:
                         # Si no encontramos valores en la BD, usar valores predeterminados
-                        with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                        with safe_append_debug('facturae_debug.log') as log_file:
                             log_file.write(f"ERROR: No se encontraron totales para la factura con ID {id}\n")
                         base_imponible = 0.0
                         impuestos = 0.0
                         total = 0.0
                 
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"TOTALES EXTRAÍDOS DIRECTAMENTE: Base={base_imponible}, IVA={impuestos}, Total={total}\n")
                     
                     # Si algún valor sigue siendo None, calcularlo desde los detalles
@@ -1996,7 +2033,7 @@ def actualizar_factura(id, data):
                         if total is None:
                             total = total_calc
                         
-                        with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                        with safe_append_debug('facturae_debug.log') as log_file:
                             log_file.write(f"TOTALES USADOS DESPUÉS DE CÁLCULO: Base={base_imponible}, IVA={impuestos}, Total={total}\n")
                     
                     # Asegurarse de que los valores no sean None
@@ -2010,7 +2047,7 @@ def actualizar_factura(id, data):
                     total = float(total)
                     
                     # Registrar los valores que se van a usar
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"VALORES FINALES PARA XML: Base={base_imponible}, IVA={impuestos}, Total={total}\n")
                         log_file.write(f"TIPO DE DATOS: Base={type(base_imponible)}, IVA={type(impuestos)}, Total={type(total)}\n")
                     
@@ -2035,17 +2072,17 @@ def actualizar_factura(id, data):
                     }
                     
                     # Crear log de los datos que se envían al generador
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"[{datetime.now().isoformat()}] Procesando factura {data['numero']}\n")
                         log_file.write(f"Datos de totales recibidos: {base_imponible}, {impuestos}, {total}\n")
                     print(f"DEBUG: Totales enviados al generador - Base: {base_imponible}, IVA: {impuestos}, Total: {total}")
                     
                     # Crear log de los datos de la factura
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"Datos para generación de factura: {json.dumps(datos_factura, default=str)}\n")
                     
                     # Debug: registrar valores antes de pasar al generador
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"[factura.py] VALORES PASADOS A GENERADOR: Bruto={base_imponible}, Impuestos={impuestos}, Total={total}\n")
                     
                     # Explicitamente importamos la función desde facturae.generador para evitar confusión
@@ -2053,7 +2090,7 @@ def actualizar_factura(id, data):
                         generar_facturae as generar_facturae_modular
 
                     # Llamar a la función de generación y firma
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write("Llamando a generar_facturae_modular...\n")
                     
                     # Mapear claves para compatibilidad con generador y validación
@@ -2067,7 +2104,7 @@ def actualizar_factura(id, data):
 
                     ruta_xml = generar_facturae_modular(datos_factura)
                     
-                    with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                    with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"Resultado de generar_facturae: {ruta_xml}\n")
                     
                     # Validar campos críticos antes de generar Facturae
@@ -2075,16 +2112,16 @@ def actualizar_factura(id, data):
                     
                     # Verificar si es realmente XSIG (firmado)
                     if ruta_xml and ruta_xml.lower().endswith('.xsig'):
-                        with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                        with safe_append_debug('facturae_debug.log') as log_file:
                             log_file.write(f"XML de factura electrónica generado y firmado correctamente: {ruta_xml}\n")
                         # Actualizamos el campo factura_e en la BD
                         cursor.execute('UPDATE factura SET factura_e = 1 WHERE id = ?', (id,))
                         factura_e_generada = True
                     else:
-                        with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                        with safe_append_debug('facturae_debug.log') as log_file:
                             log_file.write(f"ERROR: No se generó archivo XSIG firmado. Resultado: {ruta_xml}\n")
             except Exception as e:
-                with open('/var/www/html/facturae_debug.log', 'a') as log_file:
+                with safe_append_debug('facturae_debug.log') as log_file:
                     log_file.write(f"EXCEPCIÓN al generar factura electrónica: {str(e)}\n")
                     log_file.write(f"Traza del error: {traceback.format_exc()}\n")
                 # No interrumpimos el proceso por un error en la generación de la factura electrónica
@@ -2194,7 +2231,20 @@ def actualizar_factura(id, data):
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error en actualizar_factura: {str(e)}")
+        import traceback
+        tb = traceback.format_exc()
+        # Volcar a stdout y a log UTF-8 para diagnóstico
+        try:
+            print(f"Error en actualizar_factura: {str(e)}")
+            print(tb)
+        except Exception:
+            pass
+        try:
+            with safe_append_debug('facturae_debug.log') as log_file:
+                log_file.write(f"[ERROR actualizar_factura] {datetime.now().isoformat()} -> {str(e)}\n")
+                log_file.write(tb + "\n")
+        except Exception:
+            pass
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:

@@ -1,0 +1,19 @@
+# Crontab de usuario sami (actualizado por mantenimiento)
+# Copias de seguridad (excluyendo venv) a las 14:00 y 21:00 de L-V
+0 14 * * 1-5 cd /var/www/html && zip -r /media/sami/copia_servidor/$(date +\%d\%m\%Y_\%H\%M).zip . -x 'venv/*' 'venv/**'
+0 21 * * 1-5 cd /var/www/html && zip -r /media/sami/copia_servidor/$(date +\%d\%m\%Y_\%H\%M).zip . -x 'venv/*' 'venv/**'
+
+# Limpieza de zips (>7 días) solo en el directorio superior
+0 3 * * * find /media/sami/copia_servidor -maxdepth 1 -type f -name "*.zip" -mtime +7 -exec rm {} \;
+
+# Timeshift
+0 22 * * 1-5 sudo timeshift --create --comments "Copia programada de lunes a viernes a las 22:00" --tags D
+
+# batchFacturasVencidas (mantener sudo como en prod)
+0 9 * * * sudo /var/www/html/venv/bin/python /var/www/html/batchFacturasVencidas.py >> /var/www/html/logs/batchFacturasVencidas_last_run.txt 2>&1
+
+# Scraping (HEADLESS)
+0 6,15,20 * * * cd /var/www/html && HEADLESS=1 SHOW_BROWSER=0 PW_NO_PERSIST=1 /var/www/html/venv/bin/python /var/www/html/api_scraping.py >> /var/www/html/logs/scraping_last_run.txt 2>&1
+
+# batchPol (www-data) con CSV_BASE_PATH=/var/www/html/descargas
+0 * * * * sudo -u www-data CSV_BASE_PATH=/var/www/html/descargas /var/www/html/venv/bin/python /var/www/html/batchPol.py >> /var/www/html/logs/batchPol_last_run.txt 2>&1

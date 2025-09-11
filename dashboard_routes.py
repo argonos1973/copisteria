@@ -186,6 +186,7 @@ def fetch_data(query, params=()):
 
 
 @dashboard_bp.route('/ventas/total_mes', methods=['GET'])
+@dashboard_bp.route('/api/ventas/total_mes', methods=['GET'])
 def ventas_total_mes():
     """Devuelve totales mensuales de tickets, facturas y su global para un año dado."""
     anio_param = request.args.get('anio')
@@ -231,6 +232,7 @@ def ventas_total_mes():
 
 
 @dashboard_bp.route('/ventas/media_por_documento', methods=['GET'])
+@dashboard_bp.route('/api/ventas/media_por_documento', methods=['GET'])
 def media_ventas_por_documento():
     anio_param = request.args.get('anio')
     mes_param = request.args.get('mes')
@@ -528,6 +530,7 @@ def media_ventas_por_documento():
 
 """
 @dashboard_bp.route('/clientes/top_ventas', methods=['GET'])
+@dashboard_bp.route('/api/clientes/top_ventas', methods=['GET'])
 def top_clientes_ventas():
     try:
         conn = get_db_connection()
@@ -630,6 +633,7 @@ def top_clientes_ventas():
 
 # ----------------------- VENTAS MENSUALES POR CLIENTE ----------------------- #
 @dashboard_bp.route('/clientes/ventas_mes', methods=['GET'])
+@dashboard_bp.route('/api/clientes/ventas_mes', methods=['GET'])
 def ventas_cliente_mes():
     """Devuelve las ventas mensuales (facturas cobradas) de un cliente para el año dado."""
     try:

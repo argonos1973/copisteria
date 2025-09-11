@@ -3,11 +3,11 @@ import {
   PRODUCTO_ID_LIBRE,
   truncarDecimales,
   formatearImporte,
+  formatearImporteVariable,
   formatearApunto,
   parsearImporte,
   calcularPrecioConDescuento,
   calcularTotalDetalle,
-  debounce,
   abrirModalPagos as abrirModal,
   cerrarModalPagos as cerrarModal,
   calcularCambio as calcularCambioModal,
@@ -22,9 +22,9 @@ import {
   filtrarProductos as filtrarProductosCommon,
   limpiarCamposDetalle,
   seleccionarProducto as seleccionarProductoCommon,
-  validarDetalle,
-  redondearImporte
+  validarDetalle
 } from './common.js';
+import { redondearImporte } from './common.js';
 
 /**
  * Se ejecuta al cargar el DOM. Inicializa la delegación de eventos en la tabla
@@ -107,9 +107,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Agregar eventos para "concepto-input" si existe
     const conceptoInput = document.getElementById('concepto-input');
     if (conceptoInput) {
-      const debouncedFiltroConcepto = debounce(() => filtrarProductos(), 200);
-      conceptoInput.removeEventListener('input', debouncedFiltroConcepto);
-      conceptoInput.addEventListener('input', debouncedFiltroConcepto);
+      conceptoInput.addEventListener('input', filtrarProductos);
     }
 
     // Asociar evento al botón cobrar
@@ -162,9 +160,7 @@ function asociarEventos() {
   // Input "busqueda-producto" => filtrarProductos
   const busquedaProducto = document.getElementById('busqueda-producto');
   if (busquedaProducto) {
-    const debouncedFiltro = debounce(() => filtrarProductos(), 200);
-    busquedaProducto.removeEventListener('input', debouncedFiltro);
-    busquedaProducto.addEventListener('input', debouncedFiltro);
+    busquedaProducto.addEventListener('input', () => filtrarProductos());
   }
 
   // Selector "concepto-detalle" => seleccionarProducto
@@ -179,17 +175,7 @@ function asociarEventos() {
     btnAgregarDetalle.addEventListener('click', () => validarYAgregarDetalle());
   }
 
-  // Campo "cantidad-detalle" => calcularTotalDetalle
-  const cantidadDetalle = document.getElementById('cantidad-detalle');
-  if (cantidadDetalle) {
-    cantidadDetalle.addEventListener('input', calcularTotalDetalle);
-  }
-
-  // Campo "precio-detalle" => calcularTotalDetalle
-  const precioDetalle = document.getElementById('precio-detalle');
-  if (precioDetalle) {
-    precioDetalle.addEventListener('input', calcularTotalDetalle);
-  }
+  // Los event listeners se configuran en seleccionarProducto() para evitar duplicados
 
   // Modal Pagos: Botón "Cerrar"
   const closeModal = document.getElementById('closeModal'); 
@@ -222,15 +208,16 @@ export function inicializarEventDelegation() {
 
   tbody.addEventListener('click', async function(event) {
     const target = event.target;
-    // Evitar modificaciones si el ticket está anulado
+    // En estado 'A' o 'C' permitimos solo ver detalle, no eliminar
     const estadoActual = document.getElementById('estado-ticket') ? document.getElementById('estado-ticket').value.toUpperCase() : '';
-    if (estadoActual === 'A' || estadoActual === 'C') {
-      event.stopPropagation();
-      return;
-    }
+    const esSoloLectura = (estadoActual === 'A' || estadoActual === 'C');
     
     if (target && target.classList.contains('btn-icon')) {
       event.stopPropagation();
+      if (esSoloLectura) {
+        // Bloquear eliminación en modo lectura
+        return;
+      }
       await eliminarFila(target);
     } else {
       const fila = target.closest('tr');
@@ -306,7 +293,7 @@ export async function cargarProductos() {
 /**
  * Filtra los productos en el select según el texto ingresado
  */
-export function filtrarProductos() {
+export async function filtrarProductos() {
   const busquedaProducto = document.getElementById('busqueda-producto').value;
   const productosFiltrados = filtrarProductosCommon(busquedaProducto, productosOriginales);
   actualizarSelectProductos(productosFiltrados, document.getElementById('concepto-detalle'));
@@ -314,14 +301,19 @@ export function filtrarProductos() {
   if (productosFiltrados.length > 0) {
     const selectProducto = document.getElementById('concepto-detalle');
     selectProducto.value = productosFiltrados[0].id;
-    seleccionarProducto();
+    await seleccionarProducto();
   }
 }
 
 /**
  * Selecciona un producto y actualiza los campos correspondientes
  */
-export function seleccionarProducto() {
+export async function seleccionarProducto() {
+  // Si venimos de una edición de fila, saltar la re-inicialización una sola vez
+  if (window._skipSelectChangeOnce) {
+    window._skipSelectChangeOnce = false;
+    return;
+  }
   const formElements = {
     conceptoDetalle: document.getElementById('concepto-detalle'),
     descripcionDetalle: document.getElementById('descripcion-detalle'),
@@ -333,8 +325,13 @@ export function seleccionarProducto() {
     busquedaProducto: document.getElementById('busqueda-producto')
   };
   
-  // Para tickets siempre aplicar descuentos por franja, pasar '' como tipo
-  seleccionarProductoCommon(formElements, productosOriginales, 'ticket');
+  // Establecer cantidad por defecto antes de llamar a seleccionarProductoCommon
+  if (formElements.cantidadDetalle) {
+    formElements.cantidadDetalle.value = 1;
+  }
+  
+  // Para tickets siempre aplicar descuentos por franja, pasar 'ticket' como tipo
+  await seleccionarProductoCommon(formElements, productosOriginales, 'ticket');
 }
 
 /**
@@ -349,7 +346,7 @@ export function validarYAgregarDetalle() {
   let precioOriginal = parseFloat(select.options[select.selectedIndex].dataset.precioOriginal) || 0;
   let precioDetalle = parseFloat(document.getElementById('precio-detalle').value);
 
-  if (productoId === PRODUCTO_ID_LIBRE) {
+  if (String(productoId) === String(PRODUCTO_ID_LIBRE)) {
     precioOriginal = precioDetalle;
     productoSeleccionado = descripcion;
     if (!productoSeleccionado) {
@@ -426,8 +423,8 @@ export function agregarDetalle(
     tr.setAttribute('data-detalle-id', detalleId);
   }
   
-  // Formatear el precio con 5 decimales y el total con 2
-  const precioFormateado = Number(precioConDescuento).toFixed(5).replace('.', ',') + ' €';
+  // Formatear el precio con máximo 5 decimales y el total con 2
+  const precioFormateado = formatearImporteVariable(Number(precioConDescuento), 0, 5);
   const totalFormateado = formatearImporte(totalConIVA);
   
   tr.innerHTML = `
@@ -447,15 +444,15 @@ export function agregarDetalle(
 /**
  * Edita un detalle al hacer click en su fila
  */
-export function cargarDetalleParaEditar(fila) {
+export async function cargarDetalleParaEditar(fila) {
   const concepto    = fila.cells[0].textContent;
   const descripcion = fila.cells[1].textContent;
-  const cantidad    = parseFloat(fila.cells[2].textContent);
-  const precioDet   = parseFloat(fila.cells[3].textContent.replace(' €', '').replace(',', '.')); // Mantener precio sin redondear
-  const impuestos   = Number(parseFloat(fila.cells[4].textContent.replace('%', '').replace(',', '.')).toFixed(2));
-  const total       = Number(parseFloat(fila.cells[5].textContent.replace(' €', '').replace(',', '.').replace(/[^0-9.]/g, '')).toFixed(2));
+  const cantidad    = parsearImporte(fila.cells[2].textContent);
+  const precioDet   = parsearImporte(fila.cells[3].textContent);
+  const impuestos   = Number(parsearImporte(fila.cells[4].textContent.replace('%', '')).toFixed(2));
+  const total       = Number(parsearImporte(fila.cells[5].textContent).toFixed(2));
   const detalleId   = fila.getAttribute('data-detalle-id') || null;
-  const productoId  = fila.getAttribute('data-producto-id') || null;
+  let productoId  = fila.getAttribute('data-producto-id') || null;
 
   if (!productoId) {
     console.warn(`No se encontró ID del producto para "${concepto}".`);
@@ -464,14 +461,15 @@ export function cargarDetalleParaEditar(fila) {
   }
 
   const selectProducto = document.getElementById('concepto-detalle');
+  // Si el productoId es nulo o no existe en el selector, usar PRODUCTO_ID_LIBRE
   const optionProducto = Array.from(selectProducto.options).find(option => option.value == productoId);
-
+  // Marcar para saltar el handler 'change' una vez
+  window._skipSelectChangeOnce = true;
   if (optionProducto) {
-    optionProducto.selected = true;
+    selectProducto.value = String(productoId);
   } else {
-    console.warn(`Producto con ID "${productoId}" no encontrado en el selector.`);
-    mostrarNotificacion(`Producto "${concepto}" no se encontró en la lista de productos disponibles.`, "error");
-    return;
+    productoId = PRODUCTO_ID_LIBRE;
+    selectProducto.value = String(PRODUCTO_ID_LIBRE);
   }
 
   // Crear el objeto formElements
@@ -486,13 +484,62 @@ export function cargarDetalleParaEditar(fila) {
     busquedaProducto: document.getElementById('busqueda-producto')
   };
 
-  seleccionarProducto();
+  // NO recalcular el precio al editar: configurar estados manualmente
+  const precioDetalleElem   = document.getElementById('precio-detalle');
+  const totalDetalleElem    = document.getElementById('total-detalle');
+  const impuestoDetalleElem = document.getElementById('impuesto-detalle');
+  const cantidadDetalleElem = document.getElementById('cantidad-detalle');
+
+  // Ajustar readOnly según tipo de producto
+  if (String(productoId) === String(PRODUCTO_ID_LIBRE)) {
+    precioDetalleElem.readOnly = false;
+    totalDetalleElem.readOnly = false;
+    precioDetalleElem.style.backgroundColor = '';
+    totalDetalleElem.style.backgroundColor = '';
+  } else {
+    precioDetalleElem.readOnly = true;
+    totalDetalleElem.readOnly = true;
+    precioDetalleElem.style.backgroundColor = '#e9ecef';
+    totalDetalleElem.style.backgroundColor = '#e9ecef';
+  }
+  // El IVA en tickets se mantiene readonly
+  impuestoDetalleElem.readOnly = true;
+  impuestoDetalleElem.style.backgroundColor = '#e9ecef';
+
+  // Re-vincular listeners para que reaccionen a cambios del usuario (no recalcular ahora)
+  precioDetalleElem.removeEventListener('input', calcularTotalDetalle);
+  cantidadDetalleElem.removeEventListener('input', calcularTotalDetalle);
+  totalDetalleElem.removeEventListener('input', calcularTotalDetalle);
+  cantidadDetalleElem.addEventListener('input', calcularTotalDetalle);
+  if (String(productoId) === String(PRODUCTO_ID_LIBRE)) {
+    precioDetalleElem.addEventListener('input', calcularTotalDetalle);
+    totalDetalleElem.addEventListener('input', calcularTotalDetalle);
+  }
 
   document.getElementById('descripcion-detalle').value = descripcion.toUpperCase();
   document.getElementById('cantidad-detalle').value    = cantidad;
-  document.getElementById('impuesto-detalle').value    = 21;
+  document.getElementById('impuesto-detalle').value    = impuestos;
   document.getElementById('precio-detalle').value      = Number(precioDet).toFixed(5); // Mantener 5 decimales en el precio
-  document.getElementById('total-detalle').value       = total.toFixed(2);
+  // Recalcular el total con la regla de IVA por línea (subtotal + round2(subtotal*iva%)) para mostrarlo correcto
+  try {
+    const subtotalEdit = Number(precioDet) * Number(cantidad);
+    const ivaEdit = redondearImporte(subtotalEdit * (Number(impuestos) / 100));
+    const totalEdit = redondearImporte(subtotalEdit + ivaEdit);
+    document.getElementById('total-detalle').value = totalEdit.toFixed(2);
+  } catch (_) {
+    document.getElementById('total-detalle').value = total.toFixed(2);
+  }
+
+  // Si es producto libre, mostrar input de concepto y rellenarlo
+  if (String(productoId) === String(PRODUCTO_ID_LIBRE)) {
+    const conceptoInput = document.getElementById('concepto-input');
+    if (conceptoInput) {
+      conceptoInput.style.display = 'block';
+      conceptoInput.value = concepto;
+    }
+  }
+
+  // No recalcular automáticamente al cargar, se calculará si el usuario edita
 
   if (productoId === PRODUCTO_ID_LIBRE) {
     const conceptoInput = document.getElementById('concepto-input');
@@ -506,7 +553,6 @@ export function cargarDetalleParaEditar(fila) {
   }
   document.getElementById('btn-agregar-detalle').dataset.detalleId = detalleId;
   fila.remove();
-  sumarTotales();
 }
 
 /**
@@ -563,11 +609,12 @@ function obtenerDetallesDeTabla() {
     try {
       // Obtener los valores numéricos y limpiarlos de símbolos de moneda y espacios
       const cantidad = parseInt(fila.cells[2].textContent.trim());
-      // Mantener 5 decimales en el precio
-      const precio = Number(parseFloat(fila.cells[3].textContent.replace('€', '').replace(',', '.').trim()).toFixed(5));
-      const impuestos = parseFloat(fila.cells[4].textContent.replace('%', '').trim());
-      // El total se mantiene con 2 decimales
-      const total = Number(parseFloat(fila.cells[5].textContent.replace('€', '').replace(',', '.').trim()).toFixed(2));
+      // Mantener 5 decimales en el precio, usando parser robusto para formato europeo
+      const precio = Number(parsearImporte(fila.cells[3].textContent)).toFixed ? Number(parsearImporte(fila.cells[3].textContent).toFixed(5)) : Number(parsearImporte(fila.cells[3].textContent));
+      // IVA puede venir con coma y símbolo %, normalizar y parsear
+      const impuestos = parsearImporte(fila.cells[4].textContent.replace('%', ''));
+      // El total se mantiene con 2 decimales, usando parser robusto
+      const total = Number(parsearImporte(fila.cells[5].textContent)).toFixed ? Number(parsearImporte(fila.cells[5].textContent).toFixed(2)) : Number(parsearImporte(fila.cells[5].textContent));
       
       // Obtener el productoId del atributo data-producto-id de la fila
       const productoId = fila.getAttribute('data-producto-id');
@@ -681,10 +728,10 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
       return sum + subtotal;
     }, 0));
 
-    // Calcular importe de impuestos
+    // Calcular importe de impuestos (redondeando IVA por detalle a 2 decimales)
     const importe_impuestos = redondearImporte(detalles.reduce((sum, d) => {
       const subtotal = d.precio * d.cantidad;
-      const impuesto = subtotal * (d.impuestos / 100);
+      const impuesto = redondearImporte(subtotal * (d.impuestos / 100));
       return sum + impuesto;
     }, 0));
 
@@ -797,6 +844,7 @@ export async function cargarTicket(idTicket) {
     }
 
     const data = await response.json();
+    console.debug('[TICKETS] Datos recibidos de API:', JSON.parse(JSON.stringify(data)));
     if (data.ticket) {
       mostrarDatosTicket(data.ticket);
       mostrarDetallesTicket(data.detalles);
@@ -866,7 +914,7 @@ export function mostrarDatosTicket(ticket) {
     estado = "Cobrado";
   }
   document.getElementById('estado-ticket').value = estado;
-  document.getElementById('total-ticket').value  = ticket.total.toFixed(2);
+  document.getElementById('total-ticket').value  = formatearImporte(Number(ticket.total));
 
   window.ticketFormaPago = ticket.formaPago;
 
@@ -885,21 +933,37 @@ export function mostrarDetallesTicket(detalles) {
   const tbody = document.querySelector('#tabla-detalle-ticket tbody');
   tbody.innerHTML = '';
   detalles.forEach(detalle => {
+    let totalVis = Number(detalle.total) || 0;
+    try {
+      const cant = Number(detalle.cantidad) || 0;
+      const prec = Number(detalle.precio) || 0;
+      const ivaP = Number(detalle.impuestos) || 0;
+      const sub = cant * prec;
+      const ivaL = Math.round((sub * (ivaP / 100)) * 100) / 100; // IVA redondeado por línea
+      totalVis = Math.round((sub + ivaL) * 100) / 100;
+      console.debug('[TICKETS] Render detalle:', { id: detalle.id, concepto: detalle.concepto, cantidad: cant, precio: prec, impuestos: ivaP, subtotal: sub, iva_linea_redondeado: ivaL, total_bd: detalle.total, total_vis: totalVis });
+    } catch (e) {}
     const fila = document.createElement('tr');
-    fila.setAttribute('data-producto-id', detalle.productoId);
+    // Asegurar que siempre exista un productoId válido para edición
+    const pid = (detalle.productoId === null || detalle.productoId === undefined || String(detalle.productoId).toLowerCase() === 'none')
+      ? PRODUCTO_ID_LIBRE
+      : detalle.productoId;
+    fila.setAttribute('data-producto-id', pid);
     fila.setAttribute('data-precio-original', truncarDecimales(detalle.precio, 5));
     fila.setAttribute('data-precio-con-descuento', truncarDecimales(detalle.precio, 5));
 
     if (detalle.id) {
       fila.setAttribute('data-detalle-id', detalle.id);
     }
+    const ivaTexto = Number(detalle.impuestos)
+      .toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     fila.innerHTML = `
       <td>${detalle.concepto}</td>
       <td>${detalle.descripcion}</td>
       <td style="width: 50px; text-align: right;">${detalle.cantidad}</td>
-      <td style="width: 50px; text-align: right;">${detalle.precio.toFixed(5)} €</td>
-      <td style="width: 50px; text-align: right;">${Math.round(truncarDecimales(detalle.impuestos, 2))}%</td>
-      <td style="width: 100px; text-align: right;">${detalle.total.toFixed(2)} €</td>
+      <td style="width: 50px; text-align: right;">${formatearImporteVariable(Number(detalle.precio), 0, 5)}</td>
+      <td style="width: 50px; text-align: right;">${ivaTexto}%</td>
+      <td style="width: 100px; text-align: right;">${formatearImporte(totalVis)}</td>
       <td class="acciones-col"><button class="btn-icon" title="Eliminar">✕</button></td>
     `;
     tbody.appendChild(fila);

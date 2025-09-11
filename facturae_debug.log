@@ -1972,3 +1972,34 @@ Procesando detalle #1: {"concepto": "IMPRESSIO A4 COLOR ", "descripcion": "14/08
   - Cantidad: 2947.0, Precio: 0.31612, Base: 931.61, IVA: 195.64
 Resultado de generar_facturae: /var/www/html/factura_e/2025/08/F250333.xml
 ERROR: No se generó archivo XSIG firmado. Resultado: /var/www/html/factura_e/2025/08/F250333.xml
+
+[2025-09-08T15:44:53.253789] Procesando 1 detalles para la factura
+Procesando detalle #1: {"id": null, "concepto": "IMPRESSIO A4 BN", "descripcion": "08/09/2025", "cantidad": 300, "precio": "0.09600", "impuestos": 21, "total": 34.85, "productoId": "118", "formaPago": "E", "fechaDetalle": "2025-09-08"}
+  - Precio encontrado: 0.09600
+  - Cantidad: 300, Precio: 0.09600, Base: 28.80, IVA: 6.05
+
+[2025-09-09T07:25:10.543994] Actualizar Factura ID=338: estado_anterior=P, nuevo_estado=C
+Trigger generar facturae: True
+
+[2025-09-09T07:25:10.544459] Iniciando generación de factura electrónica para factura ID=338, Número=F250329
+Detalles de la factura obtenidos: [{"concepto": "SCANNER", "descripcion": "09/09/2025", "cantidad": 20.0, "importe": 0.21, "impuestos": 21.0, "productoId": 27}]
+Porcentaje IVA usado: 21.0%
+Datos del contacto: {"idContacto": 735, "razonsocial": "PEPE2 EL NENE", "identificador": "44007535W", "mail": "aleph70copisteria@gmail.com", "telf1": "678876344", "telf2": null, "direccion": "LEGALITAT, 70", "localidad": "BARCELONA", "cp": "08024", "provincia": "BARCELONA", "tipo": ""}
+[2025-09-09T07:25:10.545134] FACTURA COMPLETA: <sqlite3.Row object at 0x7ae0ddadaf50>
+VALORES DB BRUTOS: <sqlite3.Row object at 0x7ae0ddad98d0>
+[factura.py] Totales de la base de datos: Bruto=4.2, Impuestos=0.88, Total=5.08
+TOTALES EXTRAÍDOS DIRECTAMENTE: Base=4.2, IVA=0.88, Total=5.08
+VALORES FINALES PARA XML: Base=4.2, IVA=0.88, Total=5.08
+TIPO DE DATOS: Base=<class 'float'>, IVA=<class 'float'>, Total=<class 'float'>
+[2025-09-09T07:25:10.545350] Procesando factura F250329
+Datos de totales recibidos: 4.2, 0.88, 5.08
+Datos para generación de factura: {"emisor": {"nif": "44007535W", "nombre": "SAMUEL RODRIGUEZ MIQUEL", "direccion": "LEGALITAT, 70", "cp": "08024", "ciudad": "BARCELONA", "provincia": "BARCELONA", "pais": "ESP", "email": "INFO@ALEPH70.COM"}, "receptor": {"nif": "44007535W", "nombre": "PEPE2 EL NENE", "direccion": "LEGALITAT, 70", "cp": "08024", "provincia": "BARCELONA", "localidad": "BARCELONA"}, "detalles": [{"concepto": "SCANNER", "descripcion": "09/09/2025", "cantidad": 20.0, "importe": 0.21, "impuestos": 21.0, "productoId": 27}], "fecha": "2025-09-09", "numero": "F250329", "iva": 21.0, "importe_bruto": 4.2, "importe_impuestos": 0.88, "total": 5.08}
+[factura.py] VALORES PASADOS A GENERADOR: Bruto=4.2, Impuestos=0.88, Total=5.08
+Llamando a generar_facturae_modular...
+
+[2025-09-09T07:25:10.548027] Procesando 1 detalles para la factura
+Procesando detalle #1: {"concepto": "SCANNER", "descripcion": "09/09/2025", "cantidad": 20.0, "importe": 0.21, "impuestos": 21.0, "productoId": 27}
+  - Precio encontrado: 0.21
+  - Cantidad: 20.0, Precio: 0.21, Base: 4.20, IVA: 0.88
+Resultado de generar_facturae: /var/www/html/factura_e/2025/09/F250329.xml
+ERROR: No se generó archivo XSIG firmado. Resultado: /var/www/html/factura_e/2025/09/F250329.xml

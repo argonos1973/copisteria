@@ -189,7 +189,7 @@ async function rellenarFactura(datos) {
                     </div>
                 </td>
                 <td class="cantidad">${detalle.cantidad || 0}</td>
-                <td class="precio">${Number(detalle.precio).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 5 })}</td>
+                <td class="precio">${Number(detalle.precio).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 8 })}</td>
                 <td class="precio">${detalle.impuestos}%</td>
                 <td class="total">${formatearImporte(detalle.total)}</td>
             `;

@@ -8,7 +8,7 @@ const botones = document.querySelectorAll('button');
 const API_ENDPOINT = '/tickets/paginado'
 // Estado de paginación
 let currentPageTickets = 1
-let pageSizeTickets = 10
+let pageSizeTickets = 20
 let totalPagesTickets = 1
 
 // Añade un evento de clic a cada botón
@@ -97,13 +97,13 @@ document.addEventListener("DOMContentLoaded", function () {
     // Restaurar tamaño por página si estaba en sessionStorage
     const savedPageSize = sessionStorage.getItem('tickets_page_size')
     if (savedPageSize) {
-        pageSizeTickets = parseInt(savedPageSize) || 10
+        pageSizeTickets = parseInt(savedPageSize) || 20
         if (pageSizeSelect) pageSizeSelect.value = String(pageSizeTickets)
     }
 
     if (pageSizeSelect) {
         pageSizeSelect.addEventListener('change', () => {
-            pageSizeTickets = parseInt(pageSizeSelect.value) || 10
+            pageSizeTickets = parseInt(pageSizeSelect.value) || 20
             sessionStorage.setItem('tickets_page_size', String(pageSizeTickets))
             currentPageTickets = 1
             buscarTickets()

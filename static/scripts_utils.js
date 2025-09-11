@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT, API_PRODUCTOS, API_PRODUCTOS_FALLBACK, API_URL_PRIMARY, API_URL_FALLBACK } from './constantes.js';
+import { IP_SERVER, PORT } from './constantes.js?v=20250911_1135';
 
 export const PRODUCTO_ID_LIBRE = '94';
 
@@ -63,36 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
  * @param {number} delay - retraso en ms
  * @returns {Function}
  */
-export function debounce(fn, delay = 300) {
+export function debounce(fn, delay = 800) {
   let timeout;
   return function (...args) {
     clearTimeout(timeout);
     timeout = setTimeout(() => fn.apply(this, args), delay);
   };
-}
-
-// Compat: Promise.any para navegadores que no lo soporten
-async function promiseAnyCompat(promises) {
-  if (Promise.any) {
-    return Promise.any(promises);
-  }
-  const results = await Promise.allSettled(promises);
-  for (const r of results) {
-    if (r.status === 'fulfilled') return r.value;
-  }
-  throw new Error('All promises were rejected');
-}
-
-/**
- * Normaliza texto a minúsculas y sin acentos para búsquedas tolerantes.
- * @param {string} s
- * @returns {string}
- */
-export function norm(s) {
-  return String(s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
 }
 
 // --- Global fetch wrapper ---
@@ -112,12 +88,6 @@ export function truncarDecimales(numero, decimales) {
   return Math.floor(numero * factor) / factor;
 }
 
-// Redondeo clásico a N decimales (por defecto 4)
-export function redondearDecimales(numero, decimales = 4) {
-  const factor = Math.pow(10, decimales);
-  return Math.round(Number(numero) * factor) / factor;
-}
-
 export function formatearImporte(importe) {
  
   if (typeof importe !== 'number' || isNaN(importe)) {
@@ -131,15 +101,26 @@ export function formatearImporte(importe) {
   }) + ' €';
 }
 
-// Formateo con decimales variables (por defecto 2-5) para precios unitarios
-export function formatearImporteVariable(importe, minDec = 2, maxDec = 5) {
-  const n = (typeof importe === 'number') ? importe : parsearImporte(String(importe || '0'));
-  if (typeof n !== 'number' || isNaN(n)) {
-    return '0,00 €';
+// Función para formatear importes con decimales variables
+export function formatearImporteVariable(importe, minDecimals = 2, maxDecimals = 5) {
+  if (typeof importe !== 'number' || isNaN(importe)) {
+    return "0,00 €";
   }
-  return n.toLocaleString('es-ES', {
-    minimumFractionDigits: Math.max(0, Math.min(20, minDec)),
-    maximumFractionDigits: Math.max(0, Math.min(20, maxDec)),
+  return importe.toLocaleString('es-ES', {
+    minimumFractionDigits: minDecimals,
+    maximumFractionDigits: maxDecimals,
+    useGrouping: true
+  }) + ' €';
+}
+
+// Función específica para formatear precios unitarios con 5 decimales
+export function formatearPrecioUnitario(precio) {
+  if (typeof precio !== 'number' || isNaN(precio)) {
+    return "0,00000 €";
+  }
+  return precio.toLocaleString('es-ES', {
+    minimumFractionDigits: 5,
+    maximumFractionDigits: 5,
     useGrouping: true
   }) + ' €';
 }
@@ -185,97 +166,20 @@ export function parsearImporte(valor) {
   return isNaN(n) ? 0 : n;
 }
 
-// Cache de franjas por producto
-const productDiscountBands = {};
-let fetchingBands = {};
-
-// Fetch con timeout para evitar bloqueos largos del UI
-async function fetchConTimeout(url, { timeoutMs = 2000, options = {} } = {}) {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...(options || {}), signal: controller.signal });
-  } finally {
-    clearTimeout(id);
-  }
-}
-
-async function fetchFranjasProducto(productoId) {
-  if (!productoId) return null;
-  if (fetchingBands[productoId]) return null;
-  fetchingBands[productoId] = true;
-  // Política: desde el frontend SIEMPRE llamar con prefijo /api (primario y fallback)
-  const fuentes = [
-    { base: API_URL_PRIMARY, prefix: '/api' },
-    { base: API_URL_FALLBACK, prefix: '/api' },
-  ];
-  const intents = fuentes.map(f => {
-    const url = `${f.base}${f.prefix}/productos/${productoId}/franjas_descuento`;
-    return (async () => {
-      try {
-        try { console.debug('[Franjas][Fetch][Try]', { productoId, url }); } catch (_) {}
-        const res = await fetchConTimeout(url, { timeoutMs: 2000 });
-        if (!res.ok) throw new Error(String(res.status));
-        const data = await res.json();
-        const franjas = Array.isArray(data?.franjas) ? data.franjas : null;
-        if (!franjas) throw new Error('estructura invalida');
-        try { console.debug('[Franjas][Fetch][OK]', { productoId, url, count: franjas.length }); } catch (_) {}
-        return franjas;
-      } catch (e) {
-        try { console.warn('[Franjas][Fetch][Fail]', { productoId, url, error: String(e) }); } catch (_) {}
-        throw e;
-      }
-    })();
-  });
-  try {
-    const franjas = await promiseAnyCompat(intents);
-    productDiscountBands[productoId] = franjas.map(f => {
-      let d = Number(f.descuento);
-      d = isNaN(d) ? 0 : d;
-      if (d > 0 && d <= 1) d = d * 100; // normalizar fracción a %
-      // Asegurar tope [0,60]
-      d = Math.max(0, Math.min(60, d));
-      return {
-        min: Number(f.min) || 0,
-        max: Number(f.max) || 0,
-        descuento: d,
-      };
-    });
-    try {
-      console.debug('[Franjas]', productoId, productDiscountBands[productoId]);
-    } catch (_) {}
-  } catch (err) {
-    // todas las fuentes fallaron; dejar sin cache para usar fallback global
-    try { console.error('[Franjas][Fetch][AllFail]', { productoId, error: String(err) }); } catch (_) {}
-  } finally {
-    fetchingBands[productoId] = false;
-  }
-  return productDiscountBands[productoId] || null;
-}
-
-function getFranjasCached(productoId) {
-  const franjas = productDiscountBands[productoId];
-  if (!franjas) {
-    // Disparar fetch en segundo plano; primer cálculo usará fallback global
-    fetchFranjasProducto(productoId);
-  }
-  return franjas || null;
-}
-
-// Permite precargar explícitamente las franjas de un producto
-export function preloadFranjasProducto(productoId) {
-  return fetchFranjasProducto(productoId);
-}
-
-export function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoFactura = null, tipoDocumento = 'proforma', productoId = null) {
+export async function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoFactura = null, tipoDocumento = 'proforma', productoId = null) {
   // Si tipoFactura es una cadena vacía, tratarlo como 'N' (aplicar descuentos)
   if (tipoFactura === '') {
     tipoFactura = 'N';
   }
   
-  // En tickets y facturas aplicar descuentos por franja
-  if (tipoDocumento === 'ticket' || tipoDocumento === 'factura') {
-    return aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
+  // En tickets siempre aplicar descuentos
+  if (tipoDocumento === 'ticket') {
+    return await aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
+  }
+  
+  // En facturas nunca aplicar descuentos
+  if (tipoDocumento === 'factura') {
+    return precioUnitarioSinIVA;
   }
   
   // En proformas, aplicar descuentos solo si el tipo NO es 'A'
@@ -284,49 +188,113 @@ export function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoF
   }
 
   // Aplicar descuento por defecto (para proformas tipo 'N' u otros casos)
-  const valor = aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
-  return redondearDecimales(valor, 4);
+  return await aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
 }
 
-function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId = null) {
-  // Usar únicamente franjas proporcionadas por backend; sin fallback hardcodeado
-  const franjas = productoId ? getFranjasCached(productoId) : null;
+// Flag global para controlar llamadas concurrentes
+let calculandoFranjas = false;
 
-  // Si aún no hay franjas en caché, devolver precio original (0% descuento)
-  // y confiar en la recarga asíncrona que ya disparamos para recalcular.
-  if (!Array.isArray(franjas) || franjas.length === 0) {
-    try { console.debug('[Franjas][NoCache]', { productoId, cantidad, precioUnitarioSinIVA }); } catch (_) {}
+async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId) {
+  if (!productoId) {
+    console.warn('No se proporcionó productoId, usando precio original sin descuento');
     return precioUnitarioSinIVA;
   }
 
-  let descuentoAplicable = 0;
-  let franjaElegida = null;
-  for (let i = 0; i < franjas.length; i++) {
-    const franja = franjas[i];
-    if (cantidad >= Number(franja.min || 0) && cantidad <= Number(franja.max || 0)) {
-      const d = Number(franja.descuento) || 0;
-      descuentoAplicable = (d > 0 && d <= 1) ? d * 100 : d;
-      franjaElegida = { tipo: 'rango', min: Number(franja.min||0), max: Number(franja.max||0), d: descuentoAplicable };
-      break;
-    }
-  }
-  // Si la cantidad supera la mayor franja y ésta define descuento, usarla
-  const ultima = franjas[franjas.length - 1];
-  if (ultima && cantidad > Number(ultima.max || 0)) {
-    const d = Number(ultima.descuento) || 0;
-    descuentoAplicable = (d > 0 && d <= 1) ? d * 100 : d;
-    franjaElegida = { tipo: 'ultima', min: Number(ultima.min||0), max: Number(ultima.max||0), d: descuentoAplicable };
+  // Verificar si ya hay un cálculo en progreso
+  if (calculandoFranjas) {
+    console.warn('Cálculo de franjas ya en progreso, ignorando llamada duplicada');
+    return precioUnitarioSinIVA;
   }
 
-  // Clamp defensivo [0,60]
-  descuentoAplicable = Math.max(0, Math.min(60, descuentoAplicable));
-  const factorDescuento = (100 - descuentoAplicable) / 100;
-  const resultado = precioUnitarioSinIVA * factorDescuento;
-  try { console.debug('[Franjas][Aplicada]', { productoId, cantidad, descuentoAplicable, franjaElegida, precioOriginal: precioUnitarioSinIVA, precioFinal: resultado }); } catch (_) {}
-  return resultado;
+  // Establecer flag para bloquear nuevas llamadas
+  calculandoFranjas = true;
+
+  try {
+    // Obtener franjas desde la base de datos
+    const response = await originalFetch(buildApiUrl(`/api/productos/${productoId}/franjas_descuento`), {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    if (!response.ok) {
+      console.warn(`Error al obtener franjas para producto ${productoId}: ${response.status}`);
+      calculandoFranjas = false; // Liberar flag en caso de error
+      return precioUnitarioSinIVA;
+    }
+
+    const data = await response.json();
+    const franjas = data.franjas || [];
+
+    if (franjas.length === 0) {
+      console.warn(`No hay franjas definidas para producto ${productoId}`);
+      calculandoFranjas = false; // Liberar flag cuando no hay franjas
+      return precioUnitarioSinIVA;
+    }
+
+    // Buscar la franja que corresponde a la cantidad
+    let descuentoAplicable = 0;
+    let franjaAplicada = null;
+    
+    for (let i = 0; i < franjas.length; i++) {
+      const franja = franjas[i];
+      if (cantidad >= franja.min_cantidad && cantidad <= franja.max_cantidad) {
+        descuentoAplicable = franja.porcentaje_descuento;
+        franjaAplicada = {
+          min: franja.min_cantidad,
+          max: franja.max_cantidad,
+          descuento: franja.porcentaje_descuento
+        };
+        break;
+      }
+    }
+
+    // Si no se encontró franja exacta, usar la última disponible para cantidades mayores
+    if (!franjaAplicada && franjas.length > 0) {
+      const ultimaFranja = franjas[franjas.length - 1];
+      if (cantidad > ultimaFranja.max_cantidad) {
+        descuentoAplicable = ultimaFranja.porcentaje_descuento;
+        franjaAplicada = {
+          min: ultimaFranja.min_cantidad,
+          max: ultimaFranja.max_cantidad,
+          descuento: ultimaFranja.porcentaje_descuento
+        };
+      }
+    }
+
+    // Si aún no hay franja, usar precio original
+    if (!franjaAplicada) {
+      console.warn(`No se encontró franja para cantidad ${cantidad} en producto ${productoId}`);
+      return precioUnitarioSinIVA;
+    }
+
+    const factorDescuento = (100 - descuentoAplicable) / 100;
+    const precioConDescuento = precioUnitarioSinIVA * factorDescuento;
+    
+    // Mostrar información detallada en consola
+    console.log('=== CÁLCULO DE FRANJA DE DESCUENTO (BD) ===');
+    console.log(`Producto ID: ${productoId}`);
+    console.log(`Precio original: ${precioUnitarioSinIVA.toFixed(5)}€`);
+    console.log(`Cantidad: ${cantidad} unidades`);
+    console.log(`Franja aplicada: ${franjaAplicada.min}-${franjaAplicada.max} unidades`);
+    console.log(`Descuento aplicable: ${descuentoAplicable}%`);
+    console.log(`Factor de descuento: ${factorDescuento.toFixed(4)}`);
+    console.log(`Precio con descuento: ${precioConDescuento.toFixed(5)}€`);
+    console.log(`Ahorro: ${(precioUnitarioSinIVA - precioConDescuento).toFixed(5)}€`);
+    console.log('==========================================');
+    
+    return precioConDescuento;
+
+  } catch (error) {
+    console.error(`Error al calcular descuento por franja para producto ${productoId}:`, error);
+    return precioUnitarioSinIVA;
+  } finally {
+    // Liberar flag al finalizar (éxito o error)
+    calculandoFranjas = false;
+  }
 }
 
-export function calcularTotalDetalle() {
+export async function calcularTotalDetalle() {
   const cantidadElem    = document.getElementById('cantidad-detalle');
   const impuestoElem    = document.getElementById('impuesto-detalle');
   const totalElem       = document.getElementById('total-detalle');
@@ -368,71 +336,84 @@ export function calcularTotalDetalle() {
       // Si estamos editando el precio o la cantidad, calculamos el total
       const precioUnitario = parseFloat(precioDetalleElem.value) || 0;
       const subtotal = precioUnitario * cantidad;
-      const total = subtotal * (1 + impuestos / 100);
+      // Redondear IVA (base * porcentaje) a 2 decimales antes de sumar
+      const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+      const total = Number((subtotal + impuestoCalc).toFixed(2));
       totalElem.value = total.toFixed(2);
     }
   } else {
     let precioOriginal = parseFloat(selectedOption.dataset.precioOriginal) || 0;
-
-    // Detectar contexto: ticket, proforma o factura (separando el tipo de proforma/factura)
-    let contexto = 'proforma';
-    let tipoProforma = sessionStorage.getItem('tipoProforma') || 'N';
-    let tipoFactura = null; // estado de factura (P/C/V/RE/A), no afecta descuentos
-
-    const ruta = (window.location.pathname || '').toLowerCase();
-    const isTickets = !!document.getElementById('numero-ticket') || !!document.getElementById('tabla-detalle-ticket') || ruta.includes('ticket');
-    if (isTickets) {
-      contexto = 'ticket';
-    } else if (document.getElementById('tipo-proforma')) {
-      contexto = 'proforma';
-      tipoProforma = document.getElementById('tipo-proforma').value || 'N';
-    } else if (document.getElementById('tipo-factura')) {
-      contexto = 'factura';
-      tipoFactura = document.getElementById('tipo-factura').value || null;
-    }
-
-    // Estado de franjas en caché para el producto
-    let franjasCached = null;
-    try { franjasCached = productoId ? getFranjasCached(productoId) : null; } catch (_) {}
-    try { console.debug('[CTX]', { contexto, tipoProforma, tipoFactura, productoId, cantidad, precioOriginal, franjasCachedLen: Array.isArray(franjasCached) ? franjasCached.length : null }); } catch (_) {}
-
-    // Determinar el precio final
-    let precioFinal;
-    if (contexto === 'proforma' && tipoProforma === 'A') {
-      // Proforma tipo A: sin descuentos
-      precioFinal = precioOriginal;
-      console.log('Proforma tipo A: NO se aplican descuentos por franja');
+    
+    // Obtener el tipo de proforma o factura correcto (usar el campo oculto como fuente principal)
+    let tipoDocumento = 'N';
+    
+    // Verificar primero si estamos en una proforma
+    const tipoProformaElem = document.getElementById('tipo-proforma');
+    if (tipoProformaElem) {
+      tipoDocumento = tipoProformaElem.value;
+      console.log('Detectado tipo de proforma:', tipoDocumento);
     } else {
-      // Ticket o Factura: siempre aplicar franjas. Proforma N: aplicar franjas.
-      precioFinal = calcularPrecioConDescuento(precioOriginal, cantidad, tipoFactura, contexto, productoId);
+      // Si no es proforma, verificar si es una factura
+      const tipoFacturaElem = document.getElementById('tipo-factura');
+      if (tipoFacturaElem) {
+        tipoDocumento = tipoFacturaElem.value;
+        console.log('Detectado tipo de factura:', tipoDocumento);
+      } else {
+        // Si no se encuentra ningún elemento, usar el valor predeterminado
+        tipoDocumento = sessionStorage.getItem('tipoProforma') || 'N';
+        console.log('Usando tipo predeterminado:', tipoDocumento);
+      }
+    }
+    
+    console.log(`Tipo de documento detectado: ${tipoDocumento}`);
+    
+    // Determinar el precio final (sin aplicar descuentos si es tipo A)
+    let precioFinal;
+    
+    // Si estamos editando un detalle existente, respetar el precio unitario ya guardado
+    const detalleIdEditing = (document.getElementById('btn-agregar-detalle')?.dataset?.detalleId) || '';
+    if (detalleIdEditing) {
+      console.log('Edición de detalle detectada: usando precio unitario fijo del input');
+      const precioFijo = parseFloat(precioDetalleElem.value) || precioOriginal;
+      const precioRedondeado = Number(precioFijo.toFixed(5));
+      const subtotal = precioRedondeado * cantidad;
+      const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+      const total = Number((subtotal + impuestoCalc).toFixed(2));
+      precioDetalleElem.value = precioRedondeado.toFixed(5);
+      totalElem.value = total.toFixed(2);
+      return;
+    }
+    
+    if (tipoDocumento === 'A') {
+      // Para documentos tipo A, NO aplicar descuento (devolver precio original)
+      console.log('Documento tipo A: NO se aplican descuentos por franja');
+      precioFinal = precioOriginal;
+    } else {
+      // Para documentos tipo N, calcular con descuentos
+      console.log('Documento tipo N: SÍ se aplican descuentos por franja');
+      // Verificar que productoId no sea el producto libre antes de aplicar descuentos
+      if (productoId && productoId !== PRODUCTO_ID_LIBRE) {
+        precioFinal = await calcularPrecioConDescuento(precioOriginal, cantidad, null, tipoDocumento, productoId);
+      } else {
+        console.warn('ProductoId es LIBRE o vacío, usando precio original sin descuento');
+        precioFinal = precioOriginal;
+      }
+    }
+    
+    // Asegurar que precioFinal es un número válido
+    if (typeof precioFinal !== 'number' || isNaN(precioFinal)) {
+      console.error('precioFinal no es un número válido:', precioFinal);
+      precioFinal = precioOriginal;
     }
 
-    const subtotal = precioFinal * cantidad;
-    const total = subtotal * (1 + impuestos / 100);
+    const precioRedondeado = Number(precioFinal.toFixed(5));
+    const subtotal = precioRedondeado * cantidad;
+    // Redondear IVA (base * porcentaje) a 2 decimales antes de sumar
+    const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+    const total = Number((subtotal + impuestoCalc).toFixed(2));
 
-    precioDetalleElem.value = precioFinal.toFixed(5);
+    precioDetalleElem.value = precioRedondeado.toFixed(5);
     totalElem.value = total.toFixed(2);
-    try { console.debug('[Recalc]', { contexto, productoId, cantidad, impuestos, precioOriginal, precioFinal, total }); } catch (_) {}
-
-    // Si aún no había franjas en caché, precargar y recalcular al llegar
-    try {
-      const prodIdActual = productoId;
-      const selectSigue = () => select && select.options[select.selectedIndex]?.value == prodIdActual;
-      preloadFranjasProducto(prodIdActual).then(() => {
-        if (!selectSigue()) return;
-        const cant = parseFloat(cantidadElem.value) || 1;
-        const iva = parseFloat(impuestoElem.value) || 21;
-        const recalc = calcularPrecioConDescuento(precioOriginal, cant, tipoFactura, contexto, prodIdActual);
-        const nuevo = Number(recalc.toFixed(5));
-        const actual = Number(precioDetalleElem.value);
-        if (nuevo !== actual) {
-          precioDetalleElem.value = nuevo.toFixed(5);
-          const sub = nuevo * cant;
-          totalElem.value = (sub * (1 + iva / 100)).toFixed(2);
-          try { console.debug('[Recalc][PostFetch]', { productoId: prodIdActual, cant, iva, nuevo, actual }); } catch (_) {}
-        }
-      }).catch(() => {});
-    } catch (_) { /* noop */ }
   }
 }
 
@@ -738,6 +719,15 @@ export const getCodigoEstado = (estadoFormateado) => {
 };
 
 // Función para obtener la clase CSS según el estado
+// Función para normalizar texto (eliminar acentos y convertir a minúsculas)
+export const norm = (str) => {
+    if (!str) return '';
+    return str.toString()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+};
+
 export const getEstadoClass = (estado) => {
     const clases = {
         // Estados de facturas
@@ -752,29 +742,6 @@ export const getEstadoClass = (estado) => {
     };
     return clases[estado] || '';
 }; 
-
-// Mapeos específicos para FACTURAS: aquí 'A' significa Anulada
-export const getEstadoFormateadoFactura = (estado) => {
-  const estados = {
-    'P': 'Pendiente',
-    'C': 'Cobrada',
-    'V': 'Vencida',
-    'RE': 'Rectificativa',
-    'A': 'Anulada'
-  };
-  return estados[estado] || estado;
-};
-
-export const getEstadoClassFactura = (estado) => {
-  const clases = {
-    'P': 'estado-pendiente',
-    'C': 'estado-cobrado',
-    'V': 'estado-vencido',
-    'RE': 'estado-rectificativa',
-    'A': 'estado-anulada'
-  };
-  return clases[estado] || '';
-};
 
 /**
  * Convierte una fecha ISO (o timestamp) en formato DD/MM/YYYY HH:MM.
@@ -853,13 +820,69 @@ export function formatearFechaSoloDia(fecha) {
  * Realiza un fetch con manejo de errores y devuelve JSON.
  */
 export async function fetchConManejadorErrores(url, opciones = {}) {
+  let ultimaError = null;
   try {
     mostrarCargando();
-    const res = await fetch(url, opciones);
-    if (!res.ok) throw new Error(`Error ${res.status} ${res.statusText || ''} -> ${res.url}`.trim());
-    return await res.json();
+    const primaria = buildApiUrl(url);
+    const candidates = [];
+    candidates.push(primaria);
+    if (primaria !== url) candidates.push(url);
+    // Añadir solo fallbacks a IPs conocidas (sin loopback nunca)
+    try {
+      const u = new URL(primaria, window.location.origin);
+      if (u.pathname.startsWith('/api')) {
+        const knownServers = ['192.168.1.23', '192.168.1.18'];
+        for (const ip of knownServers) {
+          const candidate = `http://${ip}:${PORT}${u.pathname}${u.search}`;
+          if (!candidates.includes(candidate)) candidates.push(candidate);
+        }
+      }
+    } catch (_) {
+      const p = (typeof url === 'string' && url.startsWith('/')) ? url : `/${url}`;
+      if (p.startsWith('/api')) {
+        const knownServers = ['192.168.1.23', '192.168.1.18'];
+        for (const ip of knownServers) {
+          const candidate = `http://${ip}:${PORT}${p}`;
+          if (!candidates.includes(candidate)) candidates.push(candidate);
+        }
+      }
+    }
+
+    for (const target of candidates) {
+      try {
+        const res = await fetch(target, opciones);
+        if (res.ok) return await res.json();
+        ultimaError = new Error(`Error ${res.status} en ${target}`);
+      } catch (e) {
+        ultimaError = e;
+      }
+    }
+    // Si llegamos aquí, ambos intentos fallaron
+    throw ultimaError || new Error('Fallo de red desconocido');
   } finally {
     ocultarCargando();
   }
 }
 // === Fin funciones añadidas ===
+
+// Construye la URL completa para llamadas a la API. Si la página no se sirve
+// desde el mismo host:puerto del backend (5001), antepone http://IP_SERVER:PORT
+// Ejemplos:
+//   buildApiUrl('/api/ventas/total_mes?...') -> 'http://IP:5001/api/ventas/total_mes?...' (cuando procede)
+//   buildApiUrl('http://otrohost/api/...')   -> se respeta tal cual
+export function buildApiUrl(path) {
+  try {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    const p = path.startsWith('/') ? path : `/${path}`;
+    // Para rutas de API, devolver SIEMPRE absoluta a la IP del servidor (evita puertos incorrectos)
+    if (p.startsWith('/api')) {
+      return `http://${IP_SERVER}:${PORT}${p}`;
+    }
+    // Para otras rutas, devolver relativo al origen
+    return p;
+  } catch (e) {
+    const p2 = path && path.startsWith('/') ? path : `/${path}`;
+    return p2;
+  }
+}

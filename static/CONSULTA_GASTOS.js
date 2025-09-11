@@ -1,4 +1,6 @@
-import { API_GASTOS } from '../static/constantes.js';
+import { API_GASTOS as API_GASTOS_CONST, IP_SERVER, PORT } from '../static/constantes.js';
+// Usar la constante si existe; si no, inferir del host actual
+const API_GASTOS = API_GASTOS_CONST || `http://${window.location.hostname || IP_SERVER}:${PORT}/api/gastos`;
 import { formatearImporte, debounce } from '../static/scripts_utils.js';
 import { mostrarNotificacion } from '../static/notificaciones.js';
 
@@ -19,7 +21,7 @@ const nextPageBtn = document.getElementById('nextPageGastos');
 const pageInfoSpan = document.getElementById('pageInfoGastos');
 const pageSizeSelect = document.getElementById('pageSizeSelectGastos');
 let page = 1;
-let pageSize = parseInt(pageSizeSelect?.value || '10', 10);
+let pageSize = parseInt(pageSizeSelect?.value || '20', 10);
 
 function getTotalPages() {
     if (!Array.isArray(datosConsulta) || datosConsulta.length === 0) return 1;

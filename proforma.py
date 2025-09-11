@@ -114,8 +114,8 @@ def obtener_proforma(id):
         if not proforma:
             return jsonify({'error': 'Proforma no encontrada'}), 404
         
-        # Obtener detalles
-        detalles = cursor.execute('SELECT * FROM detalle_proforma WHERE id_proforma = ?', (id,)).fetchall()
+        # Obtener detalles ordenados por id
+        detalles = cursor.execute('SELECT * FROM detalle_proforma WHERE id_proforma = ? ORDER BY id', (id,)).fetchall()
         
         resultado = dict(proforma)
         resultado['detalles'] = [dict(detalle) for detalle in detalles]
@@ -311,6 +311,7 @@ def obtener_proforma_abierta(idContacto):
                        formaPago, productoId, fechaDetalle
                 FROM detalle_proforma 
                 WHERE id_proforma = ?
+                ORDER BY id
             ''', (proforma_dict['id'],))
             detalles = cursor.fetchall()
             print(f"Detalles encontrados: {[dict(d) for d in detalles]}")

@@ -1897,15 +1897,8 @@ td .fas {
 }
 
 .cabecera-proforma::before {
-    content: 'PROFORMA';
-    position: absolute;
-    top: -12px;
-    left: 20px;
-    background-color: transparent;
-    padding: 0 10px;
-    font-size: 18px;
-    font-weight: bold;
-    color: var(--color-primario);
+    content: '' !important;
+    display: none !important;
 }
 
 .cabecera-ticket {
@@ -1916,17 +1909,23 @@ td .fas {
     box-shadow: 0 2px 4px var(--color-shadow);
 }
 
-
 .cabecera-ticket::before {
-    content: var(--cabecera-texto, 'TICKET'); /* Valor por defecto: 'TICKET' */
-    position: absolute;
-    top: -12px;
-    left: 20px;
-    background-color: var(--color-fondo);
-    padding: 0 10px;
-    font-size: 18px;
-    font-weight: bold;
-    color: var(--color-primario);
+    content: '' !important;
+    display: none !important;
+}
+
+.cabecera-factura {
+  background-color: transparent !important;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px var(--color-shadow);
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.cabecera-factura::before {
+  content: '' !important;
+  display: none !important;
 }
 
 /* Excepción para los campos de información de contacto */
@@ -1951,19 +1950,6 @@ td .fas {
     box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
     cursor: not-allowed !important;
     min-width: 180px !important;
-}
-
-/* Título de la proforma */
-.cabecera-proforma::before {
-    content: 'PROFORMA';
-    position: absolute;
-    top: -12px;
-    left: 20px;
-    background-color: transparent;
-    padding: 0 10px;
-    font-size: 18px;
-    font-weight: bold;
-    color: var(--color-primario);
 }
 
 /* Estilo para el hover en los detalles (aplicado a todas las tablas) */
@@ -2054,15 +2040,8 @@ table:not(.fixed-footer table) tbody tr:hover {
 }
 
 .cabecera-ticket::before {
-    content: 'TICKET';
-    position: absolute;
-    top: -12px;
-    left: 20px;
-    background-color: var(--color-fondo);
-    padding: 0 10px;
-    font-size: 18px;
-    font-weight: bold;
-    color: var(--color-primario);
+    content: '' !important;
+    display: none !important;
 }
 
 .cabecera-factura {
@@ -2075,15 +2054,8 @@ table:not(.fixed-footer table) tbody tr:hover {
 }
 
 .cabecera-factura::before {
-  content: 'PROFORMA';
-  position: absolute;
-  top: -12px;
-  left: 20px;
-  background-color: transparent !important;
-  padding: 0 10px;
-  font-size: 18px;
-  font-weight: bold;
-  color: var(--color-primario);
+  content: '' !important;
+  display: none !important;
 }
 
 /* Estilos comunes para cabeceras */
@@ -2098,13 +2070,8 @@ table:not(.fixed-footer table) tbody tr:hover {
 
 /* Estilos específicos para la cabecera de proformas */
 #cabecera-proforma .cabecera-ticket::before {
-    content: 'PROFORMA';
-    position: absolute;
-    top: -12px;
-    left: 20px;
-    background-color: var(--color-fondo);
-    padding: 0 10px;
-    font-size: 18px;
+    content: '' !important;
+    display: none !important;
     font-weight: bold;
     color: var(--color-primario);
 }
@@ -2345,11 +2312,13 @@ thead .columna-fija {
 
 /* Clases específicas para cada tipo de cabecera */
 .cabecera-factura::before {
-    content: 'FACTURA' !important;
+    content: '' !important;
+    display: none !important;
 }
 
 .cabecera-proforma::before {
-    content: 'PROFORMA' !important;
+    content: '' !important;
+    display: none !important;
 }
 
 /* Compresión máxima para información de contacto */
