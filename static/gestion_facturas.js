@@ -2,6 +2,7 @@ import { IP_SERVER, PORT } from './constantes.js';
 import { 
     PRODUCTO_ID_LIBRE,
     formatearImporte,
+    formatearImporteVariable,
     formatearApunto,
     parsearImporte,
     calcularPrecioConDescuento,
@@ -23,9 +24,9 @@ import {
     limpiarCamposDetalle,
     seleccionarProducto as seleccionarProductoCommon,
     validarDetalle,
-    redondearImporte,
     volverSegunOrigen
 } from './common.js';
+import { redondearImporte } from './common.js';
 
 // Variables globales
 let detalles = [];
@@ -94,7 +95,7 @@ function calcularTotalDetallesDiaActual() {
           const cantidad = parsearImporte(detalle.cantidad);
           const iva = parsearImporte(detalle.impuestos);
           const subtotal = precio * cantidad;
-          const impuesto = subtotal * (iva / 100);
+          const impuesto = redondearImporte(subtotal * (iva / 100));
           
           importe_bruto += subtotal;
           importe_impuestos += impuesto;
@@ -165,9 +166,11 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
             cantidad: parsearImporte(d.cantidad),
             precio: parsearImporte(d.precio).toFixed(5),
             impuestos: parsearImporte(d.impuestos),
-            total: redondearImporte(
-              parsearImporte(d.precio) * parsearImporte(d.cantidad) * (1 + parsearImporte(d.impuestos)/100)
-            ),
+            total: (() => {
+              const sub = parsearImporte(d.precio) * parsearImporte(d.cantidad);
+              const ivaCalc = redondearImporte(sub * (parsearImporte(d.impuestos) / 100));
+              return redondearImporte(sub + ivaCalc);
+            })(),
             productoId: d.productoId,
             formaPago: d.formaPago,
             fechaDetalle: d.fechaDetalle || convertirFechaParaAPI(document.getElementById('fecha').value)
@@ -283,7 +286,9 @@ function calcularTotalImpuestos() {
         const precio = parsearImporte(detalle.precio);
         const cantidad = parsearImporte(detalle.cantidad);
         const iva = parsearImporte(detalle.impuestos);
-        return total + ((precio * cantidad) * (iva / 100));
+        const subtotal = precio * cantidad;
+        const impuesto = redondearImporte(subtotal * (iva / 100));
+        return total + impuesto;
     }, 0);
 }
 
@@ -315,12 +320,11 @@ async function cargarProductos() {
   actualizarSelectProductos(productosOriginales, document.getElementById('concepto-detalle'));
 }
 
-function seleccionarProducto() {
+async function seleccionarProducto() {
   console.log('Ejecutando seleccionarProducto');
   
   // Obtener el tipo de factura actual
-  const tipoFacturaActual = document.getElementById('tipo-factura').value || 'N';
-  console.log('Tipo de factura al seleccionar producto:', tipoFacturaActual);
+  const tipoFactura = document.getElementById('tipo-factura').value || 'N';
   
   const formElements = {
     conceptoDetalle: document.getElementById('concepto-detalle'),
@@ -333,8 +337,12 @@ function seleccionarProducto() {
     busquedaProducto: document.getElementById('busqueda-producto')
   };
   
-  // Pasar explícitamente el tipo de documento 'factura' para aplicar franjas en la primera carga
-  seleccionarProductoCommon(formElements, productosOriginales, 'factura');
+  // Establecer cantidad por defecto antes de llamar a seleccionarProductoCommon
+  if (formElements.cantidadDetalle) {
+    formElements.cantidadDetalle.value = 1;
+  }
+  
+  await seleccionarProductoCommon(formElements, productosOriginales, 'factura');
   
   // Si es producto libre, hacer editable el campo total
   const productoId = formElements.conceptoDetalle.value;
@@ -391,23 +399,8 @@ function seleccionarProducto() {
     console.log('Configurado como producto estándar, campos no editables, IVA fijo: 21%');
   }
   
-  // Asegurarse de que el tipo de factura se aplica correctamente
-  const precio = parsearImporte(formElements.precioDetalle.value);
-  const cantidad = parsearImporte(formElements.cantidadDetalle.value);
-  const impuesto = parsearImporte(formElements.impuestoDetalle.value);
-  const tipoFactura = document.getElementById('tipo-factura').value || 'N';
-  const precioFinal = tipoFactura === 'A' 
-    ? precio 
-    : calcularPrecioConDescuento(precio, cantidad, tipoFactura, 'factura', productoId);
-  const subtotal = precioFinal * cantidad;
-  const impuestoTotal = subtotal * (impuesto / 100);
-  const total = subtotal + impuestoTotal;
-  
-  formElements.precioDetalle.value = precioFinal.toFixed(5);
-  formElements.totalDetalle.value = redondearImporte(total).toFixed(2);
-  console.log(`Total calculado (tipo ${tipoFactura}): ${total.toFixed(2)}, precio: ${precioFinal.toFixed(5)}`);
-  
-  // No llamar a calcularTotalDetalle() aquí, ya lo hemos calculado manualmente
+  // Usar el sistema de franjas unificado
+  await calcularTotalDetalle();
 }
 
 function actualizarTotales() {
@@ -466,13 +459,13 @@ function actualizarTablaDetalles() {
         // Mantener IVA en 0 si así está establecido
         const impuestos = detalle.impuestos === 0 ? 0 : (parsearImporte(detalle.impuestos) || 21);
         
-        // Recalcular el total para asegurar consistencia
+        // Recalcular el total para asegurar consistencia (IVA redondeado por línea)
         const subtotal = precio * cantidad;
-        const impuesto = subtotal * (impuestos / 100);
-        detalle.total = redondearImporte(subtotal + impuesto);
+        const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+        detalle.total = Number((subtotal + impuestoCalc).toFixed(2));
         
-        // Formatear para mostrar
-        const precioFormateado = Number(precio).toFixed(5).replace('.', ',') + ' €';
+        // Formatear para mostrar (máximo 5 decimales)
+        const precioFormateado = formatearImporteVariable(Number(precio), 0, 5);
         const totalFormateado = formatearImporte(detalle.total);
         
         console.log(`Detalle ${index}: ${detalle.concepto}`);
@@ -575,8 +568,9 @@ function validarYAgregarDetalle() {
   console.log("Impuestos calculados:", impuestos);
   
   const subtotal = cantidad * precioDetalle;
-  const impuesto = subtotal * (impuestos / 100);
-  const total = redondearImporte(subtotal + impuesto);
+  // Redondear IVA (base * porcentaje) a 2 decimales antes de sumar (como en tickets)
+  const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+  const total = Number((subtotal + impuestoCalc).toFixed(2));
 
   console.log(`Detalle a agregar - Cantidad: ${cantidad}, Precio: ${precioDetalle}, IVA: ${impuestos}%, Total calculado: ${total}`);
 
@@ -1153,16 +1147,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       btnAgregarDetalle.addEventListener('click', () => validarYAgregarDetalle());
     }
 
-    // Campos numéricos => calcularTotalDetalle y actualizarTotales
-    ['cantidad-detalle', 'precio-detalle'].forEach(id => {
-      const elemento = document.getElementById(id);
-      if (elemento) {
-        elemento.addEventListener('input', () => {
-          calcularTotalDetalle();
-          actualizarTotales();
-        });
-      }
-    });
+    // Los event listeners se configuran en seleccionarProducto() para evitar duplicados
     
     // Campo impuesto => actualizarTotales cuando cambia (para productos LIBRE)
     const impuestoDetalle = document.getElementById('impuesto-detalle');
@@ -1582,7 +1567,7 @@ function actualizarTablaFacturas() {
 }
 
 // Función para filtrar productos según búsqueda
-function filtrarProductos() {
+async function filtrarProductos() {
   const busquedaProducto = document.getElementById('busqueda-producto').value;
   const productosFiltrados = filtrarProductosCommon(busquedaProducto, productosOriginales);
   actualizarSelectProductos(productosFiltrados, document.getElementById('concepto-detalle'));
@@ -1590,6 +1575,6 @@ function filtrarProductos() {
   if (productosFiltrados.length > 0) {
     const selectProducto = document.getElementById('concepto-detalle');
     selectProducto.value = productosFiltrados[0].id;
-    seleccionarProducto();
+    await seleccionarProducto();
   }
 }

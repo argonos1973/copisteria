@@ -1,4 +1,4 @@
-import { formatearFecha, formatearImporte, fetchConManejadorErrores, parsearImporte } from './scripts_utils.js';
+import { formatearFecha, formatearImporte, fetchConManejadorErrores, parsearImporte, buildApiUrl } from './scripts_utils.js?v=20250911_1723';
 
 // ==============================
 // ESTADISTICAS FACTURAS - COMPLETO
@@ -62,6 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Recalcular estadísticas tanto al cambiar como al introducir un nuevo valor
   selectorFecha?.addEventListener('change', recargarEstadisticas);
+  selectorFecha?.addEventListener('input', recargarEstadisticas);
 
   document.getElementById('btn-descargar-csv')?.addEventListener('click', descargarCSV);
   document.getElementById('btn-graficos')?.addEventListener('click', abrirModalGraficos);
@@ -73,7 +74,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   initModalDrag();
   initCollapseControls(); // Inicializar controles de colapso
   
-  await recargarEstadisticas();
+  try {
+    await recargarEstadisticas();
+  } catch (e) {
+    console.error('[estadisticas] Error inicial al recargar:', e);
+  }
 });
   
   document.addEventListener('visibilitychange', () => {
@@ -98,10 +103,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(mes === ultimoMes && anio === ultimoAnio) return;
     ultimoMes = mes; ultimoAnio = anio;
     safeSet('year-indicator', `(${anio})`);
-    await Promise.all([
-      cargarEstadisticas(mes, anio),
-      cargarIngresosGastosTotales(mes, anio)
-    ]);
+    try {
+      await Promise.all([
+        cargarEstadisticas(mes, anio),
+        cargarIngresosGastosTotales(mes, anio)
+      ]);
+    } catch (e) {
+      console.error('[estadisticas] Fallo al cargar alguna sección:', e);
+    }
   }
   
   function getFechaSeleccionada() {
@@ -177,20 +186,145 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mesNum = parseInt(mes, 10); // 1-12
     
     const qp = new URLSearchParams({ mes, anio, t: Date.now() });
-    const datos = await fetchConManejadorErrores('/api/ventas/media_por_documento?' + qp);
+    let datos;
+    try {
+      datos = await fetchConManejadorErrores(buildApiUrl('/api/ventas/media_por_documento?' + qp));
+    } catch (e) {
+      console.warn('[estadisticas] Fallback: media_por_documento falló, voy a construir datos desde total_mes', e);
+      datos = await construirDatosDesdeTotales(mes, anio);
+    }
+    // Si por cualquier motivo vino todo a 0, intentar reconstruir desde totales
+    try {
+      const totAct = (parsearImporte(datos?.tickets?.actual?.total) || 0) + (parsearImporte(datos?.facturas?.actual?.total) || 0);
+      const esProd = window.location.hostname === '192.168.1.18';
+      if (!esProd && (!datos || totAct === 0)) {
+        console.warn('[estadisticas] Fallback 2: datos en 0, reconstruyendo desde total_mes');
+        datos = await construirDatosDesdeTotales(mes, anio);
+      }
+    } catch (e) {
+      console.warn('[estadisticas] Error evaluando fallback:', e);
+    }
+
+    // Simular que el mes seleccionado es el "mes actual" (aplicar SIEMPRE)
+    // Ajustamos acumulados y medias usando series mensuales del backend (YTD)
+    try {
+      {
+        const totales = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}&t=${Date.now()}`));
+        const anioPrev = String(parseInt(anio, 10) - 1);
+        const totalesPrev = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anioPrev}&t=${Date.now()}`));
+        const keySel = String(mesNum).padStart(2, '0');
+        const getCampoVal = (entry, campo) => {
+          if (entry == null) return 0;
+          if (typeof entry === 'number') {
+            return campo === 'total' ? entry : 0;
+          }
+          return parsearImporte(entry?.[campo] ?? 0);
+        };
+        const sumHasta = (serie, campo) => {
+          let s = 0;
+          for (let i = 1; i <= mesNum; i++) {
+            const k = String(i).padStart(2, '0');
+            s += getCampoVal(serie?.[k], campo);
+          }
+          return s;
+        };
+        const valMes = (serie, campo) => getCampoVal(serie?.[keySel], campo);
+
+        // Tickets (año actual hasta el mes seleccionado)
+        const tktTotalHasta = sumHasta(totales.tickets, 'total');
+        const tktCantHasta  = sumHasta(totales.tickets, 'cantidad');
+        const tktMesTotal   = valMes(totales.tickets, 'total');
+        const tktMesCant    = valMes(totales.tickets, 'cantidad');
+        datos.tickets.actual.total = tktTotalHasta;
+        if (tktCantHasta > 0) {
+          datos.tickets.actual.cantidad = tktCantHasta;
+          datos.tickets.actual.media = tktTotalHasta / tktCantHasta;
+        } else {
+          // Mantener cantidades y media originales si no disponemos de cantidades en totales
+          datos.tickets.actual.media = datos.tickets.actual.media;
+        }
+        datos.tickets.actual.mes_actual = {
+          total: tktMesTotal,
+          cantidad: (tktMesCant && tktMesCant > 0) ? tktMesCant : (datos.tickets.actual.mes_actual?.cantidad || 0)
+        };
+        // Tickets (año anterior hasta el mismo mes)
+        const tktTotalHastaPrev = sumHasta(totalesPrev.tickets, 'total');
+        const tktCantHastaPrev  = sumHasta(totalesPrev.tickets, 'cantidad');
+        datos.tickets.anterior.total = tktTotalHastaPrev;
+        if (tktCantHastaPrev > 0) {
+          datos.tickets.anterior.cantidad = tktCantHastaPrev;
+          datos.tickets.anterior.media = tktTotalHastaPrev / tktCantHastaPrev;
+        }
+        datos.tickets.porcentaje_diferencia = tktTotalHastaPrev > 0 ? ((tktTotalHasta - tktTotalHastaPrev) / tktTotalHastaPrev) * 100 : 0;
+
+        // Facturas (año actual hasta el mes seleccionado)
+        const facTotalHasta = sumHasta(totales.facturas, 'total');
+        const facCantHasta  = sumHasta(totales.facturas, 'cantidad');
+        const facMesTotal   = valMes(totales.facturas, 'total');
+        const facMesCant    = valMes(totales.facturas, 'cantidad');
+        datos.facturas.actual.total = facTotalHasta;
+        if (facCantHasta > 0) {
+          datos.facturas.actual.cantidad = facCantHasta;
+          datos.facturas.actual.media = facTotalHasta / facCantHasta;
+        } else {
+          datos.facturas.actual.media = datos.facturas.actual.media;
+        }
+        datos.facturas.actual.mes_actual = {
+          total: facMesTotal,
+          cantidad: (facMesCant && facMesCant > 0) ? facMesCant : (datos.facturas.actual.mes_actual?.cantidad || 0)
+        };
+        // Facturas (año anterior hasta el mismo mes)
+        const facTotalHastaPrev = sumHasta(totalesPrev.facturas, 'total');
+        const facCantHastaPrev  = sumHasta(totalesPrev.facturas, 'cantidad');
+        datos.facturas.anterior.total = facTotalHastaPrev;
+        if (facCantHastaPrev > 0) {
+          datos.facturas.anterior.cantidad = facCantHastaPrev;
+          datos.facturas.anterior.media = facTotalHastaPrev / facCantHastaPrev;
+        }
+        datos.facturas.porcentaje_diferencia = facTotalHastaPrev > 0 ? ((facTotalHasta - facTotalHastaPrev) / facTotalHastaPrev) * 100 : 0;
+
+        // Global (recalculado con los valores ajustados)
+        if (datos.global) {
+          const globTotalHasta = tktTotalHasta + facTotalHasta;
+          const globCantHastaOri = (datos.global.actual?.cantidad || 0);
+          const globCantHastaRecalc = (tktCantHasta || 0) + (facCantHasta || 0);
+          const globCantHasta = globCantHastaRecalc > 0 ? globCantHastaRecalc : globCantHastaOri;
+          const globMesTotal   = tktMesTotal + facMesTotal;
+          const globMesCantRecalc = (tktMesCant || 0) + (facMesCant || 0);
+          const globMesCantOri = (datos.tickets.actual.mes_actual?.cantidad || 0) + (datos.facturas.actual.mes_actual?.cantidad || 0);
+          const globMesCant    = globMesCantRecalc > 0 ? globMesCantRecalc : globMesCantOri;
+          datos.global.actual.total = globTotalHasta;
+          datos.global.actual.cantidad = globCantHasta;
+          datos.global.actual.media = globCantHasta > 0 ? (globTotalHasta / globCantHasta) : (datos.global.actual.media || 0);
+          datos.global.actual.mes_actual = { total: globMesTotal, cantidad: globMesCant };
+          const globTotalHastaPrev = tktTotalHastaPrev + facTotalHastaPrev;
+          const globCantHastaPrev  = tktCantHastaPrev + facCantHastaPrev;
+          datos.global.anterior.total    = globTotalHastaPrev;
+          if (globCantHastaPrev > 0) {
+            datos.global.anterior.cantidad = globCantHastaPrev;
+            datos.global.anterior.media    = globCantHastaPrev > 0 ? (globTotalHastaPrev / globCantHastaPrev) : (datos.global.anterior.media || 0);
+          }
+          datos.global.porcentaje_diferencia = globTotalHastaPrev > 0 ? ((globTotalHasta - globTotalHastaPrev) / globTotalHastaPrev) * 100 : 0;
+        }
+      }
+    } catch (e) {
+      console.warn('No se pudo aplicar simulación local de mes actual en estadísticas:', e);
+    }
     // --- Recalcular media mensual en el cliente ---
     function ajustarMediaMensual(obj){
       if(!obj || !obj.actual) return;
-      const totalActual = parsearImporte(obj.actual.total);
+      const totalActual    = parsearImporte(obj.actual.total);
       const totalMesActual = parsearImporte(obj.actual.mes_actual?.total ?? 0);
-      const mesesPrevios = mesNum - 1;
-      const totalPrevio = totalActual - totalMesActual;
+      const mesesPrevios   = mesNum - 1;
+      const totalPrevio    = totalActual - totalMesActual; // tras el ajuste local, esto ya es acumulado hasta mes-1
       obj.actual.media_mensual = mesesPrevios > 0 ? (totalPrevio / mesesPrevios) : 0;
     }
     ajustarMediaMensual(datos.tickets);
     ajustarMediaMensual(datos.facturas);
     if(datos.proformas) ajustarMediaMensual(datos.proformas);
     if(datos.global) ajustarMediaMensual(datos.global);
+    // Completar cantidades del mes con la serie total_mes para garantizar media mensual correcta
+    await completarCantidadesMesDesdeTotales(mes, anio, datos);
     const global = datos.global;
     // cachear para cálculos globales de cantidad vs año pasado
     ultimoDatos = datos;
@@ -203,11 +337,184 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     actualizarGlobal(global);
   
-    actualizarTopClientes(await fetchConManejadorErrores('/api/clientes/top_ventas?' + qp));
-    actualizarTopProductos(await fetchConManejadorErrores('/api/productos/top_ventas?' + qp));
+    // Cargar top clientes y productos desde un único endpoint del backend
+    const top = await fetchConManejadorErrores(buildApiUrl('/api/clientes/top_ventas?' + qp));
+    actualizarTopClientes(top);
+    actualizarTopProductos(top);
     
     // Restaurar el estado de colapso de las tarjetas después de actualizar datos
     restaurarEstadoColapso();
+  }
+
+  // Construir estructura de "media_por_documento" a partir de /api/ventas/total_mes
+  async function construirDatosDesdeTotales(mes, anio) {
+    const mesNum = parseInt(mes, 10);
+    const anioPrev = String(parseInt(anio, 10) - 1);
+    const [totAct, totPrev] = await Promise.all([
+      fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}&t=${Date.now()}`)),
+      fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anioPrev}&t=${Date.now()}`))
+    ]);
+    const getCampoVal = (entry, campo) => {
+      if (entry == null) return 0;
+      if (typeof entry === 'number') return campo === 'total' ? entry : 0;
+      return parsearImporte(entry?.[campo] ?? 0);
+    };
+    const sumHasta = (serie, campo) => {
+      let s = 0, c = 0;
+      for (let i = 1; i <= mesNum; i++) {
+        const k = String(i).padStart(2,'0');
+        const e = serie?.[k];
+        s += getCampoVal(e, campo);
+        if (campo === 'cantidad') c += getCampoVal(e, 'cantidad');
+      }
+      return campo === 'cantidad' ? (c || 0) : (s || 0);
+    };
+    const valMes = (serie, campo) => getCampoVal(serie?.[String(mesNum).padStart(2,'0')], campo);
+
+    // Tickets
+    const tTot = sumHasta(totAct.tickets, 'total');
+    const tCnt = sumHasta(totAct.tickets, 'cantidad');
+    const tMesT = valMes(totAct.tickets, 'total');
+    const tMesC = valMes(totAct.tickets, 'cantidad');
+    const tTotP = sumHasta(totPrev.tickets, 'total');
+    const tCntP = sumHasta(totPrev.tickets, 'cantidad');
+
+    // Facturas
+    const fTot = sumHasta(totAct.facturas, 'total');
+    const fCnt = sumHasta(totAct.facturas, 'cantidad');
+    const fMesT = valMes(totAct.facturas, 'total');
+    const fMesC = valMes(totAct.facturas, 'cantidad');
+    const fTotP = sumHasta(totPrev.facturas, 'total');
+    const fCntP = sumHasta(totPrev.facturas, 'cantidad');
+
+    const gTot = tTot + fTot;
+    const gCnt = tCnt + fCnt;
+    const gTotP = tTotP + fTotP;
+    const gCntP = tCntP + fCntP;
+
+    const pct = (a, p) => p > 0 ? ((a - p) / p) * 100 : 0;
+
+    let datos = {
+      tickets: {
+        actual: { total: tTot, cantidad: tCnt, media: tCnt>0? tTot/tCnt:0, mes_actual: { total: tMesT, cantidad: tMesC } },
+        anterior: { total: tTotP, cantidad: tCntP, media: tCntP>0? tTotP/tCntP:0, mismo_mes: { total: valMes(totPrev.tickets,'total'), cantidad: valMes(totPrev.tickets,'cantidad') } },
+        porcentaje_diferencia: pct(tTot, tTotP),
+        porcentaje_diferencia_mes: pct(tMesT, valMes(totPrev.tickets,'total'))
+      },
+      facturas: {
+        actual: { total: fTot, cantidad: fCnt, media: fCnt>0? fTot/fCnt:0, mes_actual: { total: fMesT, cantidad: fMesC } },
+        anterior: { total: fTotP, cantidad: fCntP, media: fCntP>0? fTotP/fCntP:0, mismo_mes: { total: valMes(totPrev.facturas,'total'), cantidad: valMes(totPrev.facturas,'cantidad') } },
+        porcentaje_diferencia: pct(fTot, fTotP),
+        porcentaje_diferencia_mes: pct(fMesT, valMes(totPrev.facturas,'total'))
+      },
+      global: {
+        actual: { total: gTot, cantidad: gCnt, media: gCnt>0? gTot/gCnt:0, mes_actual: { total: tMesT+fMesT, cantidad: tMesC+fMesC } },
+        anterior: { total: gTotP, cantidad: gCntP, media: gCntP>0? gTotP/gCntP:0, mismo_mes: { total: valMes(totPrev.tickets,'total')+valMes(totPrev.facturas,'total'), cantidad: valMes(totPrev.tickets,'cantidad')+valMes(totPrev.facturas,'cantidad') } },
+        porcentaje_diferencia: pct(gTot, gTotP),
+        porcentaje_diferencia_mes: pct(tMesT+fMesT, valMes(totPrev.tickets,'total')+valMes(totPrev.facturas,'total'))
+      }
+    };
+    // medias mensuales las ajustamos más adelante con ajustarMediaMensual()
+    try {
+      // Completar CANTIDADES desde media_por_documento si no tenemos cantidades en totales
+      const md = await fetchConManejadorErrores(buildApiUrl('/api/ventas/media_por_documento?' + new URLSearchParams({ mes, anio })));
+      const aplicarCant = (dst, src) => {
+        if (!dst || !src) return;
+        if (parsearImporte(dst.actual?.cantidad) <= 0 && parsearImporte(src.actual?.cantidad) > 0) {
+          dst.actual.cantidad = src.actual.cantidad;
+          dst.actual.media = parsearImporte(dst.actual.total) > 0 && parsearImporte(src.actual.cantidad) > 0
+            ? parsearImporte(dst.actual.total) / parsearImporte(src.actual.cantidad)
+            : dst.actual.media;
+        }
+        if (parsearImporte(dst.anterior?.cantidad) <= 0 && parsearImporte(src.anterior?.cantidad) > 0) {
+          dst.anterior.cantidad = src.anterior.cantidad;
+          dst.anterior.media = parsearImporte(dst.anterior.total) > 0 && parsearImporte(src.anterior.cantidad) > 0
+            ? parsearImporte(dst.anterior.total) / parsearImporte(src.anterior.cantidad)
+            : dst.anterior.media;
+        }
+        // Rellenar cantidad del MES si falta
+        if (parsearImporte(dst.actual?.mes_actual?.cantidad) <= 0 && parsearImporte(src.actual?.mes_actual?.cantidad) > 0) {
+          dst.actual.mes_actual.cantidad = src.actual.mes_actual.cantidad;
+        }
+        if (parsearImporte(dst.anterior?.mismo_mes?.cantidad) <= 0 && parsearImporte(src.anterior?.mismo_mes?.cantidad) > 0) {
+          dst.anterior.mismo_mes.cantidad = src.anterior.mismo_mes.cantidad;
+        }
+      };
+      aplicarCant(datos.tickets, md.tickets);
+      aplicarCant(datos.facturas, md.facturas);
+      // Global a partir de sumas
+      const gActCant = (parsearImporte(datos.tickets.actual.cantidad) || 0) + (parsearImporte(datos.facturas.actual.cantidad) || 0);
+      const gAntCant = (parsearImporte(datos.tickets.anterior.cantidad) || 0) + (parsearImporte(datos.facturas.anterior.cantidad) || 0);
+      datos.global.actual.cantidad = gActCant > 0 ? gActCant : datos.global.actual.cantidad;
+      datos.global.anterior.cantidad = gAntCant > 0 ? gAntCant : datos.global.anterior.cantidad;
+      datos.global.actual.media = (datos.global.actual.cantidad > 0) ? (parsearImporte(datos.global.actual.total) / datos.global.actual.cantidad) : datos.global.actual.media;
+      datos.global.anterior.media = (datos.global.anterior.cantidad > 0) ? (parsearImporte(datos.global.anterior.total) / datos.global.anterior.cantidad) : datos.global.anterior.media;
+      const gMesCant = (parsearImporte(datos.tickets.actual.mes_actual.cantidad)||0) + (parsearImporte(datos.facturas.actual.mes_actual.cantidad)||0);
+      const gMesAntCant = (parsearImporte(datos.tickets.anterior.mismo_mes.cantidad)||0) + (parsearImporte(datos.facturas.anterior.mismo_mes.cantidad)||0);
+      if (gMesCant > 0) datos.global.actual.mes_actual.cantidad = gMesCant;
+      if (gMesAntCant > 0) datos.global.anterior.mismo_mes.cantidad = gMesAntCant;
+    } catch (e) {
+      console.warn('[estadisticas] No se pudieron completar cantidades desde media_por_documento:', e);
+    }
+    console.log('[estadisticas] Datos construidos desde total_mes:', datos);
+    return datos;
+  }
+  
+  // Completa las cantidades del mes seleccionado a partir de /api/ventas/total_mes
+  // Esto asegura que la 'Media por Ticket/Factura' pueda calcularse como total_mes / cantidad_mes
+  // incluso si el endpoint media_por_documento no envía la cantidad mensual.
+  async function completarCantidadesMesDesdeTotales(mes, anio, datos) {
+    try {
+      const mesNum = parseInt(mes, 10);
+      const keySel = String(mesNum).padStart(2, '0');
+      const totales = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}&t=${Date.now()}`));
+      const getCantidadMes = (serie) => {
+        if (!serie) return 0;
+        const entry = serie[keySel];
+        if (entry == null) return 0;
+        if (typeof entry === 'number') return 0; // cuando el backend devuelve sólo número para total
+        return parsearImporte(entry.cantidad || 0);
+      };
+      const getTotalMes = (serie) => {
+        if (!serie) return 0;
+        const entry = serie[keySel];
+        if (entry == null) return 0;
+        if (typeof entry === 'number') return parsearImporte(entry);
+        return parsearImporte(entry.total || 0);
+      };
+      const tMesCant = getCantidadMes(totales?.tickets);
+      const fMesCant = getCantidadMes(totales?.facturas);
+      const tMesTot  = getTotalMes(totales?.tickets);
+      const fMesTot  = getTotalMes(totales?.facturas);
+      // Asegurar estructura y aplicar sólo si hay dato positivo
+      datos.tickets = datos.tickets || { actual: {} };
+      datos.tickets.actual = datos.tickets.actual || {};
+      datos.tickets.actual.mes_actual = datos.tickets.actual.mes_actual || {};
+      // No sobrescribir con 0: si total_mes no trae cantidad, preservamos la previa (de media_por_documento)
+      if (tMesCant > 0) {
+        datos.tickets.actual.mes_actual.cantidad = tMesCant;
+      }
+      // Actualizar SIEMPRE total del mes seleccionado
+      datos.tickets.actual.mes_actual.total = tMesTot;
+
+      datos.facturas = datos.facturas || { actual: {} };
+      datos.facturas.actual = datos.facturas.actual || {};
+      datos.facturas.actual.mes_actual = datos.facturas.actual.mes_actual || {};
+      if (fMesCant > 0) {
+        datos.facturas.actual.mes_actual.cantidad = fMesCant;
+      }
+      datos.facturas.actual.mes_actual.total = fMesTot;
+
+      // Global del mes seleccionado
+      datos.global = datos.global || { actual: {} };
+      datos.global.actual = datos.global.actual || {};
+      datos.global.actual.mes_actual = {
+        total: (tMesTot || 0) + (fMesTot || 0),
+        cantidad: (parsearImporte(datos.tickets.actual.mes_actual.cantidad)||0) + (parsearImporte(datos.facturas.actual.mes_actual.cantidad)||0)
+      };
+    } catch (e) {
+      console.debug('[estadisticas] No se pudo completar cantidades del mes desde total_mes:', e);
+    }
   }
   
   function restaurarEstadoColapso() {
@@ -219,8 +526,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   function actualizarStats(prefijo, data, cardId) {
     // Totales y medias ANUALES
+    console.debug(`[stats] ${prefijo} antes de pintar`, {
+      total: data?.actual?.total,
+      cantidad: data?.actual?.cantidad,
+      media: data?.actual?.media,
+      mes_total: data?.actual?.mes_actual?.total,
+      mes_cantidad: data?.actual?.mes_actual?.cantidad
+    });
     safeSet(`${prefijo}Total`, formatearImporte(data.actual.total));
-    safeSet(`${prefijo}Media`, formatearImporte(data.actual.media));
+    let mediaValor = parsearImporte(data.actual.media);
+    if (!mediaValor || mediaValor === 0) {
+      const tot = parsearImporte(data.actual.total);
+      const cant = parsearImporte(data.actual.cantidad || 0);
+      if (cant > 0 && tot !== null) {
+        mediaValor = tot / cant;
+      } else {
+        // Fallback: si no tenemos cantidad anual, usar media del mes si hay documentos en el mes
+        const mesTot = parsearImporte(data.actual.mes_actual?.total || 0);
+        const mesCant = parsearImporte(data.actual.mes_actual?.cantidad || 0);
+        if (mesCant > 0 && mesTot !== null) mediaValor = mesTot / mesCant;
+      }
+    }
+    safeSet(`${prefijo}Media`, formatearImporte(mediaValor));
     // Datos del mes seleccionado
     const totalMesSeleccionado = data.actual.mes_actual?.total ?? 0;
     const cantidadMes = data.actual.mes_actual?.cantidad ?? 0;
@@ -229,10 +556,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     safeSet(`${prefijo}Cantidad`, cantidadMes);
     safeSet(`${prefijo}Anterior`, `Año anterior: ${formatearImporte(data.anterior.total)}`);
     actualizarPorcentaje(`${prefijo}Porcentaje`, data.porcentaje_diferencia);
-  
+
     // Siempre actualizamos la fila del mes para evitar valores residuales
     const totalMes = totalMesSeleccionado;
     const cantMes = cantidadMes;
+    // Recalcular y pintar la MEDIA: usar MES si hay datos; si no, fallback a YTD
+    try {
+      const totMesNum = parsearImporte(totalMes) || 0;
+      const cantMesNum = parsearImporte(cantMes) || 0;
+      const totAcumNum = parsearImporte(data.actual.total) || 0;
+      const cantAcumNum = parsearImporte(data.actual.cantidad || 0) || 0;
+      let mediaPreferida = 0;
+      if (cantMesNum > 0) {
+        mediaPreferida = totMesNum / cantMesNum;
+      } else if (cantAcumNum > 0) {
+        mediaPreferida = totAcumNum / cantAcumNum;
+      }
+      console.debug(`[stats] ${prefijo} media recalculada (Mes→YTD)`, { mediaPreferida, totMesNum, cantMesNum, totAcumNum, cantAcumNum });
+      safeSet(`${prefijo}Media`, formatearImporte(mediaPreferida));
+    } catch (e) {
+      console.warn(`[stats] ${prefijo} no se pudo recalcular media`, e);
+    }
     safeSet(`${prefijo}TotalMes`, formatearImporte(totalMes));
     const mesAnteriorTotal = data.anterior?.mismo_mes?.total ?? 0;
     safeSet(`${prefijo}MesAnterior`, `Mismo mes año anterior: ${formatearImporte(mesAnteriorTotal)}`);
@@ -263,15 +607,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   function actualizarGlobal(global) {
     if (!global) return;
+    console.debug('[stats] global antes de pintar', {
+      total: global?.actual?.total,
+      cantidad: global?.actual?.cantidad,
+      media: global?.actual?.media,
+      mes_total: global?.actual?.mes_actual?.total,
+      mes_cantidad: global?.actual?.mes_actual?.cantidad
+    });
     document.getElementById('globalTotal').textContent = formatearImporte(global.actual.total);
-    document.getElementById('globalMedia').textContent = formatearImporte(global.actual.media);
+    let globalMedia = parsearImporte(global.actual.media);
+    if (!globalMedia || globalMedia === 0) {
+      const tot = parsearImporte(global.actual.total);
+      const cant = parsearImporte(global.actual.cantidad || 0);
+      if (cant > 0 && tot !== null) {
+        globalMedia = tot / cant;
+      } else {
+        const mesTot = parsearImporte(global.actual.mes_actual?.total || 0);
+        const mesCant = parsearImporte(global.actual.mes_actual?.cantidad || 0);
+        if (mesCant > 0 && mesTot !== null) globalMedia = mesTot / mesCant;
+      }
+    }
+    document.getElementById('globalMedia').textContent = formatearImporte(globalMedia);
     document.getElementById('globalMediaMensual').textContent = formatearImporte(global.actual.media_mensual);
     document.getElementById('globalCantidad').textContent = global.actual.cantidad;
     document.getElementById('globalAnterior').textContent = `Año anterior: ${formatearImporte(global.anterior.total)}`;
     actualizarPorcentaje('globalPorcentaje', global.porcentaje_diferencia);
   
     const mediaMensual = parsearImporte(global.actual.media_mensual);
-    const mesActual = new Date().getMonth() + 1;
+    // En local, tratar el mes seleccionado como el "mes en curso"; en producción usar el mes real
+    const { mes: mesSel } = getFechaSeleccionada();
+    const esProd = window.location.hostname === '192.168.1.18';
+    const mesActual = esProd ? (new Date().getMonth() + 1) : parseInt(mesSel, 10);
     const acumulado = parsearImporte(global.actual.total);
     const previsto = acumulado + (mediaMensual * (12 - mesActual));
     document.getElementById('globalTotalPrevisto').textContent = formatearImporte(previsto);
@@ -281,18 +647,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('globalPorcentajePrevistoAnyo').textContent = `${p >= 100 ? '+' : '-'}${diff.toFixed(1)}%`;
     document.getElementById('globalPorcentajePrevistoAnyo').className = 'stats-percentage ' + (p >= 100 ? 'positive' : 'negative');
   
-    if (global.actual.mes_actual?.cantidad) {
-      document.getElementById('globalTotalMes').textContent = formatearImporte(global.actual.mes_actual.total);
-      document.getElementById('globalMesAnterior').textContent = `Mismo mes año anterior: ${formatearImporte(global.anterior.mismo_mes.total)}`;
-      actualizarPorcentaje('globalPorcentajeMes', global.porcentaje_diferencia_mes);
-      actualizarPorcentajeFaltaMediaMensual(
-        'globalFaltaMediaMensual',
-        'globalPorcentajeFalta',
-        parsearImporte(global.actual.mes_actual.total),
-        parsearImporte(global.actual.media_mensual),
-        'card-global'
-      );
-    }
+    // Mostrar SIEMPRE los valores del mes, aunque la cantidad sea 0
+    document.getElementById('globalTotalMes').textContent = formatearImporte(global.actual.mes_actual?.total || 0);
+    document.getElementById('globalMesAnterior').textContent = `Mismo mes año anterior: ${formatearImporte(global.anterior.mismo_mes?.total || 0)}`;
+    actualizarPorcentaje('globalPorcentajeMes', global.porcentaje_diferencia_mes);
+    actualizarPorcentajeFaltaMediaMensual(
+      'globalFaltaMediaMensual',
+      'globalPorcentajeFalta',
+      parsearImporte(global.actual.mes_actual?.total || 0),
+      parsearImporte(global.actual.media_mensual || 0),
+      'card-global'
+    );
     // Porcentaje de CANTIDAD GLOBAL respecto al año pasado (total anual)
     const idPctGlobalCant = 'globalCantidadPctAnyo';
     const cantActual = global?.actual?.cantidad ?? null;
@@ -357,7 +722,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // INGRESOS & GASTOS TOTALES
   // ==============================
   async function cargarIngresosGastosTotales(mes, anio){
-    const data = await fetchConManejadorErrores(`/api/ingresos_gastos_totales?anio=${anio}&mes=${mes}&t=${Date.now()}`);
+    const data = await fetchConManejadorErrores(buildApiUrl(`/api/ingresos_gastos_totales?anio=${anio}&mes=${mes}&t=${Date.now()}`));
     const ingresos = data.ingresos;
     const gastos   = data.gastos;
     const ingresosEl = document.getElementById('ig-total-ingresos');
@@ -419,7 +784,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modal = document.getElementById('modal-graficos');
     if(modal) modal.style.display = 'block';
     // Obtener datos mensuales del cliente
-    const datos = await fetchConManejadorErrores(`/api/clientes/ventas_mes?cliente_id=${clienteId}&anio=${anio}`);
+    const datos = await fetchConManejadorErrores(buildApiUrl(`/api/clientes/ventas_mes?cliente_id=${clienteId}&anio=${anio}`));
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const valores = meses.map((_, i) => parsearImporte(datos[String(i+1).padStart(2,'0')]));
 
@@ -464,7 +829,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modal = document.getElementById('modal-graficos');
     if(modal) modal.style.display = 'block';
 
-    const datos = await fetchConManejadorErrores(`/api/productos/ventas_mes?producto_id=${productoId}&anio=${anio}`);
+    const datos = await fetchConManejadorErrores(buildApiUrl(`/api/productos/ventas_mes?producto_id=${productoId}&anio=${anio}`));
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const valores = meses.map((_, i) => parsearImporte(datos[String(i+1).padStart(2,'0')]));
 
@@ -497,7 +862,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // TOP GASTOS
   // ==============================
   async function cargarTopGastos(anio) {
-    const datos = await fetchConManejadorErrores(`/api/gastos/top_gastos?anio=${anio}&t=${Date.now()}`);
+    const datos = await fetchConManejadorErrores(buildApiUrl(`/api/gastos/top_gastos?anio=${anio}&t=${Date.now()}`));
     actualizarTopGastos(datos);
   }
   
@@ -516,7 +881,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // EXTRACTO BANCO (ELIMINADO)
   // ==============================
   /* async function cargarKpiGastos(mes, anio) {
-    const data = await fetchConManejadorErrores(`/api/estadisticas_gastos?mes=${mes}&anio=${anio}&t=${Date.now()}`);
+    const data = await fetchConManejadorErrores(buildApiUrl(`/api/estadisticas_gastos?mes=${mes}&anio=${anio}&t=${Date.now()}`));
     // Función auxiliar para aplicar formato y clases a los importes
     function actualizarImporteKpi(idElemento, valor) {
       const elemento = document.getElementById(idElemento);
@@ -548,7 +913,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function descargarCSV() {
     const { anio, mes } = getFechaSeleccionada();
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const datos = await fetchConManejadorErrores(`/api/ventas/total_mes?anio=${anio}`);
+    const datos = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}`));
     const SEP = ';';
     const fila = (tipo, arr) => [tipo, ...arr.map(n => n.toFixed(2).replace('.', ',')), arr.reduce((a,b) => a+b,0).toFixed(2).replace('.', ',')].join(SEP);
     const get = t => meses.map((_,i) => parsearImporte(datos[t][String(i+1).padStart(2,'0')]));
@@ -644,13 +1009,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tipo = document.getElementById('tipo-datos').value;
     const anioAnterior = anio - 1;
     const [datosActual, datosAnterior] = await Promise.all([
-      fetchConManejadorErrores(`/api/ventas/total_mes?anio=${anio}`),
-      fetchConManejadorErrores(`/api/ventas/total_mes?anio=${anioAnterior}`)
+      fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}`)),
+      fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anioAnterior}`))
     ]);
     // Serie de CANTIDADES por mes (si el endpoint existe). Fallback seguro a null.
     let cantidadesActual = null;
     try {
-      cantidadesActual = await fetchConManejadorErrores(`/api/ventas/cantidad_mes?anio=${anio}`);
+      cantidadesActual = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/cantidad_mes?anio=${anio}`));
     } catch(e) {
       cantidadesActual = null;
     }
@@ -669,8 +1034,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       datasets.push({ label: `Tickets ${anio}`, data: valoresAnioActual, backgroundColor: '#2ecc71' });
     } else if (tipo === 'ingresos_gastos') {
       const [datosIG, datosIGAnterior] = await Promise.all([
-        fetchConManejadorErrores(`/api/ingresos_gastos_mes?anio=${anio}`),
-        fetchConManejadorErrores(`/api/ingresos_gastos_mes?anio=${anioAnterior}`)
+        fetchConManejadorErrores(buildApiUrl(`/api/ingresos_gastos_mes?anio=${anio}`)),
+        fetchConManejadorErrores(buildApiUrl(`/api/ingresos_gastos_mes?anio=${anioAnterior}`))
       ]);
       ingresosData = meses.map((_, i) => parsearImporte(datosIG.ingresos[String(i+1).padStart(2,'0')]));
       gastosData = meses.map((_, i) => Math.abs(parsearImporte(datosIG.gastos[String(i+1).padStart(2,'0')] )));
@@ -718,7 +1083,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (tipo !== 'ingresos_gastos') {
       // --- Media mensual (exactamente igual que en las tarjetas) ---
       // 1. Traer los datos agregados para recalcular la media con la misma fórmula
-      const datosMedia = await fetchConManejadorErrores('/api/ventas/media_por_documento?' + new URLSearchParams({ mes, anio }));
+      const datosMedia = await fetchConManejadorErrores(buildApiUrl('/api/ventas/media_por_documento?' + new URLSearchParams({ mes, anio })));
       const mesNumGraf = parseInt(mes, 10);
       const ajustar = obj => {
         if(!obj || !obj.actual) return;
