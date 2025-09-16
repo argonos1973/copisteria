@@ -143,6 +143,26 @@
             background: #f0f0f0;
         }
 
+        .menu-item-with-submenu {
+            position: relative;
+        }
+
+        .submenu-arrow {
+            margin-left: auto;
+            font-size: 16px;
+        }
+
+        .submenu {
+            margin-left: 20px;
+            border-left: 2px solid #e0e0e0;
+            padding-left: 8px;
+        }
+
+        .submenu-item {
+            font-size: 13px;
+            padding: 6px 8px;
+        }
+
         .taskbar-items {
             display: flex;
             gap: 4px;
@@ -226,13 +246,30 @@
 
         <!-- Menú de inicio -->
         <div v-if="isStartMenuOpen" class="start-menu">
-            <a v-for="option in menuOptions" 
-               :key="option.id"
-               class="menu-item"
-               @click="openWindow(option)">
-                <span class="material-icons">{{ option.icon }}</span>
-                {{ option.title }}
-            </a>
+            <template v-for="option in menuOptions" :key="option.id">
+                <div v-if="option.submenu" class="menu-item-with-submenu">
+                    <div class="menu-item" @click="toggleSubmenu(option.id)">
+                        <span class="material-icons">{{ option.icon }}</span>
+                        {{ option.title }}
+                        <span class="material-icons submenu-arrow">keyboard_arrow_right</span>
+                    </div>
+                    <div v-if="option.showSubmenu" class="submenu">
+                        <a v-for="subOption in option.submenu" 
+                           :key="subOption.id"
+                           class="menu-item submenu-item"
+                           @click="openWindow(subOption)">
+                            <span class="material-icons">{{ subOption.icon }}</span>
+                            {{ subOption.title }}
+                        </a>
+                    </div>
+                </div>
+                <a v-else 
+                   class="menu-item"
+                   @click="openWindow(option)">
+                    <span class="material-icons">{{ option.icon }}</span>
+                    {{ option.title }}
+                </a>
+            </template>
         </div>
     </div>
 

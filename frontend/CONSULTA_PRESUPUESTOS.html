@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presupuestos</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="./static/styles.css">
+    <link rel="stylesheet" href="./static/notificaciones.css">
+    <link rel="stylesheet" href="./static/footer.css">
+    <style>
+      .presupuestos-page { padding-bottom: 0 !important; }
+      .presupuestos-page .container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 96px);
+        min-height: 100vh;
+        box-sizing: border-box;
+        padding-bottom: 0 !important;
+      }
+      .presupuestos-page .pagination { margin-bottom: 8px !important; }
+      .table-container { flex:1; display:flex; flex-direction:column; min-height:0; }
+      .table-responsive { flex:1; max-height:none !important; height:100% !important; overflow-y:auto; }
+      h1 { margin: 6px 0; }
+      .form-inline { margin: 4px 0; }
+      .pagination { margin-top: 6px; }
+    </style>
+</head>
+<body class="presupuestos-page">
+    <div class="container">
+        <h1>Presupuestos</h1>
+        <div class="form-inline">
+            <div class="form-group">
+                <label for="startDate">Fecha inicio:</label>
+                <input type="date" id="startDate" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" class="date-input">
+            </div>
+            <div class="form-group">
+                <label for="endDate">Fecha fin:</label>
+                <input type="date" id="endDate" pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" class="date-input">
+            </div>
+            <div class="form-group">
+                <label for="status">Estado:</label>
+                <select id="status">
+                    <option value="">Todos</option>
+                    <option value="B">Borrador</option>
+                    <option value="EN">Enviado</option>
+                    <option value="AP">Aceptado</option>
+                    <option value="RJ">Rechazado</option>
+                    <option value="CD">Caducado</option>
+                    <option value="F">Facturada</option>
+                    <option value="T">Ticket</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="presupuestoNumber">Núm. Presupuesto:</label>
+                <input type="text" id="presupuestoNumber" placeholder="Ej: O250001">
+            </div>
+            <div class="form-group">
+                <label for="contacto">Razón Social:</label>
+                <input type="text" id="contacto" placeholder="Nombre del contacto...">
+            </div>
+            <div class="form-group">
+                <label for="identificador">Identificador:</label>
+                <input type="text" id="identificador" placeholder="Identificador del contacto...">
+            </div>
+            <div class="form-group">
+                <button id="nuevoPresupuesto" class="btn btn-primary" style="margin-left: 10px;">
+                    <i class="fas fa-plus"></i> Nuevo
+                </button>
+            </div>
+        </div>
+        <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button id="prevPagePresupuestos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟨</button>
+            <span id="pageInfoPresupuestos">Página 1 de 1</span>
+            <button id="nextPagePresupuestos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟩</button>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+            <label>Por página:
+              <select id="pageSizeSelectPresupuestos" style="padding:2px 6px;font-size:12px;">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="table-container" style="margin-top:0; min-height:0; flex:1;">
+            <div class="table-responsive">
+                <table class="grid" id="resultGrid">
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">Fecha</th>
+                            <th style="width: 120px;">Número</th>
+                            <th style="width: 250px;">Razón Social</th>
+                            <th class="text-right" style="width: 100px;">Base</th>
+                            <th class="text-right" style="width: 100px;">IVA</th>
+                            <th class="text-right" style="width: 100px;">Cobrado</th>
+                            <th class="text-right" style="width: 100px;">Total</th>
+                            <th class="text-center" style="width: 100px;">Estado</th>
+                            <th class="text-center" style="width: 100px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gridBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="fixed-footer fixed-footer-factura">
+        <table class="grid">
+            <tr>
+                <td class="label-totales" style="width: 100px;"><span class="content-cell hidden"><strong>Totales:</strong></span></td>
+                <td style="width: 100px;"></td>
+                <td style="width: 250px;"></td>
+                <td class="text-right" style="width: 100px;"><span class="content-cell total-data hidden" id="totalBase">0,00 €</span></td>
+                <td class="text-right" style="width: 100px;"><span class="content-cell total-data hidden" id="totalIVA">0,00 €</span></td>
+                <td class="text-right" style="width: 100px;"><span class="content-cell total-data hidden" id="totalCobrado">0,00 €</span></td>
+                <td class="text-right" style="width: 100px;"><span class="content-cell total-data hidden" id="totalTotal">0,00 €</span></td>
+                <td class="text-center" style="width: 100px; position: relative;">
+                    <div class="toggle-totals">
+                        <i class="fas fa-eye-slash"></i>
+                    </div>
+                </td>
+                <td style="width: 100px;"></td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="notificaciones-contenedor"></div>
+
+    <script type="module" src="./static/consulta_presupuestos.js" defer></script>
+
+    <div id="overlay" class="overlay">
+        <div class="progress-container">
+            <div id="progress-bar" class="progress-bar">
+                <div class="progress-bar-fill"></div>
+            </div>
+            <p>Cargando, por favor espera...</p>
+        </div>
+    </div>
+
+    <style>
+        .fixed-footer table { table-layout: fixed; width: 100%; border-collapse: collapse; }
+        .fixed-footer td { width: 100px; min-width: 100px; box-sizing: border-box; padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .fixed-footer td[style*="width: 250px"] { width: 250px; min-width: 250px; }
+        .fixed-footer .content-cell { display: inline-block; transition: opacity 0.2s; }
+        .fixed-footer .content-cell.hidden { opacity: 0; }
+        .fixed-footer td:last-child { position: relative; padding: 0; }
+        .fixed-footer .toggle-totals { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; z-index: 2; }
+        .fixed-footer .toggle-totals i { font-size: 16px; color: #666; transition: color 0.3s; }
+        .fixed-footer .toggle-totals i:hover { color: #333; }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleTotals = document.querySelector('.toggle-totals');
+            const totalDataCells = document.querySelectorAll('.fixed-footer-factura .content-cell');
+            const icon = toggleTotals.querySelector('i');
+            function updateIcon(show) {
+                if (show) { icon.classList.remove('fa-eye-slash'); icon.classList.add('fa-eye'); toggleTotals.setAttribute('aria-pressed', 'true'); }
+                else { icon.classList.remove('fa-eye'); icon.classList.add('fa-eye-slash'); toggleTotals.setAttribute('aria-pressed', 'false'); }
+            }
+            function showTotals() { totalDataCells.forEach(cell => cell.classList.remove('hidden')); updateIcon(true); }
+            function hideTotals() { totalDataCells.forEach(cell => cell.classList.add('hidden')); updateIcon(false); }
+            const totalsVisible = sessionStorage.getItem('totalsVisiblePresupuestos');
+            if (totalsVisible === 'true') { showTotals(); } else { hideTotals(); }
+            toggleTotals.addEventListener('click', function() {
+                let currentlyVisible = sessionStorage.getItem('totalsVisiblePresupuestos') === 'true';
+                if (currentlyVisible) { hideTotals(); } else { showTotals(); }
+                sessionStorage.setItem('totalsVisiblePresupuestos', !currentlyVisible);
+            });
+            toggleTotals.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleTotals.click(); }
+            });
+        });
+    </script>
+</body>
+</html>

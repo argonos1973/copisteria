@@ -11,12 +11,21 @@ createApp({
                 { id: 1, title: 'Contactos', icon: 'person', url: '/frontend/CONSULTA_CONTACTOS.html' },
                 { id: 2, title: 'Facturas', icon: 'receipt', url: '/frontend/CONSULTA_FACTURAS.html' },
                 { id: 3, title: 'Proformas', icon: 'description', url: '/frontend/CONSULTA_PROFORMAS.html' },
-                { id: 4, title: 'Tickets', icon: 'local_activity', url: '/frontend/CONSULTA_TICKETS.html' },
-                { id: 5, title: 'Gastos', icon: 'payments', url: '/frontend/CONSULTA_GASTOS.html' },
-                { id: 6, title: 'Productos', icon: 'inventory_2', url: '/frontend/CONSULTA_PRODUCTOS.html' },
-                { id: 7, title: 'Exportar', icon: 'file_download', url: '/frontend/EXPORTAR.html' },
-                { id: 8, title: 'Estadísticas', icon: 'analytics', url: '/frontend/estadisticas.html' },
-                { id: 9, title: 'Franjas Descuento', icon: 'percent', url: '/frontend/FRANJAS_DESCUENTO.html' }
+                { 
+                    id: 4, 
+                    title: 'Presupuestos', 
+                    icon: 'request_quote', 
+                    submenu: [
+                        { id: 41, title: 'Nuevo', icon: 'add', url: '/frontend/GESTION_PRESUPUESTOS.html' },
+                        { id: 42, title: 'Consulta', icon: 'search', url: '/frontend/CONSULTA_PRESUPUESTOS.html' }
+                    ]
+                },
+                { id: 5, title: 'Tickets', icon: 'local_activity', url: '/frontend/CONSULTA_TICKETS.html' },
+                { id: 6, title: 'Gastos', icon: 'payments', url: '/frontend/CONSULTA_GASTOS.html' },
+                { id: 7, title: 'Productos', icon: 'inventory_2', url: '/frontend/CONSULTA_PRODUCTOS.html' },
+                { id: 8, title: 'Exportar', icon: 'file_download', url: '/frontend/EXPORTAR.html' },
+                { id: 9, title: 'Estadísticas', icon: 'analytics', url: '/frontend/estadisticas.html' },
+                { id: 10, title: 'Franjas Descuento', icon: 'percent', url: '/frontend/FRANJAS_DESCUENTO.html' }
             ],
             nextId: 1,
             nextZIndex: 1,
@@ -42,6 +51,17 @@ createApp({
             this.isStartMenuOpen = !this.isStartMenuOpen;
         },
         
+        toggleSubmenu(optionId) {
+            const option = this.menuOptions.find(opt => opt.id === optionId);
+            if (option && option.submenu) {
+                // Inicializar showSubmenu si no existe
+                if (option.showSubmenu === undefined) {
+                    this.$set ? this.$set(option, 'showSubmenu', false) : (option.showSubmenu = false);
+                }
+                option.showSubmenu = !option.showSubmenu;
+            }
+        },
+
         openWindow(option) {
             // Cerrar el menú de inicio
             this.isStartMenuOpen = false;

@@ -30,6 +30,7 @@ except Exception as e:
 import productos
 import productos_franjas_utils
 import proforma
+import presupuesto
 import verifactu
 
 # Configuración externa para habilitar o deshabilitar VeriFactu
@@ -1288,6 +1289,146 @@ def guardar_ticket():
             conn.close()
 
 
+@app.route('/api/tickets/actualizar', methods=['PATCH', 'PUT', 'POST'])
+def actualizar_ticket():
+    conn = None
+    try:
+        # Parseo robusto de JSON: leer primero el cuerpo crudo y parsear manualmente
+        data = {}
+        try:
+            ct = request.headers.get('Content-Type')
+            cl = request.headers.get('Content-Length')
+        except Exception:
+            ct = None
+            cl = None
+        try:
+            raw = request.get_data(cache=True, as_text=True) or ''
+        except Exception:
+            raw = ''
+        try:
+            preview = raw[:200] if isinstance(raw, str) else str(raw)[:200]
+            print(f"[DEBUG][/api/tickets/actualizar] CT={ct} CL={cl} len_raw={len(raw) if isinstance(raw,str) else 'NA'} raw_preview={preview}")
+        except Exception:
+            pass
+        if raw and raw.strip():
+            try:
+                data = json.loads(raw)
+            except Exception:
+                data = {}
+        if not data:
+            # Fallback a get_json por si el servidor ya decodificó el body
+            data = request.get_json(force=True, silent=True) or {}
+        if not data:
+            return jsonify({'error': 'No se recibieron datos'}), 400
+
+        id_ticket = data.get('id')
+        if not id_ticket:
+            return jsonify({'error': 'El campo id es requerido'}), 400
+
+        # Procesar fecha (aceptar DD/MM/YYYY o YYYY-MM-DD)
+        fecha_str = data.get('fecha')
+        if not fecha_str:
+            return jsonify({'error': 'La fecha es requerida'}), 400
+        try:
+            if '/' in fecha_str:
+                dia, mes, anio = fecha_str.split('/')
+                fecha = f"{anio}-{mes.zfill(2)}-{dia.zfill(2)}"
+            else:
+                fecha = fecha_str
+        except Exception as e:
+            return jsonify({'error': 'Error al procesar la fecha', 'detalle': str(e), 'fecha_recibida': fecha_str}), 400
+
+        numero = data.get('numero')
+        detalles = data.get('detalles') or []
+        estado = (data.get('estado') or 'C')
+        formaPago = data.get('formaPago', 'E')
+
+        try:
+            importe_cobrado = redondear_importe(float(data.get('importe_cobrado', 0)))
+            total_ticket = redondear_importe(float(data.get('total', 0)))
+        except Exception as e:
+            return jsonify({'error': 'Importes inválidos', 'detalle': str(e)}), 400
+
+        if not numero or not detalles:
+            return jsonify({'error': 'Datos incompletos', 'datos_recibidos': {'numero': numero, 'detalles': len(detalles)}}), 400
+
+        # Recalcular importes
+        try:
+            importe_bruto = redondear_importe(sum(float(d['precio']) * float(d['cantidad']) for d in detalles))
+            importe_impuestos = redondear_importe(sum((float(d['precio']) * float(d['cantidad'])) * (float(d['impuestos']) / 100.0) for d in detalles))
+        except Exception as e:
+            return jsonify({'error': 'Error al calcular importes', 'detalle': str(e)}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Verificar existencia del ticket y unicidad de número si cambia
+        cursor.execute('SELECT id, numero FROM tickets WHERE id = ?', (id_ticket,))
+        row = cursor.fetchone()
+        if not row:
+            return jsonify({'error': 'Ticket no encontrado'}), 404
+        numero_actual = row['numero'] if isinstance(row, sqlite3.Row) else row[1]
+        if numero != numero_actual:
+            cursor.execute('SELECT id FROM tickets WHERE numero = ? AND id <> ?', (numero, id_ticket))
+            if cursor.fetchone():
+                return jsonify({'error': f'Ya existe un ticket con el número {numero}'}), 400
+
+        try:
+            conn.execute('BEGIN TRANSACTION')
+            cursor.execute('''
+                UPDATE tickets
+                   SET fecha = ?, numero = ?, importe_bruto = ?, importe_impuestos = ?,
+                       importe_cobrado = ?, total = ?, timestamp = ?, estado = ?, formaPago = ?
+                 WHERE id = ?
+            ''', (
+                fecha, numero, importe_bruto, importe_impuestos,
+                importe_cobrado, total_ticket, datetime.now().isoformat(), estado, formaPago,
+                id_ticket
+            ))
+
+            cursor.execute('DELETE FROM detalle_tickets WHERE id_ticket = ?', (id_ticket,))
+            for d in detalles:
+                cantidad = float(d['cantidad'])
+                precio = float(d['precio'])
+                impuestos = float(d['impuestos'])
+                subtotal = cantidad * precio
+                total_detalle = redondear_importe(subtotal * (1 + impuestos / 100.0))
+                cursor.execute('''
+                    INSERT INTO detalle_tickets (
+                        id_ticket, concepto, descripcion, cantidad, precio, impuestos, total, productoId
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    id_ticket,
+                    d.get('concepto', ''),
+                    d.get('descripcion', ''),
+                    cantidad,
+                    precio,
+                    impuestos,
+                    total_detalle,
+                    d.get('productoId', None)
+                ))
+
+            conn.commit()
+        except sqlite3.Error as e:
+            if conn:
+                conn.rollback()
+            return jsonify({'error': 'Error al actualizar en la base de datos', 'detalle': str(e)}), 500
+
+        return jsonify({'mensaje': 'Ticket actualizado correctamente', 'id': id_ticket})
+    except Exception as e:
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        return jsonify({'error': 'Error al procesar la solicitud', 'detalle': str(e)}), 500
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
 @app.route('/tickets/consulta', methods=['GET'])
 def consulta_tickets():
     try:
@@ -1712,7 +1853,7 @@ def consultar_ticket_detalles(id_ticket):
             conn.close()
 
 @app.route('/tickets/actualizar', methods=['PATCH'])
-def actualizar_ticket():
+def actualizar_ticket_legacy():
     try:
         data = request.get_json()
         if not data or 'id' not in data:
@@ -3388,7 +3529,67 @@ def estadisticas_html():
     except Exception as e:
         return f"Error loading estadisticas.html: {str(e)}", 500
 
+# ================== API: Presupuestos ================== #
+@app.route('/api/presupuesto/numero', methods=['GET'])
+def obtener_numero_presupuesto_endpoint():
+    try:
+        numero = formatear_numero_documento('O')
+        if numero is None:
+            return jsonify({"error": "No se encontró el numerador"}), 404
+        return jsonify({"numerador": numero})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/presupuesto/abierta/<int:idContacto>', methods=['GET'])
+def buscar_presupuesto_abierto(idContacto):
+    return presupuesto.obtener_presupuesto_abierto(idContacto)
+
+@app.route('/api/presupuesto', methods=['POST'])
+def crear_presupuesto_endpoint():
+    try:
+        return presupuesto.crear_presupuesto()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/presupuestos/actualizar', methods=['PATCH'])
+def actualizar_presupuesto_endpoint():
+    try:
+        data = request.get_json() or {}
+        if 'id' not in data:
+            return jsonify({"error": "Falta el ID"}), 400
+        return presupuesto.actualizar_presupuesto(data['id'], data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/presupuestos/consulta', methods=['GET'])
+def consultar_presupuestos_endpoint():
+    return presupuesto.consultar_presupuestos()
+
+@app.route('/api/presupuestos/consulta/<int:id>', methods=['GET'])
+def consultar_presupuesto_por_id(id):
+    try:
+        return presupuesto.obtener_presupuesto(id)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/presupuestos/<int:id>/convertir_factura', methods=['POST'])
+def convertir_presupuesto_a_factura_endpoint(id):
+    try:
+        return presupuesto.convertir_presupuesto_a_factura(id)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/presupuestos/<int:id>/convertir_ticket', methods=['POST'])
+def convertir_presupuesto_a_ticket_endpoint(id):
+    try:
+        return presupuesto.convertir_presupuesto_a_ticket(id)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Permite ejecutar la app directamente (modo desarrollo/standalone)
     # Escucha en 0.0.0.0:5001 para que sea accesible desde la red local
     app.run(host='0.0.0.0', port=5001)
+

@@ -219,11 +219,14 @@ export function volverSegunOrigen() {
     // Determinar la página actual
     const paginaActual = window.location.pathname.split('/').pop();
     const esFactura = paginaActual.toLowerCase().includes('factura');
+    const esPresupuesto = paginaActual.toLowerCase().includes('presupuesto');
 
     if (origen === 'contactos') {
         window.location.href = 'CONSULTA_CONTACTOS.html';
     } else if (esFactura) {
         window.location.href = 'CONSULTA_FACTURAS.html';
+    } else if (esPresupuesto) {
+        window.location.href = 'CONSULTA_PRESUPUESTOS.html';
     } else {
         window.location.href = 'CONSULTA_PROFORMAS.html';
     }
@@ -231,6 +234,7 @@ export function volverSegunOrigen() {
     // Limpiar el origen después de usarlo
     sessionStorage.removeItem('origenProforma');
     sessionStorage.removeItem('origenFactura');
+    sessionStorage.removeItem('origenPresupuesto');
 }
 
 // Función para redondear importes de manera consistente

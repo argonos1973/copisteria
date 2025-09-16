@@ -696,8 +696,13 @@ export const getEstadoFormateado = (estado) => {
         'V': 'Vencida',
         'RE': 'Rectificativa',
         // Estados de proformas
-        'A': 'Abierta',
-        'F': 'Facturada'
+        'A': 'Borrador',
+        'EN': 'Enviado',
+        'AP': 'Aceptado',
+        'RJ': 'Rechazado',
+        'CD': 'Caducado',
+        'F': 'Facturada',
+        'T': 'Ticket'
         // Nota: 'C' ya está definido arriba y significa 'Cobrada' para facturas y 'Cerrada' para proformas
     };
     return estados[estado] || estado;
@@ -706,20 +711,24 @@ export const getEstadoFormateado = (estado) => {
 // Función para convertir el estado formateado de vuelta al código
 export const getCodigoEstado = (estadoFormateado) => {
     const codigosEstado = {
-        // Estados de facturas
+        // Facturas
         'Pendiente': 'P',
         'Cobrada': 'C',
         'Vencida': 'V',
-        // Estados de proformas
-        'Abierta': 'A',
-        'Cerrada': 'C',
-        'Facturada': 'F'
+        'Rectificativa': 'RE',
+        // Presupuestos
+        'Borrador': 'A',
+        'Enviado': 'EN',
+        'Aceptado': 'AP',
+        'Rechazado': 'RJ',
+        'Caducado': 'CD',
+        // Conversiones
+        'Facturada': 'F',
+        'Ticket': 'T'
     };
     return codigosEstado[estadoFormateado] || estadoFormateado;
 };
 
-// Función para obtener la clase CSS según el estado
-// Función para normalizar texto (eliminar acentos y convertir a minúsculas)
 export const norm = (str) => {
     if (!str) return '';
     return str.toString()
@@ -737,7 +746,12 @@ export const getEstadoClass = (estado) => {
         'RE': 'estado-rectificativa',
         // Estados de proformas
         'A': 'estado-pendiente',
-        'F': 'estado-cobrado'     // Facturada - mismo estilo que cobrado
+        'EN': 'estado-pendiente',
+        'AP': 'estado-cobrado',
+        'RJ': 'estado-vencido',
+        'CD': 'estado-vencido',
+        'F': 'estado-cobrado',     // Facturada
+        'T': 'estado-cobrado'     // Facturada - mismo estilo que cobrado
         // Nota: 'C' ya está definido arriba y se usa tanto para facturas (Cobrada) como para proformas (Cerrada)
     };
     return clases[estado] || '';
@@ -885,4 +899,20 @@ export function buildApiUrl(path) {
     const p2 = path && path.startsWith('/') ? path : `/${path}`;
     return p2;
   }
+}
+
+// Invalidación de caché global (segura si no existen variables)
+
+export function invalidateGlobalCache() {
+  try {
+    if (typeof window !== 'undefined' && typeof window.globalProductCache !== 'undefined') {
+      window.globalProductCache = null;
+    }
+  } catch (e) { /* noop */ }
+  try { if (typeof globalProductCache !== 'undefined') globalProductCache = null; } catch (e) {}
+  try { if (typeof productDiscountBands !== 'undefined') productDiscountBands = {}; } catch (e) {}
+  try { if (typeof pendingPromises !== 'undefined') pendingPromises = {}; } catch (e) {}
+  try { if (typeof requestLocks !== 'undefined') requestLocks = {}; } catch (e) {}
+  try { if (typeof globalFetchLock !== 'undefined') globalFetchLock = false; } catch (e) {}
+  try { console.log('[cache] invalidateGlobalCache ejecutado'); } catch (e) {}
 }
