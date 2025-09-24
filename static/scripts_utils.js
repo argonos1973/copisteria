@@ -101,6 +101,18 @@ export function formatearImporte(importe) {
   }) + ' €';
 }
 
+// Redondeo financiero a 2 decimales (ROUND_HALF_UP equivalente en JS)
+// Centralizado aquí para evitar duplicados
+export function redondearImporte(valor) {
+  const n = Number(valor);
+  if (!isFinite(n)) return 0;
+  // Math.round con factor simula HALF_UP para positivos; para negativos ajustamos
+  const factor = 100;
+  return (n >= 0)
+    ? Math.round(n * factor) / factor
+    : -Math.round(Math.abs(n) * factor) / factor;
+}
+
 // Función para formatear importes con decimales variables
 export function formatearImporteVariable(importe, minDecimals = 2, maxDecimals = 5) {
   if (typeof importe !== 'number' || isNaN(importe)) {
@@ -688,24 +700,39 @@ export const formatDate = (dateString) => {
 };
 
 // Función para obtener el estado formateado
-export const getEstadoFormateado = (estado) => {
-    const estados = {
-        // Estados de facturas
+export const getEstadoFormateado = (estado, tipo = 'factura') => {
+    const estadosFacturas = {
         'P': 'Pendiente',
         'C': 'Cobrada',
         'V': 'Vencida',
         'RE': 'Rectificativa',
-        // Estados de proformas
-        'A': 'Borrador',
+        'A': 'Anulada'
+    };
+    
+    const estadosProformas = {
+        'A': 'Abierta',
+        'F': 'Facturada',
+        'C': 'Cerrada'
+    };
+    
+    const estadosPresupuestos = {
+        'B': 'Borrador',
         'EN': 'Enviado',
         'AP': 'Aceptado',
         'RJ': 'Rechazado',
         'CD': 'Caducado',
-        'F': 'Facturada',
-        'T': 'Ticket'
-        // Nota: 'C' ya está definido arriba y significa 'Cobrada' para facturas y 'Cerrada' para proformas
+        'T': 'Ticket',
+        'A0': 'Anulado'
     };
-    return estados[estado] || estado;
+    
+    if (tipo === 'proforma') {
+        return estadosProformas[estado] || estadosFacturas[estado] || estadosPresupuestos[estado] || estado;
+    } else if (tipo === 'presupuesto') {
+        return estadosPresupuestos[estado] || estadosFacturas[estado] || estado;
+    } else {
+        // Por defecto: factura
+        return estadosFacturas[estado] || estadosPresupuestos[estado] || estado;
+    }
 };
 
 // Función para convertir el estado formateado de vuelta al código
@@ -716,14 +743,17 @@ export const getCodigoEstado = (estadoFormateado) => {
         'Cobrada': 'C',
         'Vencida': 'V',
         'Rectificativa': 'RE',
+        // Proformas
+        'Abierta': 'A',
+        'Facturada': 'F',
+        'Cerrada': 'C',
         // Presupuestos
-        'Borrador': 'A',
+        'Borrador': 'B',
         'Enviado': 'EN',
         'Aceptado': 'AP',
         'Rechazado': 'RJ',
         'Caducado': 'CD',
-        // Conversiones
-        'Facturada': 'F',
+        // Otros
         'Ticket': 'T'
     };
     return codigosEstado[estadoFormateado] || estadoFormateado;

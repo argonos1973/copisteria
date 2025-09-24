@@ -2,16 +2,22 @@ import { IP_SERVER, PORT } from './constantes.js';
 import { 
   PRODUCTO_ID_LIBRE,
   formatearImporte,
-  formatearApunto,
+  redondearImporte,
   formatearImporteVariable,
+  formatearApunto,
   parsearImporte,
   calcularPrecioConDescuento,
   calcularTotalDetalle,
-  abrirModalPagos as abrirModal,
+  getEstadoFormateado,
+  getCodigoEstado,
   formatearFechaSoloDia,
   convertirFechaParaAPI,
   formatearFecha
 } from './scripts_utils.js';
+import { 
+    calcularTotalProforma,
+    actualizarDetalleConTotal 
+} from './calculo_totales_unificado.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
   cargarProductos as cargarProductosCommon,
@@ -22,7 +28,6 @@ import {
   validarDetalle,
   volverSegunOrigen
 } from './common.js';
-import { redondearImporte } from './common.js';
 
 // Variables globales
 let detalles = [];
@@ -182,24 +187,15 @@ function manejarProductoSinDescuentos(formElements) {
 }
 
 function actualizarTotales() {
-    let importe_bruto = 0;
-    let importe_impuestos = 0;
-    let total = 0;
-
-    // Calcular el total de TODOS los detalles para la proforma
-    detalles.forEach(detalle => {
-        const subtotal = parseFloat(detalle.precio) * parseInt(detalle.cantidad);
-        const impuesto = redondearImporte(subtotal * (parseFloat(detalle.impuestos) / 100));
-        
-        importe_bruto += subtotal;
-        importe_impuestos += impuesto;
-    });
-
-    importe_bruto = redondearImporte(importe_bruto);
-    importe_impuestos = redondearImporte(importe_impuestos);
-    total = redondearImporte(importe_bruto + importe_impuestos);
-
+    console.log('------- INICIO actualizarTotales PROFORMA UNIFICADO -------');
+    
+    // USAR FUNCIÓN UNIFICADA para garantizar consistencia absoluta
+    const total = calcularTotalProforma(detalles);
+    
+    console.log(`TOTAL PROFORMA FINAL (UNIFICADO): ${total}`);
+    
     document.getElementById('total-proforma').value = formatearImporte(total);
+    console.log('------- FIN actualizarTotales PROFORMA UNIFICADO -------');
 }
 
 function calcularTotalDetallesDiaActual() {
@@ -540,7 +536,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function cargarProforma(id) {
   try {
-    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/proformas/consulta/${id}`);
+    const response = await fetch(`/api/proformas/consulta/${id}`);
     if (!response.ok) {
       throw new Error(`Error al cargar la proforma: ${response.statusText}`);
     }
@@ -647,7 +643,7 @@ async function cargarProforma(id) {
 async function buscarProformaAbierta(idContacto) {
     try {
         console.log("Buscando proforma abierta para contacto:", idContacto);
-        const response = await fetch(`http://${IP_SERVER}:${PORT}/api/proforma/abierta/${idContacto}`);
+        const response = await fetch(`/api/proforma/abierta/${idContacto}`);
         if (!response.ok) {
             throw new Error(`Error al buscar proforma abierta: ${response.statusText}`);
         }
@@ -723,7 +719,7 @@ async function buscarProformaAbierta(idContacto) {
         } else {
             console.log("Creando nueva proforma");
             try {
-                const numResponse = await fetch(`http://${IP_SERVER}:${PORT}/api/proforma/numero`);
+                const numResponse = await fetch('/api/proforma/numero');
                 if (!numResponse.ok) {
                     throw new Error('Error al obtener el número de proforma');
                 }
@@ -759,7 +755,7 @@ async function buscarProformaAbierta(idContacto) {
 
 async function cargarDatosContacto(id) {
   try {
-    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/contactos/get_contacto/${id}`);
+    const response = await fetch(`/api/contactos/get_contacto/${id}`);
     const contacto = await response.json();
     document.getElementById('razonSocial').value = contacto.razonsocial;
     document.getElementById('identificador').value = contacto.identificador;
@@ -870,7 +866,7 @@ async function guardarProforma(formaPago = 'E', totalPago = 0, estado = 'A') {
         if (!idProforma) {
    
                 // Obtener un nuevo número de proforma
-                const numResponse = await fetch(`http://${IP_SERVER}:${PORT}/api/proforma/numero`);
+                const numResponse = await fetch('/api/proforma/numero');
                 if (!numResponse.ok) {
                     throw new Error('Error al obtener nuevo número de proforma');
                 }
@@ -948,8 +944,8 @@ async function guardarProforma(formaPago = 'E', totalPago = 0, estado = 'A') {
 
         // Guardar la proforma
         const url = idProforma 
-            ? `http://${IP_SERVER}:${PORT}/api/proformas/actualizar`
-            : `http://${IP_SERVER}:${PORT}/api/proformas`;
+            ? '/api/proformas/actualizar'
+            : '/api/proformas';
 
         const response = await fetch(url, {
             method: idProforma ? 'PATCH' : 'POST',
@@ -1047,7 +1043,7 @@ function cargarDetalleParaEditar(fila) {
 
 async function inicializarNuevoTicket() {
     try {
-        const response = await fetch(`http://${IP_SERVER}:${PORT}/api/proforma/numero`);
+        const response = await fetch('/api/proforma/numero');
         if (!response.ok) {
             throw new Error('Error al obtener el número de proforma');
         }

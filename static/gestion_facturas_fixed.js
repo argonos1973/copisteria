@@ -26,6 +26,7 @@ import {
     validarDetalle,
     volverSegunOrigen
 } from './common.js';
+import { calcularImportes } from './scripts/calculos.js';
 // Variables globales
 let detalles = [];
 let idFactura = null;

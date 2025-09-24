@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presupuesto</title>
+    <link rel="stylesheet" href="file:///var/www/html/static/css/imprimir_documento.css">
+    <style>/*
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #fff;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .header {
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        #logo {
+            position: absolute;
+            top: 0;
+            right: 0;
+            max-width: 150px;
+            max-height: 80px;
+        }
+        
+        .company-info {
+            margin-bottom: 20px;
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+        
+        .document-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .document-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .client-info, .document-details {
+            width: 48%;
+        }
+        
+        .info-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        
+        .info-title {
+            font-weight: bold;
+            font-size: 14px;
+            color: #007bff;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #007bff;
+            padding-bottom: 5px;
+        }
+        
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .details-table th {
+            background-color: #f8f8f8;
+            color: #000;
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .details-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .details-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        .totals-section {
+            margin-top: 30px;
+            text-align: right;
+        }
+        
+        .totals-table {
+            margin-left: auto;
+            border-collapse: collapse;
+            width: 300px;
+        }
+        
+        .totals-table td {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+        }
+        
+        .totals-table .label {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            text-align: right;
+        }
+        
+        .totals-table .total-final {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 12px;
+            background-color: #28a745;
+            color: white;
+        }
+    */
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img id="logo" src="/static/img/logo.png" alt="Logo" />
+        <div class="company-info">
+            <div class="company-name">{{EMISOR_NOMBRE}}</div>
+            <div>{{EMISOR_DIRECCION}}</div>
+            <div>{{EMISOR_CP}} {{EMISOR_CIUDAD}}</div>
+            <div>{{EMISOR_PROVINCIA}}</div>
+            <div>Email: {{EMISOR_EMAIL}}</div>
+            <div>NIF: {{EMISOR_NIF}}</div>
+        </div>
+    </div>
+    
+    <div class="document-title">PRESUPUESTO</div>
+    
+    <div class="document-info">
+        {{CLIENTE_HTML}}
+        
+        <div class="document-details">
+            <div class="info-box">
+                <div class="info-title">DATOS DEL PRESUPUESTO</div>
+                <div><strong>Número:</strong> {{NUMERO_PRESUPUESTO}}</div>
+                <div><strong>Fecha:</strong> {{FECHA_PRESUPUESTO}}</div>
+                <div><strong>Estado:</strong> <span class="status">{{ESTADO_TEXTO}}</span></div>
+                <div><strong>Válido hasta:</strong> {{FECHA_VALIDEZ}}</div>
+            </div>
+        </div>
+    </div>
+    
+    <table class="details-table">
+        <thead>
+            <tr>
+                <th>Concepto</th>
+                <th>Descripción</th>
+                <th style="text-align: center;">Cant.</th>
+                <th style="text-align: right;">Precio Unit.</th>
+                <th style="text-align: center;">IVA</th>
+                <th style="text-align: right;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{DETALLES_HTML}}
+        </tbody>
+    </table>
+    
+    <div class="totals-section">
+        <table class="totals-table">
+            <tr>
+                <td class="label">Subtotal:</td>
+                <td style="text-align: right;">{{SUBTOTAL}}€</td>
+            </tr>
+            <tr>
+                <td class="label">IVA:</td>
+                <td style="text-align: right;">{{TOTAL_IVA}}€</td>
+            </tr>
+            <tr class="total-final">
+                <td class="label">TOTAL:</td>
+                <td style="text-align: right;">{{TOTAL_FINAL}}€</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="footer">
+        <p><strong>Condiciones:</strong></p>
+        <p>• Este presupuesto tiene una validez de 30 días desde la fecha de emisión.</p>
+        <p>• Los precios incluyen IVA cuando se especifica.</p>
+        <p>• Para cualquier consulta, no dude en contactarnos.</p>
+        <p><strong>Gracias por confiar en nosotros.</strong></p>
+    </div>
+</body>
+</html>

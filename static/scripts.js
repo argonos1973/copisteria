@@ -13,8 +13,13 @@ import {
   calcularCambio as calcularCambioModal,
   inicializarEventosModal,
   convertirFechaParaAPI,
-  formatearFecha
+  formatearFecha,
+  redondearImporte
 } from './scripts_utils.js';
+import { 
+    calcularTotalTicket,
+    actualizarDetalleConTotal 
+} from './calculo_totales_unificado.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
   cargarProductos as cargarProductosCommon,
@@ -24,7 +29,6 @@ import {
   seleccionarProducto as seleccionarProductoCommon,
   validarDetalle
 } from './common.js';
-import { redondearImporte } from './common.js';
 
 /**
  * Se ejecuta al cargar el DOM. Inicializa la delegación de eventos en la tabla
@@ -574,21 +578,14 @@ export async function eliminarFila(icono) {
 
 /**
  * Suma el total de todos los detalles y lo refleja en el #total-ticket
+ * USANDO FUNCIÓN UNIFICADA para garantizar consistencia absoluta
  */
 export function sumarTotales() {
-  const tbody = document.querySelector('#tabla-detalle-ticket tbody');
-  let sumaTotal = 0;
-
-  tbody.querySelectorAll('tr').forEach(fila => {
-    const totalTexto = fila.cells[5].textContent || "0";
-    // Usar el parser centralizado para formato europeo (puntos de miles, coma decimal)
-    const total = parsearImporte(totalTexto);
-    // Redondear cada subtotal a 2 decimales antes de sumar
-    sumaTotal += redondearImporte(total);
-  });
-
-  // Redondear el total final a 2 decimales
-  const totalRedondeado = redondearImporte(sumaTotal);
+  // Obtener detalles de la tabla y usar función unificada
+  const detalles = obtenerDetallesDeTabla();
+  const totalRedondeado = calcularTotalTicket(detalles);
+  
+  console.log('TOTAL TICKET UNIFICADO:', totalRedondeado);
   document.getElementById('total-ticket').value = formatearImporte(totalRedondeado);
 }
 
@@ -722,18 +719,25 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
       return;
     }
 
-    // Calcular importe bruto (suma de precio * cantidad)
-    const importe_bruto = redondearImporte(detalles.reduce((sum, d) => {
-      const subtotal = d.precio * d.cantidad;
-      return sum + subtotal;
-    }, 0));
+    // USAR FUNCIÓN UNIFICADA para calcular totales correctamente
+    const totalesUnificados = calcularTotalTicket(detalles);
+    const totalesDetallados = detalles.reduce((acc, detalle) => {
+      const precio = Number(detalle.precio);
+      const cantidad = Number(detalle.cantidad);
+      const iva_pct = Number(detalle.impuestos);
+      
+      const subtotal = precio * cantidad;
+      // CRÍTICO: Redondear IVA por línea a 2 decimales (igual que frontend)
+      const iva_linea = Number((subtotal * (iva_pct / 100)).toFixed(2));
+      
+      acc.importe_bruto += subtotal;
+      acc.importe_impuestos += iva_linea;
+      
+      return acc;
+    }, { importe_bruto: 0, importe_impuestos: 0 });
 
-    // Calcular importe de impuestos (redondeando IVA por detalle a 2 decimales)
-    const importe_impuestos = redondearImporte(detalles.reduce((sum, d) => {
-      const subtotal = d.precio * d.cantidad;
-      const impuesto = redondearImporte(subtotal * (d.impuestos / 100));
-      return sum + impuesto;
-    }, 0));
+    const importe_bruto = redondearImporte(totalesDetallados.importe_bruto);
+    const importe_impuestos = redondearImporte(totalesDetallados.importe_impuestos);
 
     // Asegurar que el importe cobrado esté redondeado
     const importe_cobrado = redondearImporte(totalPago);
@@ -748,12 +752,16 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
       importe_bruto: importe_bruto,
       importe_impuestos: importe_impuestos,
       importe_cobrado: importe_cobrado,
-      total: redondearImporte(totalTicket),
-      detalles: detalles.map(d => ({
-        ...d,
-        precio: d.precio,
-        total: redondearImporte(d.total)
-      }))
+      total: totalesUnificados,
+      detalles: detalles.map(d => {
+        // Recalcular total usando función unificada
+        const detalleActualizado = actualizarDetalleConTotal(d);
+        return {
+          ...d,
+          precio: d.precio,
+          total: detalleActualizado.total
+        };
+      })
     };
 
     console.log('Datos del ticket a guardar:', JSON.stringify(ticketData, null, 2));

@@ -145,6 +145,7 @@ if (typeof window !== 'undefined' && 'EventSource' in window) {
     const ENDPOINT_SSE = '/api/notificaciones/stream'; // única ruta estable
     let fuente = null;
     let ultimoMensaje = null;
+    let retryDelay = 2000;
 
     const conectar = () => {
         console.debug('Conectando SSE a', ENDPOINT_SSE);
@@ -167,7 +168,7 @@ if (typeof window !== 'undefined' && 'EventSource' in window) {
         };
 
         fuente.onerror = (err) => {
-            console.warn('SSE desconectado, reintentando…', err);
+            console.debug('SSE desconectado, reintentando…', err);
             fuente.close();
             setTimeout(conectar, 5000);
         };

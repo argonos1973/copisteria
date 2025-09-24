@@ -7,7 +7,7 @@ import time
 import traceback
 from datetime import datetime, timedelta
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, Blueprint
 try:
     from weasyprint import CSS, HTML
 except ImportError:
@@ -82,7 +82,7 @@ if 'XDG_RUNTIME_DIR' not in os.environ:
 
 app = Flask(__name__)
 
-
+factura_bp = Blueprint('facturas', __name__)
 
 def crear_factura():
     conn = None
@@ -869,17 +869,70 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
             colnames = [desc[0] for desc in cursor.description]
             for r in rows:
                 item = dict(zip(colnames, r))
-                if 'base' in item and item['base'] is not None:
-                    item['base'] = float(item['base'])
-                if 'iva' in item and item['iva'] is not None:
-                    item['iva'] = float(item['iva'])
+                # Recalcular base/iva/total desde detalle_factura para garantizar consistencia
+                try:
+                    cursor.execute('SELECT cantidad, precio FROM detalle_factura WHERE id_factura = ? ORDER BY id', (item['id'],))
+                    dets = cursor.fetchall() or []
+                    base_sum = Decimal('0')
+                    for d in dets:
+                        # d puede ser sqlite3.Row o tupla
+                        qty = d['cantidad'] if isinstance(d, sqlite3.Row) else d[0]
+                        price = d['precio'] if isinstance(d, sqlite3.Row) else d[1]
+                        sub = Decimal(str(qty)) * Decimal(str(price))
+                        # Redondear cada subtotal antes de sumar
+                        sub_rounded = sub.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                        base_sum += sub_rounded
+                    
+                    # Calcular IVA sobre la base total
+                    tax_rate = Decimal('21')  # Asumimos 21% para todas las líneas
+                    iva_sum = (base_sum * tax_rate / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    total_sum = (base_sum + iva_sum).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    item['base'] = float(base_sum)
+                    item['iva'] = float(iva_sum)
+                    item['total'] = float(total_sum)
+                except Exception:
+                    # Fallback a valores de la tabla si hay algún error
+                    if 'base' in item and item['base'] is not None:
+                        item['base'] = float(item['base'])
+                    if 'iva' in item and item['iva'] is not None:
+                        item['iva'] = float(item['iva'])
+                    if 'total' in item and item['total'] is not None:
+                        item['total'] = float(item['total'])
                 if 'importe_cobrado' in item and item['importe_cobrado'] is not None:
                     item['importe_cobrado'] = float(item['importe_cobrado'])
-                if 'total' in item and item['total'] is not None:
-                    item['total'] = float(item['total'])
                 if 'enviado' in item:
                     item['enviado'] = int(item['enviado']) if item['enviado'] is not None else 0
                 items.append(item)
+
+        # Calcular totales globales según el estado del filtro
+        totales_globales = {
+            'total_base': 0,
+            'total_iva': 0,
+            'total_cobrado': 0,
+            'total_total': 0
+        }
+        
+        # Solo calcular totales si hay un estado específico en el filtro
+        if estado:
+            totales_sql = f'''
+                SELECT 
+                    SUM(f.importe_bruto) as total_base,
+                    SUM(f.importe_impuestos) as total_iva,
+                    SUM(f.importe_cobrado) as total_cobrado,
+                    SUM(f.total) as total_total
+                FROM factura f
+                LEFT JOIN contactos c ON f.idcontacto = c.idContacto
+                {where_sql}
+            '''
+            cursor.execute(totales_sql, params)
+            totales_row = cursor.fetchone()
+            
+            totales_globales = {
+                'total_base': float(totales_row['total_base'] or 0),
+                'total_iva': float(totales_row['total_iva'] or 0),
+                'total_cobrado': float(totales_row['total_cobrado'] or 0),
+                'total_total': float(totales_row['total_total'] or 0)
+            }
 
         total = int(total or 0)
         total_pages = (total + page_size - 1) // page_size if page_size else 1
@@ -888,7 +941,8 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
             'total': total,
             'page': page,
             'page_size': page_size,
-            'total_pages': int(total_pages)
+            'total_pages': int(total_pages),
+            'totales_globales': totales_globales
         }
     except sqlite3.Error as e:
         raise Exception(f"Error de base de datos en obtener_facturas_paginadas: {str(e)}")
@@ -1338,20 +1392,27 @@ def enviar_factura_email(id_factura):
             except Exception:
                 return 0.0
 
-        # Usar los totales de la factura (robusto a formato europeo)
-        base_imponible = _parse_euro(factura_dict.get('importe_bruto', 0))
-        iva = _parse_euro(factura_dict.get('importe_impuestos', 0))
-        total = _parse_euro(factura_dict.get('total', 0))
-
-        print(f"Totales de factura: base={base_imponible}, iva={iva}, total={total}")
-
-        # Si no hay totales en la factura, calcularlos desde los detalles
-        if total == 0:
-            base_imponible = sum(_parse_euro(detalle.get('total', 0)) for detalle in detalles_list)
-            # Si cada detalle ya incluye impuestos explícitos, podríamos recalcular. Por defecto, 21% IVA
-            iva = base_imponible * 0.21  # 21% IVA
-            total = base_imponible + iva
-            print(f"Totales calculados desde detalles: base={base_imponible}, iva={iva}, total={total}")
+        # Recalcular BASE/IVA/TOTAL con Decimal y redondeo por línea (ROUND_HALF_UP a 2 decimales)
+        # para evitar discrepancias (p.ej. 56,11 vs 56,12) y alinear con frontend
+        def D(x):
+            try:
+                return Decimal(str(x if x is not None else '0'))
+            except Exception:
+                return Decimal('0')
+        base_sum = Decimal('0')
+        iva_sum = Decimal('0')
+        for det in detalles_list:
+            qty = D(det.get('cantidad'))
+            price = D(det.get('precio'))
+            tax = D(det.get('impuestos'))  # porcentaje IVA
+            sub = qty * price
+            iva_line = (sub * tax / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            base_sum += sub
+            iva_sum += iva_line
+        base_imponible = base_sum.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        iva = iva_sum.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total = (base_imponible + iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        print(f"[PDF] Totales recalculados: base={base_imponible}, iva={iva}, total={total}")
 
         # Función para decodificar forma de pago
         def decodificar_forma_pago(forma_pago):
@@ -1457,10 +1518,12 @@ def enviar_factura_email(id_factura):
             for detalle in detalles_list:
                 descripcion_html = f"<span class='detalle-descripcion'>{detalle.get('descripcion', '')}</span>" if detalle.get('descripcion') else ''
                 _precio_raw = detalle.get('precio', 0)
-                _total_num = _parse_euro(detalle.get('total', 0))
+                _cantidad = detalle.get('cantidad', 0)
+                # Calcular subtotal SIN IVA (cantidad × precio)
+                _subtotal_sin_iva = round(_cantidad * _precio_raw, 2)
                 # Precio unitario: mismo comportamiento que impresión (2-5 decimales)
                 _precio_str = _fmt_euro_var(_precio_raw, min_dec=2, max_dec=5)
-                _total_str = _fmt_euro(_total_num)
+                _subtotal_str = _fmt_euro(_subtotal_sin_iva)
                 detalles_html += f"""
                     <tr>
                         <td>
@@ -1469,10 +1532,9 @@ def enviar_factura_email(id_factura):
                                 {descripcion_html}
                             </div>
                         </td>
-                        <td class=\"cantidad\">{detalle.get('cantidad', 0)}</td>
+                        <td class=\"cantidad\">{_cantidad}</td>
                         <td class=\"precio\">{_precio_str}€</td>
-                        <td class=\"precio\">{detalle.get('impuestos', 21)}%</td>
-                        <td class=\"total\">{_total_str}€</td>
+                        <td class=\"total\">{_subtotal_str}€</td>
                     </tr>
                 """
 
@@ -1567,7 +1629,7 @@ def enviar_factura_email(id_factura):
             html_modificado = set_span(html_modificado, 'fecha-vencimiento', datetime.strptime(factura_dict["fvencimiento"], "%Y-%m-%d").strftime("%d/%m/%Y") if factura_dict.get("fvencimiento") else '')
             html_modificado = set_span(html_modificado, 'base', f"{_fmt_euro(base_imponible)}€")
             html_modificado = set_span(html_modificado, 'iva', f"{_fmt_euro(iva)}€")
-            html_modificado = re.sub(r'<strong\s+id="total"[^>]*>.*?</strong>', f'<strong id="total">{_fmt_euro(total)}€</strong>', html_modificado, flags=re.DOTALL|re.IGNORECASE)
+            html_modificado = re.sub(r'<strong\s+id="total"[^>]*>.*?</strong>', f'<strong id="total">{_fmt_euro(total)}€</strong>', html_modificado, flags=re.DOTALL)
             
             # --- Leyenda para facturas rectificativas ---
             es_rectificativa = (
@@ -1734,12 +1796,17 @@ def enviar_factura_email_endpoint(id_factura):
         return jsonify({'error': str(e)}), 500
 
 def redondear_importe(valor):
-    """
-    Redondea un importe a 2 decimales
-    """
+    """Redondeo financiero a 2 decimales con Decimal (ROUND_HALF_UP)."""
     try:
-        return round(float(valor), 2)
-    except (ValueError, TypeError):
+        if isinstance(valor, (int, float, Decimal)):
+            d = Decimal(str(valor))
+        else:
+            s = str(valor).strip()
+            # soportar formato europeo: miles con punto y decimales con coma
+            s = s.replace('.', '').replace(',', '.')
+            d = Decimal(s)
+        return float(d.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+    except Exception:
         return 0.0
 
 def crear_factura_post():
@@ -1798,10 +1865,42 @@ def actualizar_factura(id, data):
             conn.rollback()
             return jsonify({'error': 'Factura no encontrada'}), 404
 
-        # Calcular importes basados en los detalles
-        importe_bruto = redondear_importe(sum(d['precio'] * d['cantidad'] for d in detalles))
-        importe_impuestos = redondear_importe(sum((d['precio'] * d['cantidad']) * (d['impuestos'] / 100) for d in detalles))
-        total = redondear_importe(importe_bruto + importe_impuestos)
+        # Calcular importes basados en los detalles (Decimal, IVA por línea)
+        def D(x):
+            try:
+                return Decimal(str(x if x is not None else '0'))
+            except Exception:
+                return Decimal('0')
+        base_sum = Decimal('0')
+        for d in detalles:
+            sub = D(d['precio']) * D(d['cantidad'])
+            # Redondear cada subtotal antes de sumar
+            sub_rounded = sub.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            base_sum += sub_rounded
+        
+        # USAR LÓGICA UNIFICADA: Calcular IVA por línea y luego sumar
+        importe_bruto_dec = Decimal('0')
+        importe_impuestos_dec = Decimal('0')
+        total_dec = Decimal('0')
+        
+        for detalle in detalles:
+            precio = D(detalle['precio'])
+            cantidad = D(detalle['cantidad'])
+            iva_pct = D(detalle.get('impuestos', '21'))  # Usar IVA del detalle o 21% por defecto
+            
+            subtotal = precio * cantidad
+            # CRÍTICO: Redondear IVA por línea a 2 decimales (igual que frontend)
+            iva_linea = (subtotal * iva_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            total_linea = (subtotal + iva_linea).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            
+            importe_bruto_dec += subtotal
+            importe_impuestos_dec += iva_linea
+            total_dec += total_linea
+        
+        # Redondear totales finales
+        importe_bruto = float(importe_bruto_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        importe_impuestos = float(importe_impuestos_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        total = float(total_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
         # Actualizar la factura
         cursor.execute('''
@@ -1842,10 +1941,11 @@ def actualizar_factura(id, data):
 
         # Insertar los nuevos detalles
         for detalle in detalles:
-            total_detalle = redondear_importe(
-                detalle['precio'] * detalle['cantidad'] * (1 + detalle['impuestos'] / 100)
-            )
-            
+            # Total por línea: subtotal + IVA redondeado por línea
+            sub = D(detalle['precio']) * D(detalle['cantidad'])
+            iva_line = (sub * D(detalle['impuestos']) / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            total_detalle = float((sub + iva_line).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+
             cursor.execute('''
                 INSERT INTO detalle_factura (id_factura, concepto, descripcion, cantidad,
                                            precio, impuestos, total, productoId, fechaDetalle)

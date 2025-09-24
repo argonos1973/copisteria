@@ -168,18 +168,16 @@ async function rellenarFactura(datos) {
         const cantidadNum = (typeof detalle.cantidad === 'number') ? detalle.cantidad : parsearImporte(detalle.cantidad);
         const ivaNumRaw = (typeof detalle.impuestos === 'number') ? detalle.impuestos : parsearImporte(detalle.impuestos);
         const ivaPct    = Math.round(truncarDecimales(ivaNumRaw || 0, 2));
-        // Recalcular total de la línea a partir de precio, cantidad e IVA
-        const subtotal  = (precioNum || 0) * (cantidadNum || 0);
-        const totalNum  = subtotal * (1 + (ivaNumRaw || 0) / 100);
+        // Calcular subtotal SIN IVA (cantidad × precio)
+        const subtotal = (precioNum || 0) * (cantidadNum || 0);
         const fila = document.createElement('tr');
 
-        // Asumiendo que los campos son 'concepto', 'precio', 'cantidad', 'impuestos', 'total'
+        // Mostrar subtotal SIN IVA (eliminada columna IVA %)
         fila.innerHTML = `
             <td>${detalle.concepto}</td>
             <td class="numero">${formatearImporteVariable(precioNum, 2, 5)}</td>
             <td class="numero">${cantidadNum}</td>
-            <td class="numero">${ivaPct}</td>
-            <td class="numero">${formatearImporte(totalNum)}</td>
+            <td class="numero">${formatearImporte(subtotal)}</td>
         `;
 
         tbody.appendChild(fila);

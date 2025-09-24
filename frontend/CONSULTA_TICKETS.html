@@ -9,7 +9,7 @@
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-  />
+    <link rel="stylesheet" href="../static/page_header.css">
 
   <!-- Cargar tu archivo de estilos externo -->
   <link rel="stylesheet" href="../static/styles.css" />
@@ -44,7 +44,6 @@
       overflow-y: auto;
     }
     /* Reducir márgenes verticales para ganar área de grid */
-    h1 { margin: 6px 0; }
     .form-inline { margin: 4px 0; }
     .pagination { margin-top: 6px; }
   </style>
@@ -52,7 +51,9 @@
 <body class="tickets-page">
 
   <div class="container">
-    <h1>Tickets</h1>
+    <div class="page-header" style="background: linear-gradient(90deg, #000000 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.1) 80%, transparent 100%) !important; padding: 8px 25px !important; margin: 0 0 20px 0; border-radius: 8px; color: #ffffff !important;">
+      <h1 style="color: #ffffff !important; margin: 0; font-size: 1.6em;">Tickets</h1>
+    </div>
     <div class="form-inline">
       <div class="form-group">
         <label for="startDate">Fecha inicio:</label>

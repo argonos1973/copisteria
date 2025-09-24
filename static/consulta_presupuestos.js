@@ -34,6 +34,7 @@ async function buscarPresupuestos() {
     const presupuestoNumber = document.getElementById('presupuestoNumber').value.trim();
     const contacto = document.getElementById('contacto').value.trim();
     const identificador = document.getElementById('identificador').value.trim();
+    const pageSize = document.getElementById('pageSizeSelectPresupuestos').value || '20';
 
     const params = new URLSearchParams();
     const hayFiltrosAdicionales = !!(status || presupuestoNumber || (contacto && contacto.length >= 2) || identificador);
@@ -42,11 +43,14 @@ async function buscarPresupuestos() {
       if (endDate) params.append('fecha_fin', endDate);
     }
     if (status) params.append('estado', status);
-    if (presupuestoNumber) { params.append('numero', presupuestoNumber); params.append('limit','10'); }
-    if (contacto && contacto.length >= 2) { params.append('contacto', contacto); params.append('limit','10'); }
-    if (identificador) { params.append('identificador', identificador); params.append('limit','10'); }
+    if (presupuestoNumber) { params.append('numero', presupuestoNumber);  }
+    if (contacto && contacto.length >= 2) { params.append('contacto', contacto);  }
+    if (identificador) { params.append('identificador', identificador);  }
+    
+    // Añadir limit basado en el selector de página
+    params.append('limit', pageSize);
 
-    const url = `http://${IP_SERVER}:${PORT}/api/presupuestos/consulta?${params.toString()}`;
+    const url = `/api/presupuestos/consulta?${params.toString()}`;
     // Trazas de depuración (se pueden dejar; ayudan a diagnosticar filtros en producción)
     try { console.debug('[CONSULTA_PRESUPUESTOS] Parámetros', { startDate, endDate, status, presupuestoNumber, contacto, identificador, url }); } catch (_) {}
     const response = await fetch(url);
@@ -75,8 +79,70 @@ async function buscarPresupuestos() {
       const accionesTd = document.createElement('td');
       accionesTd.className = 'text-center';
 
-      // Convertir a Factura
-      if (item.estado !== 'F') {
+      // Icono de Descarga PDF
+      const iconImprimir = document.createElement('i');
+      iconImprimir.className = 'fas fa-download action-icon';
+      iconImprimir.title = 'Descargar PDF';
+      iconImprimir.style.cursor = 'pointer';
+      iconImprimir.style.marginRight = '5px';
+      iconImprimir.style.color = '#6c757d';
+      iconImprimir.addEventListener('click', async (event) => {
+        event.stopPropagation();
+        try {
+          showOverlay();
+          const resp = await fetch(`/api/presupuestos/${item.id}/imprimir`);
+          if (!resp.ok) throw new Error('Error al generar PDF');
+          
+          const blob = await resp.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `presupuesto_${item.numero}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          
+          mostrarNotificacion('PDF generado correctamente', 'success');
+        } catch (e) {
+          console.error('Error imprimiendo presupuesto:', e);
+          mostrarNotificacion('Error al generar PDF', 'error');
+        } finally { hideOverlay(); }
+      });
+      accionesTd.appendChild(iconImprimir);
+
+      // Icono de Email (solo si el contacto tiene email)
+      if (item.mail) {
+        const iconEmail = document.createElement('i');
+        iconEmail.className = 'fas fa-envelope action-icon';
+        iconEmail.title = 'Enviar por Email';
+        iconEmail.style.cursor = 'pointer';
+        iconEmail.style.marginRight = '5px';
+        iconEmail.style.color = '#17a2b8';
+        iconEmail.addEventListener('click', async (event) => {
+          event.stopPropagation();
+          try {
+            const confirmado = await mostrarConfirmacion(`¿Enviar el presupuesto ${item.numero} por email a ${item.mail}?`);
+            if (confirmado) {
+              showOverlay();
+              const resp = await fetch(`/api/presupuestos/${item.id}/enviar_email`, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' } 
+              });
+              if (!resp.ok) throw new Error('Error al enviar email');
+              const result = await resp.json();
+              mostrarNotificacion(result.message, 'success');
+            }
+          } catch (e) {
+            console.error('Error enviando email:', e);
+            mostrarNotificacion('Error al enviar email', 'error');
+          } finally { hideOverlay(); }
+        });
+        accionesTd.appendChild(iconEmail);
+      }
+
+      // Convertir a Factura (solo si tiene contacto)
+      if (item.estado !== 'F' && (item.idcontacto || item.idContacto)) {
         const iconFactura = document.createElement('i');
         iconFactura.className = 'fas fa-file-invoice action-icon';
         iconFactura.title = 'Convertir a Factura';
@@ -89,7 +155,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Convertir el presupuesto ${item.numero} a factura?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/${item.id}/convertir_factura`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+              const resp = await fetch(`/api/presupuestos/${item.id}/convertir_factura`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
               if (!resp.ok) throw new Error('Error al convertir presupuesto a factura');
               const result = await resp.json();
               mostrarNotificacion(`Presupuesto ${item.numero} convertido a factura ${result.numero_factura}`, 'success');
@@ -117,7 +183,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Convertir el presupuesto ${item.numero} a ticket?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/${item.id}/convertir_ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+              const resp = await fetch(`/api/presupuestos/${item.id}/convertir_ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
               if (!resp.ok) throw new Error('Error al convertir presupuesto a ticket');
               const result = await resp.json();
               mostrarNotificacion(`Presupuesto ${item.numero} convertido a ticket ${result.numero_ticket}`, 'success');
@@ -182,7 +248,8 @@ function guardarFiltros() {
     estado: estadoSel,
     numero: document.getElementById('presupuestoNumber').value,
     contacto: document.getElementById('contacto').value,
-    identificador: document.getElementById('identificador').value
+    identificador: document.getElementById('identificador').value,
+    pageSize: document.getElementById('pageSizeSelectPresupuestos').value
   };
   sessionStorage.setItem('filtrosPresupuestos', JSON.stringify(filtros));
 }
@@ -198,6 +265,7 @@ function restaurarFiltros() {
     document.getElementById('presupuestoNumber').value = filtros.numero || '';
     document.getElementById('contacto').value = filtros.contacto || '';
     document.getElementById('identificador').value = filtros.identificador || '';
+    document.getElementById('pageSizeSelectPresupuestos').value = filtros.pageSize || '20';
   } else {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -222,6 +290,8 @@ function restaurarFiltros() {
   document.getElementById('identificador').addEventListener('input', (event) => { guardarFiltros(); busquedaInteractiva(event); });
   
   // Botón Nuevo Presupuesto
+  // Selector de registros por página
+  document.getElementById('pageSizeSelectPresupuestos').addEventListener('change', () => { guardarFiltros(); buscarPresupuestos(); });
   document.getElementById('nuevoPresupuesto').addEventListener('click', () => {
     window.location.href = 'GESTION_PRESUPUESTOS.html';
   });

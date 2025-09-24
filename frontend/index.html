@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="../static/styles.css">
     <link rel="stylesheet" href="../static/notificaciones.css">
     <link rel="stylesheet" href="../static/footer.css">
+    <link rel="stylesheet" href="../static/page_header.css">
     <style>
         body, html {
             margin: 0;
@@ -329,10 +330,13 @@
                         header = doc.createElement('div');
                         header.className = 'page-header';
                         // aplicar color de fondo inline por si CSS no carga la variable
-                        header.style.background = 'linear-gradient(to right, var(--color-primario, #243342) 0%, rgba(36,51,66,0.85) 30%, rgba(36,51,66,0.3) 70%, #ffffff 100%)';
-                        header.style.color = '#fff';
+                        header.style.background = 'linear-gradient(90deg, #000000 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.1) 80%, transparent 100%)';
+                        header.style.padding = "8px 25px"; header.style.margin = "0 0 20px 0"; header.style.borderRadius = "8px";
+//                         header.style.color = '#fff';
                         const h1 = doc.createElement('h1');
                         h1.textContent = txt;
+//                         header.style.color = "#ffffff";
+                        if(h1) h1.style.color = "#ffffff";
                         header.appendChild(h1);
                         doc.body.insertBefore(header, doc.body.firstChild);
                     } else {

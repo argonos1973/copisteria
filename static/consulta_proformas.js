@@ -12,7 +12,15 @@ const hideOverlay = () => {
     document.getElementById('overlay').style.display = 'none';
 };
 
-// Función para actualizar los totales
+// Función para actualizar los totales desde el backend (totales globales)
+const updateTotalsFromBackend = (totalesGlobales) => {
+    document.getElementById('totalBase').textContent = formatearImporte(totalesGlobales.total_base);
+    document.getElementById('totalIVA').textContent = formatearImporte(totalesGlobales.total_iva);
+    document.getElementById('totalCobrado').textContent = formatearImporte(totalesGlobales.total_cobrado);
+    document.getElementById('totalTotal').textContent = formatearImporte(totalesGlobales.total_total);
+};
+
+// Función para actualizar los totales (fallback - solo página actual)
 const updateTotals = (proformas) => {
     let totalBase = 0;
     let totalIVA = 0;
@@ -108,7 +116,7 @@ async function buscarProformas() {
             params.append('limit', '10');
         }
 
-        const url = `http://${IP_SERVER}:${PORT}/api/proformas/consulta?${params}`;
+        const url = `/api/proformas/consulta?${params}`;
         console.log('URL de búsqueda:', url);
 
         const response = await fetch(url);
@@ -119,16 +127,22 @@ async function buscarProformas() {
         
         console.log('Resultados obtenidos:', data);
 
-        if (!Array.isArray(data)) {
-            console.error('La respuesta no es un array:', data);
+        // Manejar nueva estructura de respuesta con totales globales
+        const proformas = data.items || data;
+        const totalesGlobales = data.totales_globales;
+
+        if (!Array.isArray(proformas)) {
+            console.error('La respuesta no contiene un array válido:', data);
             throw new Error('Formato de respuesta inválido');
         }
 
         const tbody = document.getElementById('gridBody');
         tbody.innerHTML = '';
 
-        if (data.length === 0) {
+        if (proformas.length === 0) {
             tbody.innerHTML = '<tr><td colspan="9" class="text-center">No se encontraron resultados</td></tr>';
+            // Actualizar totales a cero
+            updateTotals([]);
             return;
         }
 
@@ -137,7 +151,7 @@ async function buscarProformas() {
         let totalCobrado = 0;
         let totalTotal = 0;
 
-        data.forEach(proforma => {
+        proformas.forEach(proforma => {
             const row = document.createElement('tr');
             
             // Asegurar que los valores numéricos sean válidos
@@ -167,7 +181,7 @@ async function buscarProformas() {
                         const confirmado = await mostrarConfirmacion(`¿Estás seguro de que deseas convertir la proforma ${proforma.numero} a factura?`);
                         if (confirmado) {
                             showOverlay();
-                            const response = await fetch(`http://${IP_SERVER}:${PORT}/api/proformas/${proforma.id}/convertir`, {
+                            const response = await fetch(`/api/proformas/${proforma.id}/convertir`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json'
@@ -207,7 +221,7 @@ async function buscarProformas() {
                 <td class="text-right">${formatearImporte(iva)}</td>
                 <td class="text-right">${formatearImporte(importeCobrado)}</td>
                 <td class="text-right">${formatearImporte(total)}</td>
-                <td class="text-center ${getEstadoClass(proforma.estado)}">${getEstadoFormateado(proforma.estado)}</td>
+                <td class="text-center ${getEstadoClass(proforma.estado)}">${getEstadoFormateado(proforma.estado, 'proforma')}</td>
             `;
             
             // Añadir la celda de acciones a la fila
@@ -227,11 +241,16 @@ async function buscarProformas() {
             totalTotal += total;
         });
 
-        // Actualizar totales asegurando que sean números válidos
-        document.getElementById('totalBase').textContent = formatearImporte(totalBase || 0);
-        document.getElementById('totalIVA').textContent = formatearImporte(totalIVA || 0);
-        document.getElementById('totalCobrado').textContent = formatearImporte(totalCobrado || 0);
-        document.getElementById('totalTotal').textContent = formatearImporte(totalTotal || 0);
+        // Usar totales globales del backend si están disponibles
+        if (totalesGlobales) {
+            updateTotalsFromBackend(totalesGlobales);
+        } else {
+            // Fallback: usar totales calculados de la página actual
+            document.getElementById('totalBase').textContent = formatearImporte(totalBase || 0);
+            document.getElementById('totalIVA').textContent = formatearImporte(totalIVA || 0);
+            document.getElementById('totalCobrado').textContent = formatearImporte(totalCobrado || 0);
+            document.getElementById('totalTotal').textContent = formatearImporte(totalTotal || 0);
+        }
 
     } catch (error) {
         console.error('Error al buscar proformas:', error);

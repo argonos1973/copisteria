@@ -2,6 +2,7 @@ import { IP_SERVER, PORT } from './constantes.js';
 import { 
     PRODUCTO_ID_LIBRE,
     formatearImporte,
+    redondearImporte,
     formatearImporteVariable,
     formatearApunto,
     parsearImporte,
@@ -16,6 +17,11 @@ import {
     convertirFechaParaAPI,
     formatearFecha
 } from './scripts_utils.js';
+import { 
+    calcularTotalesDocumento, 
+    calcularTotalFactura,
+    actualizarDetalleConTotal 
+} from './calculo_totales_unificado.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
     cargarProductos as cargarProductosCommon,
@@ -26,7 +32,6 @@ import {
     validarDetalle,
     volverSegunOrigen
 } from './common.js';
-import { redondearImporte } from './common.js';
 
 // Variables globales
 let detalles = [];
@@ -219,8 +224,8 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
 
         // Guardar la factura
         const url = idFactura 
-            ? `http://${IP_SERVER}:${PORT}/api/facturas/actualizar`
-            : `http://${IP_SERVER}:${PORT}/api/facturas`;
+            ? `/api/facturas/actualizar`
+            : `/api/facturas`;
 
         const response = await fetch(url, {
             method: idFactura ? 'PATCH' : 'POST',
@@ -271,32 +276,21 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
     }
 }
 
-// Función para calcular el total bruto
+// Función para calcular el total bruto - USANDO FUNCIÓN UNIFICADA
 function calcularTotalBruto() {
-    return detalles.reduce((total, detalle) => {
-        const precio = parsearImporte(detalle.precio);
-        const cantidad = parsearImporte(detalle.cantidad);
-        return total + (precio * cantidad);
-    }, 0);
+    const totales = calcularTotalesDocumento(detalles);
+    return totales.subtotal_total;
 }
 
-// Función para calcular el total de impuestos
+// Función para calcular el total de impuestos - USANDO FUNCIÓN UNIFICADA
 function calcularTotalImpuestos() {
-    return detalles.reduce((total, detalle) => {
-        const precio = parsearImporte(detalle.precio);
-        const cantidad = parsearImporte(detalle.cantidad);
-        const iva = parsearImporte(detalle.impuestos);
-        const subtotal = precio * cantidad;
-        const impuesto = redondearImporte(subtotal * (iva / 100));
-        return total + impuesto;
-    }, 0);
+    const totales = calcularTotalesDocumento(detalles);
+    return totales.iva_total;
 }
 
-// Función para calcular el total con impuestos
+// Función para calcular el total con impuestos - USANDO FUNCIÓN UNIFICADA
 function calcularTotalConImpuestos() {
-    const totalBruto = calcularTotalBruto();
-    const totalImpuestos = calcularTotalImpuestos();
-    return totalBruto + totalImpuestos;
+    return calcularTotalFactura(detalles);
 }
 
 async function eliminarDetalle(index) {
@@ -404,38 +398,16 @@ async function seleccionarProducto() {
 }
 
 function actualizarTotales() {
-    console.log('------- INICIO actualizarTotales -------');
+    console.log('------- INICIO actualizarTotales UNIFICADO -------');
     
-    // Obtener todos los detalles de la tabla
-    const filas = document.querySelectorAll('table#tabla-detalle-proforma tbody tr');
-    console.log(`Filas en la tabla: ${filas.length}`);
+    // USAR FUNCIÓN UNIFICADA para garantizar consistencia absoluta
+    const total_factura = calcularTotalFactura(detalles);
     
-    let total_factura = 0;
-    
-    // Recorrer las filas de la tabla para obtener los totales
-    filas.forEach((fila, index) => {
-        // Obtener la celda del total (6ª celda, índice 5)
-        const celdas = fila.querySelectorAll('td');
-        if (celdas.length >= 6) {
-            const total = parsearImporte(celdas[5].textContent);
-            
-            total_factura += total;
-            console.log(`Fila ${index}: Total=${total}`);
-        }
-    });
-    
-    // Ya no sumamos el detalle en edición porque al estar en edición ya no aparece en la tabla
-    // El detalle en edición se agregará de nuevo al array y a la tabla cuando se guarde
-    console.log('Estado de detalleEnEdicion:', JSON.parse(JSON.stringify(detalleEnEdicion)));
-    
-    // Redondear el importe final
-    total_factura = redondearImporte(total_factura);
-    
-    console.log(`TOTAL FACTURA FINAL: ${total_factura}`);
+    console.log(`TOTAL FACTURA FINAL (UNIFICADO): ${total_factura}`);
     
     // Actualizar el campo del total
     document.getElementById('total-proforma').value = formatearImporte(total_factura);
-    console.log('------- FIN actualizarTotales -------');
+    console.log('------- FIN actualizarTotales UNIFICADO -------');
 }
 
 function actualizarTablaDetalles() {
@@ -452,17 +424,14 @@ function actualizarTablaDetalles() {
     detalles.forEach((detalle, index) => {
         const tr = document.createElement('tr');
         
+        // USAR FUNCIÓN UNIFICADA para recalcular el total correctamente
+        const detalleActualizado = actualizarDetalleConTotal(detalle);
+        detalle.total = detalleActualizado.total;
+        
         // Asegurar que todos los valores numéricos son realmente números
         const cantidad = parsearImporte(detalle.cantidad) || 0;
         const precio = parsearImporte(detalle.precio) || 0;
-        
-        // Mantener IVA en 0 si así está establecido
         const impuestos = detalle.impuestos === 0 ? 0 : (parsearImporte(detalle.impuestos) || 21);
-        
-        // Recalcular el total para asegurar consistencia (IVA redondeado por línea)
-        const subtotal = precio * cantidad;
-        const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
-        detalle.total = Number((subtotal + impuestoCalc).toFixed(2));
         
         // Formatear para mostrar (máximo 5 decimales)
         const precioFormateado = formatearImporteVariable(Number(precio), 0, 5);
@@ -710,7 +679,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       try {
         console.log(`Buscando contacto para factura ID: ${idFactura}`);
         // Consultar la tabla factura para obtener el idContacto
-        const response = await fetch(`http://${IP_SERVER}:${PORT}/api/facturas/obtener_contacto/${idFactura}`);
+        const response = await fetch(`/api/facturas/obtener_contacto/${idFactura}`);
         
         if (!response.ok) {
           throw new Error('No se pudo obtener el contacto asociado a la factura');
@@ -734,7 +703,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       try {
         await cargarDatosContacto(idContacto);
         // Obtener nuevo número de factura
-        const numResponse = await fetch(`http://${IP_SERVER}:${PORT}/api/factura/numero`);
+        const numResponse = await fetch(`/api/factura/numero`);
         if (!numResponse.ok) {
           throw new Error('Error al obtener el número de factura');
         }
@@ -819,7 +788,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const confirmado = await mostrarConfirmacion('¿Está seguro de anular esta factura? Se creará una rectificativa.');
         if (!confirmado) return;
         try {
-          const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/facturas/anular/${idFactura}`, {
+          const resp = await fetch(`/api/facturas/anular/${idFactura}`, {
             method: 'POST'
           });
           if (!resp.ok) {
@@ -1213,7 +1182,7 @@ async function buscarFacturaPorId(idFactura) {
         
         // Llamar al endpoint para buscar factura por ID
         // Recordar la regla: "en front siempre con prefijo api"
-        const response = await fetch(`http://${IP_SERVER}:${PORT}/api/facturas/consulta/${idFactura}`);
+        const response = await fetch(`/api/facturas/consulta/${idFactura}`);
         
         if (!response.ok) {
             throw new Error('Error al obtener la factura por ID');
@@ -1256,7 +1225,7 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
         
         // Mantener el orden correcto de parámetros en la URL: primero idContacto, luego idFactura
         // Recordar la regla: "en front siempre con prefijo api"
-        const response = await fetch(`http://${IP_SERVER}:${PORT}/api/factura/abierta/${idContacto}/${idFactura}`);
+        const response = await fetch(`/api/factura/abierta/${idContacto}/${idFactura}`);
         
         if (!response.ok) {
             throw new Error('Error al obtener la factura');
@@ -1364,7 +1333,7 @@ async function procesarPago() {
 
 async function cargarDatosContacto(id) {
   try {
-    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/contactos/get_contacto/${id}`);
+    const response = await fetch(`/api/contactos/get_contacto/${id}`);
     const contacto = await response.json();
     
     // Añadir logs para depuración

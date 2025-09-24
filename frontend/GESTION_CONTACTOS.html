@@ -311,10 +311,11 @@
 
     /* Page header bar */
     .page-header {
-      background: #243342;
-      color: #ffffff;
-      padding: 15px 20px;
+      background: linear-gradient(90deg, #000000 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.1) 80%, transparent 100%) !important;
+      padding: 8px 25px !important;
       margin: 0 0 20px 0;
+      border-radius: 8px;
+      color: #ffffff !important;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .page-header h1 {
@@ -504,7 +505,7 @@
               id="poblacio"
               v-model="contacto.poblacio"
               class="input-poblacio"
-              required
+              
               maxlength="80"
               style="width: 120px !important; margin-right: 0;"
             />
@@ -518,7 +519,7 @@
               id="provincia"
               v-model="contacto.provincia"
               class="input-provincia"
-              required
+              
               maxlength="20"
               style="width: 200px !important; margin-left: 0;"
             />

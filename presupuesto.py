@@ -1,8 +1,8 @@
 import sqlite3
 from datetime import datetime, timedelta
 
-from flask import Flask, jsonify, request
-
+from flask import Blueprint, Flask, jsonify, request, send_file
+import utilities
 from db_utils import (
     actualizar_numerador,
     formatear_numero_documento,
@@ -10,6 +10,8 @@ from db_utils import (
     obtener_numerador,
     redondear_importe,
 )
+
+presupuesto_bp = Blueprint('presupuestos', __name__)
 
 app = Flask(__name__)
 
@@ -57,13 +59,13 @@ def crear_presupuesto():
         cursor.execute(
             '''
             INSERT INTO presupuesto (
-                numero, fecha, estado, idContacto, nif, total, formaPago,
+                numero, fecha, estado, idcontacto, nif, total, formaPago,
                 importe_bruto, importe_impuestos, importe_cobrado, timestamp, tipo
             ) VALUES (?, ?, 'B', ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['numero'],
                 data['fecha'],
-                data.get('idContacto'),
+                data.get('idcontacto'),
                 data.get('nif', ''),
                 data.get('total', 0),
                 data.get('formaPago', 'E'),
@@ -137,20 +139,20 @@ def obtener_presupuesto(id):
         resultado = dict(presupuesto)
         resultado['detalles'] = [dict(detalle) for detalle in detalles]
         
-        # Buscar datos del contacto si existe idContacto (con C mayúscula)
-        print(f"[DEBUG] idContacto en presupuesto: {resultado.get('idContacto')}")
-        if resultado.get('idContacto'):
+        # Buscar datos del contacto si existe idcontacto (minúscula)
+        print(f"[DEBUG] idcontacto en presupuesto: {resultado.get('idcontacto')}")
+        if resultado.get('idcontacto'):
             contacto = cursor.execute(
-                'SELECT * FROM contactos WHERE idContacto = ?', (resultado['idContacto'],)
+                'SELECT * FROM contactos WHERE idContacto = ?', (resultado['idcontacto'],)
             ).fetchone()
             print(f"[DEBUG] Contacto encontrado: {contacto}")
             if contacto:
                 resultado['contacto'] = dict(contacto)
                 print(f"[DEBUG] Contacto añadido al resultado: {dict(contacto)}")
             else:
-                print(f"[DEBUG] No se encontró contacto con idContacto: {resultado['idContacto']}")
+                print(f"[DEBUG] No se encontró contacto con idcontacto: {resultado['idcontacto']}")
         else:
-            print("[DEBUG] No hay idContacto en el presupuesto")
+            print("[DEBUG] No hay idcontacto en el presupuesto")
         
         return jsonify(resultado)
 
@@ -188,14 +190,14 @@ def actualizar_presupuesto(id, data):
         cursor.execute(
             '''
             UPDATE presupuesto
-            SET numero = ?, fecha = ?, estado = ?, idContacto = ?, nif = ?, total = ?, formaPago = ?,
+            SET numero = ?, fecha = ?, estado = ?, idcontacto = ?, nif = ?, total = ?, formaPago = ?,
                 importe_bruto = ?, importe_impuestos = ?, importe_cobrado = ?, timestamp = ?, tipo = ?
             WHERE id = ?
             ''', (
                 data['numero'],
                 data['fecha'],
                 data.get('estado', 'B'),
-                data.get('idContacto'),
+                data.get('idcontacto'),
                 data.get('nif', ''),
                 total,
                 data.get('formaPago', 'E'),
@@ -253,13 +255,13 @@ def actualizar_presupuesto(id, data):
             conn.close()
 
 
-def obtener_presupuesto_abierto(idContacto):
+def obtener_presupuesto_abierto(idcontacto):
     try:
         conn = get_db_connection()
         conn.execute('PRAGMA busy_timeout = 10000')
         cursor = conn.cursor()
 
-        cursor.execute('SELECT * FROM contactos WHERE idContacto = ?', (idContacto,))
+        cursor.execute('SELECT * FROM contactos WHERE idContacto = ?', (idcontacto,))
         contacto = cursor.fetchone()
         if not contacto:
             return jsonify({'error': 'Contacto no encontrado'}), 404
@@ -272,7 +274,7 @@ def obtener_presupuesto_abierto(idContacto):
             ORDER BY p.fecha DESC, p.id DESC
             LIMIT 1
         '''
-        cursor.execute(sql, (idContacto,))
+        cursor.execute(sql, (idcontacto,))
         presupuesto = cursor.fetchone()
 
         if presupuesto:
@@ -364,7 +366,7 @@ def consultar_presupuestos():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        query = """
+        sql = """
             SELECT 
                 p.id,
                 p.fecha,
@@ -376,7 +378,8 @@ def consultar_presupuestos():
                 p.importe_cobrado,
                 p.total,
                 p.idcontacto,
-                c.razonsocial
+                c.razonsocial,
+                c.mail
             FROM presupuesto p
             LEFT JOIN contactos c ON p.idcontacto = c.idContacto
             WHERE 1=1
@@ -384,38 +387,37 @@ def consultar_presupuestos():
         params = []
 
         if fecha_inicio and (not hay_filtros_adicionales):
-            query += " AND p.fecha >= ?"
+            sql += " AND p.fecha >= ?"
             params.append(fecha_inicio)
         if fecha_fin and (not hay_filtros_adicionales):
-            query += " AND p.fecha <= ?"
+            sql += " AND p.fecha <= ?"
             params.append(fecha_fin)
         if estado:
-            query += " AND p.estado = ?"
+            sql += " AND p.estado = ?"
             params.append(estado)
         else:
-            query += " AND p.estado <> 'A0'"
+            sql += " AND p.estado <> 'A0'"
         if numero:
-            query += " AND p.numero LIKE ?"
+            sql += " AND p.numero LIKE ?"
             params.append(f"%{numero}%")
         if contacto:
-            query += " AND c.razonsocial LIKE ?"
+            sql += " AND c.razonsocial LIKE ?"
             params.append(f"%{contacto}%")
         if identificador:
-            query += " AND c.identificador LIKE ?"
+            sql += " AND c.identificador LIKE ?"
             params.append(f"%{identificador}%")
         if concepto:
-            query += " AND EXISTS (SELECT 1 FROM detalle_presupuesto d WHERE d.id_presupuesto = p.id AND (lower(d.concepto) LIKE ? OR lower(d.descripcion) LIKE ?))"
-            like_val = f"%{concepto.lower()}%"
-            params.extend([like_val, like_val])
+            sql += " AND EXISTS (SELECT 1 FROM detalle_presupuesto dp WHERE dp.id_presupuesto = p.id AND dp.concepto LIKE ?)"
+            params.append(f"%{concepto}%")
 
-        query += " ORDER BY p.fecha DESC LIMIT 100"
+        sql += " ORDER BY p.fecha DESC LIMIT 100"
 
         try:
-            print("[CONSULTA_PRESUPUESTOS][SQL]", query, "PARAMS", params)
+            print("[CONSULTA_PRESUPUESTOS][SQL]", sql, "PARAMS", params)
         except Exception:
             pass
 
-        cursor.execute(query, params)
+        cursor.execute(sql, params)
         items = cursor.fetchall()
 
         columnas = [desc[0] for desc in cursor.description]
@@ -471,7 +473,7 @@ def convertir_presupuesto_a_factura(id_presupuesto):
         cursor.execute(
             '''
             INSERT INTO factura (
-                numero, fecha, fvencimiento, estado, idContacto, nif, total, formaPago,
+                numero, fecha, fvencimiento, estado, idcontacto, nif, total, formaPago,
                 importe_bruto, importe_impuestos, importe_cobrado, timestamp, tipo
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
@@ -479,7 +481,7 @@ def convertir_presupuesto_a_factura(id_presupuesto):
                 datetime.now().strftime('%Y-%m-%d'),
                 (datetime.now() + timedelta(days=15)).strftime('%Y-%m-%d'),
                 'P',
-                pres['idContacto'],
+                pres['idcontacto'],
                 pres['nif'],
                 pres['total'],
                 pres['formaPago'],
@@ -565,9 +567,22 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
         detalles_pres = cursor.fetchall()
 
         try:
-            importe_bruto = redondear_importe(sum(float(d['precio']) * int(d['cantidad']) for d in detalles_pres))
-            importe_impuestos = redondear_importe(sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles_pres))
-            total_ticket = redondear_importe(float(pres['total'])) if pres['total'] else redondear_importe(importe_bruto + importe_impuestos)
+            # Convertir sqlite3.Row a dict para poder acceder con []
+            detalles_dict = [dict(d) for d in detalles_pres]
+            
+            importe_bruto = 0
+            importe_impuestos = 0
+            total_calculado = 0
+            
+            for d in detalles_dict:
+                res = utilities.calcular_importes(d['cantidad'], d['precio'], d['impuestos'])
+                importe_bruto += res['subtotal']
+                importe_impuestos += res['iva']
+                total_calculado += res['total']
+            
+            importe_bruto = redondear_importe(importe_bruto)
+            importe_impuestos = redondear_importe(importe_impuestos)
+            total_ticket = redondear_importe(total_calculado)
         except Exception:
             importe_bruto = redondear_importe(0)
             importe_impuestos = redondear_importe(0)
@@ -594,12 +609,13 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
         )
         ticket_id = cursor.lastrowid
 
-        for d in detalles_pres:
+        for d in detalles_dict:
             cantidad = float(d['cantidad'])
             precio = float(d['precio'])
             impuestos = float(d['impuestos'])
             subtotal = cantidad * precio
-            total_detalle = redondear_importe(subtotal * (1 + impuestos / 100))
+            iva_linea = subtotal * (impuestos / 100)
+            total_detalle = redondear_importe(subtotal + iva_linea)
             cursor.execute(
                 '''
                 INSERT INTO detalle_tickets (
@@ -642,6 +658,370 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
         if conn:
             conn.rollback()
         print(f"Error al convertir presupuesto a ticket: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+def generar_pdf_presupuesto(id):
+    """Genera un PDF profesional del presupuesto"""
+    try:
+        from weasyprint import HTML
+        import tempfile
+        import os
+        from datetime import datetime, timedelta
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener datos del presupuesto
+        cursor.execute('''
+            SELECT p.*, c.razonsocial, c.mail, c.direccion, c.localidad as poblacion, c.provincia, c.cp as codigopostal, c.telf1, c.identificador as nif
+            FROM presupuesto p
+            LEFT JOIN contactos c ON p.idcontacto = c.idContacto
+            WHERE p.id = ?
+        ''', (id,))
+        
+        presupuesto_data = cursor.fetchone()
+        if not presupuesto_data:
+            return jsonify({'error': 'Presupuesto no encontrado'}), 404
+            
+        presupuesto_dict = dict(presupuesto_data)
+        
+        # Obtener detalles del presupuesto
+        cursor.execute('''
+            SELECT * FROM detalle_presupuesto WHERE id_presupuesto = ? ORDER BY id
+        ''', (id,))
+        
+        detalles = [dict(row) for row in cursor.fetchall()]
+        
+        # Leer plantilla HTML
+        with open('/var/www/html/frontend/IMPRIMIR_PRESUPUESTO.html', 'r', encoding='utf-8') as f:
+            html_template = f.read()
+        
+        # Formatear fecha
+        try:
+            fecha_obj = datetime.strptime(presupuesto_dict['fecha'], '%Y-%m-%d')
+            fecha_formateada = fecha_obj.strftime('%d/%m/%Y')
+            fecha_validez = (fecha_obj + timedelta(days=30)).strftime('%d/%m/%Y')
+        except:
+            fecha_formateada = presupuesto_dict['fecha']
+            fecha_validez = 'N/A'
+        
+        # Estados formateados
+        estados = {
+            'B': 'Borrador',
+            'EN': 'Enviado', 
+            'AP': 'Aceptado',
+            'RJ': 'Rechazado',
+            'CD': 'Caducado',
+            'F': 'Facturada',
+            'T': 'Ticket'
+        }
+        estado_texto = estados.get(presupuesto_dict.get('estado', 'B'), 'Borrador')
+        
+        # Calcular totales
+        subtotal = sum(float(d['precio']) * int(d['cantidad']) for d in detalles)
+        total_iva = sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles)
+        total_final = subtotal + total_iva
+        
+        # Generar filas de detalles
+        detalles_html = ""
+        for detalle in detalles:
+            precio_unitario = float(detalle['precio'])
+            cantidad = int(detalle['cantidad'])
+            impuestos = float(detalle['impuestos'])
+            subtotal_linea = precio_unitario * cantidad
+            iva_linea = subtotal_linea * (impuestos / 100)
+            total_linea = subtotal_linea + iva_linea
+            
+            detalles_html += f"""
+            <tr>
+                <td>{detalle['concepto']}</td>
+                <td>{detalle['descripcion'] or ''}</td>
+                <td style="text-align: center;">{cantidad}</td>
+                <td style="text-align: right;">{precio_unitario:.2f}€</td>
+                <td style="text-align: center;">{impuestos:.0f}%</td>
+                <td style="text-align: right;">{total_linea:.2f}€</td>
+            </tr>
+            """
+        
+        # Cargar datos del emisor
+        try:
+            import json
+            with open('/var/www/html/emisor_config.json', 'r', encoding='utf-8') as f:
+                emisor_config = json.load(f)
+        except Exception as e:
+            print(f"Error cargando emisor_config.json: {e}")
+            emisor_config = {
+                'nombre': 'ALEPH 70',
+                'direccion': 'C/ Ejemplo, 123',
+                'cp': '28001',
+                'ciudad': 'Madrid',
+                'provincia': 'Madrid',
+                'email': 'info@aleph70.com',
+                'nif': 'B12345678'
+            }
+        
+        # Reemplazar placeholders del emisor (asegurar que no sean None)
+        html_content = html_template.replace('{{EMISOR_NOMBRE}}', str(emisor_config.get('nombre', 'ALEPH 70') or 'ALEPH 70'))
+        html_content = html_content.replace('{{EMISOR_DIRECCION}}', str(emisor_config.get('direccion', '') or ''))
+        html_content = html_content.replace('{{EMISOR_CP}}', str(emisor_config.get('cp', '') or ''))
+        html_content = html_content.replace('{{EMISOR_CIUDAD}}', str(emisor_config.get('ciudad', '') or ''))
+        html_content = html_content.replace('{{EMISOR_PROVINCIA}}', str(emisor_config.get('provincia', '') or ''))
+        html_content = html_content.replace('{{EMISOR_EMAIL}}', str(emisor_config.get('email', '') or ''))
+        html_content = html_content.replace('{{EMISOR_NIF}}', str(emisor_config.get('nif', '') or ''))
+
+        # Construir bloque de cliente dinámicamente (solo si hay datos)
+        razon = str(presupuesto_dict.get('razonsocial', '') or '')
+        direccion = str(presupuesto_dict.get('direccion', '') or '')
+        poblacion = str(presupuesto_dict.get('poblacion', '') or '')
+        cp = str(presupuesto_dict.get('codigopostal', '') or '')
+        provincia = str(presupuesto_dict.get('provincia', '') or '')
+        telefono = str(presupuesto_dict.get('telf1', '') or '')
+        email = str(presupuesto_dict.get('mail', '') or '')
+        hay_cliente = any([razon, direccion, poblacion, cp, provincia, telefono, email])
+        if hay_cliente:
+            cliente_html = f"""
+        <div class=\"client-info\">
+            <div class=\"info-box\">
+                <div class=\"info-title\">DATOS DEL CLIENTE</div>
+                <div><strong>{razon}</strong></div>
+                <div>{direccion}</div>
+                <div>{poblacion} {cp}</div>
+                <div>{provincia}</div>
+                <div>Tel: {telefono}</div>
+                <div>Email: {email}</div>
+            </div>
+        </div>
+        """
+        else:
+            cliente_html = ''
+        html_content = html_content.replace('{{CLIENTE_HTML}}', cliente_html)
+        html_content = html_content.replace('{{NUMERO_PRESUPUESTO}}', presupuesto_dict['numero'])
+        html_content = html_content.replace('{{FECHA_PRESUPUESTO}}', fecha_formateada)
+        html_content = html_content.replace('{{ESTADO_TEXTO}}', estado_texto)
+        html_content = html_content.replace('{{FECHA_VALIDEZ}}', fecha_validez)
+        html_content = html_content.replace('{{DETALLES_HTML}}', detalles_html)
+        html_content = html_content.replace('{{SUBTOTAL}}', f"{subtotal:.2f}")
+        html_content = html_content.replace('{{TOTAL_IVA}}', f"{total_iva:.2f}")
+        html_content = html_content.replace('{{TOTAL_FINAL}}', f"{total_final:.2f}")
+        
+        # Modificar ruta del logo para usar ruta absoluta
+        html_content = html_content.replace('src="/static/img/logo.png"', 'src="file:///var/www/html/static/img/logo.png"')
+        
+        # Asegurar ruta absoluta del logo y generar PDF
+        pdf_filename = f"presupuesto_{presupuesto_dict['numero']}.pdf"
+        temp_pdf_path = f"/tmp/{pdf_filename}"
+        
+        html_content = html_content.replace('src="/static/img/logo.png"', 'src="file:///var/www/html/static/img/logo.png"')
+        HTML(string=html_content, base_url='/var/www/html').write_pdf(temp_pdf_path)
+        
+        # Enviar PDF como respuesta
+        from flask import send_file
+        return send_file(temp_pdf_path, as_attachment=True, download_name=pdf_filename, mimetype='application/pdf')
+        
+    except Exception as e:
+        print(f"Error al generar PDF del presupuesto: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+def enviar_email_presupuesto(id):
+    """Envía el presupuesto por correo electrónico"""
+    try:
+        from weasyprint import HTML
+        import tempfile
+        import os
+        from datetime import datetime, timedelta
+        from email_utils import enviar_presupuesto_por_email
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener datos del presupuesto y contacto
+        cursor.execute('''
+            SELECT p.*, c.razonsocial, c.mail, c.direccion, c.localidad as poblacion, c.provincia, c.cp as codigopostal, c.telf1, c.identificador as nif
+            FROM presupuesto p
+            LEFT JOIN contactos c ON p.idcontacto = c.idContacto
+            WHERE p.id = ?
+        ''', (id,))
+        
+        presupuesto_data = cursor.fetchone()
+        if not presupuesto_data:
+            return jsonify({'error': 'Presupuesto no encontrado'}), 404
+            
+        presupuesto_dict = dict(presupuesto_data)
+        
+        # Verificar que el contacto tenga email
+        if not presupuesto_dict.get('mail'):
+            return jsonify({'error': 'El contacto no tiene email configurado'}), 400
+        
+        # Obtener detalles del presupuesto
+        cursor.execute('''
+            SELECT * FROM detalle_presupuesto WHERE id_presupuesto = ? ORDER BY id
+        ''', (id,))
+        
+        detalles = [dict(row) for row in cursor.fetchall()]
+        
+        # Generar PDF del presupuesto usando la misma lógica que generar_pdf_presupuesto
+        with open('/var/www/html/frontend/IMPRIMIR_PRESUPUESTO.html', 'r', encoding='utf-8') as f:
+            html_template = f.read()
+        
+        # Formatear fecha
+        try:
+            fecha_obj = datetime.strptime(presupuesto_dict['fecha'], '%Y-%m-%d')
+            fecha_formateada = fecha_obj.strftime('%d/%m/%Y')
+            fecha_validez = (fecha_obj + timedelta(days=30)).strftime('%d/%m/%Y')
+        except:
+            fecha_formateada = presupuesto_dict['fecha']
+            fecha_validez = 'N/A'
+        
+        # Estados formateados
+        estados = {
+            'B': 'Borrador',
+            'EN': 'Enviado',
+            'AP': 'Aceptado', 
+            'RJ': 'Rechazado',
+            'CD': 'Caducado',
+            'F': 'Facturada',
+            'T': 'Ticket'
+        }
+        estado_texto = estados.get(presupuesto_dict.get('estado', 'B'), 'Borrador')
+        
+        # Calcular totales
+        subtotal = sum(float(d['precio']) * int(d['cantidad']) for d in detalles)
+        total_iva = sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles)
+        total_final = subtotal + total_iva
+        
+        # Generar filas de detalles
+        detalles_html = ""
+        for detalle in detalles:
+            precio_unitario = float(detalle['precio'])
+            cantidad = int(detalle['cantidad'])
+            impuestos = float(detalle['impuestos'])
+            subtotal_linea = precio_unitario * cantidad
+            iva_linea = subtotal_linea * (impuestos / 100)
+            total_linea = subtotal_linea + iva_linea
+            
+            detalles_html += f"""
+            <tr>
+                <td>{detalle['concepto']}</td>
+                <td>{detalle['descripcion'] or ''}</td>
+                <td style="text-align: center;">{cantidad}</td>
+                <td style="text-align: right;">{precio_unitario:.2f}€</td>
+                <td style="text-align: center;">{impuestos:.0f}%</td>
+                <td style="text-align: right;">{total_linea:.2f}€</td>
+            </tr>
+            """
+        
+        # Cargar datos del emisor
+        try:
+            import json
+            with open('/var/www/html/emisor_config.json', 'r', encoding='utf-8') as f:
+                emisor_config = json.load(f)
+        except Exception as e:
+            print(f"Error cargando emisor_config.json: {e}")
+            emisor_config = {
+                'nombre': 'ALEPH 70',
+                'direccion': 'C/ Ejemplo, 123',
+                'cp': '28001',
+                'ciudad': 'Madrid',
+                'provincia': 'Madrid',
+                'email': 'info@aleph70.com',
+                'nif': 'B12345678'
+            }
+
+        # Reemplazar placeholders del emisor (asegurar que no sean None)
+        html_content = html_template.replace('{{EMISOR_NOMBRE}}', str(emisor_config.get('nombre', 'ALEPH 70') or 'ALEPH 70'))
+        html_content = html_content.replace('{{EMISOR_DIRECCION}}', str(emisor_config.get('direccion', '') or ''))
+        html_content = html_content.replace('{{EMISOR_CP}}', str(emisor_config.get('cp', '') or ''))
+        html_content = html_content.replace('{{EMISOR_CIUDAD}}', str(emisor_config.get('ciudad', '') or ''))
+        html_content = html_content.replace('{{EMISOR_PROVINCIA}}', str(emisor_config.get('provincia', '') or ''))
+        html_content = html_content.replace('{{EMISOR_EMAIL}}', str(emisor_config.get('email', '') or ''))
+        html_content = html_content.replace('{{EMISOR_NIF}}', str(emisor_config.get('nif', '') or ''))
+
+        # Construir bloque de cliente dinámicamente (solo si hay datos)
+        razon = str(presupuesto_dict.get('razonsocial', '') or '')
+        direccion = str(presupuesto_dict.get('direccion', '') or '')
+        poblacion = str(presupuesto_dict.get('poblacion', '') or '')
+        cp = str(presupuesto_dict.get('codigopostal', '') or '')
+        provincia = str(presupuesto_dict.get('provincia', '') or '')
+        telefono = str(presupuesto_dict.get('telf1', '') or '')
+        email = str(presupuesto_dict.get('mail', '') or '')
+        hay_cliente = any([razon, direccion, poblacion, cp, provincia, telefono, email])
+        if hay_cliente:
+            cliente_html = f"""
+        <div class=\"client-info\"> 
+            <div class=\"info-box\">
+                <div class=\"info-title\">DATOS DEL CLIENTE</div>
+                <div><strong>{razon}</strong></div>
+                <div>{direccion}</div>
+                <div>{poblacion} {cp}</div>
+                <div>{provincia}</div>
+                <div>Tel: {telefono}</div>
+                <div>Email: {email}</div>
+            </div>
+        </div>
+        """
+        else:
+            cliente_html = ''
+        html_content = html_content.replace('{{CLIENTE_HTML}}', cliente_html)
+
+        # Rellenar datos del documento
+        html_content = html_content.replace('{{NUMERO_PRESUPUESTO}}', presupuesto_dict['numero'])
+        html_content = html_content.replace('{{FECHA_PRESUPUESTO}}', fecha_formateada)
+        html_content = html_content.replace('{{ESTADO_TEXTO}}', estado_texto)
+        html_content = html_content.replace('{{FECHA_VALIDEZ}}', fecha_validez)
+        html_content = html_content.replace('{{DETALLES_HTML}}', detalles_html)
+        html_content = html_content.replace('{{SUBTOTAL}}', f"{subtotal:.2f}")
+        html_content = html_content.replace('{{TOTAL_IVA}}', f"{total_iva:.2f}")
+        html_content = html_content.replace('{{TOTAL_FINAL}}', f"{total_final:.2f}")
+
+        # Asegurar ruta absoluta del logo
+        html_content = html_content.replace('src="/static/img/logo.png"', 'src="file:///var/www/html/static/img/logo.png"')
+
+        # Generar PDF temporal
+        pdf_filename = f"presupuesto_{presupuesto_dict['numero']}.pdf"
+        temp_pdf_path = f"/tmp/{pdf_filename}"
+        
+        HTML(string=html_content, base_url='/var/www/html').write_pdf(temp_pdf_path)
+        
+        # Preparar email
+        asunto = f"Presupuesto {presupuesto_dict['numero']} - {presupuesto_dict['razonsocial']}"
+        cuerpo = f"""Estimado/a cliente,
+
+Adjuntamos el presupuesto {presupuesto_dict['numero']} por un importe total de {total_final:.2f}€.
+
+Este presupuesto tiene una validez de 30 días desde la fecha de emisión.
+
+Si tiene cualquier consulta, no dude en contactarnos.
+
+Saludos cordiales.
+ALEPH 70"""
+        
+        # Enviar email
+        exito, mensaje = enviar_presupuesto_por_email(
+            presupuesto_dict['mail'],
+            asunto,
+            cuerpo,
+            temp_pdf_path,
+            presupuesto_dict['numero']
+        )
+        
+        # Limpiar archivo PDF temporal
+        os.unlink(temp_pdf_path)
+        
+        if exito:
+            return jsonify({'message': f'Presupuesto enviado correctamente a {presupuesto_dict["mail"]}'})
+        else:
+            return jsonify({'error': mensaje}), 500
+        
+    except Exception as e:
+        print(f"Error al enviar email del presupuesto: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:

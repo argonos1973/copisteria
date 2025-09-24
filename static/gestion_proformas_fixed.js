@@ -23,6 +23,7 @@ import {
   validarDetalle,
   volverSegunOrigen
 } from './common.js';
+import { calcularImportes } from './scripts/calculos.js';
 
 // Variables globales
 let detalles = [];
@@ -314,6 +315,58 @@ function cargarDetalleParaEditar(detalle) {
   document.getElementById('precio-detalle').value = formatearImporte(detalle.precio);
   document.getElementById('impuesto-detalle').value = formatearImporte(detalle.impuesto);
   document.getElementById('total-detalle').value = formatearImporte(detalle.total);
+}
+
+function calcularImportes(cantidad, precio, impuestos) {
+  const subtotal = cantidad * precio;
+  const iva = subtotal * impuestos;
+  const total = subtotal + iva;
+  return { subtotal, iva, total };
+}
+
+function validarYAgregarDetalle() {
+  const select = document.getElementById('concepto-detalle');
+  const productoId = select.value;
+  let productoSeleccionado = productoId === PRODUCTO_ID_LIBRE 
+    ? document.getElementById('descripcion-detalle').value.trim()
+    : select.options[select.selectedIndex].textContent;
+  let descripcion = document.getElementById('descripcion-detalle').value.trim();
+  const cantidad = parsearImporte(document.getElementById('cantidad-detalle').value);
+  const precio = parsearImporte(document.getElementById('precio-detalle').value);
+  const impuesto = parsearImporte(document.getElementById('impuesto-detalle').value);
+  const total = parsearImporte(document.getElementById('total-detalle').value);
+
+  if (!validarDetalle(productoId, productoSeleccionado, descripcion, cantidad, precio, total)) {
+    return;
+  }
+
+  const result = calcularImportes(cantidad, precio, impuesto);
+  const detalle = {
+    id: detalleEnEdicion ? detalleEnEdicion.id : Date.now(),
+    productoId: productoId,
+    producto: productoSeleccionado,
+    descripcion: descripcion,
+    cantidad: cantidad,
+    precio: precio,
+    impuesto: impuesto,
+    subtotal: result.subtotal,
+    iva: result.iva,
+    total: result.total
+  };
+
+  if (detalleEnEdicion) {
+    const index = detalles.findIndex(d => d.id === detalleEnEdicion.id);
+    if (index !== -1) {
+      detalles[index] = detalle;
+    }
+    detalleEnEdicion = null;
+  } else {
+    detalles.push(detalle);
+  }
+
+  actualizarTablaDetalles();
+  limpiarCamposDetalle();
+  actualizarTotales();
 }
 
 // Exportar funciones necesarias

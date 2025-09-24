@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facturas</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="../static/page_header.css">
     <link rel="stylesheet" href="../static/styles.css">
     <link rel="stylesheet" href="../static/notificaciones.css">
     <link rel="stylesheet" href="../static/footer.css">
@@ -39,8 +40,8 @@
 </head>
 <body class="facturas-page">
     <div class="container">
-        <div class="page-header" style="display:flex; justify-content: space-between; align-items: center;">
-            <h1>Facturas</h1>
+        <div class="page-header" style="background: linear-gradient(90deg, #000000 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.1) 80%, transparent 100%) !important; padding: 8px 25px !important; margin: 0 0 20px 0; border-radius: 8px; color: #ffffff !important;">
+            <h1 style="color: #ffffff !important; margin: 0;">Facturas</h1>
             
         </div>
 
@@ -62,7 +63,7 @@
             <div class="form-group">
                 <label for="status">Estado:</label>
                 <select id="status">
-                    <option value="">Todos</option>
+                    <option value="todos">Todos</option>
                     <option value="P">Pendiente</option>
                     <option value="C">Cobrada</option>
                     <option value="V">Vencida</option>

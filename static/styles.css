@@ -265,26 +265,11 @@
     visibility: hidden; /* Mantiene el espacio pero oculta el contenido */
   }
   
-  /* Barra de título global */
-.page-header {
-  /* Gradient background */
-  background: linear-gradient(to right, var(--color-primario, #243342) 0%, rgba(36,51,66,0.85) 30%, rgba(36,51,66,0.3) 70%, #ffffff 100%);
-  color: #ffffff;
-  padding: 15px 20px;
-  margin: 0 0 20px 0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  border-radius: 8px;
-}
-.page-header h1 {
-  color: #ffffff !important;
-  font-size: 1.6em;
-  margin: 0;
-}
 
 /* Header container used in list pages */
 .header-container {
   position: relative;
-  background: linear-gradient(to right, var(--color-primario, #243342) 0%, rgba(36,51,66,0.85) 30%, rgba(36,51,66,0.3) 70%, #ffffff 100%);
+  background: linear-gradient(to right, var(--color-primario, #243342) 0%, rgba(36,51,66,0.85) 30%, rgba(36,51,66,0.3) 70%, transparent 100%);
   color: #ffffff;
   padding: 15px 20px;
   margin: 0 0 20px 0;

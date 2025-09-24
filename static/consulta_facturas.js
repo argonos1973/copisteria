@@ -14,7 +14,15 @@ const hideOverlay = () => {
     ocultarCargando();
 };
 
-// Función para actualizar los totales
+// Función para actualizar los totales desde el backend (totales globales)
+const updateTotalsFromBackend = (totalesGlobales) => {
+    document.getElementById('totalBase').textContent = formatearImporte(totalesGlobales.total_base);
+    document.getElementById('totalIVA').textContent = formatearImporte(totalesGlobales.total_iva);
+    document.getElementById('totalCobrado').textContent = formatearImporte(totalesGlobales.total_cobrado);
+    document.getElementById('totalTotal').textContent = formatearImporte(totalesGlobales.total_total);
+};
+
+// Función para actualizar los totales (fallback - solo página actual)
 const updateTotals = (facturas) => {
     let totalBase = 0;
     let totalIVA = 0;
@@ -162,9 +170,9 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
 
         const params = new URLSearchParams();
         
-        // Comprobar si hay algún filtro adicional informado
+        // Comprobar si hay algún filtro adicional informado (excluyendo "todos")
         const hayFiltrosAdicionales = !!(
-            status ||
+            (status && status !== 'todos') ||
             (facturaNumber && facturaNumber.length >= 1) ||
             (contacto && contacto.length >= 2) ||
             
@@ -172,14 +180,12 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         );
         
         // Las fechas ya vienen en formato YYYY-MM-DD del input type="date"
-        // Solo agregar fechas si no hay otros filtros
-        if (!hayFiltrosAdicionales) {
-            if (startDate) params.append('fecha_inicio', startDate);
-            if (endDate) params.append('fecha_fin', endDate);
-        }
+        // Agregar fechas siempre que estén informadas
+        if (startDate) params.append('fecha_inicio', startDate);
+        if (endDate) params.append('fecha_fin', endDate);
 
-        // Añadir los demás filtros si tienen valor
-        if (status) {
+        // Añadir los demás filtros si tienen valor (excluyendo "todos")
+        if (status && status !== 'todos') {
             console.log(`Aplicando filtro de estado: ${status}`);
             params.append('estado', status);
         }
@@ -205,7 +211,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         params.append('sort', 'fecha');
         params.append('order', 'DESC');
 
-        const url = `http://${IP_SERVER}:${PORT}/api/facturas/paginado?${params.toString()}`;
+        const url = `/api/facturas/paginado?${params.toString()}`;
         console.log('URL de búsqueda:', url);
 
         const response = await fetch(url);
@@ -329,7 +335,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 
                 try {
                     showOverlay();
-                    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/facturas/email/${facturaId}`, {
+                    const response = await fetch(`/api/facturas/email/${facturaId}`, {
                         method: 'POST'
                     });
                     
@@ -378,8 +384,13 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             totalTotal += total;
         });
 
-        // Actualizar los totales en el pie de página (solo de la página actual)
-        updateTotals(items);
+        // Actualizar los totales en el pie de página (totales globales del filtro)
+        if (data.totales_globales) {
+            updateTotalsFromBackend(data.totales_globales);
+        } else {
+            // Fallback: calcular de la página actual si no hay totales globales
+            updateTotals(items);
+        }
 
     } catch (error) {
         console.error('Error:', error);
@@ -435,18 +446,20 @@ function restaurarFiltros() {
     if (filtrosGuardados) {
         const filtros = JSON.parse(filtrosGuardados);
         
-        // Si no hay fechas guardadas, establecer fechas por defecto
-        if (!filtros.startDate || !filtros.endDate) {
-            const hoy = new Date();
-            
-            document.getElementById('startDate').value = formatDate(hoy);
-            document.getElementById('endDate').value = formatDate(hoy);
-        } else {
+        // Establecer fechas: usar las guardadas o por defecto (primer día del mes y hoy)
+        if (filtros.startDate && filtros.endDate) {
             document.getElementById('startDate').value = filtros.startDate;
             document.getElementById('endDate').value = filtros.endDate;
+        } else {
+            // Si no hay fechas guardadas, establecer fechas por defecto
+            const hoy = new Date();
+            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            
+            document.getElementById('startDate').value = formatDate(primerDiaMes);
+            document.getElementById('endDate').value = formatDate(hoy);
         }
         
-        document.getElementById('status').value = filtros.status || '';
+        document.getElementById('status').value = filtros.status || 'todos';
         document.getElementById('facturaNumber').value = filtros.facturaNumber || '';
         document.getElementById('contacto').value = filtros.contacto || '';
         if (document.getElementById('conceptFilter')) {
@@ -460,10 +473,14 @@ function restaurarFiltros() {
         // Realizar búsqueda con los filtros restaurados
         buscarFacturas(true);
     } else {
-        // Si no hay filtros guardados, establecer fechas por defecto
-        const hoy = new Date();
+        // Si no hay filtros guardados, establecer valores por defecto
+        document.getElementById('status').value = 'todos';
         
-        document.getElementById('startDate').value = formatDate(hoy);
+        // Establecer fechas por defecto: primer día del mes actual y fecha actual
+        const hoy = new Date();
+        const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        
+        document.getElementById('startDate').value = formatDate(primerDiaMes);
         document.getElementById('endDate').value = formatDate(hoy);
         
         // Cargar paginación por defecto

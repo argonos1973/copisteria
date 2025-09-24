@@ -237,7 +237,4 @@ export function volverSegunOrigen() {
     sessionStorage.removeItem('origenPresupuesto');
 }
 
-// Función para redondear importes de manera consistente
-export function redondearImporte(valor) {
-    return Number(Number(valor).toFixed(2));
-} 
+// Nota: redondearImporte ha sido centralizado en scripts_utils.js

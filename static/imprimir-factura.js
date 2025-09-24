@@ -190,7 +190,6 @@ async function rellenarFactura(datos) {
                 </td>
                 <td class="cantidad">${detalle.cantidad || 0}</td>
                 <td class="precio">${Number(detalle.precio).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 8 })}</td>
-                <td class="precio">${detalle.impuestos}%</td>
                 <td class="total">${formatearImporte(detalle.total)}</td>
             `;
             tbody.appendChild(fila);
@@ -199,10 +198,19 @@ async function rellenarFactura(datos) {
         console.error('factura.detalles no es un array:', factura.detalles);
     }
 
-    // Rellenar totales
-    document.getElementById('base').textContent = formatearImporte(factura.base || 0);
-    document.getElementById('iva').textContent = formatearImporte(factura.iva || 0);
-    document.getElementById('total').textContent = formatearImporte(factura.total || 0);
+    // Usar totales calculados por el backend (con Decimal y ROUND_HALF_UP)
+    // El backend ya calcula correctamente con redondeo por línea
+    try {
+        document.getElementById('base').textContent = formatearImporte(factura.base || 0);
+        document.getElementById('iva').textContent = formatearImporte(factura.iva || 0);
+        document.getElementById('total').textContent = formatearImporte(factura.total || 0);
+    } catch (e) {
+        console.error('Error al mostrar totales de factura:', e);
+        // Valores por defecto en caso de error
+        document.getElementById('base').textContent = '0,00';
+        document.getElementById('iva').textContent = '0,00';
+        document.getElementById('total').textContent = '0,00';
+    }
     
     // Sección FACTURA RECTIFICATIVA
     const rectInfoDiv = document.getElementById('rectificativa-info');

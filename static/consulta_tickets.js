@@ -206,16 +206,11 @@ async function buscarTickets() {
     const status = document.getElementById('status').value;
     const ticketNumber = document.getElementById('ticketNumber').value;
 
-    const url = new URL(`${API_URL}/api${API_ENDPOINT}`);
+    const url = new URL(`/api${API_ENDPOINT}`);
 
-    // Verificar si hay filtros de estado o número de ticket
-    const ignorarFechas = status || ticketNumber;
-
-    // Solo agregar fechas si no hay filtros de estado o número de ticket
-    if (!ignorarFechas) {
-        if (startDate) url.searchParams.append('fecha_inicio', startDate);
-        if (endDate) url.searchParams.append('fecha_fin', endDate);
-    }
+    // Agregar fechas siempre que estén informadas
+    if (startDate) url.searchParams.append('fecha_inicio', startDate);
+    if (endDate) url.searchParams.append('fecha_fin', endDate);
     
     // Agregar el resto de filtros normalmente
     if (status) url.searchParams.append('estado', status);
@@ -242,7 +237,13 @@ async function buscarTickets() {
         // Ajustar currentPage si excede límites tras filtros
         if (currentPageTickets > totalPagesTickets) currentPageTickets = totalPagesTickets || 1
         mostrarTickets(tickets);
-        actualizarTotales(tickets);
+        // Usar totales globales del backend si están disponibles
+        if (data.totales_globales) {
+            actualizarTotalesFromBackend(data.totales_globales);
+        } else {
+            // Fallback: calcular de la página actual
+            actualizarTotales(tickets);
+        }
         if (typeof window.__updateTicketsPageInfo === 'function') window.__updateTicketsPageInfo();
         ocultarBarraDeProgreso();
     } catch (error) {
@@ -379,6 +380,18 @@ function formatearHora(timestamp) {
     return `${horas}:${minutos}:${segundos}`;
 }
 
+function actualizarTotalesFromBackend(totalesGlobales) {
+    const totalBrutoElement = document.getElementById('totalImporteBruto');
+    const totalImpuestosElement = document.getElementById('totalImporteImpuestos');
+    const totalCobradoElement = document.getElementById('totalImporteCobrado');
+    const totalTotalElement = document.getElementById('totalTotal');
+
+    if (totalBrutoElement) totalBrutoElement.textContent = formatearImporte(totalesGlobales.total_base);
+    if (totalImpuestosElement) totalImpuestosElement.textContent = formatearImporte(totalesGlobales.total_iva);
+    if (totalCobradoElement) totalCobradoElement.textContent = formatearImporte(totalesGlobales.total_cobrado);
+    if (totalTotalElement) totalTotalElement.textContent = formatearImporte(totalesGlobales.total_total);
+}
+
 function actualizarTotales(tickets) {
     let totalImporteBruto = 0;
     let totalImporteImpuestos = 0;
@@ -388,13 +401,10 @@ function actualizarTotales(tickets) {
     const gridBody = document.getElementById('gridBody');
     const rows = gridBody.getElementsByTagName('tr');
 
-    for (let row of rows) {
-        const cells = row.getElementsByTagName('td');
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        if (cells.length < 8) continue;
 
-        // Verificar que la fila no sea una fila de 'No se encontraron resultados'
-        if (cells.length < 7) continue;
-
-        // Obtener los valores de las celdas y convertirlos a números
         let importeBruto = parsearImporte(cells[2].textContent);
         let importeImpuestos = parsearImporte(cells[3].textContent);
         let importeCobrado = parsearImporte(cells[4].textContent);
@@ -424,7 +434,7 @@ function actualizarTotales(tickets) {
 function imprimirFactura(idTicket) {
     try {
         // Construir la URL para la página de impresión con el parámetro 'ticketId'
-        const urlImprimir = `imprimir-ticket.html?ticketId=${encodeURIComponent(idTicket)}`;
+        const urlImprimir = `/api/imprimir-ticket.html?ticketId=${encodeURIComponent(idTicket)}`;
         // Abrir una nueva ventana con la página de impresión
         window.open(urlImprimir, '_blank', 'width=800,height=600');
     } catch (error) {

@@ -1,3 +1,6 @@
+    // Pequeño delay para asegurar que los valores se mantengan
+    await new Promise(resolve => setTimeout(resolve, 100));
+let cargandoContacto = false;
 // gestion_contactos.js
 // Vanilla JS replacement for the former Vue implementation in GESTION_CONTACTOS.html
 // Mantiene las mismas validaciones y envíos.
@@ -149,16 +152,6 @@ function validateTelf(field, icon) {
   setIcon(ok, icon);
   return ok;
 }
-function validateCP() {
-  const val = fields.cp.value.trim();
-  let ok = /^[0-9]{5}$/.test(val);
-  if (ok) {
-    ok = fields.poblacio.value.trim() !== '' && fields.provincia.value.trim() !== '';
-  }
-  setIcon(ok, icons.cp);
-  markValidity(fields.cp, ok);
-  return ok;
-}
 
 function markMissing(field, missing) {
   if (!field) return;
@@ -166,7 +159,7 @@ function markMissing(field, missing) {
 }
 
 function validateRequired() {
-  const required = ['razonsocial','identificador','direccion','cp','poblacio','provincia'];
+  const required = ['razonsocial','identificador','direccion'];
   let ok = true;
   required.forEach(name => {
     const el = fields[name];
@@ -218,7 +211,6 @@ async function seleccionarDireccion(sug) {
   fields.direccion.value = sug.carrer;
   fields.cp.value = sug.cp;
   sugerenciasContainer.innerHTML = '';
-  await handleCP();
 }
 
 // ------------------------ CP lookup & suggestions ------------------------
@@ -248,11 +240,11 @@ async function buscarCPSuggestions(prefix){
   }catch(err){console.error(err);} }
 
 async function handleCP() {
+  if (cargandoContacto) return;
   const cp = fields.cp.value;
-  if (cp.length !== 5) {
-    fields.poblacio.value = '';
-    fields.provincia.value = '';
-    validateCP();
+  // Permitir cualquier CP sin validación
+  if (cp.length !== 5 || !/^[0-9]{5}$/.test(cp)) {
+    // CP no es catalán (5 dígitos), no buscar en BD
     return;
   }
   try {
@@ -269,7 +261,6 @@ async function handleCP() {
   } catch (err) {
     console.error(err);
   }
-  validateCP();
 }
 
 // ------------------------ Validations events --------------------
@@ -290,8 +281,8 @@ function allValid() {
     validateIdentificador() &&
     validateEmail() &&
     validateTelf(fields.telf1, icons.telf1) &&
-    validateTelf(fields.telf2, icons.telf2) &&
-    validateCP();
+    validateTelf(fields.telf2, icons.telf2);
+    // Pequeño delay para asegurar que los valores se mantengan
   return requiredOk && othersOk;
 }
 
@@ -344,21 +335,28 @@ async function submitForm() {
   const urlParams = new URLSearchParams(window.location.search);
   const id = urlParams.get('id');
   if (!id) return;
+  cargandoContacto = true;
   try {
     const res = await fetch(`${API_URL}/contactos/get_contacto/${id}`);
     if (!res.ok) throw new Error('Error al obtener el contacto');
     const data = await res.json();
     Object.keys(fields).forEach((k) => {
-      if (k === 'facturacion') fields[k].checked = data.tipo === 1;
-      else if (fields[k]) fields[k].value = data[k] ?? '';
+      if (k === "facturacion") fields[k].checked = data.tipo === 1;
+      else if (k === "poblacio") fields[k].value = data.localidad ?? "";
+      else if (fields[k]) fields[k].value = data[k] ?? "";
     });
     validateIdentificador();
     validateEmail();
     validateTelf(fields.telf1, icons.telf1);
     validateTelf(fields.telf2, icons.telf2);
-    await handleCP();
+    // Pequeño delay para asegurar que los valores se mantengan
+    await new Promise(resolve => setTimeout(resolve, 100));
+    cargandoContacto = false;
   } catch (err) {
     console.error(err);
     mostrarNotificacion('Error al cargar el contacto', 'error');
+    // Pequeño delay para asegurar que los valores se mantengan
+    await new Promise(resolve => setTimeout(resolve, 100));
+    cargandoContacto = false;
   }
 })();

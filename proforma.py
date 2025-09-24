@@ -6,6 +6,7 @@ from flask import Flask, jsonify, request
 from db_utils import (actualizar_numerador, formatear_numero_documento,
                       get_db_connection, obtener_numerador, redondear_importe,
                       verificar_numero_proforma)
+import utilities
 
 app = Flask(__name__)
 
@@ -35,6 +36,24 @@ def crear_proforma():
         print(f"Keys en data: {data.keys()}")
         
        
+        # Calculate amounts using unified function
+        importe_bruto = 0
+        importe_impuestos = 0
+        total = 0
+        
+        for detalle in data['detalles']:
+            res = utilities.calcular_importes(detalle['cantidad'], detalle['precio'], detalle['impuestos'])
+            importe_bruto += res['subtotal']
+            importe_impuestos += res['iva']
+            total += res['total']
+            # Update detalle with calculated values
+            detalle['total'] = res['total']
+        
+        # Update data with calculated totals
+        data['importe_bruto'] = importe_bruto
+        data['importe_impuestos'] = importe_impuestos
+        data['total'] = total
+        
         # Insertar la proforma
         cursor.execute('''
             INSERT INTO proforma (numero, fecha, estado, idContacto, nif, total, formaPago, 
@@ -167,6 +186,24 @@ def actualizar_proforma(id, data):
         except (ValueError, TypeError) as e:
             conn.rollback()
             return jsonify({'error': f'Error en conversión de importes: {str(e)}'}), 400
+
+        # Calculate amounts using unified function
+        importe_bruto = 0
+        importe_impuestos = 0
+        total = 0
+        
+        for detalle in data['detalles']:
+            res = utilities.calcular_importes(detalle['cantidad'], detalle['precio'], detalle['impuestos'])
+            importe_bruto += res['subtotal']
+            importe_impuestos += res['iva']
+            total += res['total']
+            # Update detalle with calculated values
+            detalle['total'] = res['total']
+        
+        # Update data with calculated totals
+        data['importe_bruto'] = importe_bruto
+        data['importe_impuestos'] = importe_impuestos
+        data['total'] = total
 
         # Actualizar la proforma
         cursor.execute('''
@@ -499,7 +536,62 @@ def consultar_proformas():
                 'razonsocial': proforma[10]
             })
 
-        return jsonify(result)
+        # Calcular totales globales según el estado del filtro
+        totales_globales = {
+            'total_base': 0,
+            'total_iva': 0,
+            'total_cobrado': 0,
+            'total_total': 0
+        }
+        
+        # Solo calcular totales si hay un estado específico en el filtro
+        if estado:
+            totales_query = """
+                SELECT 
+                    SUM(p.importe_bruto) as total_base,
+                    SUM(p.importe_impuestos) as total_iva,
+                    SUM(p.importe_cobrado) as total_cobrado,
+                    SUM(p.total) as total_total
+                FROM proforma p
+                LEFT JOIN contactos c ON p.idcontacto = c.idContacto
+                WHERE 1=1
+            """
+            
+            # Aplicar los mismos filtros que en la consulta principal
+            totales_params = []
+            if fecha_inicio and not hay_filtros_adicionales:
+                totales_query += " AND p.fecha >= ?"
+                totales_params.append(fecha_inicio)
+            if fecha_fin and not hay_filtros_adicionales:
+                totales_query += " AND p.fecha <= ?"
+                totales_params.append(fecha_fin)
+            if estado:
+                totales_query += " AND p.estado = ?"
+                totales_params.append(estado)
+            if numero:
+                totales_query += " AND p.numero LIKE ?"
+                totales_params.append(f"%{numero}%")
+            if contacto:
+                totales_query += " AND c.razonsocial LIKE ?"
+                totales_params.append(f"%{contacto}%")
+            if identificador:
+                totales_query += " AND c.identificador LIKE ?"
+                totales_params.append(f"%{identificador}%")
+            
+            cursor.execute(totales_query, totales_params)
+            totales_row = cursor.fetchone()
+            
+            totales_globales = {
+                'total_base': float(totales_row[0] or 0),
+                'total_iva': float(totales_row[1] or 0),
+                'total_cobrado': float(totales_row[2] or 0),
+                'total_total': float(totales_row[3] or 0)
+            }
+
+        return jsonify({
+            'items': result,
+            'totales_globales': totales_globales
+        })
 
     except Exception as e:
         print(f"Error en consultar_proformas: {str(e)}")

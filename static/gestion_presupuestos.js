@@ -1,18 +1,23 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { 
-  PRODUCTO_ID_LIBRE,
-  formatearImporte,
-  formatearApunto,
-  formatearImporteVariable,
-  parsearImporte,
-  calcularPrecioConDescuento,
-  calcularTotalDetalle,
-  abrirModalPagos as abrirModal,
-  formatearFechaSoloDia,
-  convertirFechaParaAPI,
-  formatearFecha,
-  invalidateGlobalCache,
+    PRODUCTO_ID_LIBRE,
+    formatearImporte,
+    redondearImporte,
+    formatearImporteVariable,
+    formatearApunto,
+    parsearImporte,
+    calcularPrecioConDescuento,
+    calcularTotalDetalle,
+    getEstadoFormateado,
+    getCodigoEstado,
+    formatearFechaSoloDia,
+    convertirFechaParaAPI,
+    formatearFecha
 } from './scripts_utils.js';
+import { 
+    calcularTotalPresupuesto,
+    actualizarDetalleConTotal 
+} from './calculo_totales_unificado.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
   cargarProductos as cargarProductosCommon,
@@ -23,7 +28,7 @@ import {
   validarDetalle,
   volverSegunOrigen
 } from './common.js';
-import { redondearImporte } from './common.js';
+import { calcularImportes } from './scripts/calculos.js';
 
 // Variables globales
 let detalles = [];
@@ -69,20 +74,16 @@ async function seleccionarProducto() {
 }
 
 function actualizarTotales() {
-  let importe_bruto = 0;
-  let importe_impuestos = 0;
-  let total = 0;
-  detalles.forEach(detalle => {
-    const subtotal = parseFloat(detalle.precio) * parseInt(detalle.cantidad);
-    const impuesto = redondearImporte(subtotal * (parseFloat(detalle.impuestos) / 100));
-    importe_bruto += subtotal;
-    importe_impuestos += impuesto;
-  });
-  importe_bruto = redondearImporte(importe_bruto);
-  importe_impuestos = redondearImporte(importe_impuestos);
-  total = redondearImporte(importe_bruto + importe_impuestos);
+  console.log('------- INICIO actualizarTotales PRESUPUESTO UNIFICADO -------');
+  
+  // USAR FUNCIÓN UNIFICADA para garantizar consistencia absoluta
+  const total = calcularTotalPresupuesto(detalles);
+  
+  console.log(`TOTAL PRESUPUESTO FINAL (UNIFICADO): ${total}`);
+  
   const totalInput = document.getElementById('total-presupuesto');
   if (totalInput) totalInput.value = formatearImporte(total);
+  console.log('------- FIN actualizarTotales PRESUPUESTO UNIFICADO -------');
 }
 
 function actualizarTablaDetalles() {
@@ -94,8 +95,12 @@ function actualizarTablaDetalles() {
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
     tr.classList.add('detalle-editable');
+    
+    // USAR FUNCIÓN UNIFICADA para recalcular el total correctamente
+    const detalleActualizado = actualizarDetalleConTotal(detalle);
+    detalle.total = detalleActualizado.total;
+    
     const precioFormateado = formatearImporteVariable(Number(detalle.precio), 0, 5);
-    detalle.total = parseFloat(detalle.total);
     const totalFormateado = formatearImporte(detalle.total);
     tr.innerHTML = `
       <td style="width: 300px;">${detalle.concepto}</td>
@@ -268,7 +273,13 @@ async function cargarPresupuesto(id) {
     
     document.getElementById('numero').value = data.numero;
     document.getElementById('fecha').value = formatearFechaSoloDia(data.fecha);
-    document.getElementById('estado').value = data.estado === 'A' ? 'Borrador' : data.estado;
+    // Decodificar estado para mostrar texto legible
+    let estadoTexto = data.estado;
+    if (data.estado === 'B') estadoTexto = 'Borrador';
+    else if (data.estado === 'A') estadoTexto = 'Aceptado';
+    else if (data.estado === 'R') estadoTexto = 'Rechazado';
+    else if (data.estado === 'C') estadoTexto = 'Cerrado';
+    document.getElementById('estado').value = estadoTexto;
     document.getElementById('total-presupuesto').value = formatearImporte(data.total || 0);
 
     const tipo = 'N';
@@ -279,10 +290,10 @@ async function cargarPresupuesto(id) {
 
     // Cargar datos del contacto
     const contacto = data.contacto || {};
-    idContacto = contacto.idContacto || data.idContacto;
+    idContacto = contacto.idContacto || data.idContacto || data.idcontacto;
     
     // Solo asignar valores si hay contacto
-    if (idContacto && Object.keys(contacto).length > 0) {
+    if (idContacto && contacto && Object.keys(contacto).length > 0) {
       const razonSocial = contacto.razonsocial || contacto.razon_social || '';
       const identificador = contacto.identificador || contacto.nif || '';
       const direccion = contacto.direccion || '';
@@ -349,7 +360,13 @@ async function buscarPresupuestoAbierto(idContacto) {
       document.getElementById('numero').value = data.numero;
       const fechaFormateada = formatearFechaSoloDia(data.fecha);
       document.getElementById('fecha').value = fechaFormateada;
-      document.getElementById('estado').value = data.estado === 'A' ? 'Borrador' : data.estado;
+      // Decodificar estado para mostrar texto legible
+      let estadoTexto = data.estado;
+      if (data.estado === 'B') estadoTexto = 'Borrador';
+      else if (data.estado === 'A') estadoTexto = 'Aceptado';
+      else if (data.estado === 'R') estadoTexto = 'Rechazado';
+      else if (data.estado === 'C') estadoTexto = 'Cerrado';
+      document.getElementById('estado').value = estadoTexto;
       document.getElementById('total-presupuesto').value = formatearImporte(data.total);
       document.getElementById('tipo-presupuesto').value = 'N';
       sessionStorage.setItem('tipoPresupuesto', 'N');
@@ -429,7 +446,7 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='A') {
       id: idPresupuesto,
       numero: numeroPresupuesto,
       fecha: fechaAPI,
-      idContacto: idContacto,
+      idcontacto: idContacto,
       nif: document.getElementById('identificador').value,
       total: totalPresupuesto,
       formaPago: formaPago || 'E',
@@ -478,7 +495,7 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='A') {
     
     // Volver a la consulta tras guardar con filtros guardados
     setTimeout(() => {
-      window.location.href = '/frontend/CONSULTA_PRESUPUESTOS.html';
+      window.location.href = 'CONSULTA_PRESUPUESTOS.html';
     }, 800);
   } catch (error) {
     console.error('Error al guardar presupuesto:', error);
