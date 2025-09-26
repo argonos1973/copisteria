@@ -1,6 +1,6 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion } from './notificaciones.js';
-import { formatearImporte, formatearFechaSoloDia, mostrarCargando, ocultarCargando, debounce, getEstadoFormateado as getEstadoFormateadoFactura, getEstadoClass as getEstadoClassFactura } from './scripts_utils.js';
+import { formatearImporte, formatearFechaSoloDia, mostrarCargando, ocultarCargando, debounce, getEstadoFormateado as getEstadoFormateadoFactura, getEstadoClass as getEstadoClassFactura, parsearImporte } from './scripts_utils.js';
 
 // Estados y clases se importan desde scripts_utils.js
 
@@ -248,11 +248,17 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             // Debug: verificar explícitamente el valor de enviado para cada factura
             console.log(`Factura ID: ${factura.id}, Número: ${factura.numero}, Enviado: ${factura.enviado}, Tipo: ${typeof factura.enviado}`);
             
-            // Asegurar que los valores numéricos sean válidos
-            const base = parseFloat(factura.base) || 0;
-            const iva = parseFloat(factura.iva) || 0;
-            const importeCobrado = parseFloat(factura.importe_cobrado) || 0;
-            const total = parseFloat(factura.total) || 0;
+            // Tomar SIEMPRE los valores tal cual llegan del backend para la UI
+            const baseRaw = (factura.base ?? '').toString();
+            const ivaRaw = (factura.iva ?? '').toString();
+            const cobradoRaw = (factura.importe_cobrado ?? '').toString();
+            const totalRaw = (factura.total ?? '').toString();
+
+            // Para sumatorios, parsear desde los valores del backend (admite coma o punto)
+            const baseNum = parsearImporte(factura.base);
+            const ivaNum = parsearImporte(factura.iva);
+            const cobradoNum = parsearImporte(factura.importe_cobrado);
+            const totalNum = parsearImporte(factura.total);
 
             // Añadir clases de fila según estado para estilos y deshabilitar interacción
             if (factura.estado === 'A') {
@@ -265,10 +271,10 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 <td>${formatDateToDisplay(factura.fecha)}</td>
                 <td>${factura.numero}</td>
                 <td>${factura.razonsocial || ''}</td>
-                <td class="text-right">${formatearImporte(base)}</td>
-                <td class="text-right">${formatearImporte(iva)}</td>
-                <td class="text-right">${formatearImporte(importeCobrado)}</td>
-                <td class="text-right">${formatearImporte(total)}</td>
+                <td class="text-right">${baseRaw} €</td>
+                <td class="text-right">${ivaRaw} €</td>
+                <td class="text-right">${cobradoRaw} €</td>
+                <td class="text-right">${totalRaw} €</td>
                 <td class="text-center ${getEstadoClassFactura(factura.estado)}">${getEstadoFormateadoFactura(factura.estado)}</td>
                 <td class="text-center">
                     ${(['A'].includes(factura.estado)) ? '' : `<i class=\"fas fa-print print-icon\" style=\"cursor: pointer;\" data-id=\"${factura.id}\"></i>`}
@@ -335,7 +341,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 
                 try {
                     showOverlay();
-                    const response = await fetch(`/api/facturas/email/${facturaId}`, {
+                    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/facturas/email/${facturaId}`, {
                         method: 'POST'
                     });
                     
@@ -377,11 +383,11 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             
             tbody.appendChild(row);
 
-            // Actualizar totales
-            totalBase += base;
-            totalIVA += iva;
-            totalCobrado += importeCobrado;
-            totalTotal += total;
+            // Actualizar totales usando únicamente los valores del backend
+            totalBase += isNaN(baseNum) ? 0 : baseNum;
+            totalIVA += isNaN(ivaNum) ? 0 : ivaNum;
+            totalCobrado += isNaN(cobradoNum) ? 0 : cobradoNum;
+            totalTotal += isNaN(totalNum) ? 0 : totalNum;
         });
 
         // Actualizar los totales en el pie de página (totales globales del filtro)

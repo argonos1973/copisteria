@@ -11,7 +11,7 @@
 function imprimirFactura(idTicket) {
    
     // Construir la URL para la página de impresión con el parámetro 'ticketId'
-    const urlImprimir = `imprimir-ticket.html?ticketId=${encodeURIComponent(idTicket)}`;
+    const urlImprimir = `/api/imprimir-ticket.html?ticketId=${encodeURIComponent(idTicket)}`;
 
     // Abrir una nueva ventana con la página de impresión
     window.open(urlImprimir, '_blank', 'width=800,height=600');

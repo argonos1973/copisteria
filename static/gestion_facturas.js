@@ -90,25 +90,9 @@ function abrirModalPagos() {
 
 
 function calcularTotalDetallesDiaActual() {
-  let importe_bruto = 0;
-  let importe_impuestos = 0;
-
-  // Solo sumar detalles que coincidan con el ID del día actual
-  detalles.forEach(detalle => {
-     
-          const precio = parsearImporte(detalle.precio);
-          const cantidad = parsearImporte(detalle.cantidad);
-          const iva = parsearImporte(detalle.impuestos);
-          const subtotal = precio * cantidad;
-          const impuesto = redondearImporte(subtotal * (iva / 100));
-          
-          importe_bruto += subtotal;
-          importe_impuestos += impuesto;
-  });
-
-  importe_bruto = redondearImporte(importe_bruto);
-  importe_impuestos = redondearImporte(importe_impuestos);
-  return redondearImporte(importe_bruto + importe_impuestos);
+  // USAR CÁLCULO UNIFICADO EN TODO MOMENTO
+  const totales = calcularTotalesDocumento(detalles);
+  return redondearImporte(totales.subtotal_total + totales.iva_total);
 }
 
 async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
@@ -171,11 +155,11 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
             cantidad: parsearImporte(d.cantidad),
             precio: parsearImporte(d.precio).toFixed(5),
             impuestos: parsearImporte(d.impuestos),
-            total: (() => {
-              const sub = parsearImporte(d.precio) * parsearImporte(d.cantidad);
-              const ivaCalc = redondearImporte(sub * (parsearImporte(d.impuestos) / 100));
-              return redondearImporte(sub + ivaCalc);
-            })(),
+            total: actualizarDetalleConTotal({
+              precio: parsearImporte(d.precio),
+              cantidad: parsearImporte(d.cantidad),
+              impuestos: parsearImporte(d.impuestos)
+            }).total,
             productoId: d.productoId,
             formaPago: d.formaPago,
             fechaDetalle: d.fechaDetalle || convertirFechaParaAPI(document.getElementById('fecha').value)
@@ -535,11 +519,9 @@ function validarYAgregarDetalle() {
   }
   
   console.log("Impuestos calculados:", impuestos);
-  
-  const subtotal = cantidad * precioDetalle;
-  // Redondear IVA (base * porcentaje) a 2 decimales antes de sumar (como en tickets)
-  const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
-  const total = Number((subtotal + impuestoCalc).toFixed(2));
+  // Calcular total con REGLA UNIFICADA
+  const detalleCalc = actualizarDetalleConTotal({ precio: precioDetalle, cantidad, impuestos });
+  const total = detalleCalc.total;
 
   console.log(`Detalle a agregar - Cantidad: ${cantidad}, Precio: ${precioDetalle}, IVA: ${impuestos}%, Total calculado: ${total}`);
 

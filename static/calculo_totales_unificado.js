@@ -12,6 +12,7 @@
  */
 
 import { parsearImporte } from './scripts_utils.js';
+import { redondearImporte } from './scripts_utils.js';
 
 /**
  * Calcula el total de una línea de detalle con redondeo correcto
@@ -20,6 +21,76 @@ import { parsearImporte } from './scripts_utils.js';
  * @param {number|string} iva - Porcentaje de IVA (ej: 21 para 21%)
  * @returns {Object} { subtotal, iva_importe, total }
  */
+export function calcularLinea(precio, cantidad, iva) {
+  const p = parsearImporte(precio) || 0;
+  const c = parsearImporte(cantidad) || 0;
+  const iv = parsearImporte(iva) || 0;
+
+  // Subtotal sin redondear (precio * cantidad)
+  const subtotal = p * c;
+
+  // Regla fundamental: IVA se redondea por línea a 2 decimales ANTES de sumar
+  const iva_importe = redondearImporte(subtotal * (iv / 100));
+
+  // Total de línea = subtotal + IVA_redondeado
+  const total = subtotal + (iva_importe || 0);
+
+  return { subtotal, iva_importe, total };
+}
+
+/**
+ * Calcula los totales del documento (suma de líneas), aplicando la regla:
+ * - Total documento = suma(total de línea)
+ * - IVA documento = suma(IVA_redondeado por línea)
+ * - Importe bruto = suma(subtotales sin IVA)
+ * @param {Array} detalles - Lista de líneas con {precio, cantidad, impuestos}
+ * @returns {Object} { importe_bruto, iva, total, lineas: Array<{subtotal, iva_importe, total}> }
+ */
+export function calcularDocumento(detalles = []) {
+  const lineas = [];
+  let importe_bruto = 0; // suma de subtotales sin IVA
+  let iva_total = 0;     // suma de IVA redondeado por línea
+  let total = 0;         // suma de total por línea
+
+  for (const d of (detalles || [])) {
+    const res = calcularLinea(d?.precio, d?.cantidad, d?.impuestos ?? d?.iva ?? 21);
+    lineas.push(res);
+    importe_bruto += res.subtotal || 0;
+    iva_total += res.iva_importe || 0;
+    total += res.total || 0;
+  }
+
+  return {
+    importe_bruto,
+    iva: iva_total,
+    total,
+    lineas,
+  };
+}
+
+/**
+ * Helper para recalcular totales del documento devolviendo solo las 3 cifras
+ * @param {Array} detalles
+ * @returns {{importe_bruto:number, iva:number, total:number}}
+ */
+export function recalcularTotales(detalles = []) {
+  const { importe_bruto, iva, total } = calcularDocumento(detalles);
+  return { importe_bruto, iva, total };
+}
+
+/**
+ * Suma totales de varios documentos ya calculados
+ * @param {Array<{importe_bruto:number, iva:number, total:number}>} docs
+ * @returns {{importe_bruto:number, iva:number, total:number}}
+ */
+export function sumarTotales(docs = []) {
+  return (docs || []).reduce((acc, d) => {
+    acc.importe_bruto += parsearImporte(d?.importe_bruto) || 0;
+    acc.iva += parsearImporte(d?.iva) || 0;
+    acc.total += parsearImporte(d?.total) || 0;
+    return acc;
+  }, { importe_bruto: 0, iva: 0, total: 0 });
+}
 export function calcularTotalLinea(precio, cantidad, iva) {
     const precioNum = typeof precio === 'number' ? precio : parsearImporte(precio);
     const cantidadNum = typeof cantidad === 'number' ? cantidad : parsearImporte(cantidad);
@@ -122,4 +193,25 @@ export function calcularTotalProforma(detalles) {
  */
 export function calcularTotalPresupuesto(detalles) {
     return calcularTotalesDocumento(detalles).total_final;
+}
+
+/**
+ * Calcula el precio unitario (sin IVA) a partir del total de la línea (con IVA),
+ * la cantidad e IVA%. Devuelve el precio con 5 decimales.
+ * Nota: aproximación práctica invirtiendo el factor de IVA y redondeando el subtotal a 2 decimales.
+ * @param {number|string} totalLinea
+ * @param {number|string} cantidad
+ * @param {number|string} iva
+ * @returns {number}
+ */
+export function calcularPrecioDesdeTotal(totalLinea, cantidad, iva) {
+    const t = typeof totalLinea === 'number' ? totalLinea : parsearImporte(totalLinea);
+    const c = typeof cantidad === 'number' ? cantidad : parsearImporte(cantidad);
+    const iv = typeof iva === 'number' ? iva : parsearImporte(iva);
+    if (!c || c <= 0) return 0;
+    const factor = 1 + (Number(iv) / 100);
+    // Estimar subtotal (sin IVA) redondeado a 2 decimales
+    const subtotalAprox = Number((Number(t) / factor).toFixed(2));
+    const precio = subtotalAprox / Number(c);
+    return Number(precio.toFixed(5));
 }

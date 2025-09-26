@@ -34,6 +34,47 @@ function obtenerIdFactura() {
     return urlParams.get('facturaId');
 }
 
+// Helpers de formato numérico ES (coma decimal, punto de miles)
+function _splitSign(s) {
+    return s.startsWith('-') ? ['-', s.slice(1)] : ['', s];
+}
+
+function formatNumberEsMax5(val) {
+    // Hasta 5 decimales, sin redondear (trunca), quitar ceros finales
+    if (val === null || val === undefined) return '0';
+    let s = String(val).replace(',', '.');
+    const [sign, rest] = _splitSign(s);
+    let entero = rest, dec = '';
+    if (rest.includes('.')) {
+        [entero, dec] = rest.split('.', 2);
+    }
+    let enteroFmt;
+    try {
+        enteroFmt = Number.parseInt(entero, 10).toLocaleString('es-ES');
+    } catch {
+        enteroFmt = entero;
+    }
+    if (dec) {
+        dec = dec.slice(0, 5).replace(/0+$/g, '');
+    }
+    return sign + enteroFmt + (dec ? ',' + dec : '');
+}
+
+function formatTotalEsTwo(val) {
+    // Total con exactamente 2 decimales
+    const num = Number.parseFloat(val ?? 0) || 0;
+    const fixed = num.toFixed(2);
+    const [sign, rest] = _splitSign(fixed);
+    const [entero, dec] = rest.split('.');
+    let enteroFmt;
+    try {
+        enteroFmt = Number.parseInt(entero, 10).toLocaleString('es-ES');
+    } catch {
+        enteroFmt = entero;
+    }
+    return sign + enteroFmt + ',' + (dec || '00');
+}
+
 /**
  * Obtiene los datos de la factura desde el servidor.
  * @param {string} idFactura - El ID de la factura.
@@ -181,6 +222,9 @@ async function rellenarFactura(datos) {
         factura.detalles.forEach(detalle => {
             console.log('Procesando detalle:', detalle); // Debug
             const fila = document.createElement('tr');
+            const cantidadRaw = detalle.cantidad ?? '';
+            const precioRaw = detalle.precio ?? '';
+            const subtotalRaw = detalle.total ? `${detalle.total}€` : '';
             fila.innerHTML = `
                 <td>
                     <div class="detalle-concepto">
@@ -188,9 +232,9 @@ async function rellenarFactura(datos) {
                         ${detalle.descripcion ? `<span class="detalle-descripcion">${detalle.descripcion}</span>` : ''}
                     </div>
                 </td>
-                <td class="cantidad">${detalle.cantidad || 0}</td>
-                <td class="precio">${Number(detalle.precio).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 8 })}</td>
-                <td class="total">${formatearImporte(detalle.total)}</td>
+                <td class="cantidad">${cantidadRaw}</td>
+                <td class="precio">${precioRaw}</td>
+                <td class="total">${subtotalRaw}</td>
             `;
             tbody.appendChild(fila);
         });
@@ -198,19 +242,10 @@ async function rellenarFactura(datos) {
         console.error('factura.detalles no es un array:', factura.detalles);
     }
 
-    // Usar totales calculados por el backend (con Decimal y ROUND_HALF_UP)
-    // El backend ya calcula correctamente con redondeo por línea
-    try {
-        document.getElementById('base').textContent = formatearImporte(factura.base || 0);
-        document.getElementById('iva').textContent = formatearImporte(factura.iva || 0);
-        document.getElementById('total').textContent = formatearImporte(factura.total || 0);
-    } catch (e) {
-        console.error('Error al mostrar totales de factura:', e);
-        // Valores por defecto en caso de error
-        document.getElementById('base').textContent = '0,00';
-        document.getElementById('iva').textContent = '0,00';
-        document.getElementById('total').textContent = '0,00';
-    }
+    // Totales documento: mostrar exactamente lo provisto por el backend
+    document.getElementById('base').textContent = factura.base ? `${factura.base}€` : '';
+    document.getElementById('iva').textContent = factura.iva ? `${factura.iva}€` : '';
+    document.getElementById('total').textContent = factura.total ? `${factura.total}€` : '';
     
     // Sección FACTURA RECTIFICATIVA
     const rectInfoDiv = document.getElementById('rectificativa-info');
@@ -240,7 +275,7 @@ async function rellenarFactura(datos) {
                 <h2 style="color:#c00; text-align:center;">FACTURA RECTIFICATIVA</h2>
                 <p><strong>Factura rectificada:</strong> Nº ${numOrig} de fecha ${fechaOrig}</p>
                 <p><strong>Motivo rectificación:</strong> ${motivo}</p>
-                <p><strong>Importe rectificado:</strong> ${formatearImporte(factura.total)}</p>
+                <p><strong>Importe rectificado:</strong> ${factura.total ? `${factura.total}€` : ''}</p>
             </div>`;
         } else {
             rectInfoDiv.style.display = 'none';

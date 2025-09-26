@@ -1,6 +1,6 @@
-import { API_GASTOS as API_GASTOS_CONST, IP_SERVER, PORT } from '../static/constantes.js';
-// Usar la constante si existe; si no, inferir del host actual
-const API_GASTOS = API_GASTOS_CONST || `http://${window.location.hostname || IP_SERVER}:${PORT}/api/gastos`;
+import { API_GASTOS as API_GASTOS_CONST } from '../static/constantes.js';
+// Usar exclusivamente la URL de constantes.js
+const API_GASTOS = API_GASTOS_CONST;
 import { formatearImporte, debounce } from '../static/scripts_utils.js';
 import { mostrarNotificacion } from '../static/notificaciones.js';
 

@@ -21,6 +21,59 @@ def D(x):
     except Exception:
         return Decimal('0')
 
+
+def _split_sign(s: str):
+    neg = s.startswith('-')
+    return ('-', s[1:]) if neg else ('', s)
+
+
+def format_number_es_max5(val):
+    if val is None:
+        return ''
+    s = str(val).replace(',', '.')
+    sign, rest = _split_sign(s)
+    if '.' in rest:
+        entero, dec = rest.split('.', 1)
+    else:
+        entero, dec = rest, ''
+    try:
+        entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    except Exception:
+        entero_fmt = entero
+    if dec:
+        dec = dec[:5].rstrip('0')
+    return f"{sign}{entero_fmt}{(',' + dec) if dec else ''}"
+
+
+def _to_decimal(val, default='0'):
+    if val is None:
+        return Decimal(default)
+    try:
+        return Decimal(str(val).replace(',', '.'))
+    except Exception:
+        return Decimal(default)
+
+
+def format_currency_es_two(val):
+    if val is None or val == '':
+        return ''
+    dec_val = _to_decimal(val)
+    dec_val = dec_val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    s = format(dec_val, 'f')
+    sign, rest = _split_sign(s)
+    entero, _, dec = rest.partition('.')
+    try:
+        entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    except Exception:
+        entero_fmt = entero
+    return f"{sign}{entero_fmt},{dec or '00'}"
+
+
+def format_percentage(val):
+    if val is None or val == '':
+        return ''
+    return f"{format_number_es_max5(val)}%"
+
 def tickets_paginado():
     """Obtiene tickets con paginación y filtros"""
     try:
@@ -106,14 +159,22 @@ def tickets_paginado():
 
         data_sql = f"SELECT t.* FROM tickets t{where_sql}{order_by} LIMIT ? OFFSET ?"
         cursor.execute(data_sql, (*params, page_size, offset))
-        items = [dict(row) for row in cursor.fetchall()]
+        raw_rows = cursor.fetchall()
+        items = []
+        for row in raw_rows:
+            ticket_dict = dict(row)
+            ticket_dict['importe_bruto'] = format_currency_es_two(ticket_dict.get('importe_bruto'))
+            ticket_dict['importe_impuestos'] = format_currency_es_two(ticket_dict.get('importe_impuestos'))
+            ticket_dict['importe_cobrado'] = format_currency_es_two(ticket_dict.get('importe_cobrado'))
+            ticket_dict['total'] = format_currency_es_two(ticket_dict.get('total'))
+            items.append(ticket_dict)
 
         # Calcular totales globales según el estado del filtro
         totales_globales = {
-            'total_base': 0,
-            'total_iva': 0,
-            'total_cobrado': 0,
-            'total_total': 0
+            'total_base': '0,00',
+            'total_iva': '0,00',
+            'total_cobrado': '0,00',
+            'total_total': '0,00'
         }
         
         # Solo calcular totales si hay un estado específico en el filtro
@@ -127,13 +188,13 @@ def tickets_paginado():
                 FROM tickets t{where_sql}
             '''
             cursor.execute(totales_sql, params)
-            totales_row = cursor.fetchone()
-            
+            totales_row = cursor.fetchone() or {}
+
             totales_globales = {
-                'total_base': float(totales_row['total_base'] or 0),
-                'total_iva': float(totales_row['total_iva'] or 0),
-                'total_cobrado': float(totales_row['total_cobrado'] or 0),
-                'total_total': float(totales_row['total_total'] or 0)
+                'total_base': format_currency_es_two(totales_row.get('total_base', 0)),
+                'total_iva': format_currency_es_two(totales_row.get('total_iva', 0)),
+                'total_cobrado': format_currency_es_two(totales_row.get('total_cobrado', 0)),
+                'total_total': format_currency_es_two(totales_row.get('total_total', 0))
             }
 
         total_pages = (total_rows + page_size - 1) // page_size if page_size else 1
@@ -336,22 +397,14 @@ def obtener_ticket_con_detalles(id_ticket):
         ticket_dict = dict(ticket)
         detalles_list = [dict(detalle) for detalle in detalles]
 
-        # USAR LÓGICA UNIFICADA: Recalcular totales por línea
-        base_sum = 0
-        iva_sum = 0
-        total_sum = 0
-        
-        for d in detalles_list:
-            resultado = calcular_importes(d.get('cantidad'), d.get('precio'), d.get('impuestos', '21'))  # Usar IVA del detalle o 21% por defecto
-            
-            base_sum += resultado['subtotal']
-            iva_sum += resultado['iva']
-            total_sum += resultado['total']
-        
-        # Actualizar los valores calculados en ticket_dict
-        ticket_dict['importe_bruto'] = base_sum
-        ticket_dict['importe_impuestos'] = iva_sum
-        ticket_dict['total'] = total_sum
+        base_total_dec = _to_decimal(ticket_dict.get('importe_bruto'))
+        iva_total_dec = _to_decimal(ticket_dict.get('importe_impuestos'))
+        total_total_dec = _to_decimal(ticket_dict.get('total'))
+
+        ticket_dict['importe_bruto'] = format_currency_es_two(base_total_dec)
+        ticket_dict['importe_impuestos'] = format_currency_es_two(iva_total_dec)
+        ticket_dict['total'] = format_currency_es_two(total_total_dec)
+        ticket_dict['importe_cobrado'] = format_currency_es_two(ticket_dict.get('importe_cobrado'))
 
         # Obtener datos VERI*FACTU (QR y CSV) si existen
         cursor.execute('SELECT codigo_qr, csv FROM registro_facturacion WHERE ticket_id = ?', (id_ticket,))
@@ -359,10 +412,19 @@ def obtener_ticket_con_detalles(id_ticket):
         codigo_qr = reg['codigo_qr'] if reg else None
         csv = reg['csv'] if reg else None
 
+        formatted_detalles = []
+        for detalle in detalles_list:
+            detalle_fmt = detalle.copy()
+            detalle_fmt['cantidad'] = format_number_es_max5(detalle.get('cantidad'))
+            detalle_fmt['precio'] = format_number_es_max5(detalle.get('precio'))
+            detalle_fmt['impuestos'] = format_percentage(detalle.get('impuestos'))
+            detalle_fmt['total'] = format_currency_es_two(detalle.get('total'))
+            formatted_detalles.append(detalle_fmt)
+
         # Combinar ticket, detalles y datos VERI*FACTU
         resultado = {
             'ticket': ticket_dict,
-            'detalles': detalles_list,
+            'detalles': formatted_detalles,
             'codigo_qr': codigo_qr,
             'csv': csv
         }

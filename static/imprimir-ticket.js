@@ -1,7 +1,7 @@
 /**
  * Función principal que se ejecuta al cargar la página.
  */
-import { formatearImporte, formatearImporteVariable, parsearImporte, truncarDecimales } from './scripts_utils.js';
+import { IP_SERVER, PORT } from './constantes.js';
 
 window.onload = function() {
     const idTicket = obtenerIdTicket(); // Obtener el ID del ticket desde la URL
@@ -35,26 +35,14 @@ function obtenerIdTicket() {
  * @returns {Promise<Object>} Una promesa que resuelve con los datos del ticket.
  */
 function obtenerDatosDelTicket(idTicket) {
-    return new Promise((resolve, reject) => {
-        // URL de la API para obtener los datos del ticket
-        // Endpoint para obtener ticket con detalles y datos VERI*FACTU
-        const url = `/api/tickets/obtenerTicket/${encodeURIComponent(idTicket)}`;
-
-        // Hacer la solicitud al servidor
-        fetch(url)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json(); // Parsear la respuesta como JSON
-            })
-            .then(data => {
-                resolve(data); // Resolver la promesa con los datos obtenidos
-            })
-            .catch(error => {
-                reject(error); // Rechazar la promesa si hay un error
-            });
-    });
+    const url = `http://${IP_SERVER}:${PORT}/api/tickets/obtenerTicket/${encodeURIComponent(idTicket)}`;
+    return fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        });
 }
 
 /**
@@ -163,33 +151,24 @@ async function rellenarFactura(datos) {
     tbody.innerHTML = ''; // Limpiar cualquier contenido existente
 
     detalles.forEach(detalle => {
-        // Asegurar números aunque vengan como string con formato europeo
-        const precioNum = (typeof detalle.precio === 'number') ? detalle.precio : parsearImporte(detalle.precio);
-        const cantidadNum = (typeof detalle.cantidad === 'number') ? detalle.cantidad : parsearImporte(detalle.cantidad);
-        const ivaNumRaw = (typeof detalle.impuestos === 'number') ? detalle.impuestos : parsearImporte(detalle.impuestos);
-        const ivaPct    = Math.round(truncarDecimales(ivaNumRaw || 0, 2));
-        // Calcular subtotal SIN IVA (cantidad × precio)
-        const subtotal = (precioNum || 0) * (cantidadNum || 0);
         const fila = document.createElement('tr');
+        const precioRaw = (detalle.precio ?? '').toString();
+        const cantidadRaw = (detalle.cantidad ?? '').toString();
+        const subtotalRaw = (detalle.total ?? '').toString();
 
-        // Mostrar subtotal SIN IVA (eliminada columna IVA %)
         fila.innerHTML = `
-            <td>${detalle.concepto}</td>
-            <td class="numero">${formatearImporteVariable(precioNum, 2, 5)}</td>
-            <td class="numero">${cantidadNum}</td>
-            <td class="numero">${formatearImporte(subtotal)}</td>
+            <td>${detalle.concepto || ''}</td>
+            <td class="numero">${precioRaw ? `${precioRaw} €` : ''}</td>
+            <td class="numero">${cantidadRaw}</td>
+            <td class="numero">${subtotalRaw ? `${subtotalRaw} €` : ''}</td>
         `;
 
         tbody.appendChild(fila);
     });
 
-    // Rellenar los totales (parseando por si vienen como string)
-     const brutoNum = (typeof ticket.importe_bruto === 'number') ? ticket.importe_bruto : parsearImporte(ticket.importe_bruto);
-     const ivaTotNum = (typeof ticket.importe_impuestos === 'number') ? ticket.importe_impuestos : parsearImporte(ticket.importe_impuestos);
-     const totalNumTicket = (typeof ticket.total === 'number') ? ticket.total : parsearImporte(ticket.total);
-     document.getElementById('base-imponible').textContent = formatearImporte(brutoNum);
-     document.getElementById('iva').textContent = formatearImporte(ivaTotNum);
-     document.getElementById('total').textContent = formatearImporte(totalNumTicket);
+    document.getElementById('base-imponible').textContent = ticket.importe_bruto ? `${ticket.importe_bruto} €` : '';
+    document.getElementById('iva').textContent = ticket.importe_impuestos ? `${ticket.importe_impuestos} €` : '';
+    document.getElementById('total').textContent = ticket.total ? `${ticket.total} €` : '';
 
     // Mostrar información VERI*FACTU
     const verifactuDisponible = datos.codigo_qr && datos.codigo_qr.length > 50;

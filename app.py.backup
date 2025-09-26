@@ -87,19 +87,6 @@ try:
 except Exception as e:
     print(f"[AVISO] No se pudo asegurar la tabla de franjas de descuento: {e}")
 
-# ================== HTML: imprimir ticket ================== #
-@app.route('/api/imprimir-ticket.html', methods=['GET'])
-def servir_imprimir_ticket_html():
-    """Sirve la página de impresión del ticket desde static para la ruta /api/.."""
-    try:
-        ruta = os.path.join(BASE_DIR, 'static', 'imprimir-ticket.html')
-        if not os.path.exists(ruta):
-            return Response('imprimir-ticket.html no encontrado', status=404)
-        # No alteramos el contenido: la propia página/JS leerá ticketId de la query
-        return send_file(ruta)
-    except Exception as e:
-        return Response(f'Error sirviendo imprimir-ticket.html: {e}', status=500)
-
 # ================== API: aplicar franjas a todos los productos ================== #
 @app.route('/api/productos/aplicar_franjas', methods=['POST'])
 def api_aplicar_franjas_todos():
@@ -1987,55 +1974,27 @@ def obtener_factura_para_imprimir(factura_id):
             resultado = dict(zip(columnas, row))
             resultados_dict.append(resultado)
 
+        # Recalcular BASE/IVA/TOTAL con redondeo por línea (ROUND_HALF_UP, 2 decimales)
+        # para evitar discrepancias de coma flotante (p.ej. 56,11 vs 56,12)
         from decimal import Decimal, ROUND_HALF_UP
-
-        def _split_sign(s: str):
-            neg = s.startswith('-')
-            return ('-', s[1:]) if neg else ('', s)
-
-        def format_number_es_max5(val):
-            if val is None:
-                return ''
-            s = str(val).replace(',', '.')
-            sign, rest = _split_sign(s)
-            if '.' in rest:
-                entero, dec = rest.split('.', 1)
-            else:
-                entero, dec = rest, ''
+        def D(x):
             try:
-                entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                return Decimal(str(x if x is not None else '0'))
             except Exception:
-                entero_fmt = entero
-            if dec:
-                dec = dec[:5].rstrip('0')
-            return f"{sign}{entero_fmt}{(',' + dec) if dec else ''}"
-
-        def _to_decimal(val, default='0'):
-            if val is None:
-                return Decimal(default)
-            try:
-                return Decimal(str(val).replace(',', '.'))
-            except Exception:
-                return Decimal(default)
-
-        def format_currency_es_two(val):
-            if val is None or val == '':
-                return ''
-            dec_val = _to_decimal(val)
-            dec_val = dec_val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            s = format(dec_val, 'f')
-            sign, rest = _split_sign(s)
-            entero, _, dec = rest.partition('.')
-            try:
-                entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
-            except Exception:
-                entero_fmt = entero
-            return f"{sign}{entero_fmt},{dec or '00'}"
-
-        def format_percentage(val):
-            if val is None:
-                return ''
-            return f"{format_number_es_max5(val)}%"
+                return Decimal('0')
+        base_sum = Decimal('0')
+        for r in resultados_dict:
+            qty = D(r.get('cantidad'))
+            price = D(r.get('precio'))
+            sub = qty * price
+            # Redondear cada subtotal a 2 decimales antes de sumar
+            sub_rounded = sub.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            base_sum += sub_rounded
+        
+        # Calcular IVA sobre la base total (no por líneas)
+        tax_rate = D('21')  # Asumimos 21% para todas las líneas
+        iva_sum = (base_sum * tax_rate / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        total_sum = (base_sum + iva_sum).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         
         # Obtener código QR y hash de la tabla registro_facturacion si existe
         print(f"[DEBUG] Obteniendo QR y hash para factura_id: {factura_id}")
@@ -2152,22 +2111,20 @@ def obtener_factura_para_imprimir(factura_id):
             print("[DEBUG] qr_code_base64 es None")
         
         # Procesar los resultados
-        base_total_dec = Decimal('0')
-        iva_total_dec = Decimal('0')
-
         factura = {
             'id': resultados_dict[0]['id'],
             'numero': resultados_dict[0]['numero'],
             'fecha': format_date(resultados_dict[0]['fecha']),
             'fvencimiento': format_date(resultados_dict[0]['fvencimiento']) if resultados_dict[0]['fvencimiento'] else None,
-            'base': format_currency_es_two(resultados_dict[0].get('base')), 
-            'iva': format_currency_es_two(resultados_dict[0].get('iva')),
-            'total': format_currency_es_two(resultados_dict[0].get('total')),
+            # Usar los valores recalculados para asegurar consistencia de redondeo
+            'base': float(base_sum),
+            'iva': float(iva_sum),
+            'total': float(total_sum),
             'estado': resultados_dict[0]['estado'],
             'tipo': resultados_dict[0]['tipo'],
             'id_factura_rectificada': resultados_dict[0]['id_factura_rectificada'],
             'formaPago': resultados_dict[0]['formaPago'],
-            'importe_cobrado': format_currency_es_two(resultados_dict[0].get('importe_cobrado')),
+            'importe_cobrado': float(resultados_dict[0]['importe_cobrado']) if resultados_dict[0]['importe_cobrado'] is not None else 0.0,
             'hash_verifactu': (hash_value if VERIFACTU_HABILITADO else None),
             'qr_verifactu': (qr_code_base64 if VERIFACTU_HABILITADO else None),
             'contacto': {
@@ -2188,34 +2145,23 @@ def obtener_factura_para_imprimir(factura_id):
         # Procesar las líneas de la factura
         for resultado in resultados_dict:
             if resultado['concepto'] or resultado['descripcion']:  # Solo si hay concepto o descripción (evita líneas nulas)
-                qty_dec = _to_decimal(resultado.get('cantidad'))
-                price_dec = _to_decimal(resultado.get('precio'))
-                iva_pct_dec = _to_decimal(resultado.get('impuestos'))
-                base_line = (qty_dec * price_dec).quantize(Decimal('0.00001'), rounding=ROUND_HALF_UP)
-                iva_line = (base_line * iva_pct_dec / Decimal('100')).quantize(Decimal('0.00001'), rounding=ROUND_HALF_UP)
-                base_total_dec += base_line
-                iva_total_dec += iva_line
-
+                # Calcular subtotal SIN IVA para mostrar en las líneas
+                cantidad = float(resultado['cantidad']) if resultado['cantidad'] is not None else 0.0
+                precio = float(resultado['precio']) if resultado['precio'] is not None else 0.0
+                subtotal_sin_iva = round(cantidad * precio, 2)
+                
                 linea = {
                     'concepto': resultado['concepto'],
                     'descripcion': resultado['descripcion'],
-                    'cantidad': format_number_es_max5(resultado.get('cantidad')),
-                    'precio': format_number_es_max5(resultado.get('precio')) if resultado.get('precio') is not None else '',
-                    'impuestos': format_percentage(resultado.get('impuestos')),
-                    'total': format_currency_es_two(base_line),
+                    'cantidad': cantidad,
+                    'precio': precio,
+                    'impuestos': float(resultado['impuestos']) if resultado['impuestos'] is not None else 0.0,
+                    'total': subtotal_sin_iva,  # Subtotal SIN IVA
                     'productoId': resultado['productoId'] if 'productoId' in resultado else None,
                     'fechaDetalle': resultado['fechaDetalle'] if 'fechaDetalle' in resultado else None
                 }
                 print(f"Agregando línea de detalle: {linea}")  # Debug
                 factura['detalles'].append(linea)
-
-        # Si los importes de cabecera no existen, usar sumas calculadas
-        if not factura['base']:
-            factura['base'] = format_currency_es_two(base_total_dec)
-        if not factura['iva']:
-            factura['iva'] = format_currency_es_two(iva_total_dec)
-        if not factura['total']:
-            factura['total'] = format_currency_es_two(base_total_dec + iva_total_dec)
 
         print("Datos completos de factura a enviar:", factura)  # Debug
         cursor.close()
@@ -2425,7 +2371,59 @@ def estado_scraping():
             'error': f'Error al verificar el estado: {str(e)}'
         }), 500
 
-# Endpoints de notificaciones eliminados por requerimiento: no se sirve histórico ni SSE
+@app.route('/notificaciones', methods=['GET'])
+def api_notificaciones():
+    conn = sqlite3.connect(app.config['DATABASE'])
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM notificaciones ORDER BY timestamp DESC LIMIT 50")
+    notificaciones = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(notificaciones)
+
+
+@app.route('/notificaciones/stream')
+@app.route('/api/notificaciones/stream')
+def notificaciones_stream():
+    """Flujo SSE para notificaciones en tiempo real"""
+    def event_stream():
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        # Asegurar que la tabla exista
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS notificaciones (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tipo TEXT NOT NULL,
+                mensaje TEXT NOT NULL,
+                timestamp TEXT NOT NULL
+            )
+        """)
+        conn.commit()
+        last_id = 0
+        KEEPALIVE_INTERVAL = 15  # segundos entre latidos
+        while True:
+            cursor.execute("SELECT id, tipo, mensaje FROM notificaciones WHERE id > ? ORDER BY id", (last_id,))
+            rows = cursor.fetchall()
+            if not rows:
+                # Enviar latido para mantener viva la conexión
+                yield ": keep-alive\n\n"
+                time.sleep(KEEPALIVE_INTERVAL)
+                continue
+            for row in rows:
+                last_id = row['id']
+                payload = json.dumps({'mensaje': row['mensaje'], 'tipo': row['tipo']})
+                yield f"data: {payload}\n\n"
+                # Pausa breve para evitar que lleguen todas las notificaciones de golpe
+                time.sleep(0.5)
+                # Eliminar notificación tras enviarla para que no se repita
+                try:
+                    cursor.execute("DELETE FROM notificaciones WHERE id = ?", (row['id'],))
+                    conn.commit()
+                except Exception as _e:
+                    print(f"Error eliminando notificación {row['id']}: {_e}")
+            time.sleep(0.8)
+    headers = {'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'}
+    return Response(stream_with_context(event_stream()), mimetype='text/event-stream', headers=headers)
 
 # Rutas para imprimir facturas como PDF
 @app.route('/imprimir_factura_pdf/<int:id_factura>', methods=['GET'])

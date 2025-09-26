@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 
 from flask import Blueprint, Flask, jsonify, request, send_file
 import utilities
@@ -10,6 +11,74 @@ from db_utils import (
     obtener_numerador,
     redondear_importe,
 )
+
+
+def _split_sign(s: str):
+    neg = s.startswith('-')
+    return ('-', s[1:]) if neg else ('', s)
+
+
+def _to_decimal(val, default='0'):
+    if val is None or val == '':
+        return Decimal(default)
+    try:
+        return Decimal(str(val).replace(',', '.'))
+    except Exception:
+        return Decimal(default)
+
+
+def format_number_es_max5(val):
+    if val is None or val == '':
+        return ''
+    s = str(val).replace(',', '.')
+    sign, rest = _split_sign(s)
+    if '.' in rest:
+        entero, dec = rest.split('.', 1)
+    else:
+        entero, dec = rest, ''
+    try:
+        entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    except Exception:
+        entero_fmt = entero
+    if dec:
+        dec = dec[:5].rstrip('0')
+    return f"{sign}{entero_fmt}{(',' + dec) if dec else ''}"
+
+
+def format_currency_es_two(val):
+    dec_val = _to_decimal(val)
+    dec_val = dec_val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    s = format(dec_val, 'f')
+    sign, rest = _split_sign(s)
+    entero, _, dec = rest.partition('.')
+    try:
+        entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    except Exception:
+        entero_fmt = entero
+    return f"{sign}{entero_fmt},{dec or '00'}"
+
+
+def _formatear_detalle_presupuesto(detalle_row):
+    det_dict = dict(detalle_row)
+    det_dict['cantidad'] = format_number_es_max5(det_dict.get('cantidad'))
+    det_dict['precio'] = format_number_es_max5(det_dict.get('precio'))
+    det_dict['impuestos'] = format_number_es_max5(det_dict.get('impuestos'))
+    det_dict['total'] = format_currency_es_two(det_dict.get('total'))
+    return det_dict
+
+
+def _obtener_detalles_formateados(cursor, presupuesto_id):
+    detalles_rows = cursor.execute(
+        'SELECT * FROM detalle_presupuesto WHERE id_presupuesto = ? ORDER BY id', (presupuesto_id,)
+    ).fetchall()
+    return [_formatear_detalle_presupuesto(row) for row in detalles_rows]
+
+
+def _formatear_importes_presupuesto(data):
+    for key in ('importe_bruto', 'importe_impuestos', 'importe_cobrado', 'total'):
+        if key in data:
+            data[key] = format_currency_es_two(data.get(key))
+    return data
 
 presupuesto_bp = Blueprint('presupuestos', __name__)
 
@@ -132,12 +201,8 @@ def obtener_presupuesto(id):
         if not presupuesto:
             return jsonify({'error': 'Presupuesto no encontrado'}), 404
 
-        detalles = cursor.execute(
-            'SELECT * FROM detalle_presupuesto WHERE id_presupuesto = ? ORDER BY id', (id,)
-        ).fetchall()
-
-        resultado = dict(presupuesto)
-        resultado['detalles'] = [dict(detalle) for detalle in detalles]
+        resultado = _formatear_importes_presupuesto(dict(presupuesto))
+        resultado['detalles'] = _obtener_detalles_formateados(cursor, id)
         
         # Buscar datos del contacto si existe idcontacto (minúscula)
         print(f"[DEBUG] idcontacto en presupuesto: {resultado.get('idcontacto')}")
@@ -268,9 +333,9 @@ def obtener_presupuesto_abierto(idcontacto):
         contacto_dict = dict(contacto)
 
         sql = '''
-            SELECT p.id, p.numero, p.fecha, p.estado, p.tipo, p.total, p.idcontacto
+            SELECT p.id, p.numero, p.fecha, p.estado, p.tipo, p.total, p.idContacto AS idcontacto
             FROM presupuesto p
-            WHERE p.idcontacto = ? AND p.estado = 'B'
+            WHERE p.idContacto = ? AND p.estado = 'B'
             ORDER BY p.fecha DESC, p.id DESC
             LIMIT 1
         '''
@@ -278,33 +343,18 @@ def obtener_presupuesto_abierto(idcontacto):
         presupuesto = cursor.fetchone()
 
         if presupuesto:
-            presupuesto_dict = dict(presupuesto)
-            cursor.execute('''
-                SELECT id, concepto, descripcion, cantidad, precio, impuestos, total,
-                       formaPago, productoId, fechaDetalle
-                FROM detalle_presupuesto
-                WHERE id_presupuesto = ?
-                ORDER BY id
-            ''', (presupuesto_dict['id'],))
-            detalles = cursor.fetchall()
+            presupuesto_dict = _formatear_importes_presupuesto(dict(presupuesto))
+            detalles = _obtener_detalles_formateados(cursor, presupuesto_dict['id'])
             return jsonify({
                 'modo': 'edicion',
                 'id': presupuesto_dict['id'],
                 'numero': presupuesto_dict['numero'],
                 'fecha': presupuesto_dict['fecha'],
                 'estado': presupuesto_dict['estado'],
-                'tipo': presupuesto_dict.get('tipo', 'N'),
-                'total': presupuesto_dict['total'],
-                'contacto': {
-                    'idContacto': contacto_dict['idContacto'],
-                    'razonsocial': contacto_dict['razonsocial'],
-                    'identificador': contacto_dict['identificador'],
-                    'direccion': contacto_dict['direccion'],
-                    'cp': contacto_dict['cp'],
-                    'localidad': contacto_dict['localidad'],
-                    'provincia': contacto_dict['provincia'],
-                },
-                'detalles': [dict(d) for d in detalles],
+                'tipo': presupuesto_dict['tipo'],
+                'total': presupuesto_dict.get('total'),
+                'contacto': contacto_dict,
+                'detalles': detalles
             })
         else:
             return jsonify({
@@ -366,7 +416,7 @@ def consultar_presupuestos():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        sql = """
+        base_sql = """
             SELECT 
                 p.id,
                 p.fecha,
@@ -377,40 +427,41 @@ def consultar_presupuestos():
                 p.importe_impuestos as iva,
                 p.importe_cobrado,
                 p.total,
-                p.idcontacto,
+                p.idContacto AS idcontacto,
                 c.razonsocial,
                 c.mail
             FROM presupuesto p
-            LEFT JOIN contactos c ON p.idcontacto = c.idContacto
+            LEFT JOIN contactos c ON p.idContacto = c.idContacto
             WHERE 1=1
         """
+        filtros_sql = ""
         params = []
 
         if fecha_inicio and (not hay_filtros_adicionales):
-            sql += " AND p.fecha >= ?"
+            filtros_sql += " AND p.fecha >= ?"
             params.append(fecha_inicio)
         if fecha_fin and (not hay_filtros_adicionales):
-            sql += " AND p.fecha <= ?"
+            filtros_sql += " AND p.fecha <= ?"
             params.append(fecha_fin)
         if estado:
-            sql += " AND p.estado = ?"
+            filtros_sql += " AND p.estado = ?"
             params.append(estado)
         else:
-            sql += " AND p.estado <> 'A0'"
+            filtros_sql += " AND p.estado <> 'A0'"
         if numero:
-            sql += " AND p.numero LIKE ?"
+            filtros_sql += " AND p.numero LIKE ?"
             params.append(f"%{numero}%")
         if contacto:
-            sql += " AND c.razonsocial LIKE ?"
+            filtros_sql += " AND c.razonsocial LIKE ?"
             params.append(f"%{contacto}%")
         if identificador:
-            sql += " AND c.identificador LIKE ?"
+            filtros_sql += " AND c.identificador LIKE ?"
             params.append(f"%{identificador}%")
         if concepto:
-            sql += " AND EXISTS (SELECT 1 FROM detalle_presupuesto dp WHERE dp.id_presupuesto = p.id AND dp.concepto LIKE ?)"
+            filtros_sql += " AND EXISTS (SELECT 1 FROM detalle_presupuesto dp WHERE dp.id_presupuesto = p.id AND dp.concepto LIKE ?)"
             params.append(f"%{concepto}%")
 
-        sql += " ORDER BY p.fecha DESC LIMIT 100"
+        sql = f"{base_sql}{filtros_sql} ORDER BY p.fecha DESC LIMIT 100"
 
         try:
             print("[CONSULTA_PRESUPUESTOS][SQL]", sql, "PARAMS", params)
@@ -418,18 +469,71 @@ def consultar_presupuestos():
             pass
 
         cursor.execute(sql, params)
-        items = cursor.fetchall()
+        rows = cursor.fetchall()
 
         columnas = [desc[0] for desc in cursor.description]
         result = []
-        for row in items:
-            item = dict(zip(columnas, row))
-            for k in ('base', 'iva', 'importe_cobrado', 'total'):
-                if k in item and item[k] is not None:
-                    item[k] = float(item[k])
-            result.append(item)
+        for row in rows:
+            raw = dict(zip(columnas, row))
+            result.append({
+                'id': raw.get('id'),
+                'fecha': raw.get('fecha'),
+                'numero': raw.get('numero'),
+                'estado': raw.get('estado'),
+                'tipo': raw.get('tipo'),
+                'base': format_currency_es_two(raw.get('base')), 
+                'iva': format_currency_es_two(raw.get('iva')),
+                'importe_cobrado': format_currency_es_two(raw.get('importe_cobrado')),
+                'total': format_currency_es_two(raw.get('total')),
+                'idcontacto': raw.get('idcontacto'),
+                'razonsocial': raw.get('razonsocial'),
+                'mail': raw.get('mail')
+            })
 
-        return jsonify(result)
+        totales_globales = {
+            'total_base': '0,00',
+            'total_iva': '0,00',
+            'total_cobrado': '0,00',
+            'total_total': '0,00'
+        }
+
+        totales_sql = f"""
+            SELECT 
+                SUM(p.importe_bruto) as total_base,
+                SUM(p.importe_impuestos) as total_iva,
+                SUM(p.importe_cobrado) as total_cobrado,
+                SUM(p.total) as total_total
+            FROM presupuesto p
+            LEFT JOIN contactos c ON p.idContacto = c.idContacto
+            WHERE 1=1{filtros_sql}
+        """
+
+        cursor.execute(totales_sql, params)
+        tot_row = cursor.fetchone()
+
+        if tot_row:
+            if isinstance(tot_row, sqlite3.Row):
+                total_base = tot_row['total_base'] or 0
+                total_iva = tot_row['total_iva'] or 0
+                total_cobrado = tot_row['total_cobrado'] or 0
+                total_total = tot_row['total_total'] or 0
+            else:
+                total_base = tot_row[0] or 0
+                total_iva = tot_row[1] or 0
+                total_cobrado = tot_row[2] or 0
+                total_total = tot_row[3] or 0
+
+            totales_globales = {
+                'total_base': format_currency_es_two(total_base),
+                'total_iva': format_currency_es_two(total_iva),
+                'total_cobrado': format_currency_es_two(total_cobrado),
+                'total_total': format_currency_es_two(total_total)
+            }
+
+        return jsonify({
+            'items': result,
+            'totales_globales': totales_globales
+        })
 
     except Exception as e:
         print(f"Error en consultar_presupuestos: {str(e)}")
@@ -679,7 +783,7 @@ def generar_pdf_presupuesto(id):
         cursor.execute('''
             SELECT p.*, c.razonsocial, c.mail, c.direccion, c.localidad as poblacion, c.provincia, c.cp as codigopostal, c.telf1, c.identificador as nif
             FROM presupuesto p
-            LEFT JOIN contactos c ON p.idcontacto = c.idContacto
+            LEFT JOIN contactos c ON p.idContacto = c.idContacto
             WHERE p.id = ?
         ''', (id,))
         
@@ -726,24 +830,22 @@ def generar_pdf_presupuesto(id):
         total_iva = sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles)
         total_final = subtotal + total_iva
         
-        # Generar filas de detalles
+        # Generar filas de detalles (sin columna específica de IVA)
         detalles_html = ""
         for detalle in detalles:
             precio_unitario = float(detalle['precio'])
             cantidad = int(detalle['cantidad'])
             impuestos = float(detalle['impuestos'])
             subtotal_linea = precio_unitario * cantidad
-            iva_linea = subtotal_linea * (impuestos / 100)
-            total_linea = subtotal_linea + iva_linea
+            precio_unitario_fmt = format_number_es_max5(detalle.get('precio'))
             
             detalles_html += f"""
             <tr>
                 <td>{detalle['concepto']}</td>
                 <td>{detalle['descripcion'] or ''}</td>
                 <td style="text-align: center;">{cantidad}</td>
-                <td style="text-align: right;">{precio_unitario:.2f}€</td>
-                <td style="text-align: center;">{impuestos:.0f}%</td>
-                <td style="text-align: right;">{total_linea:.2f}€</td>
+                <td style="text-align: right;">{precio_unitario_fmt}€</td>
+                <td style="text-align: right;">{format_currency_es_two(subtotal_linea)}€</td>
             </tr>
             """
         
@@ -804,9 +906,9 @@ def generar_pdf_presupuesto(id):
         html_content = html_content.replace('{{ESTADO_TEXTO}}', estado_texto)
         html_content = html_content.replace('{{FECHA_VALIDEZ}}', fecha_validez)
         html_content = html_content.replace('{{DETALLES_HTML}}', detalles_html)
-        html_content = html_content.replace('{{SUBTOTAL}}', f"{subtotal:.2f}")
-        html_content = html_content.replace('{{TOTAL_IVA}}', f"{total_iva:.2f}")
-        html_content = html_content.replace('{{TOTAL_FINAL}}', f"{total_final:.2f}")
+        html_content = html_content.replace('{{SUBTOTAL}}', format_currency_es_two(subtotal))
+        html_content = html_content.replace('{{TOTAL_IVA}}', format_currency_es_two(total_iva))
+        html_content = html_content.replace('{{TOTAL_FINAL}}', format_currency_es_two(total_final))
         
         # Modificar ruta del logo para usar ruta absoluta
         html_content = html_content.replace('src="/static/img/logo.png"', 'src="file:///var/www/html/static/img/logo.png"')
@@ -846,7 +948,7 @@ def enviar_email_presupuesto(id):
         cursor.execute('''
             SELECT p.*, c.razonsocial, c.mail, c.direccion, c.localidad as poblacion, c.provincia, c.cp as codigopostal, c.telf1, c.identificador as nif
             FROM presupuesto p
-            LEFT JOIN contactos c ON p.idcontacto = c.idContacto
+            LEFT JOIN contactos c ON p.idContacto = c.idContacto
             WHERE p.id = ?
         ''', (id,))
         
@@ -977,9 +1079,9 @@ def enviar_email_presupuesto(id):
         html_content = html_content.replace('{{ESTADO_TEXTO}}', estado_texto)
         html_content = html_content.replace('{{FECHA_VALIDEZ}}', fecha_validez)
         html_content = html_content.replace('{{DETALLES_HTML}}', detalles_html)
-        html_content = html_content.replace('{{SUBTOTAL}}', f"{subtotal:.2f}")
-        html_content = html_content.replace('{{TOTAL_IVA}}', f"{total_iva:.2f}")
-        html_content = html_content.replace('{{TOTAL_FINAL}}', f"{total_final:.2f}")
+        html_content = html_content.replace('{{SUBTOTAL}}', format_currency_es_two(subtotal))
+        html_content = html_content.replace('{{TOTAL_IVA}}', format_currency_es_two(total_iva))
+        html_content = html_content.replace('{{TOTAL_FINAL}}', format_currency_es_two(total_final))
 
         # Asegurar ruta absoluta del logo
         html_content = html_content.replace('src="/static/img/logo.png"', 'src="file:///var/www/html/static/img/logo.png"')

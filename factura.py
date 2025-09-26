@@ -864,52 +864,59 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
         cursor.execute(data_sql, params_limit)
         rows = cursor.fetchall()
 
+        def _split_sign(s: str):
+            neg = s.startswith('-')
+            return ('-', s[1:]) if neg else ('', s)
+
+        def format_currency_es_two(val):
+            """Formatea importes con coma decimal y punto de miles, redondeando a 2 decimales."""
+            if val is None or val == '':
+                val = 0
+            s = str(val)
+            try:
+                normalized = s.replace(',', '.')
+                dec_val = Decimal(normalized)
+            except Exception:
+                return '0,00'
+            dec_rounded = dec_val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            s = format(dec_rounded, 'f')
+            sign, rest = _split_sign(s)
+            entero, _, dec = rest.partition('.')
+            try:
+                entero_int = int(entero)
+                entero_fmt = f"{entero_int:,}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            except Exception:
+                entero_fmt = entero
+            return f"{sign}{entero_fmt},{dec or '00'}"
+
+        def format_total_es_two(val):
+            return format_currency_es_two(val)
+
         items = []
         if rows:
             colnames = [desc[0] for desc in cursor.description]
             for r in rows:
-                item = dict(zip(colnames, r))
-                # Recalcular base/iva/total desde detalle_factura para garantizar consistencia
-                try:
-                    cursor.execute('SELECT cantidad, precio FROM detalle_factura WHERE id_factura = ? ORDER BY id', (item['id'],))
-                    dets = cursor.fetchall() or []
-                    base_sum = Decimal('0')
-                    for d in dets:
-                        # d puede ser sqlite3.Row o tupla
-                        qty = d['cantidad'] if isinstance(d, sqlite3.Row) else d[0]
-                        price = d['precio'] if isinstance(d, sqlite3.Row) else d[1]
-                        sub = Decimal(str(qty)) * Decimal(str(price))
-                        # Redondear cada subtotal antes de sumar
-                        sub_rounded = sub.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                        base_sum += sub_rounded
-                    
-                    # Calcular IVA sobre la base total
-                    tax_rate = Decimal('21')  # Asumimos 21% para todas las líneas
-                    iva_sum = (base_sum * tax_rate / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                    total_sum = (base_sum + iva_sum).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                    item['base'] = float(base_sum)
-                    item['iva'] = float(iva_sum)
-                    item['total'] = float(total_sum)
-                except Exception:
-                    # Fallback a valores de la tabla si hay algún error
-                    if 'base' in item and item['base'] is not None:
-                        item['base'] = float(item['base'])
-                    if 'iva' in item and item['iva'] is not None:
-                        item['iva'] = float(item['iva'])
-                    if 'total' in item and item['total'] is not None:
-                        item['total'] = float(item['total'])
-                if 'importe_cobrado' in item and item['importe_cobrado'] is not None:
-                    item['importe_cobrado'] = float(item['importe_cobrado'])
-                if 'enviado' in item:
-                    item['enviado'] = int(item['enviado']) if item['enviado'] is not None else 0
-                items.append(item)
+                raw = dict(zip(colnames, r))
+                # NO recalcular: devolver lo que hay en tabla, formateado
+                # Formatear importes con 2 decimales
+                if 'base' in raw:
+                    raw['base'] = format_currency_es_two(raw['base'])
+                if 'iva' in raw:
+                    raw['iva'] = format_currency_es_two(raw['iva'])
+                if 'importe_cobrado' in raw:
+                    raw['importe_cobrado'] = format_currency_es_two(raw['importe_cobrado'])
+                if 'total' in raw:
+                    raw['total'] = format_total_es_two(raw['total'])
+                if 'enviado' in raw:
+                    raw['enviado'] = int(raw['enviado']) if raw['enviado'] is not None else 0
+                items.append(raw)
 
-        # Calcular totales globales según el estado del filtro
+        # Calcular totales globales según el estado del filtro (como numérico) y devolver formateados
         totales_globales = {
-            'total_base': 0,
-            'total_iva': 0,
-            'total_cobrado': 0,
-            'total_total': 0
+            'total_base': '0,00',
+            'total_iva': '0,00',
+            'total_cobrado': '0,00',
+            'total_total': '0,00'
         }
         
         # Solo calcular totales si hay un estado específico en el filtro
@@ -925,13 +932,12 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                 {where_sql}
             '''
             cursor.execute(totales_sql, params)
-            totales_row = cursor.fetchone()
-            
+            tot_row = cursor.fetchone() or {}
             totales_globales = {
-                'total_base': float(totales_row['total_base'] or 0),
-                'total_iva': float(totales_row['total_iva'] or 0),
-                'total_cobrado': float(totales_row['total_cobrado'] or 0),
-                'total_total': float(totales_row['total_total'] or 0)
+                'total_base': format_currency_es_two((tot_row['total_base'] if isinstance(tot_row, sqlite3.Row) else None) or 0),
+                'total_iva': format_currency_es_two((tot_row['total_iva'] if isinstance(tot_row, sqlite3.Row) else None) or 0),
+                'total_cobrado': format_currency_es_two((tot_row['total_cobrado'] if isinstance(tot_row, sqlite3.Row) else None) or 0),
+                'total_total': format_total_es_two((tot_row['total_total'] if isinstance(tot_row, sqlite3.Row) else None) or 0)
             }
 
         total = int(total or 0)

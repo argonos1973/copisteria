@@ -193,16 +193,10 @@ def generar_factura_pdf(id_factura):
         detalles = cursor.fetchall()
         detalles_list = [dict(zip([d[0] for d in cursor.description], detalle)) for detalle in detalles]
         
-        # Usar los totales de la factura
-        base_imponible = float(factura_dict.get('importe_bruto', 0))
-        iva = float(factura_dict.get('importe_impuestos', 0))
-        total = float(factura_dict.get('total', 0))
-
-        # Si no hay totales en la factura, calcularlos desde los detalles
-        if total == 0:
-            base_imponible = sum(float(detalle['total']) for detalle in detalles_list)
-            iva = base_imponible * 0.21  # 21% IVA
-            total = base_imponible + iva
+        # Usar los totales de la factura exactamente como llegan del backend
+        base_imponible_raw = '' if factura_dict.get('importe_bruto') is None else str(factura_dict.get('importe_bruto'))
+        iva_raw = '' if factura_dict.get('importe_impuestos') is None else str(factura_dict.get('importe_impuestos'))
+        total_raw = '' if factura_dict.get('total') is None else str(factura_dict.get('total'))
 
         # Función para decodificar forma de pago
         def decodificar_forma_pago(forma_pago):
@@ -212,6 +206,44 @@ def generar_factura_pdf(id_factura):
                 'R': 'Pago por transferencia bancaria al siguiente número de cuenta ES4200494752902216156784'
             }
             return formas_pago.get(forma_pago, 'No especificada')
+
+        # Helpers de formato numérico (ES)
+        def _split_sign(s: str):
+            neg = s.startswith('-')
+            return ('-', s[1:]) if neg else ('', s)
+
+        def format_number_es_max5(val):
+            """Formatea con punto de miles y coma decimal, hasta 5 decimales (sin redondear, trunca)."""
+            if val is None:
+                return '0'
+            s = str(val).replace(',', '.')
+            sign, rest = _split_sign(s)
+            if '.' in rest:
+                entero, dec = rest.split('.', 1)
+            else:
+                entero, dec = rest, ''
+            try:
+                entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            except Exception:
+                entero_fmt = entero
+            if dec:
+                dec = dec[:5].rstrip('0')
+            return f"{sign}{entero_fmt}{(',' + dec) if dec else ''}"
+
+        def format_total_es_two(val):
+            """Formatea totales con exactamente 2 decimales, coma decimal y punto de miles."""
+            try:
+                num = float(val or 0)
+            except Exception:
+                num = 0.0
+            s = f"{num:.2f}"
+            sign, rest = _split_sign(s)
+            entero, dec = (rest.split('.') if '.' in rest else (rest, '00'))
+            try:
+                entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            except Exception:
+                entero_fmt = entero
+            return f"{sign}{entero_fmt},{dec or '00'}"
 
         # Generar el PDF
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
@@ -274,6 +306,11 @@ def generar_factura_pdf(id_factura):
             detalles_html = ""
             for detalle in detalles_list:
                 descripcion_html = f"<span class='detalle-descripcion'>{detalle.get('descripcion', '')}</span>" if detalle.get('descripcion') else ''
+                cantidad_raw = '' if detalle.get('cantidad') is None else str(detalle.get('cantidad'))
+                precio_raw = '' if detalle.get('precio') is None else str(detalle.get('precio'))
+                impuestos_raw = '' if detalle.get('impuestos') is None else str(detalle.get('impuestos'))
+                subtotal_raw = '' if detalle.get('total') is None else str(detalle.get('total'))
+
                 detalles_html += f"""
                     <tr>
                         <td>
@@ -282,10 +319,10 @@ def generar_factura_pdf(id_factura):
                                 {descripcion_html}
                             </div>
                         </td>
-                        <td class="cantidad">{detalle.get('cantidad', 0)}</td>
-                        <td class="precio">{str(float(detalle.get('precio', 0))).rstrip('0').rstrip('.').replace('.', ',')}€</td>
-                        <td class="precio">{detalle.get('impuestos', 21)}%</td>
-                        <td class="total">{"{:.2f}".format(float(detalle.get('total', 0))).replace('.', ',')}€</td>
+                        <td class="cantidad">{cantidad_raw}</td>
+                        <td class="precio">{precio_raw}</td>
+                        <td class="precio">{impuestos_raw}</td>
+                        <td class="total">{subtotal_raw}</td>
                     </tr>
                 """
 
@@ -362,13 +399,13 @@ def generar_factura_pdf(id_factura):
                 detalles_html
             ).replace(
                 'id="base"></span>',
-                f'id="base">{"{:.2f}".format(base_imponible).replace(".", ",")}€</span>'
+                f'id="base">{base_imponible_raw}</span>'
             ).replace(
                 'id="iva"></span>',
-                f'id="iva">{"{:.2f}".format(iva).replace(".", ",")}€</span>'
+                f'id="iva">{iva_raw}</span>'
             ).replace(
                 'id="total"></strong>',
-                f'id="total">{"{:.2f}".format(total).replace(".", ",")}€</strong>'
+                f'id="total">{total_raw}</strong>'
             ).replace(
                 '<p id="forma-pago">Tarjeta</p>',
                 f'<p>{decodificar_forma_pago(factura_dict.get("formaPago", "T"))}</p>'

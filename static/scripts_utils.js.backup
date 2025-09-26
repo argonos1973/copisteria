@@ -1,5 +1,4 @@
 import { IP_SERVER, PORT } from './constantes.js?v=20250911_1135';
-import { actualizarDetalleConTotal, calcularPrecioDesdeTotal } from './calculo_totales_unificado.js';
 
 export const PRODUCTO_ID_LIBRE = '94';
 
@@ -72,13 +71,60 @@ export function debounce(fn, delay = 800) {
   };
 }
 
-// --- Global fetch wrapper ---
+// === SISTEMA ANTI-DUPLICACIÓN DE LLAMADAS ===
+// === SISTEMA ANTI-DUPLICACIÓN ===
+const requestCache = new Map();
+const activeRequests = new Set();
+
+// Cache para respuestas
+function getCachedResponse(url) {
+  const cached = requestCache.get(url);
+  if (cached && Date.now() - cached.timestamp < 5000) return cached.data;
+  return null;
+}
+
+function setCachedResponse(url, data) {
+  requestCache.set(url, { data, timestamp: Date.now() });
+}
+
+// Prevenir duplicados
+function isRequestActive(url) { return activeRequests.has(url); }
+function addActiveRequest(url) { activeRequests.add(url); }
+function removeActiveRequest(url) { activeRequests.delete(url); }
+
+// Fetch optimizado
 const originalFetch = window.fetch.bind(window);
 window.fetch = async (...args) => {
+  const url = args[0];
+  const cacheKey = typeof url === "string" ? url : url.url;
+  
+  // Cache primero
+  const cached = getCachedResponse(cacheKey);
+  if (cached) return new Response(JSON.stringify(cached), {
+    status: 200, headers: { "Content-Type": "application/json" }
+  });
+  
+  // Bloquear duplicados
+  if (isRequestActive(cacheKey)) {
+    console.log("[BLOCK] Duplicado bloqueado:", cacheKey);
+    throw new Error("Petición duplicada");
+  }
+  
+  addActiveRequest(cacheKey);
   mostrarCargando();
+  
   try {
-    return await originalFetch(...args);
+    const response = await originalFetch(...args);
+    if (response.ok) {
+      try {
+        const clone = response.clone();
+        const data = await clone.json();
+        setCachedResponse(cacheKey, data);
+      } catch {}
+    }
+    return response;
   } finally {
+    removeActiveRequest(cacheKey);
     ocultarCargando();
   }
 };
@@ -179,71 +225,33 @@ export function parsearImporte(valor) {
   return isNaN(n) ? 0 : n;
 }
 
-function _valorComoString(valor) {
-  if (valor === null || valor === undefined) return '';
-  if (typeof valor === 'string') return valor.trim();
-  if (typeof valor === 'number' && Number.isFinite(valor)) {
-    return String(valor);
-  }
-  return String(valor ?? '').trim();
-}
-
-export function parsearNumeroBackend(valor, fallback = 0) {
-  if (valor === null || valor === undefined || valor === '') {
-    return fallback;
-  }
-  if (typeof valor === 'number') {
-    return Number.isFinite(valor) ? valor : fallback;
-  }
-  return parsearImporte(_valorComoString(valor)) || fallback;
-}
-
-export function normalizarDetalleBackend(detalle = {}) {
-  if (!detalle || typeof detalle !== 'object') return null;
-  return {
-    ...detalle,
-    cantidad: parsearNumeroBackend(detalle.cantidad, 0),
-    precio: parsearNumeroBackend(detalle.precio, 0),
-    impuestos: parsearNumeroBackend(detalle.impuestos, 0),
-    total: parsearNumeroBackend(detalle.total, 0)
-  };
-}
-
-export function normalizarDetallesBackend(detalles = []) {
-  return (detalles || [])
-    .map((detalle) => normalizarDetalleBackend(detalle))
-    .filter(Boolean);
-}
-
-export function normalizarImportesBackend(obj = {}, claves = ['importe_bruto', 'importe_impuestos', 'importe_cobrado', 'total']) {
-  if (!obj || typeof obj !== 'object') {
-    return {};
-  }
-  const resultado = { ...obj };
-  for (const clave of claves) {
-    if (clave in resultado) {
-      resultado[clave] = parsearNumeroBackend(resultado[clave], 0);
-    }
-  }
-  return resultado;
-}
-
 export async function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoFactura = null, tipoDocumento = 'proforma', productoId = null) {
-  // Normalizar tipoFactura vacío a 'N'
-  if (tipoFactura === '') tipoFactura = 'N';
-
-  // Excepción: Proformas tipo 'A' no aplican franjas
-  if (tipoDocumento === 'proforma' && tipoFactura === 'A') {
+  // Si tipoFactura es una cadena vacía, tratarlo como 'N' (aplicar descuentos)
+  if (tipoFactura === '') {
+    tipoFactura = 'N';
+  }
+  
+  // En tickets siempre aplicar descuentos
+  if (tipoDocumento === 'ticket') {
+    return await aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
+  }
+  
+  // En facturas nunca aplicar descuentos
+  if (tipoDocumento === 'factura') {
+    return precioUnitarioSinIVA;
+  }
+  
+  // En proformas, aplicar descuentos solo si el tipo NO es 'A'
+  if (tipoFactura === 'A') {
     return precioUnitarioSinIVA;
   }
 
-  // Tickets, Facturas, Presupuestos y Proformas (no 'A'): aplicar franjas
+  // Aplicar descuento por defecto (para proformas tipo 'N' u otros casos)
   return await aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
 }
 
-// Cache y promesas por producto para evitar solapes y reutilizar peticiones
-const pendingPromises = {};
-const cacheFranjasPorProducto = {};
+// Flag global para controlar llamadas concurrentes
+let calculandoFranjas = false;
 
 async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId) {
   if (!productoId) {
@@ -251,104 +259,98 @@ async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, product
     return precioUnitarioSinIVA;
   }
 
-  // Si ya tenemos franjas cacheadas, calcular directamente con la cantidad actual
-  if (cacheFranjasPorProducto[productoId]) {
-    return calcularPrecioConFranjas(precioUnitarioSinIVA, cantidad, cacheFranjasPorProducto[productoId], productoId);
+  // Verificar si ya hay un cálculo en progreso
+  if (calculandoFranjas) {
+    console.warn('Cálculo de franjas ya en progreso, ignorando llamada duplicada');
+    return precioUnitarioSinIVA;
   }
-  // Si hay una promesa en curso para este producto, esperar a que termine y usar el resultado
-  if (pendingPromises[productoId]) {
-    console.debug(`[Franjas] Reutilizando petición en curso para producto ${productoId}`);
-    try {
-      const franjas = await pendingPromises[productoId];
-      if (Array.isArray(franjas)) {
-        cacheFranjasPorProducto[productoId] = franjas;
-        return calcularPrecioConFranjas(precioUnitarioSinIVA, cantidad, franjas, productoId);
-      }
-      return precioUnitarioSinIVA;
-    } catch (_) {
-      return precioUnitarioSinIVA;
-    }
-  }
+
+  // Establecer flag para bloquear nuevas llamadas
+  calculandoFranjas = true;
 
   try {
     // Obtener franjas desde la base de datos
-    const fetchPromise = originalFetch(buildApiUrl(`/api/productos/${productoId}/franjas_descuento`), {
+    const response = await originalFetch(buildApiUrl(`/api/productos/${productoId}/franjas_descuento`), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
       }
     });
-    pendingPromises[productoId] = fetchPromise.then(async res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      return data.franjas || [];
-    }).finally(() => {
-      // Nota: mantenemos la promesa hasta resolver, luego será eliminada en finally más abajo
-    });
-    const franjas = await pendingPromises[productoId];
-    cacheFranjasPorProducto[productoId] = franjas;
-
-    if (franjas.length === 0) {
-      console.debug(`No hay franjas definidas para producto ${productoId}`);
+    if (!response.ok) {
+      console.warn(`Error al obtener franjas para producto ${productoId}: ${response.status}`);
+      calculandoFranjas = false; // Liberar flag en caso de error
       return precioUnitarioSinIVA;
     }
-    // Calcular con la cantidad actual
-    return calcularPrecioConFranjas(precioUnitarioSinIVA, cantidad, franjas, productoId);
+
+    const data = await response.json();
+    const franjas = data.franjas || [];
+
+    if (franjas.length === 0) {
+      console.warn(`No hay franjas definidas para producto ${productoId}`);
+      calculandoFranjas = false; // Liberar flag cuando no hay franjas
+      return precioUnitarioSinIVA;
+    }
+
+    // Buscar la franja que corresponde a la cantidad
+    let descuentoAplicable = 0;
+    let franjaAplicada = null;
+    
+    for (let i = 0; i < franjas.length; i++) {
+      const franja = franjas[i];
+      if (cantidad >= franja.min_cantidad && cantidad <= franja.max_cantidad) {
+        descuentoAplicable = franja.porcentaje_descuento;
+        franjaAplicada = {
+          min: franja.min_cantidad,
+          max: franja.max_cantidad,
+          descuento: franja.porcentaje_descuento
+        };
+        break;
+      }
+    }
+
+    // Si no se encontró franja exacta, usar la última disponible para cantidades mayores
+    if (!franjaAplicada && franjas.length > 0) {
+      const ultimaFranja = franjas[franjas.length - 1];
+      if (cantidad > ultimaFranja.max_cantidad) {
+        descuentoAplicable = ultimaFranja.porcentaje_descuento;
+        franjaAplicada = {
+          min: ultimaFranja.min_cantidad,
+          max: ultimaFranja.max_cantidad,
+          descuento: ultimaFranja.porcentaje_descuento
+        };
+      }
+    }
+
+    // Si aún no hay franja, usar precio original
+    if (!franjaAplicada) {
+      console.warn(`No se encontró franja para cantidad ${cantidad} en producto ${productoId}`);
+      return precioUnitarioSinIVA;
+    }
+
+    const factorDescuento = (100 - descuentoAplicable) / 100;
+    const precioConDescuento = precioUnitarioSinIVA * factorDescuento;
+    
+    // Mostrar información detallada en consola
+    console.log('=== CÁLCULO DE FRANJA DE DESCUENTO (BD) ===');
+    console.log(`Producto ID: ${productoId}`);
+    console.log(`Precio original: ${precioUnitarioSinIVA.toFixed(5)}€`);
+    console.log(`Cantidad: ${cantidad} unidades`);
+    console.log(`Franja aplicada: ${franjaAplicada.min}-${franjaAplicada.max} unidades`);
+    console.log(`Descuento aplicable: ${descuentoAplicable}%`);
+    console.log(`Factor de descuento: ${factorDescuento.toFixed(4)}`);
+    console.log(`Precio con descuento: ${precioConDescuento.toFixed(5)}€`);
+    console.log(`Ahorro: ${(precioUnitarioSinIVA - precioConDescuento).toFixed(5)}€`);
+    console.log('==========================================');
+    
+    return precioConDescuento;
 
   } catch (error) {
     console.error(`Error al calcular descuento por franja para producto ${productoId}:`, error);
     return precioUnitarioSinIVA;
   } finally {
-    // Limpiar promesa en curso (mantenemos cache)
-    delete pendingPromises[productoId];
+    // Liberar flag al finalizar (éxito o error)
+    calculandoFranjas = false;
   }
-}
-
-// Calcula el precio con descuento dada una lista de franjas ya obtenida
-function calcularPrecioConFranjas(precioUnitarioSinIVA, cantidad, franjas, productoId) {
-  let descuentoAplicable = 0;
-  let franjaAplicada = null;
-  const cant = Number(cantidad) || 0;
-
-  for (let i = 0; i < franjas.length; i++) {
-    const franja = franjas[i];
-    const min = Number(franja.min_cantidad);
-    const max = Number(franja.max_cantidad);
-    const pct = Number(franja.porcentaje_descuento ?? franja.descuento ?? 0);
-    if (cant >= min && cant <= max) {
-      descuentoAplicable = pct;
-      franjaAplicada = { min, max, descuento: pct };
-      break;
-    }
-  }
-
-  if (!franjaAplicada && franjas.length > 0) {
-    const ultimaFranja = franjas[franjas.length - 1];
-    const min = Number(ultimaFranja.min_cantidad);
-    const max = Number(ultimaFranja.max_cantidad);
-    const pct = Number(ultimaFranja.porcentaje_descuento ?? ultimaFranja.descuento ?? 0);
-    if (cant > max) {
-      descuentoAplicable = pct;
-      franjaAplicada = { min, max, descuento: pct };
-    }
-  }
-
-  if (!franjaAplicada) {
-    console.debug(`No se encontró franja para cantidad ${cant} en producto ${productoId}`);
-    return precioUnitarioSinIVA;
-  }
-
-  const factorDescuento = (100 - descuentoAplicable) / 100;
-  const precioConDescuento = precioUnitarioSinIVA * factorDescuento;
-
-  console.debug('=== CÁLCULO DE FRANJA DE DESCUENTO (BD) ===');
-  console.debug(`Producto ID: ${productoId}`);
-  console.debug(`Cantidad: ${cant} | Franjas: ${franjas.length}`);
-  console.debug(`Franja aplicada: ${franjaAplicada.min}-${franjaAplicada.max} | Descuento: ${descuentoAplicable}%`);
-  console.debug(`Precio original: ${precioUnitarioSinIVA.toFixed(5)}€ -> con descuento: ${precioConDescuento.toFixed(5)}€`);
-  console.debug('==========================================');
-
-  return precioConDescuento;
 }
 
 export async function calcularTotalDetalle() {
@@ -385,15 +387,18 @@ export async function calcularTotalDetalle() {
 
   if (productoId === PRODUCTO_ID_LIBRE) {
     if (document.activeElement === totalElem) {
-      // Editando el total: derivar precio unitario (5 decimales) desde el total con IVA
+      // Si estamos editando el total, calculamos el precio unitario
       const totalIngresado = parseFloat(totalElem.value) || 0;
-      const precioUnitario = calcularPrecioDesdeTotal(totalIngresado, cantidad, impuestos);
-      precioDetalleElem.value = Number(precioUnitario).toFixed(5);
+      const precioUnitario = (totalIngresado / (1 + impuestos / 100)) / cantidad;
+      precioDetalleElem.value = precioUnitario.toFixed(5);
     } else {
-      // Editando precio/cantidad: calcular total con módulo unificado
+      // Si estamos editando el precio o la cantidad, calculamos el total
       const precioUnitario = parseFloat(precioDetalleElem.value) || 0;
-      const det = actualizarDetalleConTotal({ precio: precioUnitario, cantidad, impuestos });
-      totalElem.value = Number(det.total).toFixed(2);
+      const subtotal = precioUnitario * cantidad;
+      // Redondear IVA (base * porcentaje) a 2 decimales antes de sumar
+      const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+      const total = Number((subtotal + impuestoCalc).toFixed(2));
+      totalElem.value = total.toFixed(2);
     }
   } else {
     let precioOriginal = parseFloat(selectedOption.dataset.precioOriginal) || 0;
@@ -430,9 +435,11 @@ export async function calcularTotalDetalle() {
       console.log('Edición de detalle detectada: usando precio unitario fijo del input');
       const precioFijo = parseFloat(precioDetalleElem.value) || precioOriginal;
       const precioRedondeado = Number(precioFijo.toFixed(5));
-      const det = actualizarDetalleConTotal({ precio: precioRedondeado, cantidad, impuestos });
+      const subtotal = precioRedondeado * cantidad;
+      const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+      const total = Number((subtotal + impuestoCalc).toFixed(2));
       precioDetalleElem.value = precioRedondeado.toFixed(5);
-      totalElem.value = Number(det.total).toFixed(2);
+      totalElem.value = total.toFixed(2);
       return;
     }
     
@@ -459,9 +466,13 @@ export async function calcularTotalDetalle() {
     }
 
     const precioRedondeado = Number(precioFinal.toFixed(5));
-    const det = actualizarDetalleConTotal({ precio: precioRedondeado, cantidad, impuestos });
+    const subtotal = precioRedondeado * cantidad;
+    // Redondear IVA (base * porcentaje) a 2 decimales antes de sumar
+    const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+    const total = Number((subtotal + impuestoCalc).toFixed(2));
+
     precioDetalleElem.value = precioRedondeado.toFixed(5);
-    totalElem.value = Number(det.total).toFixed(2);
+    totalElem.value = total.toFixed(2);
   }
 }
 
@@ -753,10 +764,12 @@ export const getEstadoFormateado = (estado, tipo = 'factura') => {
     
     const estadosPresupuestos = {
         'B': 'Borrador',
-        'A': 'Aceptado',
-        'R': 'Rechazado',
-        'F': 'Facturada',
-        'T': 'Ticket'
+        'EN': 'Enviado',
+        'AP': 'Aceptado',
+        'RJ': 'Rechazado',
+        'CD': 'Caducado',
+        'T': 'Ticket',
+        'A0': 'Anulado'
     };
     
     if (tipo === 'proforma') {
@@ -783,8 +796,10 @@ export const getCodigoEstado = (estadoFormateado) => {
         'Cerrada': 'C',
         // Presupuestos
         'Borrador': 'B',
-        'Aceptado': 'A',
-        'Rechazado': 'R',
+        'Enviado': 'EN',
+        'Aceptado': 'AP',
+        'Rechazado': 'RJ',
+        'Caducado': 'CD',
         // Otros
         'Ticket': 'T'
     };
@@ -808,19 +823,22 @@ export const getEstadoClass = (estado) => {
         'RE': 'estado-rectificativa',
         // Estados de proformas
         'A': 'estado-pendiente',
+        'EN': 'estado-pendiente',
+        'AP': 'estado-cobrado',
+        'RJ': 'estado-vencido',
+        'CD': 'estado-vencido',
         'F': 'estado-cobrado',     // Facturada
-        'T': 'estado-cobrado',     // Ticket
-        // Estados de presupuestos
-        'B': 'estado-pendiente',
-        'A': 'estado-cobrado',
-        'R': 'estado-vencido',
-        'F': 'estado-cobrado',
-        'T': 'estado-cobrado'
+        'T': 'estado-cobrado'     // Facturada - mismo estilo que cobrado
         // Nota: 'C' ya está definido arriba y se usa tanto para facturas (Cobrada) como para proformas (Cerrada)
     };
     return clases[estado] || '';
-};
- 
+}; 
+
+/**
+ * Convierte una fecha ISO (o timestamp) en formato DD/MM/YYYY HH:MM.
+ */
+// Convierte diferentes formatos de fecha (con o sin hora) a YYYY-MM-DD
+// Convierte distintos formatos de fecha a YYYY-MM-DD para la API
 export function convertirFechaParaAPI(fecha) {
   if (!fecha) return '';
   fecha = String(fecha).trim();
@@ -904,7 +922,7 @@ export async function fetchConManejadorErrores(url, opciones = {}) {
     try {
       const u = new URL(primaria, window.location.origin);
       if (u.pathname.startsWith('/api')) {
-        const knownServers = [IP_SERVER];
+        const knownServers = ['192.168.1.23', '192.168.1.18'];
         for (const ip of knownServers) {
           const candidate = `http://${ip}:${PORT}${u.pathname}${u.search}`;
           if (!candidates.includes(candidate)) candidates.push(candidate);
@@ -913,7 +931,7 @@ export async function fetchConManejadorErrores(url, opciones = {}) {
     } catch (_) {
       const p = (typeof url === 'string' && url.startsWith('/')) ? url : `/${url}`;
       if (p.startsWith('/api')) {
-        const knownServers = [IP_SERVER];
+        const knownServers = ['192.168.1.23', '192.168.1.18'];
         for (const ip of knownServers) {
           const candidate = `http://${ip}:${PORT}${p}`;
           if (!candidates.includes(candidate)) candidates.push(candidate);

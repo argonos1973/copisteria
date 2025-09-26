@@ -1,11 +1,11 @@
 import { IP_SERVER, PORT, API_URL } from './constantes.js'
 import { mostrarNotificacion } from './notificaciones.js'
-import { formatearImporte, formatearFechaSoloDia, parsearImporte, mostrarCargando, ocultarCargando } from './scripts_utils.js'
+import { formatearImporte, formatearImporteVariable, truncarDecimales, formatearFechaSoloDia, parsearImporte, mostrarCargando, ocultarCargando } from './scripts_utils.js'
 
 window.buscarTickets = buscarTickets;
 // Selecciona todos los botones en la página
 const botones = document.querySelectorAll('button');
-const API_ENDPOINT = '/tickets/paginado'
+const API_ENDPOINT = '/api/tickets/paginado'
 // Estado de paginación
 let currentPageTickets = 1
 let pageSizeTickets = 20
@@ -206,7 +206,7 @@ async function buscarTickets() {
     const status = document.getElementById('status').value;
     const ticketNumber = document.getElementById('ticketNumber').value;
 
-    const url = new URL(`/api${API_ENDPOINT}`);
+    const url = new URL(`${API_URL}${API_ENDPOINT}`);
 
     // Agregar fechas siempre que estén informadas
     if (startDate) url.searchParams.append('fecha_inicio', startDate);
@@ -318,24 +318,29 @@ function mostrarTickets(tickets) {
             numeroCell.textContent = ticket.numero;
             row.appendChild(numeroCell);
 
+            const baseRaw = (ticket.importe_bruto ?? '').toString();
+            const ivaRaw = (ticket.importe_impuestos ?? '').toString();
+            const cobradoRaw = (ticket.importe_cobrado ?? '').toString();
+            const totalRaw = (ticket.total ?? '').toString();
+
             const importeBrutoCell = document.createElement('td');
             importeBrutoCell.classList.add('text-right');
-            importeBrutoCell.textContent = formatearImporte(ticket.importe_bruto);
+            importeBrutoCell.textContent = baseRaw ? `${baseRaw} €` : '';
             row.appendChild(importeBrutoCell);
 
             const impuestosCell = document.createElement('td');
             impuestosCell.classList.add('text-right');
-            impuestosCell.textContent = formatearImporte(ticket.importe_impuestos);
+            impuestosCell.textContent = ivaRaw ? `${ivaRaw} €` : '';
             row.appendChild(impuestosCell);
 
             const importeCobradoCell = document.createElement('td');
             importeCobradoCell.classList.add('text-right');
-            importeCobradoCell.textContent = formatearImporte(ticket.importe_cobrado);
+            importeCobradoCell.textContent = cobradoRaw ? `${cobradoRaw} €` : '';
             row.appendChild(importeCobradoCell);
 
             const totalCell = document.createElement('td');
             totalCell.classList.add('text-right');
-            totalCell.textContent = formatearImporte(ticket.total);
+            totalCell.textContent = totalRaw ? `${totalRaw} €` : '';
             row.appendChild(totalCell);
 
             const estadoCell = document.createElement('td');
@@ -386,10 +391,10 @@ function actualizarTotalesFromBackend(totalesGlobales) {
     const totalCobradoElement = document.getElementById('totalImporteCobrado');
     const totalTotalElement = document.getElementById('totalTotal');
 
-    if (totalBrutoElement) totalBrutoElement.textContent = formatearImporte(totalesGlobales.total_base);
-    if (totalImpuestosElement) totalImpuestosElement.textContent = formatearImporte(totalesGlobales.total_iva);
-    if (totalCobradoElement) totalCobradoElement.textContent = formatearImporte(totalesGlobales.total_cobrado);
-    if (totalTotalElement) totalTotalElement.textContent = formatearImporte(totalesGlobales.total_total);
+    if (totalBrutoElement) totalBrutoElement.textContent = totalesGlobales.total_base ? `${totalesGlobales.total_base} €` : '';
+    if (totalImpuestosElement) totalImpuestosElement.textContent = totalesGlobales.total_iva ? `${totalesGlobales.total_iva} €` : '';
+    if (totalCobradoElement) totalCobradoElement.textContent = totalesGlobales.total_cobrado ? `${totalesGlobales.total_cobrado} €` : '';
+    if (totalTotalElement) totalTotalElement.textContent = totalesGlobales.total_total ? `${totalesGlobales.total_total} €` : '';
 }
 
 function actualizarTotales(tickets) {
@@ -405,12 +410,12 @@ function actualizarTotales(tickets) {
         const cells = rows[i].getElementsByTagName('td');
         if (cells.length < 8) continue;
 
-        let importeBruto = parsearImporte(cells[2].textContent);
-        let importeImpuestos = parsearImporte(cells[3].textContent);
-        let importeCobrado = parsearImporte(cells[4].textContent);
-        let total = parsearImporte(cells[5].textContent);
+        const importeBruto = parsearImporte(cells[2].textContent);
+        const importeImpuestos = parsearImporte(cells[3].textContent);
+        const importeCobrado = parsearImporte(cells[4].textContent);
+        const total = parsearImporte(cells[5].textContent);
 
-        if (cells[7].textContent != '?') {
+        if (cells[7].textContent !== '?') {
             totalImporteBruto += importeBruto;
             totalImporteImpuestos += importeImpuestos;
             totalImporteCobrado += importeCobrado;
@@ -418,16 +423,15 @@ function actualizarTotales(tickets) {
         }
     }
 
-    // Actualizar los totales en el DOM
     const totalBrutoElement = document.getElementById('totalImporteBruto');
     const totalImpuestosElement = document.getElementById('totalImporteImpuestos');
     const totalCobradoElement = document.getElementById('totalImporteCobrado');
     const totalTotalElement = document.getElementById('totalTotal');
 
-    if (totalBrutoElement) totalBrutoElement.textContent = formatearImporte(totalImporteBruto);
-    if (totalImpuestosElement) totalImpuestosElement.textContent = formatearImporte(totalImporteImpuestos);
-    if (totalCobradoElement) totalCobradoElement.textContent = formatearImporte(totalImporteCobrado);
-    if (totalTotalElement) totalTotalElement.textContent = formatearImporte(totalTotal);
+    if (totalBrutoElement) totalBrutoElement.textContent = `${totalImporteBruto.toFixed(2).replace('.', ',')} €`;
+    if (totalImpuestosElement) totalImpuestosElement.textContent = `${totalImporteImpuestos.toFixed(2).replace('.', ',')} €`;
+    if (totalCobradoElement) totalCobradoElement.textContent = `${totalImporteCobrado.toFixed(2).replace('.', ',')} €`;
+    if (totalTotalElement) totalTotalElement.textContent = `${totalTotal.toFixed(2).replace('.', ',')} €`;
 }
 
 

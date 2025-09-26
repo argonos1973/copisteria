@@ -18,7 +18,8 @@ import {
 } from './scripts_utils.js';
 import { 
     calcularTotalTicket,
-    actualizarDetalleConTotal 
+    actualizarDetalleConTotal,
+    calcularTotalesDocumento 
 } from './calculo_totales_unificado.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
@@ -152,7 +153,7 @@ function asociarEventos() {
     btnImprimir.addEventListener('click', () => {
       const idticket = document.getElementById('idticket').value;
     // Construir la URL para la página de impresión con el parámetro 'ticketId'
-    const urlImprimir = `imprimir-ticket.html?ticketId=${encodeURIComponent(idticket)}`;
+    const urlImprimir = `/api/imprimir-ticket.html?ticketId=${encodeURIComponent(idticket)}`;
 
     // Abrir una nueva ventana con la página de impresión
     window.open(urlImprimir, '_blank', 'width=800,height=600');
@@ -524,14 +525,12 @@ export async function cargarDetalleParaEditar(fila) {
   document.getElementById('cantidad-detalle').value    = cantidad;
   document.getElementById('impuesto-detalle').value    = impuestos;
   document.getElementById('precio-detalle').value      = Number(precioDet).toFixed(5); // Mantener 5 decimales en el precio
-  // Recalcular el total con la regla de IVA por línea (subtotal + round2(subtotal*iva%)) para mostrarlo correcto
+  // Recalcular el total usando el módulo unificado
   try {
-    const subtotalEdit = Number(precioDet) * Number(cantidad);
-    const ivaEdit = redondearImporte(subtotalEdit * (Number(impuestos) / 100));
-    const totalEdit = redondearImporte(subtotalEdit + ivaEdit);
-    document.getElementById('total-detalle').value = totalEdit.toFixed(2);
+    const detCalc = actualizarDetalleConTotal({ precio: precioDet, cantidad, impuestos });
+    document.getElementById('total-detalle').value = Number(detCalc.total).toFixed(2);
   } catch (_) {
-    document.getElementById('total-detalle').value = total.toFixed(2);
+    document.getElementById('total-detalle').value = Number(total).toFixed(2);
   }
 
   // Si es producto libre, mostrar input de concepto y rellenarlo
@@ -721,23 +720,13 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
 
     // USAR FUNCIÓN UNIFICADA para calcular totales correctamente
     const totalesUnificados = calcularTotalTicket(detalles);
-    const totalesDetallados = detalles.reduce((acc, detalle) => {
-      const precio = Number(detalle.precio);
-      const cantidad = Number(detalle.cantidad);
-      const iva_pct = Number(detalle.impuestos);
-      
-      const subtotal = precio * cantidad;
-      // CRÍTICO: Redondear IVA por línea a 2 decimales (igual que frontend)
-      const iva_linea = Number((subtotal * (iva_pct / 100)).toFixed(2));
-      
-      acc.importe_bruto += subtotal;
-      acc.importe_impuestos += iva_linea;
-      
-      return acc;
-    }, { importe_bruto: 0, importe_impuestos: 0 });
-
-    const importe_bruto = redondearImporte(totalesDetallados.importe_bruto);
-    const importe_impuestos = redondearImporte(totalesDetallados.importe_impuestos);
+    const totalesDoc = calcularTotalesDocumento(detalles.map(d => ({
+      precio: Number(d.precio),
+      cantidad: Number(d.cantidad),
+      impuestos: Number(d.impuestos)
+    })));
+    const importe_bruto = redondearImporte(totalesDoc.subtotal_total || 0);
+    const importe_impuestos = redondearImporte(totalesDoc.iva_total || 0);
 
     // Asegurar que el importe cobrado esté redondeado
     const importe_cobrado = redondearImporte(totalPago);

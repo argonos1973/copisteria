@@ -12,11 +12,16 @@ import {
     getCodigoEstado,
     formatearFechaSoloDia,
     convertirFechaParaAPI,
-    formatearFecha
+    formatearFecha,
+    parsearNumeroBackend,
+    normalizarImportesBackend,
+    normalizarDetallesBackend,
+    invalidateGlobalCache
 } from './scripts_utils.js';
 import { 
     calcularTotalPresupuesto,
-    actualizarDetalleConTotal 
+    actualizarDetalleConTotal,
+    calcularTotalesDocumento 
 } from './calculo_totales_unificado.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
@@ -28,7 +33,7 @@ import {
   validarDetalle,
   volverSegunOrigen
 } from './common.js';
-import { calcularImportes } from './scripts/calculos.js';
+// Eliminado: cálculos legacy reemplazados por calculo_totales_unificado.js
 
 // Variables globales
 let detalles = [];
@@ -62,7 +67,7 @@ async function seleccionarProducto() {
     busquedaProducto: document.getElementById('busqueda-producto')
   };
   if (formElements.cantidadDetalle) formElements.cantidadDetalle.value = 1;
-  await seleccionarProductoCommon(formElements, productosOriginales);
+  await seleccionarProductoCommon(formElements, productosOriginales, 'presupuesto');
   const productoId = formElements.conceptoDetalle.value;
   if (productoId === PRODUCTO_ID_LIBRE) {
     formElements.totalDetalle.readOnly = false;
@@ -197,7 +202,9 @@ function validarYAgregarDetalle() {
   }
 
   const impuestos = parseFloat(document.getElementById('impuesto-detalle').value) || 0;
-  const total = parseFloat(document.getElementById('total-detalle').value) || 0;
+  // Calcular total con REGLA UNIFICADA (IVA redondeado por línea)
+  const detCalc = actualizarDetalleConTotal({ precio: precioDetalle, cantidad, impuestos });
+  const total = Number(detCalc.total) || 0;
 
   if (total <= 0) {
     mostrarNotificacion("El campo 'Total' es obligatorio y debe ser mayor que 0", "warning");
@@ -267,9 +274,11 @@ async function cargarPresupuesto(id) {
     const response = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/consulta/${id}`);
     if (!response.ok) throw new Error(`Error al cargar el presupuesto: ${response.statusText}`);
     const data = await response.json();
+    const importes = normalizarImportesBackend(data);
+    const detallesNormalizados = normalizarDetallesBackend(data.detalles);
 
     // Establecer ID del presupuesto para edición
-    idPresupuesto = id;
+    idPresupuesto = parsearNumeroBackend(id, id);
     
     document.getElementById('numero').value = data.numero;
     document.getElementById('fecha').value = formatearFechaSoloDia(data.fecha);
@@ -280,7 +289,7 @@ async function cargarPresupuesto(id) {
     else if (data.estado === 'R') estadoTexto = 'Rechazado';
     else if (data.estado === 'C') estadoTexto = 'Cerrado';
     document.getElementById('estado').value = estadoTexto;
-    document.getElementById('total-presupuesto').value = formatearImporte(data.total || 0);
+    document.getElementById('total-presupuesto').value = formatearImporte(importes.total || 0);
 
     const tipo = 'N';
     document.getElementById('tipo-presupuesto').value = 'N';
@@ -290,7 +299,8 @@ async function cargarPresupuesto(id) {
 
     // Cargar datos del contacto
     const contacto = data.contacto || {};
-    idContacto = contacto.idContacto || data.idContacto || data.idcontacto;
+    const contactoId = contacto.idContacto || data.idContacto || data.idcontacto;
+    idContacto = contactoId != null ? parseInt(contactoId, 10) : null;
     
     // Solo asignar valores si hay contacto
     if (idContacto && contacto && Object.keys(contacto).length > 0) {
@@ -318,18 +328,18 @@ async function cargarPresupuesto(id) {
     }
 
     // Cargar detalles del presupuesto
-    if (data.detalles && Array.isArray(data.detalles)) {
-      detalles = data.detalles.map(d => ({
-        id: d.id,
-        concepto: d.concepto,
-        descripcion: d.descripcion || '',
-        cantidad: d.cantidad,
-        precio: d.precio,
-        impuestos: d.impuestos,
-        total: d.total,
-        productoId: d.productoId,
-        formaPago: d.formaPago,
-        fechaDetalle: d.fechaDetalle
+    if (detallesNormalizados.length > 0) {
+      detalles = detallesNormalizados.map(d => ({
+        id: d?.id,
+        concepto: d?.concepto,
+        descripcion: d?.descripcion || '',
+        cantidad: d?.cantidad,
+        precio: d?.precio,
+        impuestos: d?.impuestos,
+        total: d?.total,
+        productoId: d?.productoId,
+        formaPago: d?.formaPago,
+        fechaDetalle: d?.fechaDetalle
       }));
     } else {
       detalles = [];
@@ -346,6 +356,8 @@ async function buscarPresupuestoAbierto(idContacto) {
     const response = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuesto/abierta/${idContacto}`);
     if (!response.ok) throw new Error(`Error al buscar presupuesto abierto: ${response.statusText}`);
     const data = await response.json();
+    const importes = normalizarImportesBackend(data);
+    const detallesNormalizados = normalizarDetallesBackend(data.detalles);
 
     const contacto = data.contacto;
     document.getElementById('identificador').value = contacto.identificador || '';
@@ -354,6 +366,9 @@ async function buscarPresupuestoAbierto(idContacto) {
     document.getElementById('cp').value = contacto.cp || '';
     document.getElementById('localidad').value = contacto.localidad || '';
     document.getElementById('provincia').value = contacto.provincia || '';
+
+    const contactoId = data.idContacto || data.idcontacto || contacto.idContacto;
+    idContacto = contactoId != null ? parseInt(contactoId, 10) : null;
 
     if (data.modo === 'edicion') {
       idPresupuesto = data.id;
@@ -371,18 +386,18 @@ async function buscarPresupuestoAbierto(idContacto) {
       document.getElementById('tipo-presupuesto').value = 'N';
       sessionStorage.setItem('tipoPresupuesto', 'N');
 
-      if (data.detalles && Array.isArray(data.detalles)) {
-        detalles = data.detalles.map(d => ({
-          id: d.id,
-          concepto: d.concepto,
-          descripcion: d.descripcion || '',
-          cantidad: d.cantidad,
-          precio: d.precio,
-          impuestos: d.impuestos,
-          total: d.total,
-          productoId: d.productoId,
-          formaPago: d.formaPago,
-          fechaDetalle: d.fechaDetalle
+      if (detallesNormalizados.length > 0) {
+        detalles = detallesNormalizados.map(d => ({
+          id: d?.id,
+          concepto: d?.concepto,
+          descripcion: d?.descripcion || '',
+          cantidad: d?.cantidad,
+          precio: d?.precio,
+          impuestos: d?.impuestos,
+          total: d?.total,
+          productoId: d?.productoId,
+          formaPago: d?.formaPago,
+          fechaDetalle: d?.fechaDetalle
         }));
       } else {
         detalles = [];
@@ -419,9 +434,15 @@ async function buscarPresupuestoAbierto(idContacto) {
   }
 }
 
-async function guardarPresupuesto(formaPago, importeCobrado, estado='A') {
+async function guardarPresupuesto(formaPago, importeCobrado, estado='B') {
   try {
-    const totalPresupuesto = parsearImporte(document.getElementById('total-presupuesto').value);
+    // Recalcular totales del documento con módulo unificado
+    const totalesDoc = calcularTotalesDocumento((detalles || []).map(d => ({
+      precio: parsearImporte(d.precio),
+      cantidad: parsearImporte(d.cantidad),
+      impuestos: parsearImporte(d.impuestos)
+    })));
+    const totalPresupuesto = totalesDoc.total_final || 0;
     const fechaInput = document.getElementById('fecha').value;
     // Convertir DD/MM/YYYY -> YYYY-MM-DD para API
     let fechaAPI = convertirFechaParaAPI(fechaInput);
@@ -442,16 +463,18 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='A') {
       console.log('Usando nuevo número de presupuesto:', nuevoNumero);
     }
 
+    const idContactoNumerico = idContacto ? parseInt(idContacto, 10) : null;
+
     const datos = {
       id: idPresupuesto,
       numero: numeroPresupuesto,
       fecha: fechaAPI,
-      idcontacto: idContacto,
+      idcontacto: idContactoNumerico,
       nif: document.getElementById('identificador').value,
       total: totalPresupuesto,
       formaPago: formaPago || 'E',
-      importe_bruto: detalles.reduce((acc,d)=>acc + (parseFloat(d.precio) * parseInt(d.cantidad)), 0),
-      importe_impuestos: detalles.reduce((acc,d)=>acc + ((parseFloat(d.precio) * parseInt(d.cantidad)) * (parseFloat(d.impuestos)/100)), 0),
+      importe_bruto: totalesDoc.subtotal_total || 0,
+      importe_impuestos: totalesDoc.iva_total || 0,
       importe_cobrado: typeof importeCobrado === 'number' ? importeCobrado : parsearImporte(importeCobrado || '0,00'),
       estado: estado,
       tipo: document.getElementById('tipo-presupuesto').value,
@@ -590,7 +613,7 @@ function cerrarModalContactos() {
 }
 
 function seleccionarContactoModal(contactoData) {
-  idContacto = contactoData.id;
+  idContacto = parseInt(contactoData.id, 10) || null;
   
   // Actualizar campos del contacto
   document.getElementById('razonSocial').value = contactoData.razon || '';
@@ -685,7 +708,7 @@ function inicializarModalPagos() {
   if (btnGuardar) {
     btnGuardar.addEventListener('click', () => {
       const total = parsearImporte(document.getElementById('total-presupuesto').value);
-      guardarPresupuesto('E', 0, 'A');
+      guardarPresupuesto('E', 0, 'B');
     });
   }
 }
@@ -715,7 +738,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (impuestoDetalle) { impuestoDetalle.readOnly = true; impuestoDetalle.style.backgroundColor = '#e9ecef'; }
 
     const urlParams = new URLSearchParams(window.location.search);
-    idContacto = urlParams.get('idContacto');
+    const idContactoParam = urlParams.get('idContacto');
+    idContacto = idContactoParam ? parseInt(idContactoParam, 10) : null;
     const idPresupuestoParam = urlParams.get('idPresupuesto');
     const origen = urlParams.get('origen');
     if (origen) sessionStorage.setItem('origenPresupuesto', origen);

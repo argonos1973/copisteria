@@ -136,47 +136,4 @@ export function mostrarConfirmacion(mensaje) {
     });
 }
 
-// Conexión Server-Sent Events con reconexión automática
-// Evita inicializar múltiples veces si el script se vuelve a cargar
-if (typeof window !== 'undefined' && window.__SSE_NOTIFICACIONES_INIT) {
-    console.debug('SSE ya inicializado');
-} else
-if (typeof window !== 'undefined' && 'EventSource' in window) {
-    const ENDPOINT_SSE = '/api/notificaciones/stream'; // única ruta estable
-    let fuente = null;
-    let ultimoMensaje = null;
-    let retryDelay = 2000;
-
-    const conectar = () => {
-        console.debug('Conectando SSE a', ENDPOINT_SSE);
-        fuente = new EventSource(ENDPOINT_SSE);
-
-        fuente.onopen = () => {
-            console.debug('SSE conectado');
-        };
-
-        fuente.onmessage = (ev) => {
-            try {
-                const data = JSON.parse(ev.data);
-                if (data?.mensaje && data.mensaje !== ultimoMensaje) {
-                    ultimoMensaje = data.mensaje;
-                    mostrarNotificacion(data.mensaje, data.tipo || 'info');
-                }
-            } catch (e) {
-                console.error('Error parseando SSE:', e);
-            }
-        };
-
-        fuente.onerror = (err) => {
-            console.debug('SSE desconectado, reintentando…', err);
-            fuente.close();
-            setTimeout(conectar, 5000);
-        };
-    };
-
-    conectar();
-    // marcar como iniciado
-    if (typeof window !== 'undefined') {
-        window.__SSE_NOTIFICACIONES_INIT = true;
-    }
-}
+// SSE eliminado: no se conecta a ningún endpoint de notificaciones

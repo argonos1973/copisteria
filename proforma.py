@@ -1,5 +1,6 @@
 import sqlite3
 from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
 
 from flask import Flask, jsonify, request
 
@@ -9,6 +10,75 @@ from db_utils import (actualizar_numerador, formatear_numero_documento,
 import utilities
 
 app = Flask(__name__)
+
+
+def _split_sign(s: str):
+    neg = s.startswith('-')
+    return ('-', s[1:]) if neg else ('', s)
+
+
+def _to_decimal(val, default='0'):
+    if val is None or val == '':
+        return Decimal(default)
+    try:
+        return Decimal(str(val).replace(',', '.'))
+    except Exception:
+        return Decimal(default)
+
+
+def format_number_es_max5(val):
+    if val is None or val == '':
+        return ''
+    s = str(val).replace(',', '.')
+    sign, rest = _split_sign(s)
+    if '.' in rest:
+        entero, dec = rest.split('.', 1)
+    else:
+        entero, dec = rest, ''
+    try:
+        entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    except Exception:
+        entero_fmt = entero
+    if dec:
+        dec = dec[:5].rstrip('0')
+    return f"{sign}{entero_fmt}{(',' + dec) if dec else ''}"
+
+
+def format_currency_es_two(val):
+    from decimal import Decimal, ROUND_HALF_UP
+    dec_val = _to_decimal(val)
+    dec_val = dec_val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    s = format(dec_val, 'f')
+    sign, rest = _split_sign(s)
+    entero, _, dec = rest.partition('.')
+    try:
+        entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    except Exception:
+        entero_fmt = entero
+    return f"{sign}{entero_fmt},{dec or '00'}"
+
+
+def _formatear_detalle_proforma(detalle_row):
+    det_dict = dict(detalle_row)
+    det_dict['cantidad'] = format_number_es_max5(det_dict.get('cantidad'))
+    det_dict['precio'] = format_number_es_max5(det_dict.get('precio'))
+    det_dict['impuestos'] = format_number_es_max5(det_dict.get('impuestos'))
+    det_dict['total'] = format_currency_es_two(det_dict.get('total'))
+    return det_dict
+
+
+def _obtener_detalles_formateados(cursor, proforma_id):
+    detalles_rows = cursor.execute(
+        'SELECT * FROM detalle_proforma WHERE id_proforma = ? ORDER BY id', (proforma_id,)
+    ).fetchall()
+    return [_formatear_detalle_proforma(row) for row in detalles_rows]
+
+
+def _formatear_importes_proforma(data):
+    for key in ('importe_bruto', 'importe_impuestos', 'importe_cobrado', 'total'):
+        if key in data:
+            data[key] = format_currency_es_two(data.get(key))
+    return data
 
 def crear_proforma():
     conn = None
@@ -95,17 +165,16 @@ def crear_proforma():
                 detalle.get('fechaDetalle', data['fecha'])
             ))
 
-
-            if not es_actualizacion:
-                try:
+        if not es_actualizacion:
+            try:
                 # Actualizar el numerador usando la nueva función
-                    numerador_actual, _ = actualizar_numerador('P', conn, commit=False)
-                    if numerador_actual is None:
-                        conn.rollback()
-                        return jsonify({"error": "Error al actualizar el numerador"}), 500
-                except Exception as e:
+                numerador_actual, _ = actualizar_numerador('P', conn, commit=False)
+                if numerador_actual is None:
                     conn.rollback()
-                    return jsonify({"error": f"Error al actualizar numerador: {str(e)}"}), 500
+                    return jsonify({"error": "Error al actualizar el numerador"}), 500
+            except Exception as e:
+                conn.rollback()
+                return jsonify({"error": f"Error al actualizar numerador: {str(e)}"}), 500
 
         conn.commit()
         return jsonify({
@@ -122,183 +191,35 @@ def crear_proforma():
         if conn:
             conn.close()
 
+
 def obtener_proforma(id):
+    conn = None
     try:
         conn = get_db_connection()
         conn.execute('PRAGMA busy_timeout = 10000')
         cursor = conn.cursor()
-        
-        # Obtener proforma
+
         proforma = cursor.execute('SELECT * FROM proforma WHERE id = ?', (id,)).fetchone()
         if not proforma:
             return jsonify({'error': 'Proforma no encontrada'}), 404
-        
-        # Obtener detalles ordenados por id
-        detalles = cursor.execute('SELECT * FROM detalle_proforma WHERE id_proforma = ? ORDER BY id', (id,)).fetchall()
-        
-        resultado = dict(proforma)
-        resultado['detalles'] = [dict(detalle) for detalle in detalles]
-        
+
+        resultado = _formatear_importes_proforma(dict(proforma))
+        resultado['detalles'] = _obtener_detalles_formateados(cursor, id)
+
+        if resultado.get('idcontacto'):
+            contacto = cursor.execute(
+                'SELECT * FROM contactos WHERE idContacto = ?', (resultado['idcontacto'],)
+            ).fetchone()
+            if contacto:
+                resultado['contacto'] = dict(contacto)
+
         return jsonify(resultado)
-    
+
     except Exception as e:
         return jsonify({'error': str(e)}), 400
     finally:
-        conn.close()
-
-def actualizar_proforma(id, data):
-    conn = None
-    try:
-        if not data:
-            return jsonify({'error': 'No se recibieron datos'}), 400
-
-        print(f"Iniciando actualización de proforma {id} con datos:", data)
-        
-        conn = get_db_connection()
-        conn.execute('PRAGMA busy_timeout = 10000')
-        conn.execute('BEGIN TRANSACTION')
-        cursor = conn.cursor()
-
-        # Verificar si la proforma existe
-        cursor.execute('SELECT numero FROM proforma WHERE id = ?', (id,))
-        proforma_existente = cursor.fetchone()
-        
-        if not proforma_existente:
-            print(f"No se encontró la proforma con ID {id}")
-            conn.rollback()
-            return jsonify({'error': 'Proforma no encontrada'}), 404
-
-        print(f"Proforma {id} encontrada, datos actuales:", dict(proforma_existente))
-
-        # Validar datos requeridos
-        campos_requeridos = ['numero', 'fecha', 'estado', 'idContacto', 'total']
-        for campo in campos_requeridos:
-            if campo not in data:
-                conn.rollback()
-                return jsonify({'error': f'Falta el campo requerido: {campo}'}), 400
-
-        # Validar y convertir datos numéricos
-        try:
-            total = redondear_importe(float(data.get('total', 0)))
-            importe_bruto = redondear_importe(float(data.get('importe_bruto', 0)))
-            importe_impuestos = redondear_importe(float(data.get('importe_impuestos', 0)))
-            importe_cobrado = redondear_importe(float(data.get('importe_cobrado', 0)))
-        except (ValueError, TypeError) as e:
-            conn.rollback()
-            return jsonify({'error': f'Error en conversión de importes: {str(e)}'}), 400
-
-        # Calculate amounts using unified function
-        importe_bruto = 0
-        importe_impuestos = 0
-        total = 0
-        
-        for detalle in data['detalles']:
-            res = utilities.calcular_importes(detalle['cantidad'], detalle['precio'], detalle['impuestos'])
-            importe_bruto += res['subtotal']
-            importe_impuestos += res['iva']
-            total += res['total']
-            # Update detalle with calculated values
-            detalle['total'] = res['total']
-        
-        # Update data with calculated totals
-        data['importe_bruto'] = importe_bruto
-        data['importe_impuestos'] = importe_impuestos
-        data['total'] = total
-
-        # Actualizar la proforma
-        cursor.execute('''
-            UPDATE proforma 
-            SET numero = ?, 
-                fecha = ?, 
-                estado = ?, 
-                idContacto = ?, 
-                nif = ?, 
-                total = ?, 
-                formaPago = ?, 
-                importe_bruto = ?, 
-                importe_impuestos = ?,
-                importe_cobrado = ?, 
-                timestamp = ?,
-                tipo = ?
-            WHERE id = ?
-        ''', (
-            data['numero'],
-            data['fecha'],
-            data['estado'],
-            data['idContacto'],
-            data.get('nif', ''),
-            total,
-            data.get('formaPago', 'E'),
-            importe_bruto,
-            importe_impuestos,
-            importe_cobrado,
-            datetime.now().isoformat(),
-            data.get('tipo', 'N'),  # Por defecto, tipo 'A' si no se especifica
-            id
-        ))
-
-        print(f"Proforma {id} actualizada, procediendo a actualizar detalles")
-
-        # Eliminar detalles existentes
-        cursor.execute('DELETE FROM detalle_proforma WHERE id_proforma = ?', (id,))
-
-        # Validar detalles
-        if 'detalles' not in data or not isinstance(data['detalles'], list):
-            conn.rollback()
-            return jsonify({'error': 'Se requiere una lista de detalles válida'}), 400
-
-        # Insertar los nuevos detalles
-        for detalle in data['detalles']:
-            try:
-                # Validar campos requeridos del detalle
-                campos_detalle = ['concepto', 'cantidad', 'precio', 'impuestos', 'total']
-                for campo in campos_detalle:
-                    if campo not in detalle:
-                        raise ValueError(f'Falta el campo {campo} en el detalle')
-
-                # Convertir valores numéricos
-                cantidad = int(detalle['cantidad'])
-                precio = float(detalle['precio'])
-                impuestos = float(detalle['impuestos'])
-                total_detalle = redondear_importe(float(detalle['total']))
-
-                cursor.execute('''
-                    INSERT INTO detalle_proforma (id_proforma, concepto, descripcion, cantidad, 
-                                                precio, impuestos, total, formaPago, productoId, fechaDetalle)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    id,
-                    detalle['concepto'],
-                    detalle.get('descripcion', ''),
-                    cantidad,
-                    precio,
-                    impuestos,
-                    total_detalle,
-                    detalle.get('formaPago', 'E'),
-                    detalle.get('productoId', None),
-                    detalle.get('fechaDetalle', data['fecha'])
-                ))
-            except (ValueError, TypeError) as e:
-                conn.rollback()
-                return jsonify({'error': f'Error en detalle: {str(e)}'}), 400
-
-        conn.commit()
-        print(f"Proforma {id} y sus detalles actualizados correctamente")
-        
-        return jsonify({
-            'mensaje': 'Proforma actualizada exitosamente',
-            'id': id
-        })
-
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        print(f"Error al actualizar proforma {id}: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-    finally:
         if conn:
             conn.close()
-        print(f"Conexión cerrada para proforma {id}")
 
 
 
@@ -339,21 +260,11 @@ def obtener_proforma_abierta(idContacto):
         
         if proforma:
             print(f"Proforma abierta encontrada: {dict(proforma)}")
-            proforma_dict = dict(proforma)
-            
-            # Obtener los detalles de la proforma
-            print(f"Buscando detalles para proforma id: {proforma_dict['id']}")
-            cursor.execute('''
-                SELECT id, concepto, descripcion, cantidad, precio, impuestos, total, 
-                       formaPago, productoId, fechaDetalle
-                FROM detalle_proforma 
-                WHERE id_proforma = ?
-                ORDER BY id
-            ''', (proforma_dict['id'],))
-            detalles = cursor.fetchall()
-            print(f"Detalles encontrados: {[dict(d) for d in detalles]}")
-            
-            # Construir respuesta completa
+            proforma_dict = _formatear_importes_proforma(dict(proforma))
+
+            detalles = _obtener_detalles_formateados(cursor, proforma_dict['id'])
+            print(f"Detalles formateados: {detalles}")
+
             response_data = {
                 'modo': 'edicion',
                 'id': proforma_dict['id'],
@@ -361,7 +272,7 @@ def obtener_proforma_abierta(idContacto):
                 'fecha': proforma_dict['fecha'],
                 'estado': proforma_dict['estado'],
                 'tipo': proforma_dict['tipo'],
-                'total': proforma_dict['total'],
+                'total': proforma_dict.get('total'),
                 'contacto': {
                     'idContacto': contacto_dict['idContacto'],
                     'razonsocial': contacto_dict['razonsocial'],
@@ -371,7 +282,7 @@ def obtener_proforma_abierta(idContacto):
                     'localidad': contacto_dict['localidad'],
                     'provincia': contacto_dict['provincia']
                 },
-                'detalles': [dict(d) for d in detalles]
+                'detalles': detalles
             }
             print("Enviando respuesta modo edición")
             return jsonify(response_data)
@@ -519,29 +430,43 @@ def consultar_proformas():
         cursor.execute(query, params)
         proformas = cursor.fetchall()
 
-        # Convertir los resultados a una lista de diccionarios
+        # Convertir los resultados a una lista de diccionarios formateados
         result = []
         for proforma in proformas:
-            result.append({
+            row = dict(proforma) if isinstance(proforma, sqlite3.Row) else {
                 'id': proforma[0],
                 'fecha': proforma[1],
                 'numero': proforma[2],
                 'estado': proforma[3],
                 'tipo': proforma[4],
-                'base': float(proforma[5]) if proforma[5] is not None else 0,
-                'iva': float(proforma[6]) if proforma[6] is not None else 0,
-                'importe_cobrado': float(proforma[7]) if proforma[7] is not None else 0,
-                'total': float(proforma[8]) if proforma[8] is not None else 0,
+                'base': proforma[5],
+                'iva': proforma[6],
+                'importe_cobrado': proforma[7],
+                'total': proforma[8],
                 'idcontacto': proforma[9],
                 'razonsocial': proforma[10]
+            }
+
+            result.append({
+                'id': row.get('id'),
+                'fecha': row.get('fecha'),
+                'numero': row.get('numero'),
+                'estado': row.get('estado'),
+                'tipo': row.get('tipo'),
+                'base': format_currency_es_two(row.get('base')),
+                'iva': format_currency_es_two(row.get('iva')),
+                'importe_cobrado': format_currency_es_two(row.get('importe_cobrado')),
+                'total': format_currency_es_two(row.get('total')),
+                'idcontacto': row.get('idcontacto'),
+                'razonsocial': row.get('razonsocial')
             })
 
         # Calcular totales globales según el estado del filtro
         totales_globales = {
-            'total_base': 0,
-            'total_iva': 0,
-            'total_cobrado': 0,
-            'total_total': 0
+            'total_base': '0,00',
+            'total_iva': '0,00',
+            'total_cobrado': '0,00',
+            'total_total': '0,00'
         }
         
         # Solo calcular totales si hay un estado específico en el filtro
@@ -580,13 +505,25 @@ def consultar_proformas():
             
             cursor.execute(totales_query, totales_params)
             totales_row = cursor.fetchone()
-            
-            totales_globales = {
-                'total_base': float(totales_row[0] or 0),
-                'total_iva': float(totales_row[1] or 0),
-                'total_cobrado': float(totales_row[2] or 0),
-                'total_total': float(totales_row[3] or 0)
-            }
+
+            if totales_row:
+                if isinstance(totales_row, sqlite3.Row):
+                    total_base = totales_row['total_base'] or 0
+                    total_iva = totales_row['total_iva'] or 0
+                    total_cobrado = totales_row['total_cobrado'] or 0
+                    total_total = totales_row['total_total'] or 0
+                else:
+                    total_base = totales_row[0] or 0
+                    total_iva = totales_row[1] or 0
+                    total_cobrado = totales_row[2] or 0
+                    total_total = totales_row[3] or 0
+
+                totales_globales = {
+                    'total_base': format_currency_es_two(total_base),
+                    'total_iva': format_currency_es_two(total_iva),
+                    'total_cobrado': format_currency_es_two(total_cobrado),
+                    'total_total': format_currency_es_two(total_total)
+                }
 
         return jsonify({
             'items': result,
@@ -594,7 +531,8 @@ def consultar_proformas():
         })
 
     except Exception as e:
-        print(f"Error en consultar_proformas: {str(e)}")
+        import traceback
+        print(f"Error en consultar_proformas: {str(e)}\n{traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
     finally:
         if 'conn' in locals():

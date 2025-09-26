@@ -176,15 +176,7 @@ def reconciliar_facturas():
         if conn:
             conn.rollback()
     finally:
-        # Notificación web al finalizar
-        try:
-            from notificaciones_utils import guardar_notificacion
-            if conciliadas > 0:
-                guardar_notificacion(f"Conciliación completada: {conciliadas} factura(s) conciliada(s)", tipo='success')
-            else:
-                guardar_notificacion("Conciliación completada: ninguna factura conciliada", tipo='info')
-        except Exception as e:
-            print(f"Error registrando notificación: {e}")
+        # Cerrar conexión sin generar notificaciones web
         if conn:
             conn.close()
 

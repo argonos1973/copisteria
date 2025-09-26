@@ -1,6 +1,6 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
-import { formatearImporte, formatearFechaSoloDia, getEstadoFormateado, getEstadoClass } from './scripts_utils.js';
+import { formatearImporte, formatearFechaSoloDia, getEstadoFormateado, getEstadoClass, parsearImporte } from './scripts_utils.js';
 
 // Función para mostrar el overlay de carga
 const showOverlay = () => {
@@ -14,10 +14,15 @@ const hideOverlay = () => {
 
 // Función para actualizar los totales desde el backend (totales globales)
 const updateTotalsFromBackend = (totalesGlobales) => {
-    document.getElementById('totalBase').textContent = formatearImporte(totalesGlobales.total_base);
-    document.getElementById('totalIVA').textContent = formatearImporte(totalesGlobales.total_iva);
-    document.getElementById('totalCobrado').textContent = formatearImporte(totalesGlobales.total_cobrado);
-    document.getElementById('totalTotal').textContent = formatearImporte(totalesGlobales.total_total);
+    const setText = (id, valor) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = valor ? `${valor} €` : '';
+    };
+
+    setText('totalBase', totalesGlobales.total_base);
+    setText('totalIVA', totalesGlobales.total_iva);
+    setText('totalCobrado', totalesGlobales.total_cobrado);
+    setText('totalTotal', totalesGlobales.total_total);
 };
 
 // Función para actualizar los totales (fallback - solo página actual)
@@ -28,16 +33,18 @@ const updateTotals = (proformas) => {
     let totalTotal = 0;
 
     proformas.forEach(proforma => {
-        totalBase += parseFloat(proforma.base || 0);
-        totalIVA += parseFloat(proforma.iva || 0);
-        totalCobrado += parseFloat(proforma.importe_cobrado || 0);
-        totalTotal += parseFloat(proforma.total || 0);
+        totalBase += parsearImporte(proforma.base || 0) || 0;
+        totalIVA += parsearImporte(proforma.iva || 0) || 0;
+        totalCobrado += parsearImporte(proforma.importe_cobrado || 0) || 0;
+        totalTotal += parsearImporte(proforma.total || 0) || 0;
     });
 
-    document.getElementById('totalBase').textContent = formatearImporte(totalBase);
-    document.getElementById('totalIVA').textContent = formatearImporte(totalIVA);
-    document.getElementById('totalCobrado').textContent = formatearImporte(totalCobrado);
-    document.getElementById('totalTotal').textContent = formatearImporte(totalTotal);
+    const formatEuros = (valor) => `${valor.toFixed(2).replace('.', ',')} €`;
+
+    document.getElementById('totalBase').textContent = formatEuros(totalBase);
+    document.getElementById('totalIVA').textContent = formatEuros(totalIVA);
+    document.getElementById('totalCobrado').textContent = formatEuros(totalCobrado);
+    document.getElementById('totalTotal').textContent = formatEuros(totalTotal);
 };
 
 // Función para formatear fechas como DD/MM/AAAA
@@ -116,7 +123,7 @@ async function buscarProformas() {
             params.append('limit', '10');
         }
 
-        const url = `/api/proformas/consulta?${params}`;
+        const url = `http://${IP_SERVER}:${PORT}/api/proformas/consulta?${params}`;
         console.log('URL de búsqueda:', url);
 
         const response = await fetch(url);
@@ -154,11 +161,20 @@ async function buscarProformas() {
         proformas.forEach(proforma => {
             const row = document.createElement('tr');
             
-            // Asegurar que los valores numéricos sean válidos
-            const base = parseFloat(proforma.base) || 0;
-            const iva = parseFloat(proforma.iva) || 0;
-            const importeCobrado = parseFloat(proforma.importe_cobrado) || 0;
-            const total = parseFloat(proforma.total) || 0;
+            // Asegurar que los valores numéricos sean válidos (parseo robusto)
+            const base = parsearImporte(proforma.base) || 0;
+            const iva = parsearImporte(proforma.iva) || 0;
+            const importeCobrado = parsearImporte(proforma.importe_cobrado) || 0;
+            const total = parsearImporte(proforma.total) || 0;
+            const estadoUp = String(proforma.estado || '').toUpperCase();
+            // Si está facturada ('F') o cobrada ('C'), Total debe igualar al importe cobrado mostrado
+            const totalDisplay = (estadoUp === 'F' || estadoUp === 'C') ? importeCobrado : total;
+            const baseRaw = (proforma.base ?? '').toString();
+            const ivaRaw = (proforma.iva ?? '').toString();
+            const cobradoRaw = (proforma.importe_cobrado ?? '').toString();
+            const totalDisplayRaw = (estadoUp === 'F' || estadoUp === 'C')
+                ? (proforma.importe_cobrado ?? '').toString()
+                : (proforma.total ?? '').toString();
 
             // Crear la celda de acciones con el icono de conversión a factura
             const accionesTd = document.createElement('td');
@@ -181,7 +197,7 @@ async function buscarProformas() {
                         const confirmado = await mostrarConfirmacion(`¿Estás seguro de que deseas convertir la proforma ${proforma.numero} a factura?`);
                         if (confirmado) {
                             showOverlay();
-                            const response = await fetch(`/api/proformas/${proforma.id}/convertir`, {
+                            const response = await fetch(`http://${IP_SERVER}:${PORT}/api/proformas/${proforma.id}/convertir`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json'
@@ -217,10 +233,10 @@ async function buscarProformas() {
                 <td>${formatDateToDisplay(proforma.fecha)}</td>
                 <td>${proforma.numero}</td>
                 <td>${proforma.razonsocial || ''}</td>
-                <td class="text-right">${formatearImporte(base)}</td>
-                <td class="text-right">${formatearImporte(iva)}</td>
-                <td class="text-right">${formatearImporte(importeCobrado)}</td>
-                <td class="text-right">${formatearImporte(total)}</td>
+                <td class="text-right">${baseRaw ? `${baseRaw} €` : ''}</td>
+                <td class="text-right">${ivaRaw ? `${ivaRaw} €` : ''}</td>
+                <td class="text-right">${cobradoRaw ? `${cobradoRaw} €` : ''}</td>
+                <td class="text-right">${totalDisplayRaw ? `${totalDisplayRaw} €` : ''}</td>
                 <td class="text-center ${getEstadoClass(proforma.estado)}">${getEstadoFormateado(proforma.estado, 'proforma')}</td>
             `;
             
@@ -238,7 +254,7 @@ async function buscarProformas() {
             totalBase += base;
             totalIVA += iva;
             totalCobrado += importeCobrado;
-            totalTotal += total;
+            totalTotal += totalDisplay;
         });
 
         // Usar totales globales del backend si están disponibles

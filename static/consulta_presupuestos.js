@@ -1,6 +1,6 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
-import { formatearImporte, formatearFechaSoloDia, getEstadoFormateado, getEstadoClass } from './scripts_utils.js';
+import { formatearFechaSoloDia, getEstadoFormateado, getEstadoClass, parsearImporte } from './scripts_utils.js';
 
 // Overlay utils
 const showOverlay = () => { const el = document.getElementById('overlay'); if (el) el.style.display = 'flex'; };
@@ -10,12 +10,15 @@ const hideOverlay = () => { const el = document.getElementById('overlay'); if (e
 const updateTotals = (items) => {
   let totalBase = 0, totalIVA = 0, totalCobrado = 0, totalTotal = 0;
   items.forEach(it => {
-    totalBase += parseFloat(it.base || 0);
-    totalIVA += parseFloat(it.iva || 0);
-    totalCobrado += parseFloat(it.importe_cobrado || 0);
-    totalTotal += parseFloat(it.total || 0);
+    totalBase += parsearImporte(it.base || 0) || 0;
+    totalIVA += parsearImporte(it.iva || 0) || 0;
+    totalCobrado += parsearImporte(it.importe_cobrado || 0) || 0;
+    totalTotal += parsearImporte(it.total || 0) || 0;
   });
-  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = formatearImporte(val); };
+  const setText = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = `${val.toFixed(2).replace('.', ',')} €`;
+  };
   setText('totalBase', totalBase);
   setText('totalIVA', totalIVA);
   setText('totalCobrado', totalCobrado);
@@ -50,18 +53,21 @@ async function buscarPresupuestos() {
     // Añadir limit basado en el selector de página
     params.append('limit', pageSize);
 
-    const url = `/api/presupuestos/consulta?${params.toString()}`;
+    const url = `http://${IP_SERVER}:${PORT}/api/presupuestos/consulta?${params.toString()}`;
     // Trazas de depuración (se pueden dejar; ayudan a diagnosticar filtros en producción)
     try { console.debug('[CONSULTA_PRESUPUESTOS] Parámetros', { startDate, endDate, status, presupuestoNumber, contacto, identificador, url }); } catch (_) {}
     const response = await fetch(url);
     if (!response.ok) throw new Error('Error al buscar presupuestos');
     const data = await response.json();
-    if (!Array.isArray(data)) throw new Error('Formato de respuesta inválido');
+    if (!Array.isArray(data.items || data)) throw new Error('Formato de respuesta inválido');
+
+    const items = Array.isArray(data.items) ? data.items : data;
+    const totalesGlobales = data.totales_globales;
 
     const tbody = document.getElementById('gridBody');
     tbody.innerHTML = '';
 
-    if (data.length === 0) {
+    if (items.length === 0) {
       tbody.innerHTML = '<tr><td colspan="9" class="text-center">No se encontraron resultados</td></tr>';
       updateTotals([]);
       return;
@@ -69,12 +75,21 @@ async function buscarPresupuestos() {
 
     let totalBase = 0, totalIVA = 0, totalCobrado = 0, totalTotal = 0;
 
-    data.forEach(item => {
+    items.forEach(item => {
       const row = document.createElement('tr');
-      const base = parseFloat(item.base) || 0;
-      const iva = parseFloat(item.iva) || 0;
-      const cobrado = parseFloat(item.importe_cobrado) || 0;
-      const total = parseFloat(item.total) || 0;
+      const base = parsearImporte(item.base) || 0;
+      const iva = parsearImporte(item.iva) || 0;
+      const cobrado = parsearImporte(item.importe_cobrado) || 0;
+      const total = parsearImporte(item.total) || 0;
+      const estadoUp = String(item.estado || '').toUpperCase();
+      // Regla: si está Aceptado ('A') o Cerrado ('C'), Total debe igualar al Cobrado mostrado
+      const totalDisplay = (estadoUp === 'A' || estadoUp === 'C') ? cobrado : total;
+      const baseRaw = (item.base ?? '').toString();
+      const ivaRaw = (item.iva ?? '').toString();
+      const cobradoRaw = (item.importe_cobrado ?? '').toString();
+      const totalDisplayRaw = (estadoUp === 'A' || estadoUp === 'C')
+        ? (item.importe_cobrado ?? '').toString()
+        : (item.total ?? '').toString();
 
       const accionesTd = document.createElement('td');
       accionesTd.className = 'text-center';
@@ -90,7 +105,7 @@ async function buscarPresupuestos() {
         event.stopPropagation();
         try {
           showOverlay();
-          const resp = await fetch(`/api/presupuestos/${item.id}/imprimir`);
+          const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/${item.id}/imprimir`);
           if (!resp.ok) throw new Error('Error al generar PDF');
           
           const blob = await resp.blob();
@@ -112,7 +127,10 @@ async function buscarPresupuestos() {
       accionesTd.appendChild(iconImprimir);
 
       // Icono de Email (solo si el contacto tiene email)
-      if (item.mail) {
+      const tieneContacto = Boolean(item.idcontacto || item.idContacto);
+      const tieneEmail = Boolean((item.mail || '').toString().trim());
+
+      if (tieneContacto && tieneEmail) {
         const iconEmail = document.createElement('i');
         iconEmail.className = 'fas fa-envelope action-icon';
         iconEmail.title = 'Enviar por Email';
@@ -125,7 +143,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Enviar el presupuesto ${item.numero} por email a ${item.mail}?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`/api/presupuestos/${item.id}/enviar_email`, { 
+              const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/${item.id}/enviar_email`, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' } 
               });
@@ -142,7 +160,7 @@ async function buscarPresupuestos() {
       }
 
       // Convertir a Factura (solo si tiene contacto)
-      if (item.estado !== 'F' && (item.idcontacto || item.idContacto)) {
+      if (item.estado !== 'F' && tieneContacto) {
         const iconFactura = document.createElement('i');
         iconFactura.className = 'fas fa-file-invoice action-icon';
         iconFactura.title = 'Convertir a Factura';
@@ -155,7 +173,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Convertir el presupuesto ${item.numero} a factura?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`/api/presupuestos/${item.id}/convertir_factura`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+              const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/${item.id}/convertir_factura`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
               if (!resp.ok) throw new Error('Error al convertir presupuesto a factura');
               const result = await resp.json();
               mostrarNotificacion(`Presupuesto ${item.numero} convertido a factura ${result.numero_factura}`, 'success');
@@ -170,7 +188,7 @@ async function buscarPresupuestos() {
       }
 
       // Convertir a Ticket (si no convertido)
-      if (item.estado !== 'T' && item.estado !== 'F') {
+      if (!tieneContacto && item.estado !== 'T' && item.estado !== 'F') {
         const iconTicket = document.createElement('i');
         iconTicket.className = 'fas fa-receipt action-icon';
         iconTicket.title = 'Convertir a Ticket';
@@ -183,7 +201,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Convertir el presupuesto ${item.numero} a ticket?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`/api/presupuestos/${item.id}/convertir_ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+              const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/${item.id}/convertir_ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
               if (!resp.ok) throw new Error('Error al convertir presupuesto a ticket');
               const result = await resp.json();
               mostrarNotificacion(`Presupuesto ${item.numero} convertido a ticket ${result.numero_ticket}`, 'success');
@@ -201,11 +219,11 @@ async function buscarPresupuestos() {
         <td>${formatearFechaSoloDia(item.fecha)}</td>
         <td>${item.numero}</td>
         <td>${item.razonsocial || ''}</td>
-        <td class="text-right">${formatearImporte(base)}</td>
-        <td class="text-right">${formatearImporte(iva)}</td>
-        <td class="text-right">${formatearImporte(cobrado)}</td>
-        <td class="text-right">${formatearImporte(total)}</td>
-        <td class="text-center ${getEstadoClass(item.estado)}">${getEstadoFormateado(item.estado)}</td>
+        <td class="text-right">${baseRaw ? `${baseRaw} €` : ''}</td>
+        <td class="text-right">${ivaRaw ? `${ivaRaw} €` : ''}</td>
+        <td class="text-right">${cobradoRaw ? `${cobradoRaw} €` : ''}</td>
+        <td class="text-right">${totalDisplayRaw ? `${totalDisplayRaw} €` : ''}</td>
+        <td class="text-center ${getEstadoClass(item.estado)}">${getEstadoFormateado(item.estado, 'presupuesto')}</td>
       `;
       row.appendChild(accionesTd);
 
@@ -214,10 +232,21 @@ async function buscarPresupuestos() {
       });
 
       document.getElementById('gridBody').appendChild(row);
-      totalBase += base; totalIVA += iva; totalCobrado += cobrado; totalTotal += total;
+      totalBase += base; totalIVA += iva; totalCobrado += cobrado; totalTotal += totalDisplay;
     });
 
-    updateTotals([{base: totalBase, iva: totalIVA, importe_cobrado: totalCobrado, total: totalTotal}]);
+    if (totalesGlobales) {
+      const showTotals = (field, valor) => {
+        const el = document.getElementById(field);
+        if (el) el.textContent = valor ? `${valor} €` : '';
+      };
+      showTotals('totalBase', totalesGlobales.total_base);
+      showTotals('totalIVA', totalesGlobales.total_iva);
+      showTotals('totalCobrado', totalesGlobales.total_cobrado);
+      showTotals('totalTotal', totalesGlobales.total_total);
+    } else {
+      updateTotals([{base: totalBase, iva: totalIVA, importe_cobrado: totalCobrado, total: totalTotal}]);
+    }
   } catch (error) {
     console.error('Error al buscar presupuestos:', error);
     mostrarNotificacion('Error al buscar presupuestos', 'error');

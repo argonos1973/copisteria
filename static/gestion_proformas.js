@@ -12,7 +12,12 @@ import {
   getCodigoEstado,
   formatearFechaSoloDia,
   convertirFechaParaAPI,
-  formatearFecha
+  formatearFecha,
+  abrirModalPagos as abrirModal,
+  cerrarModalPagos as cerrarModal,
+  parsearNumeroBackend,
+  normalizarImportesBackend,
+  normalizarDetallesBackend
 } from './scripts_utils.js';
 import { 
     calcularTotalProforma,
@@ -85,9 +90,9 @@ async function seleccionarProducto() {
     console.log('Proforma tipo A: NO se aplican descuentos por franja');
     await seleccionarProductoCommon(formElements, productosOriginales, 'proforma');
   } else {
-    // Comportamiento normal para otros tipos de proformas
+    // Comportamiento normal para otros tipos de proformas (con franjas)
     console.log('Usando manejo normal CON descuentos por franja');
-    await seleccionarProductoCommon(formElements, productosOriginales);
+    await seleccionarProductoCommon(formElements, productosOriginales, 'proforma');
   }
 
    // Si es producto libre, hacer editable el campo total
@@ -137,11 +142,11 @@ function manejarProductoSinDescuentos(formElements) {
   impuestoDetalle.readOnly = true;
   impuestoDetalle.style.backgroundColor = '#e9ecef';
 
-  // Calcular el total sin descuentos
+  // Calcular el total con REGLA UNIFICADA (IVA redondeado por línea)
   const cantidad = parseFloat(cantidadDetalle.value) || 0;
-  const subtotal = precioOriginal * cantidad;
-  const total = subtotal * (1 + (parseFloat(impuestoDetalle.value) || 0) / 100);
-  totalDetalle.value = total.toFixed(2).replace('.', ',');
+  const impuestosVal = parseFloat(impuestoDetalle.value) || 0;
+  const detCalc = actualizarDetalleConTotal({ precio: precioOriginal, cantidad, impuestos: impuestosVal });
+  totalDetalle.value = Number(detCalc.total).toFixed(2).replace('.', ',');
 
   // Primero removemos todos los event listeners anteriores
   precioDetalle.removeEventListener('input', calcularTotalDetalle);
@@ -199,28 +204,12 @@ function actualizarTotales() {
 }
 
 function calcularTotalDetallesDiaActual() {
-    let importe_bruto = 0;
-    let importe_impuestos = 0;
-    let total = 0;
-
     // Obtener el ID del día actual
     const fecha = new Date();
     const idHoy = `${fecha.getDate().toString().padStart(2, '0')}${(fecha.getMonth() + 1).toString().padStart(2, '0')}`;
-
-    // Solo sumar detalles que coincidan con el ID del día actual
-    detalles.forEach(detalle => {
-        if (detalle.detalleId === idHoy) {
-            const subtotal = parseFloat(detalle.precio) * parseInt(detalle.cantidad);
-            const impuesto = redondearImporte(subtotal * (parseFloat(detalle.impuestos) / 100));
-            
-            importe_bruto += subtotal;
-            importe_impuestos += impuesto;
-        }
-    });
-
-    importe_bruto = redondearImporte(importe_bruto);
-    importe_impuestos = redondearImporte(importe_impuestos);
-    return redondearImporte(importe_bruto + importe_impuestos);
+    const delDia = (detalles || []).filter(d => d.detalleId === idHoy);
+    const tot = calcularTotalesDocumento(delDia);
+    return redondearImporte((tot?.subtotal_total || 0) + (tot?.iva_total || 0));
 }
 
 function actualizarTablaDetalles() {
@@ -325,7 +314,8 @@ function validarYAgregarDetalle() {
   }
 
   const impuestos = parseFloat(document.getElementById('impuesto-detalle').value) || 0;
-  const total = parseFloat(document.getElementById('total-detalle').value) || 0;
+  const totalCalc = actualizarDetalleConTotal({ precio: precioDetalle, cantidad, impuestos }).total;
+  const total = Number(totalCalc);
 
   if (total <= 0) {
     mostrarNotificacion("El campo 'Total' es obligatorio y debe ser mayor que 0", "warning");
@@ -350,7 +340,7 @@ function validarYAgregarDetalle() {
     cantidad: cantidad,
     precio: Number(precioDetalle).toFixed(5),  // Asegurar 5 decimales
     impuestos: impuestos,
-    total: Number(total).toFixed(2),  // Total con 2 decimales
+    total: Number(total).toFixed(2),  // Total con 2 decimales (calculado con módulo unificado)
     formaPago: 'E',
     fechaDetalle: fechaDetalle,
     detalleId: detalleId
@@ -536,12 +526,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function cargarProforma(id) {
   try {
-    const response = await fetch(`/api/proformas/consulta/${id}`);
+    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/proformas/consulta/${id}`);
     if (!response.ok) {
       throw new Error(`Error al cargar la proforma: ${response.statusText}`);
     }
     const data = await response.json();
-    
+    const importes = normalizarImportesBackend(data);
+    const detallesNormalizados = normalizarDetallesBackend(data.detalles);
+
+    idProforma = parsearNumeroBackend(data?.id, null);
+    document.getElementById('total-proforma').value = formatearImporte(importes.total || 0);
+
     document.getElementById('numero').value = data.numero;
     // Convertir la fecha de YYYY-MM-DD a DD/MM/AAAA
     document.getElementById('fecha').value = formatearFechaSoloDia(data.fecha);
@@ -625,14 +620,28 @@ async function cargarProforma(id) {
       formulario.dataset.tipoProforma = tipoProforma;
     }
     
-    document.getElementById('razonSocial').value = data.contacto.razonsocial;
-    document.getElementById('identificador').value = data.contacto.identificador;
-    document.getElementById('direccion').value = data.contacto.direccion || '';
-    document.getElementById('cp').value = data.contacto.cp || '';
-    document.getElementById('localidad').value = data.contacto.localidad || '';
-    document.getElementById('provincia').value = data.contacto.provincia || '';
-    
-    detalles = data.detalles;
+    const contacto = data.contacto || {};
+    document.getElementById('razonSocial').value = contacto.razonsocial || '';
+    document.getElementById('identificador').value = contacto.identificador || '';
+    document.getElementById('direccion').value = contacto.direccion || '';
+    document.getElementById('cp').value = contacto.cp || '';
+    document.getElementById('localidad').value = contacto.localidad || '';
+    document.getElementById('provincia').value = contacto.provincia || '';
+
+    document.getElementById('total-proforma').value = formatearImporte(importes.total || 0);
+
+    detalles = detallesNormalizados.map(d => ({
+      id: d?.id,
+      concepto: d?.concepto,
+      descripcion: d?.descripcion || '',
+      cantidad: d?.cantidad,
+      precio: d?.precio,
+      impuestos: d?.impuestos,
+      total: d?.total,
+      productoId: d?.productoId,
+      formaPago: d?.formaPago,
+      fechaDetalle: d?.fechaDetalle
+    }));
     actualizarTablaDetalles();
   } catch (error) {
     console.error('Error al cargar la proforma:', error);
@@ -649,9 +658,11 @@ async function buscarProformaAbierta(idContacto) {
         }
         const data = await response.json();
         console.log("Respuesta de proforma abierta:", data);
+        const importes = normalizarImportesBackend(data);
+        const detallesNormalizados = normalizarDetallesBackend(data.detalles);
 
         // Siempre tendremos los datos del contacto
-        const contacto = data.contacto;
+        const contacto = data.contacto || {};
         document.getElementById('identificador').value = contacto.identificador || '';
         document.getElementById('razonSocial').value = contacto.razonsocial || '';
         document.getElementById('direccion').value = contacto.direccion || '';
@@ -661,13 +672,13 @@ async function buscarProformaAbierta(idContacto) {
 
         if (data.modo === 'edicion') {
             console.log("Entrando en modo edición - Proforma existente");
-            idProforma = data.id;
+            idProforma = parsearNumeroBackend(data.id, data.id);
             document.getElementById('numero').value = data.numero;
             // Convertir la fecha de YYYY-MM-DD a DD/MM/AAAA
             const fechaFormateada = formatearFechaSoloDia(data.fecha);
             document.getElementById('fecha').value = fechaFormateada;
             document.getElementById('estado').value = data.estado === 'A' ? 'Abierta' : data.estado;
-            document.getElementById('total-proforma').value = formatearImporte(data.total);
+            document.getElementById('total-proforma').value = formatearImporte(importes.total || 0);
 
             // IMPORTANTE: Actualizar el tipo de proforma (tanto el campo oculto como el selector)
             const tipoProforma = data.tipo === 'A' ? 'A' : 'N';
@@ -696,19 +707,19 @@ async function buscarProformaAbierta(idContacto) {
             sessionStorage.setItem('tipoProforma', tipoProforma);
 
             // Cargar detalles si existen
-            if (data.detalles && Array.isArray(data.detalles)) {
-                console.log("Cargando detalles:", data.detalles);
-                detalles = data.detalles.map(d => ({
-                    id: d.id,
-                    concepto: d.concepto,
-                    descripcion: d.descripcion || '',
-                    cantidad: d.cantidad,
-                    precio: d.precio,
-                    impuestos: d.impuestos,
-                    total: d.total,
-                    productoId: d.productoId,
-                    formaPago: d.formaPago,
-                    fechaDetalle: d.fechaDetalle
+            if (detallesNormalizados.length > 0) {
+                console.log("Cargando detalles normalizados:", detallesNormalizados);
+                detalles = detallesNormalizados.map(d => ({
+                    id: d?.id,
+                    concepto: d?.concepto,
+                    descripcion: d?.descripcion || '',
+                    cantidad: d?.cantidad,
+                    precio: d?.precio,
+                    impuestos: d?.impuestos,
+                    total: d?.total,
+                    productoId: d?.productoId,
+                    formaPago: d?.formaPago,
+                    fechaDetalle: d?.fechaDetalle
                 }));
                 actualizarTablaDetalles();
             } else {

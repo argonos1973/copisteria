@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Imprimir Ticket</title>
+    <style>
+        /* Estilos para la factura */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #fff;
+            position: relative; /* Necesario para posicionar el logo respecto al body */
+        }
+
+        /* Estilos para el logo */
+        #logo {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 90px; /* Ajusta el tamaño según prefieras (reducido) */
+            height: auto; /* Mantiene la proporción original de la imagen */
+            max-width: 100px; /* Asegura que el logo no exceda este ancho */
+            max-height: 100px; /* Asegura que el logo no exceda esta altura */
+        }
+
+        /* Alinear todos los encabezados y párrafos a la izquierda */
+        h1, h2, h3, p {
+            text-align: left;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left; /* Alinear contenido de las celdas a la izquierda por defecto */
+        }
+
+        th {
+            background-color: #f8f8f8;
+            border-bottom: 1px solid #ddd;
+            color: #000;
+            text-align: left;
+        }
+
+        /* Clase para alinear texto a la derecha */
+        .align-right {
+            text-align: right;
+        }
+
+        /* Alinear números a la derecha para mejor legibilidad */
+        td.numero {
+            text-align: right;
+        }
+
+        /* Estilos para la sección de totales usando Flexbox */
+        .totales {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end; /* Alinea todo el contenedor a la derecha */
+            margin-top: 20px;
+        }
+
+        .total-item {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end; /* Alinea los contenidos dentro de cada item a la derecha */
+            padding: 5px 0;
+        }
+
+        .total-item .etiqueta {
+            margin-right: 10px; /* Espacio entre etiqueta y valor */
+            text-align: right;    /* Alinea el texto de la etiqueta a la derecha */
+            width: 200px;         /* Ajusta el ancho según sea necesario */
+        }
+
+        .total-item .numero {
+            text-align: right; /* Alinea el valor a la derecha */
+        }
+        
+      
+         
+        /* Ajustes para impresión */
+        @media print {
+                
+            /* Ocultar elementos que no deseas imprimir */
+            /* Por ejemplo, si tuvieras botones u otros elementos interactivos */
+            .no-imprimir {
+                display: none;
+            }
+
+            /* Opcional: ajustar los estilos de Flexbox para impresión */
+            .totales {
+                align-items: flex-end;
+            }
+
+            .total-item {
+                justify-content: flex-end;
+            }
+
+            /* Opcional: mantener bordes en la tabla impresa */
+            /* table, th, td {
+                border: 1px solid #000;
+            } */
+        }
+       
+        /* Media Query para Responsividad (Opcional) */
+        @media (max-width: 600px) {
+            .total-item .etiqueta {
+                width: 150px; /* Ajusta según sea necesario */
+            }
+        }
+    #titulo-principal{
+            background: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+            color:#fff;
+            font-size:24px;
+            margin:0 0 30px 0;
+            padding:4px 8px;
+        }
+        body{font-size:12px;}
+        th:first-child, td:first-child{ text-align:left; }
+        hr{display:none;border:none;height:0;}
+    </style>
+</head>
+<body>
+    <!-- Añadir el logo en la parte superior derecha -->
+    <img id="logo" src="logo.png" alt="Logo">
+
+    <div id="factura">
+        <h1 id="titulo-principal">FACTURA SIMPLIFICADA</h1>
+        <!-- Bloque para tickets rectificativos, oculto por defecto -->
+        <div id="info-rectificativo" style="display:none; border:2px dashed red; padding:10px; margin:10px 0;">
+            <p style="font-size:18px; font-weight:bold; color:red; margin:0 0 5px 0;">TICKET RECTIFICATIVO</p>
+            <p style="margin:0 0 3px 0;">Rectifica al ticket <span id="ticket-original-numero"></span> de fecha <span id="ticket-original-fecha"></span></p>
+            <p style="margin:0;">Motivo: <span id="motivo-rectificacion">Anulación de ticket</span></p>
+        </div>
+        <p><strong>EMISOR:</strong> <span id="emisor-nombre">SAMUEL RODRIGUEZ MIQUEL</span></p>
+        <p><strong>DIRECCIÓN:</strong> <span id="emisor-direccion">LEGALITAT, 70, BARCELONA (08024), BARCELONA, ESPAÑA</span></p>
+        <p><strong>NIF:</strong> <span id="emisor-nif">44007535W</span></p>
+        <p><strong>EMAIL:</strong> <span id="emisor-email">INFO@ALEPH70.COM</span></p>
+        <hr>
+        <p><strong>NÚMERO DE TICKET:</strong> <span id="numero">001</span></p>
+        <p><strong>FECHA:</strong> <span id="fecha">17/11/2024</span></p>
+        <p><strong>ESTADO:</strong> <span id="estado">PAGADO</span></p>
+        <hr>
+        <table>
+            <thead>
+                <tr>
+                    <th>Concepto</th>
+                    <th class="align-right">Precio</th>
+                    <th class="align-right">Cantidad</th>
+                    <th class="align-right">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody id="productos">
+                <!-- Los productos se llenarán dinámicamente -->
+            </tbody>
+        </table>
+        <hr>
+        <div class="totales">
+            <div class="total-item">
+                <span class="etiqueta"><strong>Base imponible:</strong></span>
+                <span id="base-imponible" class="numero">0.00€</span>
+            </div>
+            <div class="total-item">
+                <span class="etiqueta"><strong>IVA:</strong></span>
+                <span id="iva" class="numero">0.00€</span>
+            </div>
+            <div class="total-item">
+                <span class="etiqueta"><strong>Total:</strong></span>
+                <span id="total" class="numero">0.00€</span>
+            </div>
+        </div>
+        <hr>
+        <div style="margin-top: 30px; border-top: 1px solid #ddd; padding-top: 20px;">
+            <div style="float: left; width: 70%;">
+                <p><strong>Información VERI*FACTU</strong></p>
+                <p>Este ticket ha sido generado mediante un sistema de emisión de facturas verificables <strong>VERI*FACTU</strong>. Los registros de este ticket se envían automáticamente a la Agencia Tributaria.</p>
+                <p id="hash-ticket">Hash: </p>
+            </div>
+            <div style="float: right; width: 30%; text-align: right;">
+                <img id="qr-verifactu" alt="Código QR VERI*FACTU" style="width:140px;height:140px;" />
+                <p style="font-size: 12px; margin-top: 5px; text-align: center; font-weight: bold; color: #0056b3;">VERI*FACTU</p>
+            </div>
+            <div style="clear:both;"></div>
+        </div>
+    </div>
+
+    <!-- Incluir el script externo -->
+    <script type="module" src="/static/imprimir-ticket.js"></script>
+</body>
+</html>
+
