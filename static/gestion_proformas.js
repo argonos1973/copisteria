@@ -15,6 +15,7 @@ import {
   formatearFecha,
   abrirModalPagos as abrirModal,
   cerrarModalPagos as cerrarModal,
+  calcularCambio,
   parsearNumeroBackend,
   normalizarImportesBackend,
   normalizarDetallesBackend
@@ -85,25 +86,36 @@ async function seleccionarProducto() {
     formElements.cantidadDetalle.value = 1;
   }
 
-  if (tipoProforma === 'A') {
-    // Para proformas tipo A, usar el precio original sin descuentos
-    console.log('Proforma tipo A: NO se aplican descuentos por franja');
-    await seleccionarProductoCommon(formElements, productosOriginales, 'proforma');
-  } else {
-    // Comportamiento normal para otros tipos de proformas (con franjas)
-    console.log('Usando manejo normal CON descuentos por franja');
-    await seleccionarProductoCommon(formElements, productosOriginales, 'proforma');
-  }
+  await seleccionarProductoCommon(formElements, productosOriginales, 'proforma');
 
-   // Si es producto libre, hacer editable el campo total
-   const productoId = formElements.conceptoDetalle.value;
-   if (productoId === PRODUCTO_ID_LIBRE) {
-     formElements.totalDetalle.readOnly = false;
-     formElements.totalDetalle.classList.remove('readonly-field');
-   } else {
-     formElements.totalDetalle.readOnly = true;
-     formElements.totalDetalle.classList.add('readonly-field');
-   }
+  const productoId = formElements.conceptoDetalle.value;
+  if (productoId === PRODUCTO_ID_LIBRE) {
+    formElements.precioDetalle.readOnly = false;
+    formElements.precioDetalle.classList.remove('readonly-field');
+    formElements.precioDetalle.style.backgroundColor = '';
+
+    formElements.totalDetalle.readOnly = false;
+    formElements.totalDetalle.classList.remove('readonly-field');
+    formElements.totalDetalle.style.backgroundColor = '';
+
+    formElements.impuestoDetalle.value = 21;
+    formElements.impuestoDetalle.readOnly = true;
+    formElements.impuestoDetalle.classList.add('readonly-field');
+    formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
+  } else {
+    formElements.precioDetalle.readOnly = true;
+    formElements.precioDetalle.classList.add('readonly-field');
+    formElements.precioDetalle.style.backgroundColor = '#e9ecef';
+
+    formElements.totalDetalle.readOnly = true;
+    formElements.totalDetalle.classList.add('readonly-field');
+    formElements.totalDetalle.style.backgroundColor = '#e9ecef';
+
+    formElements.impuestoDetalle.value = 21;
+    formElements.impuestoDetalle.readOnly = true;
+    formElements.impuestoDetalle.classList.add('readonly-field');
+    formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
+  }
 }
 
 // Nueva función para manejar productos sin aplicar descuentos por franja
@@ -478,7 +490,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       sessionStorage.setItem('origenProforma', origen);
     }
 
-    if (idContacto) {
+    const tieneContacto = idContacto && idContacto !== 'null' && idContacto !== 'undefined';
+    if (tieneContacto) {
       await buscarProformaAbierta(idContacto);
     } else {
       await inicializarNuevoTicket();
@@ -650,8 +663,13 @@ async function cargarProforma(id) {
 }
 
 async function buscarProformaAbierta(idContacto) {
+    if (!idContacto || idContacto === 'null' || idContacto === 'undefined') {
+        console.warn('buscarProformaAbierta llamado sin idContacto válido');
+        await inicializarNuevoTicket();
+        return;
+    }
     try {
-        console.log("Buscando proforma abierta para contacto:", idContacto);
+        console.log('Buscando proforma abierta para contacto:', idContacto);
         const response = await fetch(`/api/proforma/abierta/${idContacto}`);
         if (!response.ok) {
             throw new Error(`Error al buscar proforma abierta: ${response.statusText}`);
@@ -1091,7 +1109,7 @@ Object.assign(window, {
     filtrarProductos,
     cargarDetalleParaEditar,
     cerrarModalPagos: cerrarModal,
-    calcularCambio: calcularCambioModal,
+    calcularCambio,
     procesarPago,
     eliminarDetalle
 });

@@ -2,6 +2,12 @@
  * Función principal que se ejecuta al cargar la página.
  */
 import { IP_SERVER, PORT } from './constantes.js';
+import {
+    formatearImporte,
+    formatearImporteVariable,
+    parsearImporte,
+    redondearImporte
+} from './scripts_utils.js';
 
 window.onload = function() {
     const idTicket = obtenerIdTicket(); // Obtener el ID del ticket desde la URL
@@ -152,23 +158,34 @@ async function rellenarFactura(datos) {
 
     detalles.forEach(detalle => {
         const fila = document.createElement('tr');
-        const precioRaw = (detalle.precio ?? '').toString();
-        const cantidadRaw = (detalle.cantidad ?? '').toString();
-        const subtotalRaw = (detalle.total ?? '').toString();
+        const concepto = detalle?.concepto || '';
+        const cantidadNum = parsearImporte(detalle?.cantidad ?? 0);
+        const precioNum = parsearImporte(detalle?.precio ?? 0);
+        const subtotalSinIVA = redondearImporte(cantidadNum * precioNum);
+
+        const precioDisplay = formatearImporteVariable(precioNum, 0, 5);
+        const cantidadDisplay = Number.isFinite(cantidadNum)
+            ? cantidadNum.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
+            : '';
+        const subtotalDisplay = formatearImporte(subtotalSinIVA);
 
         fila.innerHTML = `
-            <td>${detalle.concepto || ''}</td>
-            <td class="numero">${precioRaw ? `${precioRaw} €` : ''}</td>
-            <td class="numero">${cantidadRaw}</td>
-            <td class="numero">${subtotalRaw ? `${subtotalRaw} €` : ''}</td>
+            <td>${concepto}</td>
+            <td class="numero">${precioNum ? precioDisplay : ''}</td>
+            <td class="numero">${cantidadDisplay}</td>
+            <td class="numero">${subtotalSinIVA ? subtotalDisplay : formatearImporte(0)}</td>
         `;
 
         tbody.appendChild(fila);
     });
 
-    document.getElementById('base-imponible').textContent = ticket.importe_bruto ? `${ticket.importe_bruto} €` : '';
-    document.getElementById('iva').textContent = ticket.importe_impuestos ? `${ticket.importe_impuestos} €` : '';
-    document.getElementById('total').textContent = ticket.total ? `${ticket.total} €` : '';
+    const baseImponible = parsearImporte(ticket.importe_bruto ?? 0);
+    const importeIVA = parsearImporte(ticket.importe_impuestos ?? 0);
+    const totalTicket = parsearImporte(ticket.total ?? 0);
+
+    document.getElementById('base-imponible').textContent = baseImponible ? formatearImporte(baseImponible) : '';
+    document.getElementById('iva').textContent = importeIVA ? formatearImporte(importeIVA) : '';
+    document.getElementById('total').textContent = totalTicket ? formatearImporte(totalTicket) : '';
 
     // Mostrar información VERI*FACTU
     const verifactuDisponible = datos.codigo_qr && datos.codigo_qr.length > 50;

@@ -703,10 +703,10 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
                 numero_ticket,
                 importe_bruto,
                 importe_impuestos,
-                total_ticket,
+                0.0,
                 total_ticket,
                 datetime.now().isoformat(),
-                'C',
+                'P',
                 pres['formaPago'],
                 pres['tipo']
             )
@@ -717,9 +717,10 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
             cantidad = float(d['cantidad'])
             precio = float(d['precio'])
             impuestos = float(d['impuestos'])
-            subtotal = cantidad * precio
-            iva_linea = subtotal * (impuestos / 100)
-            total_detalle = redondear_importe(subtotal + iva_linea)
+            res_detalle = utilities.calcular_importes(cantidad, precio, impuestos)
+            subtotal = res_detalle.get('subtotal', 0.0)
+            iva_linea = res_detalle.get('iva', 0.0)
+            total_detalle = res_detalle.get('total', subtotal + iva_linea)
             cursor.execute(
                 '''
                 INSERT INTO detalle_tickets (

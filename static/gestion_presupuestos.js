@@ -5,6 +5,7 @@ import {
     redondearImporte,
     formatearImporteVariable,
     formatearApunto,
+    debounce,
     parsearImporte,
     calcularPrecioConDescuento,
     calcularTotalDetalle,
@@ -16,6 +17,8 @@ import {
     parsearNumeroBackend,
     normalizarImportesBackend,
     normalizarDetallesBackend,
+    normalizarContactoBackend,
+    fetchContactoPorId,
     invalidateGlobalCache
 } from './scripts_utils.js';
 import { 
@@ -48,7 +51,109 @@ let currentPageContactos = 1;
 let totalPagesContactos = 1;
 let filtrosContactos = { razonSocial: '', nif: '' };
 
-// El HTML de presupuestos usa los mismos estilos/estructura que proformas, pero con IDs propios
+const CONTACTO_CANDIDATO_KEYS = [
+  'contacto',
+  'contactoPresupuesto',
+  'contacto_presupuesto',
+  'contactoCliente',
+  'contacto_facturacion',
+  'contactoFacturacion',
+  'cliente',
+  'contactoData',
+  'datos_contacto'
+];
+
+function limpiarFormularioContacto() {
+  document.getElementById('razonSocial').value = '';
+  document.getElementById('identificador').value = '';
+  document.getElementById('direccion').value = '';
+  document.getElementById('cp').value = '';
+  document.getElementById('localidad').value = '';
+  document.getElementById('provincia').value = '';
+}
+
+function aplicarContactoEnFormulario(contacto = {}) {
+  if (!contacto || typeof contacto !== 'object') {
+    limpiarFormularioContacto();
+    return;
+  }
+  document.getElementById('razonSocial').value = contacto.razonsocial || '';
+  document.getElementById('identificador').value = contacto.identificador || '';
+  document.getElementById('direccion').value = contacto.direccion || '';
+  document.getElementById('cp').value = contacto.cp || '';
+  document.getElementById('localidad').value = contacto.localidad || '';
+  document.getElementById('provincia').value = contacto.provincia || '';
+}
+
+function extraerCandidatosContacto(datos = {}) {
+  const candidatos = [];
+  for (const key of CONTACTO_CANDIDATO_KEYS) {
+    if (datos && datos[key]) {
+      candidatos.push(datos[key]);
+    }
+  }
+  return candidatos;
+}
+
+function normalizarPrimerContactoValido(candidatos = []) {
+  for (const candidato of candidatos) {
+    const normalizado = normalizarContactoBackend(candidato);
+    if (normalizado && Object.keys(normalizado).length > 0) {
+      return normalizado;
+    }
+  }
+  return null;
+}
+
+async function resolverContactoDocumento(datos = {}, preferido = null) {
+  const candidatos = [];
+  if (preferido) candidatos.push(preferido);
+  candidatos.push(...extraerCandidatosContacto(datos));
+
+  const contactoNormalizado = normalizarPrimerContactoValido(candidatos);
+  if (contactoNormalizado) {
+    return contactoNormalizado;
+  }
+
+  const fallbackId = parsearNumeroBackend(
+    preferido?.idContacto ?? datos.idContacto ?? datos.idcontacto ?? datos.id_contacto,
+    null
+  );
+
+  if (fallbackId) {
+    const contactoApi = await fetchContactoPorId(fallbackId);
+    if (contactoApi && Object.keys(contactoApi).length > 0) {
+      return contactoApi;
+    }
+  }
+
+  const planB = {
+    idContacto: fallbackId,
+    razonsocial: datos.razonsocial ?? datos.razon_social ?? datos.razonSocial ?? '',
+    identificador: datos.identificador ?? datos.nif ?? datos.cif ?? '',
+    direccion: datos.direccion ?? datos.direccion_fiscal ?? '',
+    cp: datos.cp ?? datos.codigo_postal ?? datos.codigopostal ?? '',
+    localidad: datos.localidad ?? datos.poblacion ?? datos.ciudad ?? '',
+    provincia: datos.provincia ?? datos.provincia_nombre ?? ''
+  };
+
+  const planBNormalizado = normalizarContactoBackend(planB);
+  if (planBNormalizado && Object.keys(planBNormalizado).length > 0) {
+    return planBNormalizado;
+  }
+
+  return {};
+}
+
+async function establecerContactoDesdeDatos(datos = {}, preferido = null) {
+  const contacto = await resolverContactoDocumento(datos, preferido);
+  if (contacto && Object.keys(contacto).length > 0) {
+    aplicarContactoEnFormulario(contacto);
+    return contacto;
+  }
+  limpiarFormularioContacto();
+  return {};
+}
 
 async function cargarProductos() {
   productosOriginales = await cargarProductosCommon();
@@ -70,11 +175,31 @@ async function seleccionarProducto() {
   await seleccionarProductoCommon(formElements, productosOriginales, 'presupuesto');
   const productoId = formElements.conceptoDetalle.value;
   if (productoId === PRODUCTO_ID_LIBRE) {
+    formElements.precioDetalle.readOnly = false;
+    formElements.precioDetalle.classList.remove('readonly-field');
+    formElements.precioDetalle.style.backgroundColor = '';
+
     formElements.totalDetalle.readOnly = false;
     formElements.totalDetalle.classList.remove('readonly-field');
+    formElements.totalDetalle.style.backgroundColor = '';
+
+    formElements.impuestoDetalle.value = 21;
+    formElements.impuestoDetalle.readOnly = true;
+    formElements.impuestoDetalle.classList.add('readonly-field');
+    formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
   } else {
+    formElements.precioDetalle.readOnly = true;
+    formElements.precioDetalle.classList.add('readonly-field');
+    formElements.precioDetalle.style.backgroundColor = '#e9ecef';
+
     formElements.totalDetalle.readOnly = true;
     formElements.totalDetalle.classList.add('readonly-field');
+    formElements.totalDetalle.style.backgroundColor = '#e9ecef';
+
+    formElements.impuestoDetalle.value = 21;
+    formElements.impuestoDetalle.readOnly = true;
+    formElements.impuestoDetalle.classList.add('readonly-field');
+    formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
   }
 }
 
@@ -298,34 +423,10 @@ async function cargarPresupuesto(id) {
     if (formulario) formulario.dataset.tipoPresupuesto = 'N';
 
     // Cargar datos del contacto
-    const contacto = data.contacto || {};
-    const contactoId = contacto.idContacto || data.idContacto || data.idcontacto;
-    idContacto = contactoId != null ? parseInt(contactoId, 10) : null;
-    
-    // Solo asignar valores si hay contacto
-    if (idContacto && contacto && Object.keys(contacto).length > 0) {
-      const razonSocial = contacto.razonsocial || contacto.razon_social || '';
-      const identificador = contacto.identificador || contacto.nif || '';
-      const direccion = contacto.direccion || '';
-      const cp = contacto.cp || contacto.codigo_postal || '';
-      const localidad = contacto.localidad || contacto.poblacion || '';
-      const provincia = contacto.provincia || '';
-      
-      document.getElementById('razonSocial').value = razonSocial;
-      document.getElementById('identificador').value = identificador;
-      document.getElementById('direccion').value = direccion;
-      document.getElementById('cp').value = cp;
-      document.getElementById('localidad').value = localidad;
-      document.getElementById('provincia').value = provincia;
-    } else {
-      // Limpiar campos si no hay contacto
-      document.getElementById('razonSocial').value = '';
-      document.getElementById('identificador').value = '';
-      document.getElementById('direccion').value = '';
-      document.getElementById('cp').value = '';
-      document.getElementById('localidad').value = '';
-      document.getElementById('provincia').value = '';
-    }
+    const contactoNormalizado = await establecerContactoDesdeDatos(data, importes.contacto);
+    let contactoId = parsearNumeroBackend(contactoNormalizado.idContacto ?? data.idContacto ?? data.idcontacto, null);
+    contactoId = contactoId != null ? parseInt(contactoId, 10) : null;
+    idContacto = Number.isNaN(contactoId) ? null : contactoId;
 
     // Cargar detalles del presupuesto
     if (detallesNormalizados.length > 0) {
@@ -359,16 +460,10 @@ async function buscarPresupuestoAbierto(idContacto) {
     const importes = normalizarImportesBackend(data);
     const detallesNormalizados = normalizarDetallesBackend(data.detalles);
 
-    const contacto = data.contacto;
-    document.getElementById('identificador').value = contacto.identificador || '';
-    document.getElementById('razonSocial').value = contacto.razonsocial || '';
-    document.getElementById('direccion').value = contacto.direccion || '';
-    document.getElementById('cp').value = contacto.cp || '';
-    document.getElementById('localidad').value = contacto.localidad || '';
-    document.getElementById('provincia').value = contacto.provincia || '';
-
-    const contactoId = data.idContacto || data.idcontacto || contacto.idContacto;
-    idContacto = contactoId != null ? parseInt(contactoId, 10) : null;
+    const contactoNormalizado = await establecerContactoDesdeDatos(data, importes.contacto);
+    let contactoId = parsearNumeroBackend(contactoNormalizado.idContacto ?? data.idContacto ?? data.idcontacto, null);
+    contactoId = contactoId != null ? parseInt(contactoId, 10) : null;
+    idContacto = Number.isNaN(contactoId) ? null : contactoId;
 
     if (data.modo === 'edicion') {
       idPresupuesto = data.id;
@@ -651,18 +746,19 @@ function inicializarModalContactos() {
   // Filtros
   const filtroRazon = document.getElementById('filtroRazonSocial');
   const filtroNIF = document.getElementById('filtroNIF');
+  const actualizarFiltrosDebounced = debounce(() => cargarContactos(1), 800);
   
   if (filtroRazon) {
     filtroRazon.addEventListener('input', () => {
       filtrosContactos.razonSocial = filtroRazon.value;
-      cargarContactos(1);
+      actualizarFiltrosDebounced();
     });
   }
   
   if (filtroNIF) {
     filtroNIF.addEventListener('input', () => {
       filtrosContactos.nif = filtroNIF.value;
-      cargarContactos(1);
+      actualizarFiltrosDebounced();
     });
   }
   

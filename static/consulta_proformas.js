@@ -245,7 +245,12 @@ async function buscarProformas() {
             
             // Añadir evento de clic para editar la proforma
             row.addEventListener('click', () => {
-                window.location.href = `GESTION_PROFORMAS.html?idProforma=${proforma.id}&idContacto=${proforma.idcontacto}`;
+                const contactoId = proforma.idcontacto ?? proforma.idContacto ?? '';
+                const params = new URLSearchParams({ idProforma: proforma.id });
+                if (contactoId !== '' && contactoId !== null && contactoId !== undefined) {
+                    params.set('idContacto', contactoId);
+                }
+                window.location.href = `GESTION_PROFORMAS.html?${params.toString()}`;
             });
             
             tbody.appendChild(row);

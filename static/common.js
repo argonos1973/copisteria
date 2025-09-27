@@ -4,11 +4,9 @@ import {
   truncarDecimales,
   formatearImporte,
   calcularPrecioConDescuento,
-  calcularTotalDetalle,
-  debounce
+  calcularTotalDetalle
 } from './scripts_utils.js';
 import { mostrarNotificacion } from './notificaciones.js';
-import { actualizarDetalleConTotal } from './calculo_totales_unificado.js';
 
 // Funciones comunes para manejo de productos
 export async function cargarProductos() {
@@ -84,9 +82,9 @@ export function limpiarCamposDetalle(formElements) {
   }
 
   // Remover event listeners
-  if (precioDetalle) precioDetalle.removeEventListener('input', recalcularTotalUI);
-  if (cantidadDetalle) cantidadDetalle.removeEventListener('input', recalcularTotalUI);
-  if (totalDetalle) totalDetalle.removeEventListener('input', recalcularTotalUI);
+  if (precioDetalle) precioDetalle.removeEventListener('input', calcularTotalDetalle);
+  if (cantidadDetalle) cantidadDetalle.removeEventListener('input', calcularTotalDetalle);
+  if (totalDetalle) totalDetalle.removeEventListener('input', calcularTotalDetalle);
 }
 
 export async function seleccionarProducto(formElements, productosOriginales, tipoDocumento = 'ticket') {
@@ -123,9 +121,9 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
   impuestoDetalle.style.backgroundColor = '#e9ecef';
 
   // Primero removemos todos los event listeners anteriores
-  precioDetalle.removeEventListener('input', recalcularTotalUI);
-  cantidadDetalle.removeEventListener('input', recalcularTotalUI);
-  totalDetalle.removeEventListener('input', recalcularTotalUI);
+  precioDetalle.removeEventListener('input', calcularTotalDetalle);
+  cantidadDetalle.removeEventListener('input', calcularTotalDetalle);
+  totalDetalle.removeEventListener('input', calcularTotalDetalle);
 
   if (productoId === PRODUCTO_ID_LIBRE) {
     precioDetalle.readOnly = false;
@@ -134,9 +132,9 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
     totalDetalle.style.backgroundColor = '';
 
     // Añadimos los event listeners para el producto libre
-    precioDetalle.addEventListener('input', recalcularTotalUI);
-    cantidadDetalle.addEventListener('input', recalcularTotalUI);
-    totalDetalle.addEventListener('input', recalcularTotalUI);
+    precioDetalle.addEventListener('input', calcularTotalDetalle);
+    cantidadDetalle.addEventListener('input', calcularTotalDetalle);
+    totalDetalle.addEventListener('input', calcularTotalDetalle);
 
     // Manejar el campo de concepto personalizado si existe
     if (conceptoInput) {
@@ -156,43 +154,8 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
     totalDetalle.readOnly = true;
     totalDetalle.style.backgroundColor = '#e9ecef';
 
-    // Para productos normales: aplicar franjas según tipoDocumento (ticket, factura, proforma, presupuesto)
-    const onCantidadChange = async () => {
-      const cantidad = parseFloat(cantidadDetalle.value) || 0;
-      const impuestos = parseFloat(impuestoDetalle.value) || 0;
-      const productoIdSel = selectedOption.value;
-      const precioOriginalSel = parseFloat(selectedOption.dataset.precioOriginal) || 0;
-
-      // Determinar tipo de documento y tipo (A/N) cuando aplique
-      let tipoFacturaProforma = 'N';
-      if (tipoDocumento === 'proforma') {
-        tipoFacturaProforma = document.getElementById('tipo-proforma')?.value || sessionStorage.getItem('tipoProforma') || 'N';
-      } else if (tipoDocumento === 'factura') {
-        tipoFacturaProforma = document.getElementById('tipo-factura')?.value || 'N';
-      }
-
-      // Proforma tipo 'A' no aplica descuentos
-      if (tipoDocumento === 'proforma' && String(tipoFacturaProforma).toUpperCase() === 'A') {
-        const det = actualizarDetalleConTotal({ precio: precioOriginalSel, cantidad, impuestos });
-        precioDetalle.value = Number(precioOriginalSel).toFixed(5);
-        totalDetalle.value = Number(det.total).toFixed(2);
-        return;
-      }
-
-      // Para tickets, facturas, presupuestos y proformas (no 'A'): aplicar franjas
-      const precioConDesc = await calcularPrecioConDescuento(
-        precioOriginalSel,
-        cantidad,
-        tipoFacturaProforma,
-        tipoDocumento,
-        productoIdSel
-      );
-      precioDetalle.value = Number(precioConDesc).toFixed(5);
-      const det = actualizarDetalleConTotal({ precio: precioConDesc, cantidad, impuestos });
-      totalDetalle.value = Number(det.total).toFixed(2);
-    };
-    const debouncedOnCantidadChange = debounce(onCantidadChange, 350);
-    cantidadDetalle.addEventListener('input', debouncedOnCantidadChange);
+    // Para productos normales, añadir listener solo en cantidad para calcular franjas
+    cantidadDetalle.addEventListener('input', calcularTotalDetalle);
 
     // Ocultar y limpiar el campo de concepto personalizado si existe
     if (conceptoInput) {
@@ -205,52 +168,14 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
     }
   }
 
-  // Calcular el total inicial con consideración de franjas según tipoDocumento
+  // Solo calcular el total inicial con precio base, sin consultar franjas
   const cantidad = parseFloat(cantidadDetalle.value) || 1;
   const impuestos = parseFloat(impuestoDetalle.value) || 21;
-  if (productoId !== PRODUCTO_ID_LIBRE) {
-    let tipoFacturaProforma = 'N';
-    if (tipoDocumento === 'proforma') {
-      tipoFacturaProforma = document.getElementById('tipo-proforma')?.value || sessionStorage.getItem('tipoProforma') || 'N';
-    } else if (tipoDocumento === 'factura') {
-      tipoFacturaProforma = document.getElementById('tipo-factura')?.value || 'N';
-    } else if (tipoDocumento === 'presupuesto') {
-      tipoFacturaProforma = 'N';
-    }
-
-    if (tipoDocumento === 'proforma' && String(tipoFacturaProforma).toUpperCase() === 'A') {
-      const det = actualizarDetalleConTotal({ precio: precioOriginal, cantidad, impuestos });
-      precioDetalle.value = Number(precioOriginal).toFixed(5);
-      totalDetalle.value = Number(det.total).toFixed(2);
-    } else {
-      const precioConDesc = await calcularPrecioConDescuento(precioOriginal, cantidad, tipoFacturaProforma, tipoDocumento, productoId);
-      precioDetalle.value = Number(precioConDesc).toFixed(5);
-      const det = actualizarDetalleConTotal({ precio: precioConDesc, cantidad, impuestos });
-      totalDetalle.value = Number(det.total).toFixed(2);
-    }
-  } else {
-    const det = actualizarDetalleConTotal({ precio: precioOriginal, cantidad, impuestos });
-    totalDetalle.value = Number(det.total).toFixed(2);
-  }
-}
-
-// Recalcula el total de la línea en el formulario manteniendo 5 decimales en precio y 2 en total
-function recalcularTotalUI() {
-  const cantidadDetalle = document.getElementById('cantidad-detalle');
-  const precioDetalle = document.getElementById('precio-detalle');
-  const impuestoDetalle = document.getElementById('impuesto-detalle');
-  const totalDetalle = document.getElementById('total-detalle');
-
-  const cantidad = parseFloat(cantidadDetalle?.value) || 0;
-  const impuestos = parseFloat(impuestoDetalle?.value) || 0;
-  const precio = parseFloat(precioDetalle?.value) || 0;
-
-  // Calcular con módulo unificado
-  const det = actualizarDetalleConTotal({ precio, cantidad, impuestos });
-  // Precio siempre con 5 decimales en UI
-  if (precioDetalle) precioDetalle.value = Number(precio).toFixed(5);
-  // Total siempre con 2 decimales en UI
-  if (totalDetalle) totalDetalle.value = Number(det.total).toFixed(2);
+  const subtotal = precioOriginal * cantidad;
+  // Redondear IVA (base * porcentaje) a 2 decimales antes de sumar
+  const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+  const total = Number((subtotal + impuestoCalc).toFixed(2));
+  totalDetalle.value = total.toFixed(2);
 }
 
 // Funciones comunes para validación

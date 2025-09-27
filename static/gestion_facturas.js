@@ -331,54 +331,32 @@ async function seleccionarProducto() {
   console.log('Datos del producto:', producto);
   
   if (productoId === PRODUCTO_ID_LIBRE) {
-    // Hacer editables todos los campos para producto LIBRE
-    formElements.totalDetalle.readOnly = false;
-    formElements.totalDetalle.classList.remove('readonly-field');
-    formElements.totalDetalle.style.backgroundColor = '';
-    
-    formElements.impuestoDetalle.readOnly = false;
-    formElements.impuestoDetalle.classList.remove('readonly-field');
-    formElements.impuestoDetalle.style.backgroundColor = '';
-    formElements.impuestoDetalle.placeholder = '';
-    
     formElements.precioDetalle.readOnly = false;
     formElements.precioDetalle.classList.remove('readonly-field');
     formElements.precioDetalle.style.backgroundColor = '';
-    
-    // Para producto LIBRE, usar el IVA del detalle en edición si existe
-    if (detalleEnEdicion && detalleEnEdicion.productoId === PRODUCTO_ID_LIBRE) {
-      // Si es 0, mostrar campo vacío
-      formElements.impuestoDetalle.value = detalleEnEdicion.impuestos === 0 ? '' : detalleEnEdicion.impuestos;
-      console.log('Configurando IVA de producto LIBRE en edición:', formElements.impuestoDetalle.value);
-    } else {
-      // Para nuevos productos LIBRE, establecer 21 por defecto
-      formElements.impuestoDetalle.value = 21;
-      console.log('Valor por defecto IVA para nuevo producto LIBRE: 21%');
-    }
-    
-    console.log('Configurado como producto LIBRE, campos editables', formElements.impuestoDetalle.value);
-  } else {
-    // Para productos normales, todos los campos son no editables
-    formElements.totalDetalle.readOnly = true;
-    formElements.totalDetalle.classList.add('readonly-field');
-    formElements.totalDetalle.style.backgroundColor = '#e9ecef';
-    
+
+    formElements.totalDetalle.readOnly = false;
+    formElements.totalDetalle.classList.remove('readonly-field');
+    formElements.totalDetalle.style.backgroundColor = '';
+
+    formElements.impuestoDetalle.value = 21;
     formElements.impuestoDetalle.readOnly = true;
     formElements.impuestoDetalle.classList.add('readonly-field');
     formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
-    formElements.impuestoDetalle.placeholder = '';
-    
+  } else {
     formElements.precioDetalle.readOnly = true;
     formElements.precioDetalle.classList.add('readonly-field');
     formElements.precioDetalle.style.backgroundColor = '#e9ecef';
-    
-    // Siempre establecer el IVA a 21% para productos no LIBRE
+
+    formElements.totalDetalle.readOnly = true;
+    formElements.totalDetalle.classList.add('readonly-field');
+    formElements.totalDetalle.style.backgroundColor = '#e9ecef';
+
     formElements.impuestoDetalle.value = 21;
-    console.log('Configurado como producto estándar, campos no editables, IVA fijo: 21%');
+    formElements.impuestoDetalle.readOnly = true;
+    formElements.impuestoDetalle.classList.add('readonly-field');
+    formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
   }
-  
-  // Usar el sistema de franjas unificado
-  await calcularTotalDetalle();
 }
 
 function actualizarTotales() {

@@ -11,7 +11,7 @@ def calcular_importes(cantidad, precio, impuestos):
         precio = Decimal(str(precio))
         impuestos = Decimal(str(impuestos))
         
-        subtotal = cantidad * precio
+        subtotal = (cantidad * precio).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         iva = (subtotal * impuestos / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         total = (subtotal + iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         

@@ -395,7 +395,7 @@ def consultar_proformas():
                 p.importe_impuestos as iva,
                 p.importe_cobrado,
                 p.total,
-                p.idcontacto,
+                p.idcontacto AS idContacto,
                 c.razonsocial
             FROM proforma p
             LEFT JOIN contactos c ON p.idcontacto = c.idContacto
@@ -443,7 +443,7 @@ def consultar_proformas():
                 'iva': proforma[6],
                 'importe_cobrado': proforma[7],
                 'total': proforma[8],
-                'idcontacto': proforma[9],
+                'idContacto': proforma[9],
                 'razonsocial': proforma[10]
             }
 
@@ -457,7 +457,7 @@ def consultar_proformas():
                 'iva': format_currency_es_two(row.get('iva')),
                 'importe_cobrado': format_currency_es_two(row.get('importe_cobrado')),
                 'total': format_currency_es_two(row.get('total')),
-                'idcontacto': row.get('idcontacto'),
+                'idcontacto': row.get('idContacto', row.get('idcontacto')),
                 'razonsocial': row.get('razonsocial')
             })
 
