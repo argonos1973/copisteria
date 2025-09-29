@@ -1947,11 +1947,11 @@ td .fas {
 }
 
 .info-precio-vacio {
+    margin: 0;
     font-size: 0.85rem;
     color: var(--color-texto-secundario);
 }
 
-.detalle-proforma-item-cantidad input[type="number"] {
     width: 120px;
 }
 

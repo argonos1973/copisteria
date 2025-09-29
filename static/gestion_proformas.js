@@ -18,11 +18,15 @@ import {
   calcularCambio,
   parsearNumeroBackend,
   normalizarImportesBackend,
-  normalizarDetallesBackend
+  normalizarDetallesBackend,
+  normalizarContactoBackend,
+  fetchContactoPorId,
+  invalidateGlobalCache,
+  inicializarInfoPrecioPopup
 } from './scripts_utils.js';
 import { 
-    calcularTotalProforma,
-    actualizarDetalleConTotal 
+  calcularTotalProforma,
+  actualizarDetalleConTotal 
 } from './calculo_totales_unificado.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
@@ -415,6 +419,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Establecer el texto de la cabecera
     document.querySelector('.cabecera-ticket').classList.add('cabecera-proforma');
 
+    inicializarInfoPrecioPopup();
     await cargarProductos();
     inicializarEventDelegation();
 
@@ -1006,68 +1011,52 @@ async function guardarProforma(formaPago = 'E', totalPago = 0, estado = 'A') {
     }
 }
 
-function cargarDetalleParaEditar(fila) {
+async function cargarDetalleParaEditar(fila) {
   const index = fila.dataset.index;
   const detalle = detalles[index];
   if (!detalle) return;
 
-  // Al editar, siempre usar la fecha actual
-  detalleEnEdicion = {
-    fechaDetalle: new Date().toISOString().split('T')[0],
-    formaPago: detalle.formaPago // Mantener la forma de pago original por ahora
-  };
+  const conceptoSelect = document.getElementById('concepto-detalle');
+  const descripcionInput = document.getElementById('descripcion-detalle');
+  const cantidadInput = document.getElementById('cantidad-detalle');
+  const precioInput = document.getElementById('precio-detalle');
+  const impuestoInput = document.getElementById('impuesto-detalle');
+  const totalInput = document.getElementById('total-detalle');
+  const conceptoInput = document.getElementById('concepto-input');
+  const busquedaInput = document.getElementById('busqueda-producto');
 
-  // Eliminar el detalle actual (será reemplazado al guardar)
-  detalles.splice(index, 1);
-  actualizarTablaDetalles();
+  if (busquedaInput) busquedaInput.value = '';
 
-  const selectProducto = document.getElementById('concepto-detalle');
-  
-  if (detalle.productoId === PRODUCTO_ID_LIBRE) {
-    selectProducto.value = PRODUCTO_ID_LIBRE;
-  } else {
-    selectProducto.value = detalle.productoId;
+  if (conceptoSelect) {
+    actualizarSelectProductos(productosOriginales, conceptoSelect);
+    conceptoSelect.value = detalle.productoId || '';
+    await seleccionarProducto();
   }
 
-  // Crear el objeto formElements
-  const formElements = {
-    conceptoDetalle: selectProducto,
-    descripcionDetalle: document.getElementById('descripcion-detalle'),
-    cantidadDetalle: document.getElementById('cantidad-detalle'),
-    precioDetalle: document.getElementById('precio-detalle'),
-    impuestoDetalle: document.getElementById('impuesto-detalle'),
-    totalDetalle: document.getElementById('total-detalle'),
-    conceptoInput: document.getElementById('concepto-input'),
-    busquedaProducto: document.getElementById('busqueda-producto')
-  };
+  if (descripcionInput) descripcionInput.value = (detalle.descripcion || '').toUpperCase();
+  if (cantidadInput) cantidadInput.value = Number(detalle.cantidad || 1);
+  if (precioInput) precioInput.value = Number(detalle.precio || 0).toFixed(5);
+  if (impuestoInput) impuestoInput.value = Number(detalle.impuestos ?? 21);
+  if (totalInput) totalInput.value = Number(detalle.total || 0).toFixed(2);
 
-  // Primero seleccionamos el producto para que se configuren los campos correctamente
-  seleccionarProductoCommon(formElements, productosOriginales);
-
-  // Luego actualizamos con los valores del detalle
-  formElements.descripcionDetalle.value = detalle.descripcion.toUpperCase();
-  formElements.cantidadDetalle.value = detalle.cantidad;
-  formElements.impuestoDetalle.value = detalle.impuestos;
-  formElements.precioDetalle.value = Number(detalle.precio).toFixed(5); // Mantener 5 decimales en el precio
-  formElements.totalDetalle.value = Number(detalle.total).toFixed(2);   // Total con 2 decimales
-
-  if (detalle.productoId === PRODUCTO_ID_LIBRE) {
-    formElements.conceptoInput.value = detalle.concepto;
-    formElements.conceptoInput.style.display = 'block';
-
-    // Configurar campos para edición libre
-    formElements.precioDetalle.readOnly = false;
-    formElements.precioDetalle.style.backgroundColor = '';
-    formElements.totalDetalle.readOnly = false;
-    formElements.totalDetalle.style.backgroundColor = '';
-
-    if (!formElements.conceptoInput.dataset.listenerAdded) {
-      formElements.conceptoInput.addEventListener('input', filtrarProductos);
-      formElements.conceptoInput.dataset.listenerAdded = true;
+  if (conceptoInput) {
+    if (String(detalle.productoId) === String(PRODUCTO_ID_LIBRE)) {
+      conceptoInput.style.display = 'block';
+      conceptoInput.value = detalle.concepto || '';
+    } else {
+      conceptoInput.style.display = 'none';
+      conceptoInput.value = '';
     }
   }
 
-  calcularTotalDetalle();
+  await calcularTotalDetalle();
+
+  detalleEnEdicion = index;
+  detalles.splice(index, 1);
+  actualizarTablaDetalles();
+
+  if (busquedaInput) busquedaInput.focus();
+  mostrarNotificacion('Detalle cargado para edición', 'info');
 }
 
 async function inicializarNuevoTicket() {

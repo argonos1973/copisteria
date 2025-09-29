@@ -8,6 +8,7 @@ import {
     parsearImporte,
     calcularPrecioConDescuento,
     calcularTotalDetalle,
+    inicializarInfoPrecioPopup,
     abrirModalPagos as abrirModal,
     cerrarModalPagos as cerrarModal,
     calcularCambio as calcularCambioModal,
@@ -604,7 +605,7 @@ async function inicializarEventDelegation() {
     } else {
       const fila = target.closest('tr');
       if (fila && !target.classList.contains('columna-eliminar')) {
-        cargarDetalleParaEditar(fila);
+        await cargarDetalleParaEditar(fila);
       }
     }
   });
@@ -615,6 +616,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Establecer el texto de la cabecera
     document.querySelector('.cabecera-ticket').classList.add('cabecera-factura');
 
+    inicializarInfoPrecioPopup();
     await cargarProductos();
     inicializarEventDelegation();
 
@@ -1320,7 +1322,7 @@ async function cargarDatosContacto(id) {
   }
 }
 
-function cargarDetalleParaEditar(fila) {
+async function cargarDetalleParaEditar(fila) {
   const index = fila.dataset.index;
   const detalle = detalles[index];
   if (!detalle) return;
@@ -1353,114 +1355,90 @@ function cargarDetalleParaEditar(fila) {
   // Asegurar que se actualiza el total también mostrando los valores del detalle en edición
   actualizarTotales();
 
-  const selectProducto = document.getElementById('concepto-detalle');
-  
-  if (detalle.productoId === PRODUCTO_ID_LIBRE) {
-    selectProducto.value = PRODUCTO_ID_LIBRE;
-  } else {
-    selectProducto.value = detalle.productoId;
-  }
+  const conceptoSelect = document.getElementById('concepto-detalle');
+  const descripcionInput = document.getElementById('descripcion-detalle');
+  const cantidadInput = document.getElementById('cantidad-detalle');
+  const precioInput = document.getElementById('precio-detalle');
+  const impuestoInput = document.getElementById('impuesto-detalle');
+  const totalInput = document.getElementById('total-detalle');
+  const conceptoInput = document.getElementById('concepto-input');
+  const busquedaInput = document.getElementById('busqueda-producto');
 
-  // Crear el objeto formElements
   const formElements = {
-    conceptoDetalle: selectProducto,
-    descripcionDetalle: document.getElementById('descripcion-detalle'),
-    cantidadDetalle: document.getElementById('cantidad-detalle'),
-    precioDetalle: document.getElementById('precio-detalle'),
-    impuestoDetalle: document.getElementById('impuesto-detalle'),
-    totalDetalle: document.getElementById('total-detalle'),
-    conceptoInput: document.getElementById('concepto-input'),
-    busquedaProducto: document.getElementById('busqueda-producto')
+    conceptoDetalle: conceptoSelect,
+    descripcionDetalle: descripcionInput,
+    cantidadDetalle: cantidadInput,
+    precioDetalle: precioInput,
+    impuestoDetalle: impuestoInput,
+    totalDetalle: totalInput,
+    conceptoInput,
+    busquedaProducto: busquedaInput
   };
 
-  // Verificar que todos los elementos del formulario existen
   for (const [key, element] of Object.entries(formElements)) {
     if (!element) {
       console.error(`Elemento no encontrado: ${key}`);
-      mostrarNotificacion("Error al cargar el formulario. Contacte al administrador.", "error");
+      mostrarNotificacion('Error al cargar el formulario. Contacte al administrador.', 'error');
       return;
     }
   }
 
-  // Actualizar directamente los valores del detalle
-  formElements.descripcionDetalle.value = detalle.descripcion.toUpperCase();
-  formElements.cantidadDetalle.value = detalle.cantidad;
-  formElements.precioDetalle.value = detalle.precio;
-  
-  // Manejar el campo de IVA según tipo de producto
-  const PRODUCTO_ID_LIBRE_NUM = parseInt(PRODUCTO_ID_LIBRE);
-  const productoIdNum = parseInt(detalle.productoId);
-  const esLibre = productoIdNum === PRODUCTO_ID_LIBRE_NUM;
-  
-  console.log("Configurando detalle - Producto ID:", productoIdNum, "Es LIBRE:", esLibre);
-  
-  // Normalizar el valor de impuestos para productos LIBRE
-  if (esLibre) {
-    // Si es un producto LIBRE y los impuestos son 0, null, undefined o cadena vacía
-    // asegurarnos de que quede como 0 en el modelo de datos
-    if (!detalle.impuestos && detalle.impuestos !== 0) {
-      console.log("Impuestos no definidos, estableciendo a 0%");
-      detalle.impuestos = 0;
-      detalleEnEdicion.impuestos = 0;
-    } else if (detalle.impuestos === 0) {
-      console.log("Impuestos ya son 0");
-    } else {
-      console.log("Impuestos definidos:", detalle.impuestos);
+  if (busquedaInput) {
+    busquedaInput.value = '';
+  }
+
+  if (conceptoSelect) {
+    actualizarSelectProductos(productosOriginales, conceptoSelect);
+    conceptoSelect.value = detalle.productoId || '';
+    await seleccionarProducto();
+    // En facturas convertidas desde proforma puede no existir la opción en el select
+    if (
+      conceptoSelect.options.length === 0 ||
+      !Array.from(conceptoSelect.options).some((option) => option.value === String(detalle.productoId))
+    ) {
+      console.warn('Producto no encontrado en selector, recargando productos...');
+      await cargarProductos();
+      actualizarSelectProductos(productosOriginales, conceptoSelect);
+      conceptoSelect.value = detalle.productoId || '';
+      await seleccionarProducto();
     }
-    
-    // Para la UI: mostrar campo vacío si es 0
-    formElements.impuestoDetalle.value = detalle.impuestos === 0 ? '' : detalle.impuestos;
-    formElements.impuestoDetalle.readOnly = false;
-    formElements.impuestoDetalle.classList.remove('readonly-field');
-    formElements.impuestoDetalle.placeholder = '';
-    
-    formElements.precioDetalle.readOnly = false;
-    formElements.precioDetalle.classList.remove('readonly-field');
+  }
+
+  descripcionInput.value = (detalle.descripcion || '').toUpperCase();
+  cantidadInput.value = Number(detalle.cantidad || 1);
+  precioInput.value = Number(detalle.precio || 0).toFixed(5);
+
+  const esProductoLibre = String(detalle.productoId) === String(PRODUCTO_ID_LIBRE);
+  if (esProductoLibre) {
+    conceptoInput.style.display = 'block';
+    conceptoInput.value = detalle.concepto || '';
+    precioInput.readOnly = false;
+    precioInput.classList.remove('readonly-field');
+    impuestoInput.readOnly = false;
+    impuestoInput.classList.remove('readonly-field');
+    impuestoInput.value = detalle.impuestos ?? '';
   } else {
-    // Configurar campos no editables para productos normales
-    formElements.impuestoDetalle.value = detalle.impuestos || 21;
-    formElements.impuestoDetalle.readOnly = true;
-    formElements.impuestoDetalle.classList.add('readonly-field');
-    
-    formElements.precioDetalle.readOnly = true;
-    formElements.precioDetalle.classList.add('readonly-field');
+    conceptoInput.style.display = 'none';
+    conceptoInput.value = '';
+    precioInput.readOnly = true;
+    precioInput.classList.add('readonly-field');
+    impuestoInput.readOnly = true;
+    impuestoInput.classList.add('readonly-field');
+    impuestoInput.value = Number(detalle.impuestos ?? 21);
   }
-  
-  // Establecer el total directamente desde el detalle original
-  formElements.totalDetalle.value = detalle.total;
-  
-  // Limpiar listeners previos para evitar duplicados
-  formElements.cantidadDetalle.removeEventListener('input', calcularTotalDetalle);
-  formElements.precioDetalle.removeEventListener('input', calcularTotalDetalle);
-  formElements.impuestoDetalle.removeEventListener('input', calcularTotalDetalle);
-  
-  // Configurar event listeners para recalcular el total cuando cambien los valores
-  formElements.cantidadDetalle.addEventListener('input', calcularTotalDetalle);
-  formElements.precioDetalle.addEventListener('input', calcularTotalDetalle);
-  formElements.impuestoDetalle.addEventListener('input', calcularTotalDetalle);
-  
-  // Para asegurar que el select tiene el valor correcto del producto
-  // Buscamos la opción con el ID correcto y la seleccionamos
-  for (let i = 0; i < selectProducto.options.length; i++) {
-    if (selectProducto.options[i].value == detalle.productoId) {
-      selectProducto.selectedIndex = i;
-      break;
-    }
-  }
-  
-  // Después de configurar todo, ejecutar un cálculo del total para asegurar que se muestra correctamente
-  setTimeout(calcularTotalDetalle, 100);
-  
-  // Actualizar totales después de reconstruir la tabla
-  console.log('Actualizando totales después de reconstruir tabla');
-  actualizarTotales();
-  console.log('------- FIN actualizarTablaDetalles -------');
-  
-  // Ajustar el estado visual del botón
+
+  totalInput.value = Number(detalle.total || 0).toFixed(2);
+
+  await calcularTotalDetalle();
+
   const btnAgregar = document.getElementById('btn-agregar-detalle');
   if (btnAgregar) {
     btnAgregar.textContent = 'Actualizar';
     btnAgregar.classList.add('editando');
+  }
+
+  if (busquedaInput) {
+    busquedaInput.focus();
   }
 
   console.log('Formulario configurado para edición');

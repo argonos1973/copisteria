@@ -4,7 +4,9 @@ import {
   truncarDecimales,
   formatearImporte,
   calcularPrecioConDescuento,
-  calcularTotalDetalle
+  calcularTotalDetalle,
+  resetInfoPrecio,
+  registrarFranjaAplicada
 } from './scripts_utils.js';
 import { mostrarNotificacion } from './notificaciones.js';
 
@@ -85,6 +87,15 @@ export function limpiarCamposDetalle(formElements) {
   if (precioDetalle) precioDetalle.removeEventListener('input', calcularTotalDetalle);
   if (cantidadDetalle) cantidadDetalle.removeEventListener('input', calcularTotalDetalle);
   if (totalDetalle) totalDetalle.removeEventListener('input', calcularTotalDetalle);
+
+  const btnAgregar = document.getElementById('btn-agregar-detalle');
+  if (btnAgregar && btnAgregar.dataset.detalleId !== undefined) {
+    delete btnAgregar.dataset.detalleId;
+    btnAgregar.classList.remove('editando');
+  }
+
+  registrarFranjaAplicada(null);
+  resetInfoPrecio();
 }
 
 export async function seleccionarProducto(formElements, productosOriginales, tipoDocumento = 'ticket') {
@@ -102,6 +113,9 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
 
   const selectedOption = conceptoDetalle.options[conceptoDetalle.selectedIndex];
   const productoId = selectedOption.value;
+
+  registrarFranjaAplicada(null);
+  resetInfoPrecio();
 
   if (!productoId) {
     limpiarCamposDetalle(formElements);
@@ -176,6 +190,8 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
   const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
   const total = Number((subtotal + impuestoCalc).toFixed(2));
   totalDetalle.value = total.toFixed(2);
+
+  await calcularTotalDetalle();
 }
 
 // Funciones comunes para validación

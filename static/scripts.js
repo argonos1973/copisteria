@@ -8,13 +8,21 @@ import {
   parsearImporte,
   calcularPrecioConDescuento,
   calcularTotalDetalle,
+  obtenerUltimaFranjaAplicada,
+  obtenerInfoPrecioActual,
+  actualizarInfoPrecio,
+  inicializarInfoPrecioPopup,
+  resetInfoPrecio,
+  registrarFranjaAplicada,
+  extraerFranjaDeDataset,
   abrirModalPagos as abrirModal,
   cerrarModalPagos as cerrarModal,
   calcularCambio as calcularCambioModal,
   inicializarEventosModal,
   convertirFechaParaAPI,
   formatearFecha,
-  redondearImporte
+  redondearImporte,
+  formatearPrecioUnitario
 } from './scripts_utils.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
@@ -36,6 +44,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 2. Asociar los listeners que antes se ponían inline
   asociarEventos();
+  inicializarInfoPrecioPopup();
 
   // 3. Verificar si tenemos un ticketId en la URL
   const urlParams = new URLSearchParams(window.location.search);
@@ -199,6 +208,7 @@ function asociarEventos() {
   }
 }
 
+
 /**
  * Inicializa la delegación de eventos en la tabla (para click en ícono de eliminar o edición)
  */
@@ -325,13 +335,26 @@ export async function seleccionarProducto() {
     busquedaProducto: document.getElementById('busqueda-producto')
   };
   
-  // Establecer cantidad por defecto antes de llamar a seleccionarProductoCommon
-  if (formElements.cantidadDetalle) {
-    formElements.cantidadDetalle.value = 1;
+  const { conceptoDetalle, cantidadDetalle } = formElements;
+
+  const btnAgregar = document.getElementById('btn-agregar-detalle');
+  if (btnAgregar) {
+    delete btnAgregar.dataset.detalleId;
+    btnAgregar.classList.remove('editando');
   }
-  
-  // Para tickets siempre aplicar descuentos por franja, pasar 'ticket' como tipo
+
+  registrarFranjaAplicada(null);
+  resetInfoPrecio();
+
+  if (cantidadDetalle) {
+    cantidadDetalle.value = 1;
+  }
+
   await seleccionarProductoCommon(formElements, productosOriginales, 'ticket');
+
+  if (conceptoDetalle && conceptoDetalle.value && conceptoDetalle.value !== PRODUCTO_ID_LIBRE) {
+    await calcularTotalDetalle();
+  }
 }
 
 /**
@@ -339,8 +362,19 @@ export async function seleccionarProducto() {
  */
 export function validarYAgregarDetalle() {
   const select = document.getElementById('concepto-detalle');
-  const productoId = select.value;
-  let productoSeleccionado = select.options[select.selectedIndex].textContent;
+  if (!select) {
+    mostrarNotificacion('No se encontró el selector de productos.', 'error');
+    return false;
+  }
+
+  const optionSeleccionada = select.options[select.selectedIndex];
+  if (!optionSeleccionada || !optionSeleccionada.value) {
+    mostrarNotificacion('Debe seleccionar un producto antes de agregar el detalle.', 'warning');
+    return false;
+  }
+
+  const productoId = optionSeleccionada.value;
+  let productoSeleccionado = optionSeleccionada.textContent;
   const descripcion = document.getElementById('descripcion-detalle').value.trim();
   const cantidad = parseFloat(document.getElementById('cantidad-detalle').value);
   let precioOriginal = parseFloat(select.options[select.selectedIndex].dataset.precioOriginal) || 0;
@@ -422,11 +456,27 @@ export function agregarDetalle(
   if (detalleId) {
     tr.setAttribute('data-detalle-id', detalleId);
   }
+
+  const precioBaseDataset = Number(precioOriginal ?? precioConDescuento ?? 0);
+  const precioFinalDataset = Number(precioConDescuento ?? precioOriginal ?? 0);
+  tr.dataset.precioOriginal = Number.isFinite(precioBaseDataset) ? precioBaseDataset.toFixed(5) : '0.00000';
+  tr.dataset.precioConDescuento = Number.isFinite(precioFinalDataset) ? precioFinalDataset.toFixed(5) : '0.00000';
   
   // Formatear el precio con máximo 5 decimales y el total con 2
   const precioFormateado = formatearImporteVariable(Number(precioConDescuento), 0, 5);
   const totalFormateado = formatearImporte(totalConIVA);
   
+  const franja = obtenerUltimaFranjaAplicada();
+  if (franja) {
+    tr.dataset.franjaMin = franja.min ?? '';
+    tr.dataset.franjaMax = franja.max ?? '';
+    tr.dataset.franjaDescuento = franja.descuento ?? '';
+  } else {
+    delete tr.dataset.franjaMin;
+    delete tr.dataset.franjaMax;
+    delete tr.dataset.franjaDescuento;
+  }
+
   tr.innerHTML = `
     <td>${concepto}</td>
     <td>${descripcion}</td>
@@ -457,8 +507,27 @@ export async function cargarDetalleParaEditar(fila) {
   if (!productoId) {
     console.warn(`No se encontró ID del producto para "${concepto}".`);
     mostrarNotificacion("No se puede editar este detalle debido a un error en los datos del producto.", "error");
+    registrarFranjaAplicada(null);
+    resetInfoPrecio();
     return;
   }
+
+  let franjaAplicada = extraerFranjaDeDataset(fila.dataset);
+  const precioBaseRecalculo = Number.parseFloat(fila.dataset.precioOriginal ?? fila.dataset.precioConDescuento ?? precioDet) || Number(precioDet);
+  const productoIdString = String(productoId ?? '');
+
+  if (!franjaAplicada && productoIdString && productoIdString !== String(PRODUCTO_ID_LIBRE)) {
+    try {
+      await calcularPrecioConDescuento(Number(precioBaseRecalculo), cantidad, null, 'ticket', productoId);
+      franjaAplicada = obtenerUltimaFranjaAplicada();
+    } catch (error) {
+      console.error('No se pudo recalcular la franja para el detalle seleccionado:', error);
+      franjaAplicada = null;
+    }
+  }
+
+  registrarFranjaAplicada(franjaAplicada);
+  actualizarInfoPrecio(Number(precioDet), impuestos);
 
   const selectProducto = document.getElementById('concepto-detalle');
   // Si el productoId es nulo o no existe en el selector, usar PRODUCTO_ID_LIBRE
@@ -962,6 +1031,25 @@ export function mostrarDetallesTicket(detalles) {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2
     });
+
+    const precioOriginalDataset = Number(detalle?.precioOriginal ?? detalle?.precio ?? precio);
+    const precioConDescDataset = Number(detalle?.precioConDescuento ?? detalle?.precio ?? precio);
+    fila.dataset.precioOriginal = Number.isFinite(precioOriginalDataset) ? precioOriginalDataset.toFixed(5) : '0.00000';
+    fila.dataset.precioConDescuento = Number.isFinite(precioConDescDataset) ? precioConDescDataset.toFixed(5) : '0.00000';
+
+    const franjaMin = detalle?.franjaMin ?? detalle?.franja_min ?? detalle?.franja?.min ?? null;
+    const franjaMax = detalle?.franjaMax ?? detalle?.franja_max ?? detalle?.franja?.max ?? null;
+    const franjaDesc = detalle?.franjaDescuento ?? detalle?.franja_descuento ?? detalle?.franja?.descuento ?? null;
+    const tieneFranjaGuardada = [franjaMin, franjaMax, franjaDesc].some((valor) => valor !== null && valor !== undefined && valor !== '');
+    if (tieneFranjaGuardada) {
+      fila.dataset.franjaMin = franjaMin ?? '';
+      fila.dataset.franjaMax = franjaMax ?? '';
+      fila.dataset.franjaDescuento = franjaDesc ?? '';
+    } else {
+      delete fila.dataset.franjaMin;
+      delete fila.dataset.franjaMax;
+      delete fila.dataset.franjaDescuento;
+    }
 
     fila.innerHTML = `
       <td>${detalle?.concepto ?? ''}</td>

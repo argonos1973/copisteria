@@ -96,10 +96,11 @@ export function calcularTotalLinea(precio, cantidad, iva) {
     const cantidadNum = typeof cantidad === 'number' ? cantidad : parsearImporte(cantidad);
     const ivaNum = typeof iva === 'number' ? iva : parsearImporte(iva);
     
-    const subtotal = precioNum * cantidadNum;
+    const subtotalRaw = precioNum * cantidadNum;
+    const subtotal = Number(subtotalRaw.toFixed(2));
     
     // CRÍTICO: Redondear IVA por línea a 2 decimales
-    const iva_importe = Number((subtotal * (ivaNum / 100)).toFixed(2));
+    const iva_importe = Number((subtotalRaw * (ivaNum / 100)).toFixed(2));
     
     // Total de línea = subtotal + IVA redondeado
     const total = Number((subtotal + iva_importe).toFixed(2));

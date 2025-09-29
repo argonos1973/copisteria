@@ -17,9 +17,9 @@ import {
     parsearNumeroBackend,
     normalizarImportesBackend,
     normalizarDetallesBackend,
-    normalizarContactoBackend,
     fetchContactoPorId,
-    invalidateGlobalCache
+    invalidateGlobalCache,
+    inicializarInfoPrecioPopup
 } from './scripts_utils.js';
 import { 
     calcularTotalPresupuesto,
@@ -28,13 +28,13 @@ import {
 } from './calculo_totales_unificado.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
-  cargarProductos as cargarProductosCommon,
-  actualizarSelectProductos,
-  filtrarProductos as filtrarProductosCommon,
-  limpiarCamposDetalle,
-  seleccionarProducto as seleccionarProductoCommon,
-  validarDetalle,
-  volverSegunOrigen
+    cargarProductos as cargarProductosCommon,
+    actualizarSelectProductos,
+    filtrarProductos as filtrarProductosCommon,
+    limpiarCamposDetalle,
+    seleccionarProducto as seleccionarProductoCommon,
+    validarDetalle,
+    volverSegunOrigen
 } from './common.js';
 // Eliminado: cálculos legacy reemplazados por calculo_totales_unificado.js
 
@@ -171,9 +171,15 @@ async function seleccionarProducto() {
     conceptoInput: document.getElementById('concepto-input'),
     busquedaProducto: document.getElementById('busqueda-producto')
   };
-  if (formElements.cantidadDetalle) formElements.cantidadDetalle.value = 1;
+
+  if (formElements.cantidadDetalle) {
+    formElements.cantidadDetalle.value = 1;
+  }
+
   await seleccionarProductoCommon(formElements, productosOriginales, 'presupuesto');
+
   const productoId = formElements.conceptoDetalle.value;
+
   if (productoId === PRODUCTO_ID_LIBRE) {
     formElements.precioDetalle.readOnly = false;
     formElements.precioDetalle.classList.remove('readonly-field');
@@ -201,6 +207,8 @@ async function seleccionarProducto() {
     formElements.impuestoDetalle.classList.add('readonly-field');
     formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
   }
+
+  await calcularTotalDetalle();
 }
 
 function actualizarTotales() {
@@ -244,9 +252,9 @@ function actualizarTablaDetalles() {
     tr.dataset.index = index;
     
     // Event listener para editar detalle al hacer click
-    tr.addEventListener('click', (e) => {
+    tr.addEventListener('click', async (e) => {
       if (!e.target.classList.contains('btn-icon')) {
-        editarDetalle(index);
+        await editarDetalle(index);
       }
     });
     
@@ -255,7 +263,7 @@ function actualizarTablaDetalles() {
   actualizarTotales();
 }
 
-function editarDetalle(index) {
+async function editarDetalle(index) {
   const detalle = detalles[index];
   if (!detalle) return;
   
@@ -266,25 +274,52 @@ function editarDetalle(index) {
   const precioInput = document.getElementById('precio-detalle');
   const impuestoInput = document.getElementById('impuesto-detalle');
   const totalInput = document.getElementById('total-detalle');
+  const conceptoInput = document.getElementById('concepto-input');
+  const busquedaInput = document.getElementById('busqueda-producto');
   
-  // Establecer valores
-  conceptoSelect.value = detalle.productoId || '';
-  descripcionInput.value = detalle.descripcion || '';
-  cantidadInput.value = detalle.cantidad || 1;
-  precioInput.value = detalle.precio || 0;
-  impuestoInput.value = detalle.impuestos || 21;
-  totalInput.value = detalle.total || 0;
-  
+  // Restablecer filtros para asegurar que el producto esté disponible
+  if (busquedaInput) {
+    busquedaInput.value = '';
+  }
+  if (conceptoSelect) {
+    actualizarSelectProductos(productosOriginales, conceptoSelect);
+    conceptoSelect.value = detalle.productoId || '';
+    await seleccionarProducto();
+  }
+
+  // Establecer valores del detalle seleccionado
+  if (descripcionInput) descripcionInput.value = detalle.descripcion || '';
+  if (cantidadInput) cantidadInput.value = Number(detalle.cantidad || 1);
+  if (precioInput) precioInput.value = Number(detalle.precio || 0).toFixed(5);
+  if (impuestoInput) impuestoInput.value = Number(detalle.impuestos ?? 21);
+  if (totalInput) totalInput.value = Number(detalle.total || 0).toFixed(2);
+
+  // Manejar producto libre para mostrar concepto personalizado
+  if (conceptoInput) {
+    if (String(detalle.productoId) === String(PRODUCTO_ID_LIBRE)) {
+      conceptoInput.style.display = 'block';
+      conceptoInput.value = detalle.concepto || '';
+    } else {
+      conceptoInput.style.display = 'none';
+      conceptoInput.value = '';
+    }
+  }
+
+  // Recalcular franjas y actualizar información de precio
+  await calcularTotalDetalle();
+
   // Marcar como en edición
   detalleEnEdicion = index;
-  
+
   // Eliminar el detalle de la lista temporalmente
   detalles.splice(index, 1);
   actualizarTablaDetalles();
-  
+
   // Enfocar el campo de búsqueda
-  document.getElementById('busqueda-producto').focus();
-  
+  if (busquedaInput) {
+    busquedaInput.focus();
+  }
+
   mostrarNotificacion('Detalle cargado para edición', 'info');
 }
 
@@ -814,6 +849,7 @@ function inicializarModalPagos() {
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     sessionStorage.setItem('tipoProforma', 'N');
+    inicializarInfoPrecioPopup();
     await cargarProductos();
     inicializarEventDelegation();
 

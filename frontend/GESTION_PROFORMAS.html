@@ -161,10 +161,25 @@
                 <label for="cantidad-detalle">Cantidad</label>
                 <input type="number" id="cantidad-detalle" value="1" required min="0" step="1">
               </div>
-            <div class="detalle-proforma-item-importe" style="flex: 1">
+            <div class="detalle-proforma-item-importe precio-info-container" style="flex: 1">
                 <input type="hidden" id="precio-detalle-orig" value="0">
-                <label for="precio-detalle">Precio</label>
+                <div class="precio-label-row">
+                  <label for="precio-detalle">Precio</label>
+                  <button
+                          type="button"
+                          id="btn-info-precio"
+                          class="icono-info-precio oculto"
+                          aria-label="Información sobre el descuento aplicado"
+                          title="Ver detalle del descuento"
+                          aria-controls="popup-info-precio"
+                          aria-expanded="false">
+                    <span aria-hidden="true">i</span>
+                  </button>
+                </div>
                 <input type="number" id="precio-detalle" value="0" required step="0.00001" min="0" inputmode="decimal">
+                <div id="popup-info-precio" class="info-precio-popup" role="dialog" aria-live="polite" aria-hidden="true" tabindex="-1" aria-labelledby="btn-info-precio">
+                  <div class="info-precio-contenido"></div>
+                </div>
               </div>
             <div class="detalle-proforma-item-importe" style="flex: 1">
                 <label for="impuesto-detalle">IVA (%)</label>

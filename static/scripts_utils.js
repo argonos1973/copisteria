@@ -2,6 +2,228 @@ import { IP_SERVER, PORT } from './constantes.js?v=20250911_1135';
 
 export const PRODUCTO_ID_LIBRE = '94';
 
+const INFO_PRECIO_VACIO = {
+  precioSinIVA: null,
+  precioConIVA: null,
+  impuestos: null,
+  descuento: null,
+  franja: null
+};
+
+let ultimaFranjaAplicada = null;
+let infoPrecioActual = { ...INFO_PRECIO_VACIO };
+
+function emitirEventoInfoPrecioActualizado() {
+  document.dispatchEvent(new CustomEvent('info-precio-actualizado', { detail: obtenerInfoPrecioActual() }));
+}
+
+export function registrarFranjaAplicada(franja) {
+  if (franja && typeof franja === 'object') {
+    ultimaFranjaAplicada = {
+      min: franja.min ?? franja.min_cantidad ?? null,
+      max: franja.max ?? franja.max_cantidad ?? null,
+      descuento: franja.descuento ?? franja.porcentaje_descuento ?? 0
+    };
+  } else {
+    ultimaFranjaAplicada = null;
+  }
+}
+
+export function obtenerUltimaFranjaAplicada() {
+  if (!ultimaFranjaAplicada) return null;
+  return { ...ultimaFranjaAplicada };
+}
+
+export function actualizarInfoPrecio(precioSinIVA, impuestos) {
+  if (typeof precioSinIVA !== 'number' || isNaN(precioSinIVA) || typeof impuestos !== 'number' || isNaN(impuestos)) {
+    infoPrecioActual = { ...INFO_PRECIO_VACIO };
+    emitirEventoInfoPrecioActualizado();
+    return;
+  }
+
+  const franja = obtenerUltimaFranjaAplicada();
+  const precioConIVA = precioSinIVA * (1 + (impuestos || 0) / 100);
+
+  infoPrecioActual = {
+    precioSinIVA,
+    precioConIVA,
+    impuestos,
+    descuento: franja?.descuento ?? 0,
+    franja
+  };
+
+  emitirEventoInfoPrecioActualizado();
+}
+
+export function resetInfoPrecio() {
+  ultimaFranjaAplicada = null;
+  infoPrecioActual = { ...INFO_PRECIO_VACIO };
+  emitirEventoInfoPrecioActualizado();
+}
+
+export function obtenerInfoPrecioActual() {
+  const franja = obtenerUltimaFranjaAplicada();
+  return {
+    ...infoPrecioActual,
+    franja
+  };
+}
+
+export function extraerFranjaDeDataset(dataset) {
+  if (!dataset) return null;
+
+  const rawMin = dataset.franjaMin;
+  const rawMax = dataset.franjaMax;
+  const rawDescuento = dataset.franjaDescuento;
+
+  const parseNullableNumber = (value) => {
+    if (value === undefined || value === null || value === '') return null;
+    const num = Number(value);
+    return Number.isNaN(num) ? null : num;
+  };
+
+  const min = parseNullableNumber(rawMin);
+  const max = parseNullableNumber(rawMax);
+  const descuento = parseNullableNumber(rawDescuento);
+
+  if (min === null && max === null && (descuento === null || Number.isNaN(descuento))) {
+    return null;
+  }
+
+  return {
+    min,
+    max,
+    descuento: descuento ?? 0
+  };
+}
+
+export function inicializarInfoPrecioPopup() {
+  const infoButton = document.getElementById('btn-info-precio');
+  const popup = document.getElementById('popup-info-precio');
+  if (!infoButton || !popup) return;
+
+  if (infoButton.dataset.infoPrecioPopup === 'initialized') {
+    return;
+  }
+  infoButton.dataset.infoPrecioPopup = 'initialized';
+
+  const content = popup.querySelector('.info-precio-contenido');
+  let infoActual = obtenerInfoPrecioActual();
+
+  const cerrarPopup = () => {
+    popup.classList.remove('visible');
+    popup.setAttribute('aria-hidden', 'true');
+    infoButton.setAttribute('aria-expanded', 'false');
+  };
+
+  const actualizarVisibilidadIcono = () => {
+    const franjaAplicada = infoActual?.franja || null;
+    const descuentoFranja = franjaAplicada ? Number(franjaAplicada.descuento ?? 0) : 0;
+    const hayFranjaConDescuento = franjaAplicada && !Number.isNaN(descuentoFranja) && descuentoFranja > 0;
+    const precioValido = Number.isFinite(infoActual?.precioSinIVA) && (infoActual?.precioSinIVA ?? 0) > 0;
+    if (hayFranjaConDescuento && precioValido) {
+      infoButton.classList.remove('oculto');
+    } else {
+      infoButton.classList.add('oculto');
+      cerrarPopup();
+    }
+  };
+
+  const formatearFranja = (franja) => {
+    if (!franja) return 'Sin franja aplicada';
+    const { min, max, descuento } = franja;
+    const descuentoTexto = `${(descuento ?? 0).toFixed(2)} %`;
+    if (min !== null && max !== null) {
+      return `${min}-${max} uds · ${descuentoTexto}`;
+    }
+    if (min !== null) {
+      return `≥ ${min} uds · ${descuentoTexto}`;
+    }
+    if (max !== null) {
+      return `≤ ${max} uds · ${descuentoTexto}`;
+    }
+    return `Descuento ${descuentoTexto}`;
+  };
+
+  const renderContenido = () => {
+    if (!content) return;
+
+    actualizarVisibilidadIcono();
+
+    const tienePrecio = Number.isFinite(infoActual?.precioSinIVA);
+    if (!tienePrecio) {
+      content.innerHTML = '<p class="info-precio-vacio">Introduce cantidad y precio para ver los detalles.</p>'
+;
+      return;
+    }
+
+    const tieneIVA = Number.isFinite(infoActual?.impuestos);
+    const precioSinIVA = formatearPrecioUnitario(infoActual.precioSinIVA ?? 0);
+    const precioConIVA = formatearImporteVariable(infoActual.precioConIVA ?? 0, 2, 2);
+    const ivaTexto = tieneIVA ? `${(infoActual.impuestos ?? 0).toFixed(2)} %` : '—';
+    const descuentoTexto = `${(infoActual.descuento ?? 0).toFixed(2)} %`;
+    const franjaTexto = formatearFranja(infoActual.franja);
+
+    content.innerHTML = `
+      <h4>Detalle de precio</h4>
+      <ul class="lista-info-precio">
+        <li><span>Precio unitario (sin IVA):</span> <strong>${precioSinIVA}</strong></li>
+        <li><span>IVA aplicado:</span> <strong>${ivaTexto}</strong></li>
+        <li><span>Precio unitario con IVA:</span> <strong>${precioConIVA}</strong></li>
+        <li><span>Descuento por franja:</span> <strong>${descuentoTexto}</strong></li>
+        <li><span>Franja aplicada:</span> <strong>${franjaTexto}</strong></li>
+      </ul>
+    `;
+  };
+
+  const abrirPopup = () => {
+    if (infoButton.classList.contains('oculto')) return;
+    renderContenido();
+    popup.classList.add('visible');
+    popup.setAttribute('aria-hidden', 'false');
+    infoButton.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(() => popup.focus());
+  };
+
+  infoButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    if (infoButton.classList.contains('oculto')) return;
+    if (popup.classList.contains('visible')) {
+      cerrarPopup();
+    } else {
+      abrirPopup();
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!popup.classList.contains('visible')) return;
+    if (popup.contains(event.target) || event.target === infoButton) return;
+    cerrarPopup();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && popup.classList.contains('visible')) {
+      cerrarPopup();
+      infoButton.focus();
+    }
+  });
+
+  document.addEventListener('info-precio-actualizado', (event) => {
+    infoActual = event.detail ?? obtenerInfoPrecioActual();
+    actualizarVisibilidadIcono();
+    if (popup.classList.contains('visible')) {
+      if (infoButton.classList.contains('oculto')) {
+        cerrarPopup();
+      } else {
+        renderContenido();
+      }
+    }
+  });
+
+  actualizarVisibilidadIcono();
+  renderContenido();
+}
+
 /* ================= Loading Overlay ================= */
 let overlayDiv;
 
@@ -271,27 +493,24 @@ export function normalizarImportesBackend(importes = {}, claves = ['importe_brut
 
 
 export async function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad, tipoFactura = null, tipoDocumento = 'proforma', productoId = null) {
-  // Si tipoFactura es una cadena vacía, tratarlo como 'N' (aplicar descuentos)
   if (tipoFactura === '') {
     tipoFactura = 'N';
   }
-  
-  // En tickets siempre aplicar descuentos
+
   if (tipoDocumento === 'ticket') {
     return await aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
   }
-  
-  // En facturas nunca aplicar descuentos
+
   if (tipoDocumento === 'factura') {
-    return precioUnitarioSinIVA;
-  }
-  
-  // En proformas, aplicar descuentos solo si el tipo NO es 'A'
-  if (tipoFactura === 'A') {
+    registrarFranjaAplicada(null);
     return precioUnitarioSinIVA;
   }
 
-  // Aplicar descuento por defecto (para proformas tipo 'N' u otros casos)
+  if (tipoFactura === 'A') {
+    registrarFranjaAplicada(null);
+    return precioUnitarioSinIVA;
+  }
+
   return await aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
 }
 
@@ -301,20 +520,19 @@ let calculandoFranjas = false;
 async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId) {
   if (!productoId) {
     console.warn('No se proporcionó productoId, usando precio original sin descuento');
+    registrarFranjaAplicada(null);
     return precioUnitarioSinIVA;
   }
 
-  // Verificar si ya hay un cálculo en progreso
   if (calculandoFranjas) {
     console.warn('Cálculo de franjas ya en progreso, ignorando llamada duplicada');
+    registrarFranjaAplicada(null);
     return precioUnitarioSinIVA;
   }
 
-  // Establecer flag para bloquear nuevas llamadas
   calculandoFranjas = true;
 
   try {
-    // Obtener franjas desde la base de datos
     const response = await originalFetch(buildApiUrl(`/api/productos/${productoId}/franjas_descuento`), {
       method: 'GET',
       headers: {
@@ -323,7 +541,8 @@ async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, product
     });
     if (!response.ok) {
       console.warn(`Error al obtener franjas para producto ${productoId}: ${response.status}`);
-      calculandoFranjas = false; // Liberar flag en caso de error
+      registrarFranjaAplicada(null);
+      calculandoFranjas = false;
       return precioUnitarioSinIVA;
     }
 
@@ -332,16 +551,15 @@ async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, product
 
     if (franjas.length === 0) {
       console.warn(`No hay franjas definidas para producto ${productoId}`);
-      calculandoFranjas = false; // Liberar flag cuando no hay franjas
+      registrarFranjaAplicada(null);
+      calculandoFranjas = false;
       return precioUnitarioSinIVA;
     }
 
-    // Buscar la franja que corresponde a la cantidad
     let descuentoAplicable = 0;
     let franjaAplicada = null;
-    
-    for (let i = 0; i < franjas.length; i++) {
-      const franja = franjas[i];
+
+    for (const franja of franjas) {
       if (cantidad >= franja.min_cantidad && cantidad <= franja.max_cantidad) {
         descuentoAplicable = franja.porcentaje_descuento;
         franjaAplicada = {
@@ -353,7 +571,6 @@ async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, product
       }
     }
 
-    // Si no se encontró franja exacta, usar la última disponible para cantidades mayores
     if (!franjaAplicada && franjas.length > 0) {
       const ultimaFranja = franjas[franjas.length - 1];
       if (cantidad > ultimaFranja.max_cantidad) {
@@ -366,34 +583,32 @@ async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, product
       }
     }
 
-    // Si aún no hay franja, usar precio original
     if (!franjaAplicada) {
       console.warn(`No se encontró franja para cantidad ${cantidad} en producto ${productoId}`);
+      registrarFranjaAplicada(null);
       return precioUnitarioSinIVA;
     }
 
+    registrarFranjaAplicada(franjaAplicada);
+
     const factorDescuento = (100 - descuentoAplicable) / 100;
     const precioConDescuento = precioUnitarioSinIVA * factorDescuento;
-    
-    // Mostrar información detallada en consola
+
     console.log('=== CÁLCULO DE FRANJA DE DESCUENTO (BD) ===');
     console.log(`Producto ID: ${productoId}`);
     console.log(`Precio original: ${precioUnitarioSinIVA.toFixed(5)}€`);
     console.log(`Cantidad: ${cantidad} unidades`);
     console.log(`Franja aplicada: ${franjaAplicada.min}-${franjaAplicada.max} unidades`);
     console.log(`Descuento aplicable: ${descuentoAplicable}%`);
-    console.log(`Factor de descuento: ${factorDescuento.toFixed(4)}`);
     console.log(`Precio con descuento: ${precioConDescuento.toFixed(5)}€`);
-    console.log(`Ahorro: ${(precioUnitarioSinIVA - precioConDescuento).toFixed(5)}€`);
     console.log('==========================================');
-    
-    return precioConDescuento;
 
+    return precioConDescuento;
   } catch (error) {
     console.error(`Error al calcular descuento por franja para producto ${productoId}:`, error);
+    registrarFranjaAplicada(null);
     return precioUnitarioSinIVA;
   } finally {
-    // Liberar flag al finalizar (éxito o error)
     calculandoFranjas = false;
   }
 }
@@ -406,119 +621,137 @@ export async function calcularTotalDetalle() {
   const select          = document.getElementById('concepto-detalle');
 
   if (!cantidadElem || !select || !impuestoElem || !totalElem || !precioDetalleElem) {
-    console.error("Uno o más elementos necesarios no existen en el DOM.");
+    console.error('Uno o más elementos necesarios no existen en el DOM.');
+    resetInfoPrecio();
     return;
   }
 
-  const selectedOption  = select.options[select.selectedIndex];
-  const productoId      = selectedOption.value;
+  const selectedIndex = select.selectedIndex;
+  if (selectedIndex < 0) {
+    console.warn('No hay ninguna opción seleccionada en el selector de productos.');
+    totalElem.value = '0.00';
+    registrarFranjaAplicada(null);
+    resetInfoPrecio();
+    return;
+  }
+
+  const selectedOption  = select.options[selectedIndex];
+  const productoId      = selectedOption?.value ?? '';
   const cantidad        = parseFloat(cantidadElem.value) || 0;
-  
-  // Comprobar si el campo de impuestos está vacío para tratarlo como 0%
+
+  if (!productoId) {
+    console.warn('Opción de producto sin valor. Reiniciando información de precio.');
+    totalElem.value = '0.00';
+    registrarFranjaAplicada(null);
+    resetInfoPrecio();
+    return;
+  }
+
   let impuestos = 0;
   if (impuestoElem.value === '') {
-    // Si está vacío, dejarlo así en la UI pero usar 0 para cálculos
-    console.log("Campo IVA vacío, usando 0% para el cálculo");
+    console.log('Campo IVA vacío, usando 0% para el cálculo');
     impuestos = 0;
   } else {
-    // Si tiene valor, parsearlo normalmente
     impuestos = parseFloat(impuestoElem.value) || 0;
   }
 
   if (cantidad < 1) {
-    totalElem.value = "0.00";
+    totalElem.value = '0.00';
+    resetInfoPrecio();
     return;
   }
 
   if (productoId === PRODUCTO_ID_LIBRE) {
+    registrarFranjaAplicada(null);
+
     if (document.activeElement === totalElem) {
-      // Si estamos editando el total, calculamos el precio unitario
       const totalIngresado = parseFloat(totalElem.value) || 0;
       const precioUnitario = (totalIngresado / (1 + impuestos / 100)) / cantidad;
       precioDetalleElem.value = precioUnitario.toFixed(5);
+      actualizarInfoPrecio(precioUnitario, impuestos);
     } else {
-      // Si estamos editando el precio o la cantidad, calculamos el total
       const precioUnitario = parseFloat(precioDetalleElem.value) || 0;
       const subtotal = precioUnitario * cantidad;
-      // Redondear IVA (base * porcentaje) a 2 decimales antes de sumar
       const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
       const total = Number((subtotal + impuestoCalc).toFixed(2));
       totalElem.value = total.toFixed(2);
+      actualizarInfoPrecio(precioUnitario, impuestos);
     }
-  } else {
-    let precioOriginal = parseFloat(selectedOption.dataset.precioOriginal) || 0;
-    
-    // Obtener el tipo de proforma o factura correcto (usar el campo oculto como fuente principal)
-    let tipoDocumento = 'N';
-    
-    // Verificar primero si estamos en una proforma
-    const tipoProformaElem = document.getElementById('tipo-proforma');
-    if (tipoProformaElem) {
-      tipoDocumento = tipoProformaElem.value;
-      console.log('Detectado tipo de proforma:', tipoDocumento);
-    } else {
-      // Si no es proforma, verificar si es una factura
-      const tipoFacturaElem = document.getElementById('tipo-factura');
-      if (tipoFacturaElem) {
-        tipoDocumento = tipoFacturaElem.value;
-        console.log('Detectado tipo de factura:', tipoDocumento);
-      } else {
-        // Si no se encuentra ningún elemento, usar el valor predeterminado
-        tipoDocumento = sessionStorage.getItem('tipoProforma') || 'N';
-        console.log('Usando tipo predeterminado:', tipoDocumento);
-      }
-    }
-    
-    console.log(`Tipo de documento detectado: ${tipoDocumento}`);
-    
-    // Determinar el precio final (sin aplicar descuentos si es tipo A)
-    let precioFinal;
-    
-    // Si estamos editando un detalle existente, respetar el precio unitario ya guardado
-    const detalleIdEditing = (document.getElementById('btn-agregar-detalle')?.dataset?.detalleId) || '';
-    if (detalleIdEditing) {
-      console.log('Edición de detalle detectada: usando precio unitario fijo del input');
-      const precioFijo = parseFloat(precioDetalleElem.value) || precioOriginal;
-      const precioRedondeado = Number(precioFijo.toFixed(5));
-      const subtotal = precioRedondeado * cantidad;
-      const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
-      const total = Number((subtotal + impuestoCalc).toFixed(2));
-      precioDetalleElem.value = precioRedondeado.toFixed(5);
-      totalElem.value = total.toFixed(2);
-      return;
-    }
-    
-    if (tipoDocumento === 'A') {
-      // Para documentos tipo A, NO aplicar descuento (devolver precio original)
-      console.log('Documento tipo A: NO se aplican descuentos por franja');
-      precioFinal = precioOriginal;
-    } else {
-      // Para documentos tipo N, calcular con descuentos
-      console.log('Documento tipo N: SÍ se aplican descuentos por franja');
-      // Verificar que productoId no sea el producto libre antes de aplicar descuentos
-      if (productoId && productoId !== PRODUCTO_ID_LIBRE) {
-        precioFinal = await calcularPrecioConDescuento(precioOriginal, cantidad, null, tipoDocumento, productoId);
-      } else {
-        console.warn('ProductoId es LIBRE o vacío, usando precio original sin descuento');
-        precioFinal = precioOriginal;
-      }
-    }
-    
-    // Asegurar que precioFinal es un número válido
-    if (typeof precioFinal !== 'number' || isNaN(precioFinal)) {
-      console.error('precioFinal no es un número válido:', precioFinal);
-      precioFinal = precioOriginal;
-    }
-
-    const precioRedondeado = Number(precioFinal.toFixed(5));
-    const subtotal = precioRedondeado * cantidad;
-    // Redondear IVA (base * porcentaje) a 2 decimales antes de sumar
-    const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
-    const total = Number((subtotal + impuestoCalc).toFixed(2));
-
-    precioDetalleElem.value = precioRedondeado.toFixed(5);
-    totalElem.value = total.toFixed(2);
+    return;
   }
+
+  let precioOriginal = parseFloat(selectedOption.dataset.precioOriginal) || 0;
+
+  let tipoDocumento = 'N';
+  const tipoPresupuestoElem = document.getElementById('tipo-presupuesto');
+  const tipoProformaElem = document.getElementById('tipo-proforma');
+  if (tipoPresupuestoElem) {
+    tipoDocumento = tipoPresupuestoElem.value || 'N';
+    sessionStorage.setItem('tipoPresupuesto', tipoDocumento);
+    console.log('Detectado tipo de presupuesto:', tipoDocumento);
+  } else if (tipoProformaElem) {
+    tipoDocumento = tipoProformaElem.value || 'N';
+    sessionStorage.setItem('tipoProforma', tipoDocumento);
+    console.log('Detectado tipo de proforma:', tipoDocumento);
+  } else {
+    const tipoFacturaElem = document.getElementById('tipo-factura');
+    if (tipoFacturaElem) {
+      tipoDocumento = tipoFacturaElem.value || 'N';
+      sessionStorage.setItem('tipoFactura', tipoDocumento);
+      console.log('Detectado tipo de factura:', tipoDocumento);
+    } else {
+      tipoDocumento = sessionStorage.getItem('tipoPresupuesto')
+        || sessionStorage.getItem('tipoProforma')
+        || sessionStorage.getItem('tipoFactura')
+        || 'N';
+      console.log('Usando tipo predeterminado:', tipoDocumento);
+    }
+  }
+
+  console.log(`Tipo de documento detectado: ${tipoDocumento}`);
+
+  let precioFinal;
+
+  const detalleIdEditing = document.getElementById('btn-agregar-detalle')?.dataset?.detalleId || '';
+  const enEdicion = Boolean(detalleIdEditing);
+
+  if (tipoDocumento === 'A') {
+    console.log('Documento tipo A: NO se aplican descuentos por franja');
+    precioFinal = parseFloat(precioDetalleElem.value) || precioOriginal;
+    registrarFranjaAplicada(null);
+  } else {
+    console.log('Documento tipo N: SÍ se aplican descuentos por franja');
+    if (productoId && productoId !== PRODUCTO_ID_LIBRE) {
+      const baseCalculo = parseFloat(selectedOption.dataset.precioOriginal);
+      const precioBase = Number.isFinite(baseCalculo) ? baseCalculo : precioOriginal;
+      precioFinal = await calcularPrecioConDescuento(precioBase, cantidad, null, tipoDocumento, productoId);
+    } else {
+      console.warn('ProductoId es LIBRE o vacío, usando precio original sin descuento');
+      precioFinal = parseFloat(precioDetalleElem.value) || precioOriginal;
+      registrarFranjaAplicada(null);
+    }
+  }
+
+  if (typeof precioFinal !== 'number' || isNaN(precioFinal)) {
+    console.error('precioFinal no es un número válido:', precioFinal);
+    precioFinal = precioOriginal;
+  }
+
+  if (enEdicion && document.activeElement === precioDetalleElem) {
+    const precioManual = parseFloat(precioDetalleElem.value);
+    if (Number.isFinite(precioManual) && precioManual > 0) {
+      precioFinal = precioManual;
+    }
+  }
+
+  const precioRedondeado = Number(precioFinal.toFixed(5));
+  const subtotal = precioRedondeado * cantidad;
+  const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
+  const total = Number((subtotal + impuestoCalc).toFixed(2));
+
+  precioDetalleElem.value = precioRedondeado.toFixed(5);
+  totalElem.value = total.toFixed(2);
+  actualizarInfoPrecio(precioRedondeado, impuestos);
 }
 
 let onCobrarCallback = null;
