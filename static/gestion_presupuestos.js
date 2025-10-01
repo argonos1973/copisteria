@@ -17,6 +17,7 @@ import {
     parsearNumeroBackend,
     normalizarImportesBackend,
     normalizarDetallesBackend,
+    normalizarContactoBackend,
     fetchContactoPorId,
     invalidateGlobalCache,
     inicializarInfoPrecioPopup
@@ -67,8 +68,7 @@ function limpiarFormularioContacto() {
   document.getElementById('razonSocial').value = '';
   document.getElementById('identificador').value = '';
   document.getElementById('direccion').value = '';
-  document.getElementById('cp').value = '';
-  document.getElementById('localidad').value = '';
+  document.getElementById('cp-localidad').textContent = '';
   document.getElementById('provincia').value = '';
 }
 
@@ -80,8 +80,9 @@ function aplicarContactoEnFormulario(contacto = {}) {
   document.getElementById('razonSocial').value = contacto.razonsocial || '';
   document.getElementById('identificador').value = contacto.identificador || '';
   document.getElementById('direccion').value = contacto.direccion || '';
-  document.getElementById('cp').value = contacto.cp || '';
-  document.getElementById('localidad').value = contacto.localidad || '';
+  const cp = contacto.cp || '';
+  const localidad = contacto.localidad || '';
+  document.getElementById('cp-localidad').textContent = cp && localidad ? `${cp} ${localidad}` : (cp || localidad);
   document.getElementById('provincia').value = contacto.provincia || '';
 }
 
@@ -749,8 +750,9 @@ function seleccionarContactoModal(contactoData) {
   document.getElementById('razonSocial').value = contactoData.razon || '';
   document.getElementById('identificador').value = contactoData.nif || '';
   document.getElementById('direccion').value = contactoData.direccion || '';
-  document.getElementById('cp').value = contactoData.cp || '';
-  document.getElementById('localidad').value = contactoData.localidad || '';
+  const cp = contactoData.cp || '';
+  const localidad = contactoData.localidad || '';
+  document.getElementById('cp-localidad').textContent = cp && localidad ? `${cp} ${localidad}` : (cp || localidad);
   document.getElementById('provincia').value = contactoData.provincia || '';
   
   cerrarModalContactos();

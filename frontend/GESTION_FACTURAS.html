@@ -15,6 +15,144 @@
     <link rel="stylesheet" href="../static/styles.css">
     <link rel="stylesheet" href="../static/notificaciones.css">
 
+    <style>
+        .contact-header {
+            display: flex;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .contact-column {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .contact-main .contact-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+
+        .contact-main .contact-field input {
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid #d7dde6;
+            padding: 6px 10px;
+            background: #fafbfc;
+        }
+
+        .contact-main {
+            flex: 1 1 auto;
+        }
+
+        .contact-dir3 {
+            flex: 0 0 260px;
+            background: #f5f8fb;
+            border: 1px solid #d8e2ee;
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .contact-dir3.face-error {
+            border-color: #e74c3c;
+            box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+        }
+
+        .face-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .face-toggle-title {
+            font-weight: 600;
+            color: #2c3e50;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.04em;
+        }
+
+        .contact-dir3 .checkbox-label {
+            margin: 0;
+        }
+
+        .contact-dir3 .checkbox-text {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .dir3-values {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .dir3-values.is-visible {
+            display: flex;
+        }
+
+        .dir3-item {
+            background: #ffffff;
+            border: 1px solid #e3eaf3;
+            border-radius: 6px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .dir3-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #7f8c8d;
+            font-weight: 600;
+        }
+
+        .dir3-code {
+            font-size: 14px;
+            color: #2c3e50;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .total-face-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .total-face-item > label {
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .total-face-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .face-inline {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #2c3e50;
+        }
+
+        .face-inline.face-error {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+    </style>
+
 </head>
 <body>
     <div class="page-header" style="background: linear-gradient(90deg, #000000 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.1) 80%, transparent 100%) !important; padding: 8px 25px !important; margin: 0 0 20px 0; border-radius: 8px; color: #ffffff !important;">
@@ -41,9 +179,15 @@
                     <option value="A">Tipo A (sin descuentos)</option>
                 </select>
             </div>
-            <div class="detalle-proforma-item">
+            <div class="detalle-proforma-item total-face-item">
                 <label for="total-proforma" style="text-align: right;">Total (€)</label>
-                <input type="text" id="total-proforma" value="0.00" readonly class="total-proforma-display">
+                <div class="total-face-row">
+                    <input type="text" id="total-proforma" value="0.00" readonly class="total-proforma-display">
+                    <div class="face-inline" id="face-inline">
+                        <input type="checkbox" id="presentar-face" class="input-checkbox" />
+                        <label for="presentar-face" class="checkbox-text" style="margin:0;">Presentar FACe</label>
+                    </div>
+                </div>
             </div>
             <div class="detalle-proforma-item">
                 <input type="text" id="idfactura" required readonly class="hidden-field" style="display: none;">
@@ -55,13 +199,30 @@
 
     <div id="cabecera-proforma">
         <div class="contact-info">
-            <input type="text" id="razonSocial" readonly />
-            <input type="text" id="identificador" readonly />
-            <input type="text" id="direccion" readonly />
-            <div class="cp-poblacion">
-                <p id="cp-localidad" style="margin-bottom:5px;"></p>
+            <div class="contact-header">
+                <div class="contact-column contact-main">
+                    <div class="contact-field">
+                        <label for="razonSocial">Razón social</label>
+                        <input type="text" id="razonSocial" readonly />
+                    </div>
+                    <div class="contact-field">
+                        <label for="identificador">Identificador</label>
+                        <input type="text" id="identificador" readonly />
+                    </div>
+                    <div class="contact-field">
+                        <label for="direccion">Dirección</label>
+                        <input type="text" id="direccion" readonly />
+                    </div>
+                    <div class="contact-field">
+                        <label>CP y localidad</label>
+                        <p id="cp-localidad" style="margin-bottom:0; font-weight:600; color:#2c3e50;"></p>
+                    </div>
+                    <div class="contact-field">
+                        <label for="provincia">Provincia</label>
+                        <input type="text" id="provincia" readonly />
+                    </div>
+                </div>
             </div>
-            <input type="text" id="provincia" readonly />
         </div>
     </div>
 

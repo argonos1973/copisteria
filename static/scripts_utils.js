@@ -69,6 +69,22 @@ export function obtenerInfoPrecioActual() {
   };
 }
 
+export function validarContactoFace(contacto) {
+  if (!contacto) return { valido: false, errores: ['No hay datos de contacto'] };
+  const requiereFace = parsearNumeroBackend(contacto.face_presentacion, 0) === 1;
+  if (!requiereFace) {
+    return { valido: true, errores: [] };
+  }
+  const faltantes = [];
+  if (!(contacto.dir3_oficina || '').trim()) faltantes.push('DIR3 Oficina contable');
+  if (!(contacto.dir3_organo || '').trim()) faltantes.push('DIR3 Órgano gestor');
+  if (!(contacto.dir3_unidad || '').trim()) faltantes.push('DIR3 Unidad tramitadora');
+  return {
+    valido: faltantes.length === 0,
+    errores: faltantes
+  };
+}
+
 export function extraerFranjaDeDataset(dataset) {
   if (!dataset) return null;
 
@@ -450,7 +466,14 @@ export function normalizarContactoBackend(contacto = {}) {
     localidad: contacto.localidad ?? contacto.poblacion ?? contacto.ciudad ?? '',
     provincia: contacto.provincia ?? contacto.provincia_nombre ?? '',
     telefono: contacto.telefono ?? contacto.tlf ?? '',
-    email: contacto.email ?? contacto.correo ?? ''
+    email: contacto.email ?? contacto.correo ?? '',
+    dir3_oficina: contacto.dir3_oficina ?? contacto.dir3Oficina ?? '',
+    dir3_organo: contacto.dir3_organo ?? contacto.dir3Organo ?? '',
+    dir3_unidad: contacto.dir3_unidad ?? contacto.dir3Unidad ?? '',
+    face_presentacion: parsearNumeroBackend(
+      contacto.face_presentacion ?? contacto.facePresentacion ?? contacto.faceRequerido,
+      0
+    )
   };
 }
 

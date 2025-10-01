@@ -87,6 +87,40 @@
         #btn-cobrar:hover {
             background-color: #4583a0;
         }
+
+        /* Estilos para información de contacto */
+        .contact-header {
+            display: flex;
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .contact-column {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .contact-main .contact-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #7f8c8d;
+            margin-bottom: 4px;
+        }
+
+        .contact-main .contact-field input {
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid #d7dde6;
+            padding: 6px 10px;
+            background: #fafbfc;
+        }
+
+        .contact-main {
+            flex: 1 1 auto;
+        }
     </style>
 </head>
 <body>
@@ -127,14 +161,30 @@
 
     <div id="cabecera-proforma">
         <div class="contact-info">
-            <input type="text" id="razonSocial" readonly />
-            <input type="text" id="identificador" readonly />
-            <input type="text" id="direccion" readonly />
-            <div class="cp-poblacion">
-                <input type="text" id="localidad" readonly />
-                <input type="text" id="cp" readonly class="width-60" />
+            <div class="contact-header">
+                <div class="contact-column contact-main">
+                    <div class="contact-field">
+                        <label for="razonSocial">Razón social</label>
+                        <input type="text" id="razonSocial" readonly />
+                    </div>
+                    <div class="contact-field">
+                        <label for="identificador">Identificador</label>
+                        <input type="text" id="identificador" readonly />
+                    </div>
+                    <div class="contact-field">
+                        <label for="direccion">Dirección</label>
+                        <input type="text" id="direccion" readonly />
+                    </div>
+                    <div class="contact-field">
+                        <label>CP y localidad</label>
+                        <p id="cp-localidad" style="margin-bottom:0; font-weight:600; color:#2c3e50;"></p>
+                    </div>
+                    <div class="contact-field">
+                        <label for="provincia">Provincia</label>
+                        <input type="text" id="provincia" readonly />
+                    </div>
+                </div>
             </div>
-            <input type="text" id="provincia" readonly />
         </div>
 
     <form id="form-detalle-proforma">

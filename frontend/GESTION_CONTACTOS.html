@@ -121,7 +121,7 @@
     }
     
     .input-mail {
-      width: 400px !important;
+      width: 240px !important;
     }
     
     .form-control {
@@ -149,6 +149,10 @@
     
     .input-provincia {
       width: 200px !important;
+    }
+
+    .input-dir3-small {
+      width: 120px !important;
     }
     
     /* Ajuste para la validación de iconos */
@@ -382,7 +386,7 @@
 
       <!-- Fila 3: Email -->
       <div class="form-row">
-        <div class="form-column col-12">
+        <div class="form-column col-3">
           <div class="form-group">
             <label for="mail">Email</label>
             <div class="input-container">
@@ -403,11 +407,29 @@
             </div>
           </div>
         </div>
+        <div class="form-column col-3">
+          <div class="form-group">
+            <label for="dir3_oficina">DIR3 Oficina contable</label>
+            <input type="text" id="dir3_oficina" maxlength="10" class="input-dir3 input-dir3-small" v-model="contacto.dir3_oficina" />
+          </div>
+        </div>
+        <div class="form-column col-3">
+          <div class="form-group">
+            <label for="dir3_organo">DIR3 Órgano gestor</label>
+            <input type="text" id="dir3_organo" maxlength="10" class="input-dir3 input-dir3-small" v-model="contacto.dir3_organo" />
+          </div>
+        </div>
+        <div class="form-column col-3">
+          <div class="form-group">
+            <label for="dir3_unidad">DIR3 Unidad tramitadora</label>
+            <input type="text" id="dir3_unidad" maxlength="10" class="input-dir3 input-dir3-small" v-model="contacto.dir3_unidad" />
+          </div>
+        </div>
       </div>
 
-      <!-- Fila 4: Dirección -->
+      <!-- Fila 4: Teléfonos -->
       <div class="form-row">
-        <div class="form-column col-12">
+        <div class="form-column col-6">
           <div class="form-group">
             <label for="direccion">Dirección</label>
             <div class="direccion-container">

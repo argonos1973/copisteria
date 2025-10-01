@@ -1539,52 +1539,67 @@ td .fas {
     font-size: 1em;
     display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 2px;
     max-width: 500px;
     text-align: right;
-    line-height: 0.9;
+    line-height: 1.2;
 }
 
-.contact-info input {
-    border: none;
-    background: transparent;
-    padding: 0;
-    margin: 0;
+/* Etiquetas de campo (RAZÓN SOCIAL, IDENTIFICADOR, etc.) */
+.contact-label {
+    color: #666;
+    font-size: 0.75em;
+    font-weight: normal;
+    text-transform: uppercase;
+    margin-top: 4px;
+    margin-bottom: 2px;
+    text-align: right;
+}
+
+/* Valor principal (Razón Social) */
+.contact-value-main {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
     min-width: 300px;
     width: auto;
-    font-size: 1em;
-    color: #333;
+    font-size: 1.1em !important;
+    color: #333 !important;
     text-align: right;
-    font-weight: 500;
-    height: 1.1em;
+    font-weight: bold !important;
+    height: auto !important;
     display: block;
-    line-height: 1;
-    margin-bottom: 0px;
+    line-height: 1.2;
+    margin-bottom: 4px !important;
+}
+
+/* Valores normales (resto de campos) */
+.contact-value {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-width: 300px;
+    width: auto;
+    font-size: 0.95em !important;
+    color: #333 !important;
+    text-align: right;
+    font-weight: normal !important;
+    height: auto !important;
+    display: block;
+    line-height: 1.2;
+    margin-bottom: 4px !important;
 }
 
 .contact-info .cp-poblacion {
     display: flex;
     flex-direction: row;
-    gap: 3px;
+    gap: 5px;
     justify-content: flex-end;
     min-width: 300px;
     width: auto;
-    margin-bottom: 0px;
-}
-
-.contact-info #razonSocial {
-    font-size: 1.2em;
-    font-weight: bold;
-    margin-bottom: 0px;
-    line-height: 1.1;
-}
-
-.contact-info #identificador,
-.contact-info #direccion,
-.contact-info #provincia {
-    font-size: 1.1em;
-    margin-bottom: 0px;
-    line-height: 1;
+    margin-bottom: 4px;
 }
 
 .contact-info .cp-poblacion input {

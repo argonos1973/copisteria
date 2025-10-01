@@ -128,6 +128,7 @@ function filaHTML(f) {
       <td><input type="text" class="max" value="${f.max}" inputmode="decimal" /></td>
       <td class="descuento-col"><input type="text" class="descuento" inputmode="decimal" pattern="[0-9.,]*" value="${Number(f.descuento || 0).toLocaleString('es-ES', { minimumFractionDigits: 5, maximumFractionDigits: 5 })}" /></td>
       <td class="precio-aplicado">-</td>
+      <td class="precio-iva-editable"><input type="number" class="precio-final-iva" step="0.001" min="0" value="0" /></td>
       <td class="precio-iva">-</td>
       <td class="iva-unit">-</td>
       <td class="acciones-col">
@@ -163,6 +164,12 @@ function renderFranjas() {
       inp.value = n.toLocaleString('es-ES', { minimumFractionDigits: 5, maximumFractionDigits: 5 });
       actualizarPreciosAplicados();
     });
+  });
+  
+  // Vincular listeners para precio final con IVA (recalcula descuento)
+  tbody.querySelectorAll('input.precio-final-iva').forEach((inp, idx) => {
+    inp.addEventListener('input', () => recalcularDescuentoDesdePrecioFinal(idx));
+    inp.addEventListener('blur', () => recalcularDescuentoDesdePrecioFinal(idx));
   });
 }
 
@@ -286,6 +293,47 @@ function getSelectedProductoImpuestos() {
 
 // Sin multiselección
 
+function recalcularDescuentoDesdePrecioFinal(idx) {
+  try {
+    const subtotal = getSelectedProductoSubtotal();
+    const impuestos = getSelectedProductoImpuestos();
+    if (!subtotal || subtotal <= 0) return;
+    
+    const filas = Array.from(tbody.querySelectorAll('tr'));
+    if (idx >= filas.length) return;
+    
+    const tr = filas[idx];
+    const inputPrecioFinal = tr.querySelector('input.precio-final-iva');
+    const inputDesc = tr.querySelector('input.descuento');
+    
+    if (!inputPrecioFinal || !inputDesc) return;
+    
+    const precioFinalDeseado = Number(inputPrecioFinal.value) || 0;
+    
+    // Calcular el precio con descuento (sin IVA) a partir del precio final con IVA
+    const precioConDescuento = precioFinalDeseado / (1 + impuestos / 100);
+    
+    // Calcular el descuento necesario
+    const descuentoNecesario = ((subtotal - precioConDescuento) / subtotal) * 100;
+    
+    // Limitar a rango [0, 60]
+    const descuentoFinal = Math.max(0, Math.min(60, descuentoNecesario));
+    
+    // Actualizar el input de descuento
+    inputDesc.value = descuentoFinal.toLocaleString('es-ES', { minimumFractionDigits: 5, maximumFractionDigits: 5 });
+    
+    // Actualizar el array en memoria
+    if (franjas[idx]) {
+      franjas[idx].descuento = Math.round(descuentoFinal * 100000) / 100000;
+    }
+    
+    // Recalcular todos los precios
+    actualizarPreciosAplicados();
+  } catch (e) {
+    console.debug('recalcularDescuentoDesdePrecioFinal error:', e);
+  }
+}
+
 function actualizarPreciosAplicados() {
   try {
     const subtotal = getSelectedProductoSubtotal();
@@ -296,6 +344,7 @@ function actualizarPreciosAplicados() {
       const tdPrecio = tr.querySelector('td.precio-aplicado');
       const tdPrecioIva = tr.querySelector('td.precio-iva');
       const tdIvaUnit = tr.querySelector('td.iva-unit');
+      const inputPrecioFinal = tr.querySelector('input.precio-final-iva');
       if (!tdPrecio || !tdPrecioIva || !tdIvaUnit) continue;
       // Tomar el descuento desde el input si existe; si no, del array
       const inputDesc = tr.querySelector('input.descuento');
@@ -319,6 +368,11 @@ function actualizarPreciosAplicados() {
       tdPrecio.textContent = fmt5(aplicado);
       tdPrecioIva.textContent = fmt3(totalConIva);
       tdIvaUnit.textContent = fmt5(ivaUnit);
+      
+      // Actualizar el input de precio final con IVA con el valor calculado
+      if (inputPrecioFinal) {
+        inputPrecioFinal.value = totalConIva.toFixed(3);
+      }
     }
   } catch (e) {
     console.debug('actualizarPreciosAplicados error:', e);

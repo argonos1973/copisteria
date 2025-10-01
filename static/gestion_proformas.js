@@ -642,8 +642,9 @@ async function cargarProforma(id) {
     document.getElementById('razonSocial').value = contacto.razonsocial || '';
     document.getElementById('identificador').value = contacto.identificador || '';
     document.getElementById('direccion').value = contacto.direccion || '';
-    document.getElementById('cp').value = contacto.cp || '';
-    document.getElementById('localidad').value = contacto.localidad || '';
+    const cp = contacto.cp || '';
+    const localidad = contacto.localidad || '';
+    document.getElementById('cp-localidad').textContent = cp && localidad ? `${cp} ${localidad}` : (cp || localidad);
     document.getElementById('provincia').value = contacto.provincia || '';
 
     document.getElementById('total-proforma').value = formatearImporte(importes.total || 0);
@@ -689,8 +690,9 @@ async function buscarProformaAbierta(idContacto) {
         document.getElementById('identificador').value = contacto.identificador || '';
         document.getElementById('razonSocial').value = contacto.razonsocial || '';
         document.getElementById('direccion').value = contacto.direccion || '';
-        document.getElementById('cp').value = contacto.cp || '';
-        document.getElementById('localidad').value = contacto.localidad || '';
+        const cp = contacto.cp || '';
+        const localidad = contacto.localidad || '';
+        document.getElementById('cp-localidad').textContent = cp && localidad ? `${cp} ${localidad}` : (cp || localidad);
         document.getElementById('provincia').value = contacto.provincia || '';
 
         if (data.modo === 'edicion') {
@@ -794,8 +796,9 @@ async function cargarDatosContacto(id) {
     document.getElementById('razonSocial').value = contacto.razonsocial;
     document.getElementById('identificador').value = contacto.identificador;
     document.getElementById('direccion').value = contacto.direccion || '';
-    document.getElementById('cp').value = contacto.cp || '';
-    document.getElementById('poblacion').value = contacto.poblacion || '';
+    const cp = contacto.cp || '';
+    const poblacion = contacto.poblacion || contacto.localidad || '';
+    document.getElementById('cp-localidad').textContent = cp && poblacion ? `${cp} ${poblacion}` : (cp || poblacion);
     document.getElementById('provincia').value = contacto.provincia || '';
   } catch (error) {
     console.error('Error al cargar datos del contacto:', error);

@@ -20,7 +20,9 @@
     #tablaFranjas td.descuento-col, #tablaFranjas th.descuento-col { text-align: right; }
     #tablaFranjas input.descuento { width: 80px; text-align: right; padding: 2px 4px; font-size: 0.9rem; }
     #tablaFranjas td.precio-aplicado, #tablaFranjas th.precio-aplicado { text-align: right; min-width: 110px; }
-    #tablaFranjas td.precio-iva, #tablaFranjas th.precio-iva { text-align: right; min-width: 120px; }
+    #tablaFranjas td.precio-iva-editable, #tablaFranjas th.precio-iva-editable { text-align: right; min-width: 130px; }
+    #tablaFranjas input.precio-final-iva { width: 120px; text-align: right; padding: 2px 4px; font-size: 0.9rem; background: #fffacd; }
+    #tablaFranjas td.precio-iva, #tablaFranjas th.precio-iva { text-align: right; min-width: 120px; color: #666; font-size: 0.85em; }
     #tablaFranjas td.iva-unit, #tablaFranjas th.iva-unit { text-align: right; min-width: 110px; }
   </style>
 </head>
@@ -49,7 +51,8 @@
             <th>Max Cantidad</th>
             <th class="descuento-col">% Descuento</th>
             <th class="precio-aplicado">Precio con %</th>
-            <th class="precio-iva">Precio con IVA</th>
+            <th class="precio-iva-editable">Precio Final IVA</th>
+            <th class="precio-iva">Precio con IVA (calc)</th>
             <th class="iva-unit">IVA unitario</th>
             <th title="Eliminar">✕</th>
           </tr>

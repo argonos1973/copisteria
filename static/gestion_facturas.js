@@ -16,7 +16,9 @@ import {
     getCodigoEstado,
     formatearFechaSoloDia,
     convertirFechaParaAPI,
-    formatearFecha
+    formatearFecha,
+    normalizarContactoBackend,
+    validarContactoFace
 } from './scripts_utils.js';
 import { 
     calcularTotalesDocumento, 
@@ -44,6 +46,7 @@ let modoGuardar = false; // Flag global para indicar modo guardar
 let botonUsandose = null;
 // Flag global para indicar si la factura está cobrada
 let facturaCobrada = false;
+let contactoActual = null;
 
 function abrirModalPagos() {
   // Usar el total de detalles del día actual para la modal
@@ -57,7 +60,7 @@ function abrirModalPagos() {
     const [año, mes, dia] = fechaInput.split('-');
     fechaFormateada = `${dia}/${mes}/${año}`;
   }
-  
+
   const formaPago = 'E'; // Por defecto efectivo
   
   abrirModal({
@@ -106,6 +109,13 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
         totalPago = 0;
     }
     
+    const presentarFaceCheckbox = document.getElementById('presentar-face');
+    const presentarFace = presentarFaceCheckbox ? presentarFaceCheckbox.checked : false;
+
+    if (presentarFace && !validarPresentacionFace(true)) {
+        return;
+    }
+
     if (detalles.length === 0) {
         mostrarNotificacion("Debe añadir al menos un detalle a la factura", "warning");
         return;
@@ -202,7 +212,8 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
             importe_cobrado: importeCobrado,
             estado: estado, // Usar directamente el estado que viene por parámetro
             tipo: document.getElementById('tipo-factura').value || 'N', // Añadir el tipo de factura
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            presentar_face: presentarFace ? 1 : 0
         };
 
         console.log('Enviando factura con importes recalculados:', factura);
@@ -1202,11 +1213,16 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
         console.log('Datos del contacto:', contacto);
         
         if (contacto) {
-            document.getElementById('razonSocial').value = contacto.razonsocial || '';
-            document.getElementById('identificador').value = contacto.identificador || '';
-            document.getElementById('direccion').value = contacto.direccion || '';
-            document.getElementById('cp-localidad').textContent = (contacto.cp || '') + (contacto.cp && contacto.localidad ? ' ' : '') + (contacto.localidad || '');
-            document.getElementById('provincia').value = contacto.provincia || '';
+            const contactoNormalizado = normalizarContactoBackend(contacto) || {};
+            contactoActual = contactoNormalizado;
+
+            document.getElementById('razonSocial').value = contactoNormalizado.razonsocial || '';
+            document.getElementById('identificador').value = contactoNormalizado.identificador || '';
+            document.getElementById('direccion').value = contactoNormalizado.direccion || '';
+            document.getElementById('cp-localidad').textContent = (contactoNormalizado.cp || '') + (contactoNormalizado.cp && contactoNormalizado.localidad ? ' ' : '') + (contactoNormalizado.localidad || '');
+            document.getElementById('provincia').value = contactoNormalizado.provincia || '';
+
+            actualizarCamposContactoUI(contactoNormalizado);
         } else {
             console.error('No se encontraron datos del contacto en la respuesta');
         }
@@ -1224,6 +1240,8 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
             document.getElementById('estado').value = estadoTexto;
             
             document.getElementById('total-proforma').value = formatearImporte(factura.total || 0);
+
+            sincronizarPresentarFaceConFactura(factura);
 
             // Establecer el tipo de factura (con validación para asegurar que sea string)
             const tipoFactura = typeof factura.tipo === 'string' ? factura.tipo : 
@@ -1293,33 +1311,153 @@ async function procesarPago() {
   await guardarFactura(formaPago, modalTotal, 'C');
 }
 
+function actualizarCamposContactoUI(contactoNormalizado) {
+  const presentarFaceCheckbox = document.getElementById('presentar-face');
+  const faceInline = document.getElementById('face-inline');
+  const faceLabel = document.querySelector('#face-inline label[for="presentar-face"]');
+
+  const oficina = (contactoNormalizado?.dir3_oficina || '').trim();
+  const organo = (contactoNormalizado?.dir3_organo || '').trim();
+  const unidad = (contactoNormalizado?.dir3_unidad || '').trim();
+  const hayDir3 = Boolean(oficina && organo && unidad);
+  const contactoRequiereFace = (contactoNormalizado?.face_presentacion ?? 0) === 1;
+  const debeActivarFace = hayDir3 && contactoRequiereFace;
+
+  if (presentarFaceCheckbox) {
+    presentarFaceCheckbox.dataset.contactoRequiereFace = contactoRequiereFace ? '1' : '0';
+    presentarFaceCheckbox.checked = debeActivarFace;
+    presentarFaceCheckbox.disabled = !hayDir3;
+  }
+
+  if (faceInline) {
+    faceInline.style.display = hayDir3 ? 'flex' : 'none';
+    faceInline.classList.remove('face-error');
+    if (faceLabel) {
+      faceLabel.textContent = 'Presentar FACe';
+      faceLabel.title = '';
+    }
+  }
+
+  validarPresentacionFace(false);
+}
+
 async function cargarDatosContacto(id) {
   try {
     const response = await fetch(`/api/contactos/get_contacto/${id}`);
     const contacto = await response.json();
-    
-    // Añadir logs para depuración
-    console.log('Datos de contacto recibidos:', contacto);
-    console.log('Valor de localidad:', contacto.localidad);
-    
-    document.getElementById('razonSocial').value = contacto.razonsocial;
-    document.getElementById('identificador').value = contacto.identificador;
-    document.getElementById('direccion').value = contacto.direccion || '';
-    document.getElementById('cp-localidad').textContent = (contacto.cp || '') + (contacto.cp && contacto.localidad ? ' ' : '') + (contacto.localidad || '');
-    document.getElementById('provincia').value = contacto.provincia || '';
-    
-    // Inspeccionar DOM después de asignar valores
-    setTimeout(() => {
-      console.log('Comprobación DOM actualizado:');
-      console.log('Elemento localidad:', document.getElementById('cp-localidad'));
-      console.log('Valor actual de localidad:', document.getElementById('cp-localidad').textContent);
-      console.log('Estilo computed de localidad:', window.getComputedStyle(document.getElementById('cp-localidad')));
-    }, 100);
-    
+    contactoActual = normalizarContactoBackend(contacto);
+
+    document.getElementById('razonSocial').value = contactoActual.razonsocial;
+    document.getElementById('identificador').value = contactoActual.identificador;
+    document.getElementById('direccion').value = contactoActual.direccion || '';
+    document.getElementById('cp-localidad').textContent = (contactoActual.cp || '') + (contactoActual.cp && contactoActual.localidad ? ' ' : '') + (contactoActual.localidad || '');
+    document.getElementById('provincia').value = contactoActual.provincia || '';
+
+    actualizarCamposContactoUI(contactoActual);
+
+    if (document.getElementById('presentar-face')?.checked && !validarPresentacionFace(false)) {
+      mostrarNotificacion('El contacto requiere FACe pero faltan códigos DIR3. Actualice el contacto antes de generar la factura.', 'warning');
+    }
   } catch (error) {
     console.error('Error al cargar datos del contacto:', error);
     mostrarNotificacion('Error al cargar datos del contacto', "error");
+    contactoActual = null;
   }
+}
+
+function validarPresentacionFace(notifyOnError = false) {
+  const checkbox = document.getElementById('presentar-face');
+  const faceInline = document.getElementById('face-inline');
+  const faceLabel = document.querySelector('#face-inline label[for="presentar-face"]');
+  if (!checkbox) return true;
+
+  if (checkbox.disabled) {
+    checkbox.checked = false;
+    if (faceInline) faceInline.classList.remove('face-error');
+    if (faceLabel) {
+      faceLabel.textContent = 'Presentar FACe';
+      faceLabel.title = '';
+    }
+    return true;
+  }
+
+  if (!checkbox.checked) {
+    if (faceInline) faceInline.classList.remove('face-error');
+    if (faceLabel) {
+      faceLabel.textContent = 'Presentar FACe';
+      faceLabel.title = '';
+    }
+    return true;
+  }
+
+  const resultado = validarContactoFace(contactoActual);
+  if (resultado.valido) {
+    if (faceInline) faceInline.classList.remove('face-error');
+    if (faceLabel) {
+      faceLabel.textContent = 'Presentar FACe';
+      faceLabel.title = '';
+    }
+    return true;
+  }
+
+  const mensaje = `Faltan códigos DIR3: ${resultado.errores.join(', ')}`;
+  if (faceInline) faceInline.classList.add('face-error');
+  if (faceLabel) {
+    faceLabel.textContent = 'Presentar FACe';
+    faceLabel.title = mensaje;
+  }
+  if (notifyOnError) {
+    mostrarNotificacion(mensaje, 'error');
+  }
+  return false;
+}
+
+function sincronizarPresentarFaceConFactura(factura) {
+  const checkbox = document.getElementById('presentar-face');
+  const faceInline = document.getElementById('face-inline');
+  const faceLabel = document.querySelector('#face-inline label[for="presentar-face"]');
+  
+  console.log('[FACe] sincronizarPresentarFaceConFactura llamada');
+  console.log('[FACe] contactoActual:', contactoActual);
+  console.log('[FACe] Elementos encontrados:', {checkbox: !!checkbox, faceInline: !!faceInline});
+  
+  if (!checkbox || !faceInline) {
+    console.log('[FACe] ERROR: No se encontraron elementos checkbox o faceInline');
+    return;
+  }
+
+  const hayDir3 = Boolean(
+    (contactoActual?.dir3_oficina || '').trim() &&
+    (contactoActual?.dir3_organo || '').trim() &&
+    (contactoActual?.dir3_unidad || '').trim()
+  );
+  
+  console.log('[FACe] hayDir3:', hayDir3, 'Códigos DIR3:', {
+    oficina: contactoActual?.dir3_oficina,
+    organo: contactoActual?.dir3_organo,
+    unidad: contactoActual?.dir3_unidad
+  });
+
+  if (!hayDir3) {
+    checkbox.checked = false;
+    faceInline.style.display = 'none';
+    console.log('[FACe] No hay DIR3 completos, ocultando checkbox');
+    return;
+  }
+
+  faceInline.style.display = 'flex';
+  checkbox.disabled = false;
+  console.log('[FACe] Mostrando checkbox, presentar_face en factura:', factura.presentar_face);
+
+  if (typeof factura.presentar_face !== 'undefined') {
+    checkbox.checked = factura.presentar_face === 1;
+  } else if (checkbox.dataset.contactoRequiereFace === '1') {
+    checkbox.checked = true;
+  }
+  
+  console.log('[FACe] Checkbox checked final:', checkbox.checked, 'display:', faceInline.style.display);
+
+  if (faceLabel) faceLabel.title = '';
 }
 
 async function cargarDetalleParaEditar(fila) {

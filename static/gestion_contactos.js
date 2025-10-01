@@ -27,7 +27,10 @@ const fields = {
   cp: document.getElementById('cp'),
   poblacio: document.getElementById('poblacio'),
   provincia: document.getElementById('provincia'),
-  facturacion: document.getElementById('facturacion_automatica')
+  facturacion: document.getElementById('facturacion_automatica'),
+  dir3Oficina: document.getElementById('dir3_oficina'),
+  dir3Organo: document.getElementById('dir3_organo'),
+  dir3Unidad: document.getElementById('dir3_unidad')
 };
 
 const icons = {
@@ -303,7 +306,10 @@ async function submitForm() {
     poblacio: fields.poblacio.value.trim().toUpperCase(),
     localidad: fields.poblacio.value.trim().toUpperCase(),
     provincia: fields.provincia.value.trim().toUpperCase(),
-    tipo: fields.facturacion.checked ? 1 : 0
+    tipo: fields.facturacion.checked ? 1 : 0,
+    dir3_oficina: fields.dir3Oficina.value.trim() || null,
+    dir3_organo: fields.dir3Organo.value.trim() || null,
+    dir3_unidad: fields.dir3Unidad.value.trim() || null
   };
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -341,9 +347,17 @@ async function submitForm() {
     if (!res.ok) throw new Error('Error al obtener el contacto');
     const data = await res.json();
     Object.keys(fields).forEach((k) => {
-      if (k === "facturacion") fields[k].checked = data.tipo === 1;
-      else if (k === "poblacio") fields[k].value = data.localidad ?? "";
-      else if (fields[k]) fields[k].value = data[k] ?? "";
+      if (k === 'facturacion') {
+        fields[k].checked = data.tipo === 1;
+      } else if (k === 'poblacio') {
+        fields[k].value = data.localidad ?? '';
+      } else if (fields[k]) {
+        const key = k === 'dir3Oficina' ? 'dir3_oficina'
+          : k === 'dir3Organo' ? 'dir3_organo'
+          : k === 'dir3Unidad' ? 'dir3_unidad'
+          : k;
+        fields[k].value = data[key] ?? '';
+      }
     });
     validateIdentificador();
     validateEmail();
