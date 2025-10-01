@@ -130,6 +130,10 @@ def obtener_contactos():
                 c.cp,
                 c.provincia,
                 c.tipo,
+                c.dir3_oficina,
+                c.dir3_organo,
+                c.dir3_unidad,
+                c.face_presentacion,
                 c.idContacto as id,
                 p.numero as numero_proforma_abierta
             FROM contactos c
@@ -235,6 +239,10 @@ def obtener_contactos_paginados(filtros, page=1, page_size=10, sort='razonsocial
                 c.cp,
                 c.provincia,
                 c.tipo,
+                c.dir3_oficina,
+                c.dir3_organo,
+                c.dir3_unidad,
+                c.face_presentacion,
                 c.idContacto as id,
                 (
                     SELECT p.numero 
@@ -330,8 +338,12 @@ def crear_contacto(data):
     conn = get_db_connection()
     cur = conn.cursor()
     cur.execute('''
-        INSERT INTO contactos (razonsocial, identificador, mail, telf1, telf2, direccion, localidad, cp, provincia, tipo)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO contactos (
+            razonsocial, identificador, mail, telf1, telf2, direccion,
+            localidad, cp, provincia, tipo,
+            dir3_oficina, dir3_organo, dir3_unidad
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         data.get('razonsocial'),
         data.get('identificador'),
@@ -342,7 +354,10 @@ def crear_contacto(data):
         data.get('localidad'),
         data.get('cp'),
         data.get('provincia'),
-        data.get('tipo')
+        data.get('tipo'),
+        data.get('dir3_oficina'),
+        data.get('dir3_organo'),
+        data.get('dir3_unidad')
     ))
     conn.commit()
     last_id = cur.lastrowid
@@ -404,7 +419,8 @@ def actualizar_contacto(idContacto, data):
     cur = conn.cursor()
     cur.execute('''
         UPDATE contactos
-        SET razonsocial=?,
+        SET
+            razonsocial=?,
             identificador=?,
             mail=?,
             telf1=?,
@@ -413,7 +429,10 @@ def actualizar_contacto(idContacto, data):
             localidad=?,
             cp=?,
             provincia=?,
-            tipo=?
+            tipo=?,
+            dir3_oficina=?,
+            dir3_organo=?,
+            dir3_unidad=?
         WHERE idContacto=?
     ''', (
         data.get('razonsocial'),
@@ -426,12 +445,14 @@ def actualizar_contacto(idContacto, data):
         data.get('cp'),
         data.get('provincia'),
         data.get('tipo'),
+        data.get('dir3_oficina'),
+        data.get('dir3_organo'),
+        data.get('dir3_unidad'),
         idContacto
     ))
     conn.commit()
     conn.close()
     return {"success": True, "message": "Contacto actualizado exitosamente."}
-
 
 def delete_contacto(idContacto):
     """Elimina un contacto por su idContacto."""

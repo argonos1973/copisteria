@@ -1,7 +1,7 @@
 {
     "entorno": "desarrollo",
     "ruta_certificado": "/var/www/html/certs/certificado.pfx",
-    "password_certificado": "password_certificado",
+    "password_certificado": "sami1969",
     "email_notificaciones": "notificaciones@example.com",
     "organo_gestor": "L01000000",
     "unidad_tramitadora": "L01000000",

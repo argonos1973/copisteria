@@ -140,13 +140,13 @@ def crear_factura():
         try:
             # Si es una actualización (tiene ID válido), no verificamos el numerador
             es_actualizacion = 'id' in data and data['id'] is not None and data['id'] != 0
-            
-           
+            presentar_face_flag = 1 if int(data.get('presentar_face', 0)) == 1 else 0
+
             # Insertar la factura
             cursor.execute('''
                 INSERT INTO factura (numero, fecha, fvencimiento, estado, idContacto, nif, total, formaPago, 
-                                   importe_bruto, importe_impuestos, importe_cobrado, timestamp, tipo)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                   importe_bruto, importe_impuestos, importe_cobrado, timestamp, tipo, presentar_face)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['numero'],
                 data['fecha'],
@@ -162,7 +162,8 @@ def crear_factura():
                 data.get('importe_impuestos', 0),
                 data.get('importe_cobrado', 0),
                 datetime.now().isoformat(),
-                data.get('tipo', 'N')  # N=Normal (con descuentos), A=Sin descuentos
+                data.get('tipo', 'N'),  # N=Normal (con descuentos), A=Sin descuentos
+                presentar_face_flag
             ))
             
             factura_id = cursor.lastrowid
@@ -200,6 +201,9 @@ def crear_factura():
             tipo_doc = data.get('tipo', 'N')
             num_doc = str(data.get('numero', ''))
             es_rectificativa = (estado_doc == 'RE') or (tipo_doc.upper() == 'R') or num_doc.upper().endswith('-R')
+            
+            print(f"[DEBUG crear_factura] estado={estado_doc}, presentar_face_flag={presentar_face_flag}, es_rectificativa={es_rectificativa}")
+            
             if estado_doc != 'C' and not es_rectificativa:
                 push_notif("Factura guardada", tipo='success')
                 print("[FACTURA] Guardada como pendiente: se omite generación de XML y envío AEAT")
@@ -210,19 +214,16 @@ def crear_factura():
                 })
 
             # --- Generación de Facturae ---
-            if not VERIFACTU_HABILITADO:
-                push_notif("Factura guardada", tipo='success')
-                print("[FACTURA] VeriFactu deshabilitado: se omite generación XML/AEAT")
-                return jsonify({
-                    'mensaje': 'Factura guardada (VeriFactu OFF)',
-                    'id': factura_id,
-                    'notificaciones': notificaciones
-                })
+            print(f"[FACTURA] Generando XML Facturae (presentar_face={presentar_face_flag}, VERIFACTU_HABILITADO={VERIFACTU_HABILITADO})")
 
             try:
                 print("[FACTURAE] Iniciando integración Facturae para factura_id:", factura_id)
                 push_notif("Generando XML Facturae ...")
-                cursor.execute('SELECT razonsocial, identificador, direccion, cp, localidad, provincia FROM contactos WHERE idContacto = ?', (data['idContacto'],))
+                cursor.execute('''
+                    SELECT razonsocial, identificador, direccion, cp, localidad, provincia,
+                           dir3_oficina, dir3_organo, dir3_unidad, face_presentacion, tipo
+                    FROM contactos WHERE idContacto = ?
+                ''', (data['idContacto'],))
                 contacto = cursor.fetchone()
                 if contacto:
                     print(f"[FACTURAE] Datos de contacto encontrados: {contacto}")
@@ -234,7 +235,27 @@ def crear_factura():
                         'cp': contacto[3],
                         'localidad': contacto[4],
                         'provincia': contacto[5],
+                        'dir3_oficina': contacto[6],
+                        'dir3_organo': contacto[7],
+                        'dir3_unidad': contacto[8],
+                        'face_presentacion': contacto[9],
+                        'tipo': contacto[10]
                     }
+                    requiere_face = presentar_face_flag or (datos_contacto.get('face_presentacion') == 1)
+                    if requiere_face:
+                        faltantes = []
+                        if not (datos_contacto.get('dir3_oficina') or '').strip():
+                            faltantes.append('DIR3 Oficina contable')
+                        if not (datos_contacto.get('dir3_organo') or '').strip():
+                            faltantes.append('DIR3 Órgano gestor')
+                        if not (datos_contacto.get('dir3_unidad') or '').strip():
+                            faltantes.append('DIR3 Unidad tramitadora')
+                        if faltantes:
+                            mensaje_error = f"El contacto requiere FACe pero faltan códigos DIR3: {', '.join(faltantes)}"
+                            print(f"[FACTURAE][ERROR] {mensaje_error}")
+                            conn.rollback()
+                            return jsonify({'error': mensaje_error, 'codigo': 'DIR3_INCOMPLETO'}), 400
+
                     direccion_completa = f"{datos_contacto['direccion']}, {datos_contacto['cp']} {datos_contacto['localidad']} ({datos_contacto['provincia']})"
                     datos_facturae = {
                         'emisor': cargar_datos_emisor(),
@@ -242,10 +263,12 @@ def crear_factura():
                             'nif': datos_contacto['nif'] if datos_contacto['nif'] else 'B00000000',
                             'nombre': datos_contacto['razonsocial'],
                             'direccion': direccion_completa,
+                            'direccion_calle': datos_contacto['direccion'],
                             'cp': datos_contacto['cp'],
                             'ciudad': datos_contacto['localidad'],
                             'provincia': datos_contacto['provincia'],
-                            'pais': 'ESP'
+                            'pais': 'ESP',
+                            'tipo': datos_contacto.get('tipo')
                         },
                         # Campos obligatorios para formato Facturae
                         'invoice_number': data['numero'],
@@ -273,7 +296,11 @@ def crear_factura():
                         # Añadimos campo 'items' con el formato correcto para generar_facturae
                         'items': data['detalles'],
                         # Nos aseguramos de que el campo 'detalles' esté presente con el formato esperado por generar_facturae
-                        'detalles': data['detalles']
+                        'detalles': data['detalles'],
+                        'presentar_face': 1 if requiere_face else 0,
+                        'dir3_oficina': datos_contacto.get('dir3_oficina'),
+                        'dir3_organo': datos_contacto.get('dir3_organo'),
+                        'dir3_unidad': datos_contacto.get('dir3_unidad')
                     }
                 else:
                     print("[FACTURAE] No se encontraron datos del contacto, usando valores por defecto para receptor.")
@@ -283,10 +310,12 @@ def crear_factura():
                             'nif': 'B00000000',
                             'nombre': 'CONTACTO_DESCONOCIDO',
                             'direccion': '-',
+                            'direccion_calle': '-',
                             'cp': '-',
                             'ciudad': '-',
                             'provincia': '-',
-                            'pais': 'ESP'
+                            'pais': 'ESP',
+                            'tipo': None
                         },
                         'invoice_number': data['numero'],
                         'issue_date': data['fecha'],
@@ -538,7 +567,11 @@ def obtener_factura_abierta(idContacto,idFactura):
                 cp,
                 localidad,
                 provincia,
-                mail as email
+                mail as email,
+                dir3_oficina,
+                dir3_organo,
+                dir3_unidad,
+                face_presentacion
             FROM contactos 
             WHERE idContacto = ?
         """, (idContacto,))
@@ -554,7 +587,7 @@ def obtener_factura_abierta(idContacto,idFactura):
         # Buscar factura abierta
         print("Ejecutando consulta de factura abierta...")
         sql = '''
-            SELECT id, numero, fecha, estado, total, idContacto, tipo
+            SELECT id, numero, fecha, estado, total, idContacto, tipo, presentar_face
             FROM factura
             WHERE idContacto = ? 
             AND id = ?
@@ -591,6 +624,7 @@ def obtener_factura_abierta(idContacto,idFactura):
                 'estado': factura_dict['estado'],
                 'total': factura_dict['total'],
                 'tipo': factura_dict.get('tipo', 'N'),  # Añadir el tipo de factura a la respuesta
+                'presentar_face': factura_dict.get('presentar_face', 0),
                 'contacto': contacto_dict,
                 'detalles': [dict(d) for d in detalles]
             }
@@ -1846,6 +1880,10 @@ def actualizar_factura(id, data):
 
         estado = data.get('estado')
         formaPago = data.get('formaPago')
+        presentar_face_flag = 1 if int(data.get('presentar_face', 0)) == 1 else 0
+        
+        # Log inmediato para debugging
+        print(f"[DEBUG actualizar_producto] ID={id}, estado={estado}, presentar_face_flag={presentar_face_flag}")
         
         conn = get_db_connection()
         conn.execute('BEGIN EXCLUSIVE TRANSACTION')
@@ -1866,6 +1904,8 @@ def actualizar_factura(id, data):
                     estado_anterior = factura_existente[4]
                 except Exception:
                     estado_anterior = None
+        
+        print(f"[DEBUG estados] estado_anterior={estado_anterior}, nuevo_estado={estado}, presentar_face={presentar_face_flag}")
         
         if not factura_existente:
             conn.rollback()
@@ -1923,7 +1963,8 @@ def actualizar_factura(id, data):
                 importe_impuestos = ?,
                 importe_cobrado = ?, 
                 timestamp = ?,
-                tipo = ?
+                tipo = ?,
+                presentar_face = ?
             WHERE id = ?
         ''', (
             data['numero'],
@@ -1939,6 +1980,7 @@ def actualizar_factura(id, data):
             importe_cobrado,
             datetime.now().isoformat(),
             data.get('tipo', 'N'),  # N=Normal (con descuentos), A=Sin descuentos
+            presentar_face_flag,
             id
         ))
 
@@ -1968,18 +2010,18 @@ def actualizar_factura(id, data):
                 detalle.get('fechaDetalle', data['fecha'])
             ))
 
-        # ---- DEBUG estados ----
-        try:
-            with safe_append_debug('facturae_debug.log') as log_file:
-                log_file.write(f"\n[{datetime.now().isoformat()}] Actualizar Factura ID={id}: estado_anterior={estado_anterior}, nuevo_estado={estado}\n")
-        except Exception:
-            pass
         # Detectar si debemos generar Facturae/VERI*FACTU tras la actualización
-        trigger_generar_facturae = (estado == 'C' and estado_anterior == 'P')
+        # Generar si el checkbox presentar_face está marcado y la factura está cobrada
+        trigger_generar_facturae = (estado == 'C' and presentar_face_flag == 1)
+        
+        print(f"[DEBUG trigger] trigger_generar_facturae={trigger_generar_facturae}, estado={estado}, presentar_face={presentar_face_flag}")
+        
         try:
             with safe_append_debug('facturae_debug.log') as log_file:
+                log_file.write(f"\n[{datetime.now().isoformat()}] Actualizar Factura ID={id}: estado={estado}, presentar_face={presentar_face_flag}\n")
                 log_file.write(f"Trigger generar facturae: {trigger_generar_facturae}\n")
-        except Exception:
+        except Exception as e:
+            print(f"[DEBUG] Error escribiendo log: {e}")
             pass
 
         # Generar factura electrónica sólo si pasamos de Pendiente (u otro) a Cobrado
@@ -2174,7 +2216,11 @@ def actualizar_factura(id, data):
                         'iva': porcentaje_iva,  # Usar el valor real del IVA de los detalles
                         'importe_bruto': base_imponible,  # Base imponible
                         'importe_impuestos': impuestos,  # Impuestos
-                        'total': total  # Total factura
+                        'total': total,  # Total factura
+                        'presentar_face': 1,  # Siempre 1 cuando se ejecuta esta rama
+                        'dir3_oficina': contacto_dict.get('dir3_oficina', ''),
+                        'dir3_organo': contacto_dict.get('dir3_organo', ''),
+                        'dir3_unidad': contacto_dict.get('dir3_unidad', '')
                     }
                     
                     # Crear log de los datos que se envían al generador
@@ -2202,7 +2248,7 @@ def actualizar_factura(id, data):
                     # Mapear claves para compatibilidad con generador y validación
                     datos_factura.setdefault('invoice_number', data['numero'])
                     datos_factura.setdefault('issue_date', data['fecha'])
-                    datos_factura.setdefault('customer_info', receptor_dict if 'receptor_dict' in locals() else contacto_dict)
+                    datos_factura.setdefault('customer_info', datos_factura['receptor'])
                     datos_factura.setdefault('items', datos_factura.get('detalles', []))
                     datos_factura.setdefault('base_amount', base_imponible)
                     datos_factura.setdefault('taxes', impuestos)

@@ -884,18 +884,24 @@ def generar_pdf_presupuesto(id):
         provincia = str(presupuesto_dict.get('provincia', '') or '')
         telefono = str(presupuesto_dict.get('telf1', '') or '')
         email = str(presupuesto_dict.get('mail', '') or '')
-        hay_cliente = any([razon, direccion, poblacion, cp, provincia, telefono, email])
+        # Obtener identificador (NIF/CIF)
+        identificador = str(presupuesto_dict.get('identificador', '') or presupuesto_dict.get('nif', '') or '')
+        
+        hay_cliente = any([razon, direccion, poblacion, cp, provincia, telefono, email, identificador])
         if hay_cliente:
             cliente_html = f"""
         <div class=\"client-info\">
             <div class=\"info-box\">
-                <div class=\"info-title\">DATOS DEL CLIENTE</div>
-                <div><strong>{razon}</strong></div>
-                <div>{direccion}</div>
-                <div>{poblacion} {cp}</div>
-                <div>{provincia}</div>
-                <div>Tel: {telefono}</div>
-                <div>Email: {email}</div>
+                <div class=\"info-title\">RAZÓN SOCIAL</div>
+                <div style=\"font-weight: bold; font-size: 16px; margin-bottom: 10px;\">{razon}</div>
+                <div style=\"color: #666; font-size: 11px; margin-bottom: 3px;\">IDENTIFICADOR</div>
+                <div style=\"margin-bottom: 8px;\">{identificador}</div>
+                <div style=\"color: #666; font-size: 11px; margin-bottom: 3px;\">DIRECCIÓN</div>
+                <div style=\"margin-bottom: 8px;\">{direccion}</div>
+                <div style=\"color: #666; font-size: 11px; margin-bottom: 3px;\">CP Y LOCALIDAD</div>
+                <div style=\"margin-bottom: 8px;\">{cp} {poblacion}</div>
+                <div style=\"color: #666; font-size: 11px; margin-bottom: 3px;\">PROVINCIA</div>
+                <div style=\"margin-bottom: 8px;\">{provincia}</div>
             </div>
         </div>
         """
@@ -1055,18 +1061,24 @@ def enviar_email_presupuesto(id):
         provincia = str(presupuesto_dict.get('provincia', '') or '')
         telefono = str(presupuesto_dict.get('telf1', '') or '')
         email = str(presupuesto_dict.get('mail', '') or '')
-        hay_cliente = any([razon, direccion, poblacion, cp, provincia, telefono, email])
+        # Obtener identificador (NIF/CIF)
+        identificador = str(presupuesto_dict.get('identificador', '') or presupuesto_dict.get('nif', '') or '')
+        
+        hay_cliente = any([razon, direccion, poblacion, cp, provincia, telefono, email, identificador])
         if hay_cliente:
             cliente_html = f"""
         <div class=\"client-info\"> 
             <div class=\"info-box\">
-                <div class=\"info-title\">DATOS DEL CLIENTE</div>
-                <div><strong>{razon}</strong></div>
-                <div>{direccion}</div>
-                <div>{poblacion} {cp}</div>
-                <div>{provincia}</div>
-                <div>Tel: {telefono}</div>
-                <div>Email: {email}</div>
+                <div class=\"info-title\">RAZÓN SOCIAL</div>
+                <div style=\"font-weight: bold; font-size: 16px; margin-bottom: 10px;\">{razon}</div>
+                <div style=\"color: #666; font-size: 11px; margin-bottom: 3px;\">IDENTIFICADOR</div>
+                <div style=\"margin-bottom: 8px;\">{identificador}</div>
+                <div style=\"color: #666; font-size: 11px; margin-bottom: 3px;\">DIRECCIÓN</div>
+                <div style=\"margin-bottom: 8px;\">{direccion}</div>
+                <div style=\"color: #666; font-size: 11px; margin-bottom: 3px;\">CP Y LOCALIDAD</div>
+                <div style=\"margin-bottom: 8px;\">{cp} {poblacion}</div>
+                <div style=\"color: #666; font-size: 11px; margin-bottom: 3px;\">PROVINCIA</div>
+                <div style=\"margin-bottom: 8px;\">{provincia}</div>
             </div>
         </div>
         """

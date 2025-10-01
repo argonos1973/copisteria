@@ -7,4 +7,6 @@ Pillow>=9.0
 Werkzeug<3.0
 WeasyPrint==60.2
 requests>=2.31.0
- pydyf==0.10.0
+pydyf==0.10.0
+lxml==5.2.1
+cryptography==41.0.7
