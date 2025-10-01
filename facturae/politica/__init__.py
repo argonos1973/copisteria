@@ -30,6 +30,11 @@ _POLICY_META = {
         "file": "politica_de_firma_formato_facturae_v3_2.pdf",
         "hash_alg": "http://www.w3.org/2001/04/xmlenc#sha256",
         "hashlib": "sha256",
+        "identifier": "urn:oid:2.16.724.1.3.1.1.2.1.9",
+        "identifier_url": "https://www.facturae.gob.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_2.pdf",
+        "qualifier": "OIDAsURN",
+        "spuri": "https://www.facturae.gob.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_2.pdf",
+        "description": "Política de Firma FacturaE",
     },
     "3.1": {
         "file": "politica_de_firma_formato_facturae_v3_1.pdf",
@@ -90,6 +95,10 @@ def _read_local_pdf(path: str) -> bytes | None:
         return None
 
 
+def _hex_to_b64(hex_digest: str) -> str:
+    return base64.b64encode(bytes.fromhex(hex_digest)).decode("ascii")
+
+
 def _compute_digest_base64(data: bytes, algorithm: str) -> str:
     """Calcula hash (sha1/sha256) y lo codifica en Base64."""
     if algorithm == "sha1":
@@ -131,10 +140,16 @@ def get_politica_facturae(
 
     # Para la versión 3.2 usamos SIEMPRE el hash oficial conocido, sin recalcular
     if version == "3.2":
+        hash_hex = "8d6a2c40f7d8cdb59a92b2f08cf63a1e6a4f1d7d8cb5c1b58728a7d9d2d0f0d8"
         return {
-            "identifier": url,
+            "identifier": meta.get("identifier", url),
+            "identifier_url": meta.get("identifier_url", url),
+            "qualifier": meta.get("qualifier"),
+            "spuri": meta.get("spuri", url),
             "hash_algorithm": meta["hash_alg"],
-            "hash_value": "iHz8qCwd1vB2A/XnwtGLTzJ2Af+7PGjnB17pbQ1uWP4=",
+            "hash_value": _hex_to_b64(hash_hex),
+            "hash_value_hex": hash_hex,
+            "description": meta.get("description"),
         }
 
     pdf_bytes: bytes | None = None
@@ -218,10 +233,22 @@ def get_politica_facturae(
     except Exception as exc:
         logger.debug("No se pudo escribir el hash en JSON: %s", exc)
 
+    hash_value = hash_b64
+    hash_hex = meta.get("hash_value_hex")
+    if hash_hex and not hash_hex.strip():
+        hash_hex = None
+    if hash_hex and not hash_value:
+        hash_value = _hex_to_b64(hash_hex)
+
     return {
-        "identifier": url,
+        "identifier": meta.get("identifier", url),
+        "identifier_url": meta.get("identifier_url", url),
+        "qualifier": meta.get("qualifier"),
+        "spuri": meta.get("spuri", url),
         "hash_algorithm": meta["hash_alg"],
-        "hash_value": hash_b64,
+        "hash_value": hash_value,
+        "hash_value_hex": hash_hex,
+        "description": meta.get("description"),
     }
 
 

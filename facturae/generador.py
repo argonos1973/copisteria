@@ -10,17 +10,46 @@ import logging
 import os
 from datetime import datetime
 from decimal import ROUND_HALF_UP, Decimal
+from pathlib import Path
 
 from facturae.firma import corregir_etiqueta_n_por_name, firmar_xml
 from facturae.utils import procesar_serie_numero, separar_nombre_apellidos
 from facturae.validacion import es_persona_fisica
-from facturae.xml_template import (generar_individual_template,
-                                   generar_item_template,
-                                   generar_party_template,
-                                   generar_taxes_template,
-                                   obtener_plantilla_xml)
+from facturae.xml_template import (
+    generar_administrative_centre_template,
+    generar_individual_template,
+    generar_item_template,
+    generar_party_template,
+    generar_taxes_template,
+    obtener_plantilla_xml,
+)
 
 logger = logging.getLogger(__name__)
+
+# Ruta de configuración del emisor
+EMISOR_CONFIG_PATH = Path("/var/www/html/emisor_config.json")
+_EMISOR_CONFIG_CACHE: dict | None = None
+
+
+def _cargar_emisor_config() -> dict:
+    global _EMISOR_CONFIG_CACHE
+    if _EMISOR_CONFIG_CACHE is None:
+        try:
+            with EMISOR_CONFIG_PATH.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, dict):
+                    _EMISOR_CONFIG_CACHE = data
+                else:
+                    logger.warning("emisor_config.json no contiene un objeto JSON válido")
+                    _EMISOR_CONFIG_CACHE = {}
+        except FileNotFoundError:
+            logger.warning("No se encontró emisor_config.json en %s", EMISOR_CONFIG_PATH)
+            _EMISOR_CONFIG_CACHE = {}
+        except json.JSONDecodeError as exc:
+            logger.error("Error parseando emisor_config.json: %s", exc)
+            _EMISOR_CONFIG_CACHE = {}
+    return dict(_EMISOR_CONFIG_CACHE)
+
 
 # Helper de depuración sin escritura a disco
 def dbg(msg: str):
@@ -29,9 +58,45 @@ def dbg(msg: str):
     except Exception:
         pass
 
-# Rutas por defecto para certificados
-CLAVE_PRIVADA_PATH = "/var/www/html/certs/clave_privada.key"
-CERTIFICADO_PATH = "/var/www/html/certs/certificado.crt"
+# ---------------------------------------------------------------------------
+# Utilidades internas
+# ---------------------------------------------------------------------------
+
+def _limpiar_texto(valor, fallback=""):
+    if valor is None:
+        return fallback
+    texto = str(valor).strip()
+    return texto if texto else fallback
+
+
+def _valor_obligatorio(valor, fallback):
+    texto = _limpiar_texto(valor, "")
+    return texto if texto else fallback
+
+
+def _es_receptor_aapp(datos_factura: dict) -> bool:
+    if not datos_factura.get('presentar_face'):
+        return False
+    return all(
+        _limpiar_texto(datos_factura.get(campo))
+        for campo in ('dir3_oficina', 'dir3_organo', 'dir3_unidad')
+    )
+
+
+def _normalizar_texto(texto: str) -> str:
+    """
+    Normaliza un texto para que sea compatible con el estándar Facturae.
+    """
+    texto = texto.strip()
+    texto = texto.replace('\n', ' ')
+    texto = texto.replace('\r', ' ')
+    texto = texto.replace('\t', ' ')
+    return texto
+
+
+# Rutas por defecto para certificados (FNMT válido con cadena completa)
+CLAVE_PRIVADA_PATH = "/var/www/html/certs/clave_real.pem"
+CERTIFICADO_PATH = "/var/www/html/certs/cert_real_chain.pem"
 
 def generar_facturae(datos_factura, ruta_salida_xml=None):
     """
@@ -65,7 +130,11 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
         os.makedirs(os.path.dirname(ruta_salida_xml), exist_ok=True)
 
     try:
-        emisor = datos_factura['emisor']
+        emisor_recibido = datos_factura.get('emisor') or {}
+        emisor_base = _cargar_emisor_config()
+        emisor = {**emisor_base, **emisor_recibido}
+        if not emisor.get('nif'):
+            raise ValueError("No se proporcionó NIF del emisor ni existe en emisor_config.json")
         receptor = datos_factura['receptor']
         detalles = datos_factura.get("detalles", datos_factura.get("items", []))
         fecha = datos_factura.get('fecha', '')
@@ -125,6 +194,15 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
         batch_id = f"BATCH-{numero}"
         
         # Preparar datos del emisor
+        emisor_address = _valor_obligatorio(emisor.get('direccion') or emisor.get('direccion_calle'), "-")
+        emisor_postcode = _valor_obligatorio(emisor.get('cp'), "00000")
+        emisor_town = _valor_obligatorio(
+            emisor.get('localidad'),
+            _valor_obligatorio(emisor.get('provincia'), "DESCONOCIDO")
+        )
+        emisor_province = _valor_obligatorio(emisor.get('provincia'), "DESCONOCIDO")
+        seller_party_identification = ''
+
         if es_emisor_persona_fisica:
             # Es una persona física
             nombre, primer_apellido, segundo_apellido = separar_nombre_apellidos(emisor.get('nombre', ''))
@@ -134,24 +212,49 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
                 name=nombre,
                 first_surname=primer_apellido,
                 second_surname=segundo_apellido,
-                address=emisor.get('direccion', ''),
-                post_code=emisor.get('cp', ''),
-                town=emisor.get('localidad', ''),
-                province=emisor.get('provincia', '')
+                address=emisor_address,
+                post_code=emisor_postcode,
+                town=emisor_town,
+                province=emisor_province
             )
         else:
             # Es una persona jurídica
             xml_emisor = generar_party_template('seller').format(
                 person_type_code="J",
                 tax_number=emisor.get('nif', ''),
-                corporate_name=emisor.get('nombre', ''),
-                address=emisor.get('direccion', ''),
-                post_code=emisor.get('cp', ''),
-                town=emisor.get('localidad', ''),
-                province=emisor.get('provincia', '')
+                party_identification=seller_party_identification,
+                corporate_name=_valor_obligatorio(emisor.get('nombre'), "EMISOR"),
+                address=emisor_address,
+                post_code=emisor_postcode,
+                town=emisor_town,
+                province=emisor_province
             )
             
         # Preparar datos del receptor
+        receptor_address = _valor_obligatorio(receptor.get('direccion_calle') or receptor.get('direccion'), "-")
+        receptor_postcode = _valor_obligatorio(receptor.get('cp'), "00000")
+        receptor_town = _valor_obligatorio(
+            receptor.get('ciudad') or receptor.get('localidad'),
+            _valor_obligatorio(receptor.get('provincia'), "DESCONOCIDO")
+        )
+        receptor_province = _valor_obligatorio(receptor.get('provincia'), "DESCONOCIDO")
+
+        es_receptor_aapp = _es_receptor_aapp(datos_factura)
+        administrative_centres_xml = ''
+        if es_receptor_aapp:
+            admin_template = generar_administrative_centre_template()
+            administrative_centres_xml = admin_template.format(
+                dir3_oficina=_limpiar_texto(datos_factura.get('dir3_oficina')),
+                dir3_organo=_limpiar_texto(datos_factura.get('dir3_organo')),
+                dir3_unidad=_limpiar_texto(datos_factura.get('dir3_unidad')),
+                address=receptor_address,
+                cp=receptor_postcode,
+                town=receptor_town,
+                province=receptor_province
+            )
+
+        receptor_party_identification = ''
+
         if es_receptor_persona_fisica:
             # Es una persona física
             nombre, primer_apellido, segundo_apellido = separar_nombre_apellidos(receptor.get('nombre', ''))
@@ -161,21 +264,23 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
                 name=nombre,
                 first_surname=primer_apellido,
                 second_surname=segundo_apellido,
-                address=receptor.get('direccion', ''),
-                post_code=receptor.get('cp', ''),
-                town=receptor.get('localidad', ''),
-                province=receptor.get('provincia', '')
+                address=receptor_address,
+                post_code=receptor_postcode,
+                town=receptor_town,
+                province=receptor_province
             )
         else:
             # Es una persona jurídica
             xml_receptor = generar_party_template('buyer').format(
                 person_type_code="J",
                 tax_number=receptor.get('nif', ''),
-                corporate_name=receptor.get('nombre', ''),
-                address=receptor.get('direccion', ''),
-                post_code=receptor.get('cp', ''),
-                town=receptor.get('localidad', ''),
-                province=receptor.get('provincia', '')
+                party_identification=receptor_party_identification,
+                administrative_centres=administrative_centres_xml,
+                corporate_name=_valor_obligatorio(receptor.get('nombre'), "RECEPTOR"),
+                address=receptor_address,
+                post_code=receptor_postcode,
+                town=receptor_town,
+                province=receptor_province
             )
             
         # Preparar los impuestos (formato correcto según el estándar Facturae)
@@ -234,6 +339,24 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
         # Unir todos los ítems
         items_xml_final = '\n                '.join(items_xml)
         
+        # Construir centros administrativos DIR3 cuando el receptor lo requiera
+        administrative_centres_xml = ''
+        if datos_factura.get('presentar_face') and all(
+            (datos_factura.get('dir3_oficina'),
+             datos_factura.get('dir3_organo'),
+             datos_factura.get('dir3_unidad'))
+        ):
+            admin_template = generar_administrative_centre_template()
+            administrative_centres_xml = admin_template.format(
+                dir3_oficina=datos_factura.get('dir3_oficina'),
+                dir3_organo=datos_factura.get('dir3_organo'),
+                dir3_unidad=datos_factura.get('dir3_unidad'),
+                address=receptor.get('direccion', ''),
+                cp=receptor.get('cp', ''),
+                town=receptor.get('localidad', ''),
+                province=receptor.get('provincia', '')
+            )
+
         # Completar la plantilla con formato correcto para cada campo
         xml_completo = xml_plantilla.format(
             batch_id=batch_id,
@@ -241,6 +364,7 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
             total_amount='{:.2f}'.format(total_factura),
             seller_party=xml_emisor,
             buyer_party=xml_receptor,
+            administrative_centres=administrative_centres_xml,
             # Usamos la función procesar_serie_numero para separar correctamente serie y número
             # según requerimientos de AEAT VERI*FACTU
             invoice_series=procesar_serie_numero(numero)[0] if numero else "SER",
@@ -288,7 +412,8 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
             print("DEBUG: Llamando a firmar_xml con archivos separados de clave privada y certificado")
             xml_firmado = firmar_xml(ruta_salida_xml, 
                                     ruta_clave_privada=ruta_clave_privada, 
-                                    ruta_certificado_publico=ruta_certificado_publico)
+                                    ruta_certificado_publico=ruta_certificado_publico,
+                                    alias="certificadora_sami")
             
             print(f"DEBUG: XML firmado recibido, tamaño: {len(xml_firmado)} bytes")
             

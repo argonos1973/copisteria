@@ -328,13 +328,13 @@ def exportar():
                 for fila in filas_unificadas:
                     row = [
                         datetime.strptime(fila["fecha"], '%Y-%m-%d').strftime('%d/%m/%Y') if fila["fecha"] else "",
-                        fila["numero"],
-                        fila["nif"],
-                        fila["razonSocial"],
-                        f"{fila['importe_bruto']:.2f}".replace('.', ','),
-                        f"{fila['importe_impuestos']:.2f}".replace('.', ','),
-                        f"{fila['importe_cobrado']:.2f}".replace('.', ','),
-                        f"{fila['total']:.2f}".replace('.', ',')
+                        fila["numero"] or "",
+                        fila["nif"] or "",
+                        fila["razonSocial"] or "",
+                        f"{float(fila['importe_bruto'] or 0):.2f}".replace('.', ','),
+                        f"{float(fila['importe_impuestos'] or 0):.2f}".replace('.', ','),
+                        f"{float(fila['importe_cobrado'] or 0):.2f}".replace('.', ','),
+                        f"{float(fila['total'] or 0):.2f}".replace('.', ',')
                     ]
                     writer.writerow(row)
 
@@ -566,6 +566,10 @@ def filtrar_contactos():
                 c.cp,
                 c.provincia,
                 c.tipo,
+                c.dir3_oficina,
+                c.dir3_organo,
+                c.dir3_unidad,
+                c.face_presentacion,
                 c.idContacto as id,
                 (
                     SELECT p.numero 

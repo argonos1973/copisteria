@@ -11,15 +11,15 @@ logger = logging.getLogger(__name__)
 
 def obtener_plantilla_xml():
     """
-    Devuelve la plantilla base XML para Facturae
     
     Returns:
         str: Plantilla XML base para Facturae
     """
     # Plantilla básica de Facturae 3.2.2 para VERI*FACTU
     return """<?xml version="1.0" encoding="UTF-8"?>
-<fe:Facturae xmlns:fe="http://www.facturae.gob.es/formato/Versiones/Facturaev3_2_2.xml" 
-             xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+<fe:Facturae xmlns:fe="http://www.facturae.gob.es/formato/Versiones/Facturaev3_2_2.xml"
+             xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+             xmlns:xades="http://uri.etsi.org/01903/v1.3.2#">
     <FileHeader>
         <SchemaVersion>3.2.2</SchemaVersion>
         <Modality>I</Modality>
@@ -51,7 +51,6 @@ def obtener_plantilla_xml():
         <Invoice>
             <InvoiceHeader>
                 <InvoiceNumber>{invoice_number}</InvoiceNumber>
-                <InvoiceSeriesCode>{invoice_series}</InvoiceSeriesCode>
                 <InvoiceDocumentType>FC</InvoiceDocumentType>
                 <InvoiceClass>OO</InvoiceClass>
             </InvoiceHeader>
@@ -97,6 +96,7 @@ def generar_party_template(tipo='seller'):
                 <ResidenceTypeCode>R</ResidenceTypeCode>
                 <TaxIdentificationNumber>{tax_number}</TaxIdentificationNumber>
             </TaxIdentification>
+            {party_identification}
             <LegalEntity>
                 <CorporateName>{corporate_name}</CorporateName>
                 <AddressInSpain>
@@ -113,6 +113,8 @@ def generar_party_template(tipo='seller'):
                 <ResidenceTypeCode>R</ResidenceTypeCode>
                 <TaxIdentificationNumber>{tax_number}</TaxIdentificationNumber>
             </TaxIdentification>
+            {party_identification}
+            {administrative_centres}
             <LegalEntity>
                 <CorporateName>{corporate_name}</CorporateName>
                 <AddressInSpain>
@@ -193,3 +195,43 @@ def generar_item_template():
                     </Tax>
                 </TaxesOutputs>
             </InvoiceLine>"""
+
+
+def generar_administrative_centre_template():
+    """Plantilla para un centro administrativo DIR3."""
+    return """
+        <AdministrativeCentres>
+            <AdministrativeCentre>
+                <CentreCode>{dir3_oficina}</CentreCode>
+                <RoleTypeCode>01</RoleTypeCode>
+                <AddressInSpain>
+                    <Address>{address}</Address>
+                    <PostCode>{cp}</PostCode>
+                    <Town>{town}</Town>
+                    <Province>{province}</Province>
+                    <CountryCode>ESP</CountryCode>
+                </AddressInSpain>
+            </AdministrativeCentre>
+            <AdministrativeCentre>
+                <CentreCode>{dir3_organo}</CentreCode>
+                <RoleTypeCode>02</RoleTypeCode>
+                <AddressInSpain>
+                    <Address>{address}</Address>
+                    <PostCode>{cp}</PostCode>
+                    <Town>{town}</Town>
+                    <Province>{province}</Province>
+                    <CountryCode>ESP</CountryCode>
+                </AddressInSpain>
+            </AdministrativeCentre>
+            <AdministrativeCentre>
+                <CentreCode>{dir3_unidad}</CentreCode>
+                <RoleTypeCode>03</RoleTypeCode>
+                <AddressInSpain>
+                    <Address>{address}</Address>
+                    <PostCode>{cp}</PostCode>
+                    <Town>{town}</Town>
+                    <Province>{province}</Province>
+                    <CountryCode>ESP</CountryCode>
+                </AddressInSpain>
+            </AdministrativeCentre>
+        </AdministrativeCentres>"""

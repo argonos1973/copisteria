@@ -1,116 +1,53 @@
-import logging
-import os
-import shutil
-import subprocess
-import tempfile
+from pathlib import Path
+from typing import List
 
+from cryptography.hazmat.primitives import serialization
 
-def sign_with_autofirma_pem(
-    input_xml: str,
-    output_xsig: str,
-    cert_pem: str,
-    key_pem: str,
-    pem_password: str = "",
-    af_cli: str = "/usr/bin/autofirma",
-    alias: str = None,
-    cert_filter: str = None
-):
-    """
-    Firma un XML usando AutoFirma CLI con certificados PEM.
+from facturae.sign_facturae_xades import sign_with_xmlsec
 
-    El .xsig resultante se deja en la ruta que se pase en output_xsig.
-    """
-    # Verificar CLI
-    if not (os.path.isfile(af_cli) and os.access(af_cli, os.X_OK)):
-        raise FileNotFoundError(f"No encuentro o no es ejecutable: '{af_cli}'")
-
-    # Crear PKCS#12 temporal
-    with tempfile.NamedTemporaryFile(suffix=".p12", delete=False) as tmp_p12:
-        p12_path = tmp_p12.name
-    try:
-        # Exportar PEM -> P12
-        openssl_cmd = [
-            "openssl", "pkcs12", "-export",
-            "-in", cert_pem,
-            "-inkey", key_pem,
-            "-out", p12_path,
-            "-passout", f"pass:{pem_password}"
-        ]
-        if alias:
-            openssl_cmd += ["-name", alias]
-        proc = subprocess.run(openssl_cmd, capture_output=True, text=True)
-        if proc.returncode != 0:
-            raise RuntimeError(f"Error generando P12 (código {proc.returncode}): STDOUT: {proc.stdout}\nSTDERR: {proc.stderr}")
-
-        # Crear HOME para logs en temporal
-        log_home = tempfile.mkdtemp()
-        env = os.environ.copy()
-        env['HOME'] = log_home
-
-        # Llamar a AutoFirma
-        cmd = [
-            af_cli, "sign",
-            "-i", input_xml,
-            "-o", output_xsig,
-            "-format", "facturae",
-            "-store", f"pkcs12:{p12_path}",
-            "-password", pem_password
-        ]
-        if alias:
-            cmd += ["-alias", alias]
-        elif cert_filter:
-            cmd += ["-filter", cert_filter]
-        # Si no se proporciona ni alias ni filtro, AutoFirma utilizará el primer
-        # certificado disponible en el almacén PKCS#12.
-
-
-        proc2 = subprocess.run(cmd, capture_output=True, text=True, env=env)
-        if proc2.returncode != 0:
-            raise RuntimeError(f"AutoFirma falló (código {proc2.returncode}): STDOUT: {proc2.stdout}\nSTDERR: {proc2.stderr}")
-
-        print(f"✅ Firma generada → {output_xsig}")
-    finally:
-        # Limpieza
-        if os.path.exists(p12_path):
-            os.unlink(p12_path)
-        if 'log_home' in locals() and os.path.isdir(log_home):
-            shutil.rmtree(log_home)
-
-
-# -----------------------------------------------------------------------------
-# Wrapper de alto nivel compatible con el resto de módulos
-# -----------------------------------------------------------------------------
-
-# -----------------------------------------------------------------------------
-# Funciones de utilidad requeridas por otros módulos (stubs básicos)
-# -----------------------------------------------------------------------------
 
 def corregir_etiqueta_n_por_name(ruta_xml: str) -> None:
-    """Corrige, si es necesario, etiquetas <N> por <Name> en el XML.
-
-    En esta implementación mínima no se realiza modificación alguna para no
-    interferir con XML ya válido. Se mantiene por compatibilidad.
-    """
-    # Implementación real pendiente
+    """Compatibilidad con versiones anteriores: no aplica cambios."""
     return
 
 
 def leer_contenido_xsig(ruta_xsig: str) -> str:
-    """Devuelve el contenido (texto) de un archivo XSIG.
-
-    Args:
-        ruta_xsig: Ruta al archivo .xsig.
-
-    Returns:
-        str: Contenido en texto (utf-8, errores ignorados si los hay).
-    """
     with open(ruta_xsig, "rb") as f:
         return f.read().decode("utf-8", errors="ignore")
 
 
-# -----------------------------------------------------------------------------
-# Wrapper de alto nivel compatible con el resto de módulos
-# -----------------------------------------------------------------------------
+def _load_private_key(path: str, password: str | None) -> bytes:
+    key_bytes = Path(path).read_bytes()
+    password_bytes = password.encode("utf-8") if password else None
+    private_key = serialization.load_pem_private_key(key_bytes, password=password_bytes)
+    return private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+
+
+def _split_pem_certificates(pem_bytes: bytes) -> List[bytes]:
+    pem_text = pem_bytes.decode("utf-8")
+    certificates: List[bytes] = []
+    block = []
+    inside = False
+    for line in pem_text.splitlines():
+        if "-----BEGIN CERTIFICATE-----" in line:
+            inside = True
+            block = [line]
+        elif "-----END CERTIFICATE-----" in line and inside:
+            block.append(line)
+            certificates.append("\n".join(block).encode("utf-8") + b"\n")
+            inside = False
+            block = []
+        elif inside:
+            block.append(line)
+
+    if not certificates and pem_bytes:
+        certificates.append(pem_bytes)
+    return certificates
+
 
 def firmar_xml(
     ruta_xml: str,
@@ -118,76 +55,40 @@ def firmar_xml(
     ruta_certificado_publico: str,
     password: str = "",
     alias: str | None = None,
-    af_cli: str = "/usr/bin/autofirma",
+    af_cli: str | None = None,
 ) -> bytes:
-    """Firma un archivo XML Facturae y devuelve el contenido firmado (bytes).
+    """Firma un archivo XML Facturae y devuelve los bytes firmados (XAdES-BES)."""
 
-    Este wrapper existe para mantener compatibilidad con módulos que esperan
-    la función ``firmar_xml``. Internamente delega en
-    :func:`sign_with_autofirma_pem` que utiliza AutoFirma CLI.
+    xml_bytes = Path(ruta_xml).read_bytes()
+    key_pem = _load_private_key(ruta_clave_privada, password if password else None)
 
-    Args:
-        ruta_xml: Ruta al XML de entrada.
-        ruta_clave_privada: Ruta a la clave privada PEM.
-        ruta_certificado_publico: Ruta al certificado público PEM.
-        password: Contraseña del almacén (si existe).
-        alias: Alias del certificado dentro del PKCS#12 temporal (opcional).
-        af_cli: Ruta al ejecutable de AutoFirma CLI.
+    cert_file_bytes = Path(ruta_certificado_publico).read_bytes()
+    cert_chain = _split_pem_certificates(cert_file_bytes)
 
-    Returns:
-        bytes: Contenido del fichero .xsig firmado.
-    """
-    import os
-    import tempfile
+    if not cert_chain:
+        raise ValueError("No se encontró ningún certificado en el archivo proporcionado")
 
-    # Crear ruta temporal para el .xsig
-    with tempfile.NamedTemporaryFile(suffix=".xsig", delete=False) as tmp_out:
-        ruta_xsig_tmp = tmp_out.name
+    cert_pem = cert_chain[0]
+    chain_pems = cert_chain[1:]
 
-    try:
-        sign_with_autofirma_pem(
-            input_xml=ruta_xml,
-            output_xsig=ruta_xsig_tmp,
-            cert_pem=ruta_certificado_publico,
-            key_pem=ruta_clave_privada,
-            pem_password=password,
-            af_cli=af_cli,
-            alias=alias,
-        )
-
-        # Leer bytes firmados y devolverlos
-        with open(ruta_xsig_tmp, "rb") as f:
-            firmado_bytes = f.read()
-        return firmado_bytes
-
-    finally:
-        # Limpiar temporal
-        if os.path.exists(ruta_xsig_tmp):
-            os.unlink(ruta_xsig_tmp)
+    signed_xml = sign_with_xmlsec(xml_bytes, key_pem, cert_pem, chain_pems)
+    return signed_xml
 
 
-def main():
-    logging.basicConfig(level=logging.DEBUG)
-    # Ruta fija de entrada y salida
-    input_xml = "/media/sami/copia500/F250948.xml"
-    output_xsig = input_xml.replace(".xml", ".xsig")
-    cert_pem    = "/media/sami/copia500/cert_real.pem"
-    key_pem     = "/media/sami/copia500/clave_real.pem"
-    pem_password = ""  # si hay contraseña, ponerla aquí
-    alias       = "certificadora_sami"
+def main():  # pragma: no cover - utilidad manual
+    import argparse
 
-    try:
-        sign_with_autofirma_pem(
-            input_xml=input_xml,
-            output_xsig=output_xsig,
-            cert_pem=cert_pem,
-            key_pem=key_pem,
-            pem_password=pem_password,
-            alias=alias
-        )
-    except Exception as e:
-        logging.error(f"AutoFirma falló: {e}")
-        raise
+    parser = argparse.ArgumentParser(description="Firmar Facturae con XAdES-BES usando xmlsec")
+    parser.add_argument("--xml", required=True, help="Ruta al XML Facturae a firmar")
+    parser.add_argument("--key", required=True, help="Ruta a la clave privada PEM")
+    parser.add_argument("--cert", required=True, help="Ruta al certificado PEM")
+    parser.add_argument("--password", default="", help="Contraseña de la clave privada si aplica")
+    parser.add_argument("--out", required=True, help="Ruta de salida para el XML firmado")
+    args = parser.parse_args()
+
+    firmado = firmar_xml(args.xml, args.key, args.cert, password=args.password)
+    Path(args.out).write_bytes(firmado)
+    print(f"Firma generada en {args.out}")
 
 
 if __name__ == "__main__":
