@@ -16,10 +16,18 @@ const hideOverlay = () => {
 
 // Función para actualizar los totales desde el backend (totales globales)
 const updateTotalsFromBackend = (totalesGlobales) => {
-    document.getElementById('totalBase').textContent = formatearImporte(totalesGlobales.total_base);
-    document.getElementById('totalIVA').textContent = formatearImporte(totalesGlobales.total_iva);
-    document.getElementById('totalCobrado').textContent = formatearImporte(totalesGlobales.total_cobrado);
-    document.getElementById('totalTotal').textContent = formatearImporte(totalesGlobales.total_total);
+    console.log('[FACTURAS] Actualizando totales desde backend:', totalesGlobales);
+    const baseEl = document.getElementById('totalBase');
+    const ivaEl = document.getElementById('totalIVA');
+    const cobradoEl = document.getElementById('totalCobrado');
+    const totalEl = document.getElementById('totalTotal');
+    
+    if (baseEl) baseEl.textContent = totalesGlobales.total_base ? `${totalesGlobales.total_base} €` : '';
+    if (ivaEl) ivaEl.textContent = totalesGlobales.total_iva ? `${totalesGlobales.total_iva} €` : '';
+    if (cobradoEl) cobradoEl.textContent = totalesGlobales.total_cobrado ? `${totalesGlobales.total_cobrado} €` : '';
+    if (totalEl) totalEl.textContent = totalesGlobales.total_total ? `${totalesGlobales.total_total} €` : '';
+    
+    console.log('[FACTURAS] Totales actualizados en DOM');
 };
 
 // Función para actualizar los totales (fallback - solo página actual)
@@ -391,9 +399,12 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         });
 
         // Actualizar los totales en el pie de página (totales globales del filtro)
+        console.log('[FACTURAS] Verificando totales_globales:', data.totales_globales);
         if (data.totales_globales) {
+            console.log('[FACTURAS] Llamando a updateTotalsFromBackend');
             updateTotalsFromBackend(data.totales_globales);
         } else {
+            console.log('[FACTURAS] No hay totales_globales, usando fallback');
             // Fallback: calcular de la página actual si no hay totales globales
             updateTotals(items);
         }
