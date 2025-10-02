@@ -187,24 +187,43 @@ async function rellenarFactura(datos) {
     document.getElementById('iva').textContent = importeIVA ? formatearImporte(importeIVA) : '';
     document.getElementById('total').textContent = totalTicket ? formatearImporte(totalTicket) : '';
 
-    // Mostrar información VERI*FACTU
-    const verifactuDisponible = datos.codigo_qr && datos.codigo_qr.length > 50;
+    // Verificar si VERIFACTU está habilitado consultando config.json
+    let verifactuHabilitado = false;
+    try {
+        const configResponse = await fetch('/config.json');
+        const config = await configResponse.json();
+        verifactuHabilitado = config.verifactu_enabled === true;
+    } catch (e) {
+        console.log('No se pudo cargar config.json, asumiendo VERIFACTU desactivado');
+        verifactuHabilitado = false;
+    }
+
+    // Mostrar información VERI*FACTU solo si está habilitado
     const bloqueVerifactu = document.getElementById('hash-ticket')?.parentElement?.parentElement;
-    if (!verifactuDisponible && bloqueVerifactu) {
-        // Ocultar sección si no hay datos
-        bloqueVerifactu.style.display = 'none';
-    }
+    
+    if (!verifactuHabilitado) {
+        // Si VERIFACTU está desactivado, ocultar toda la sección
+        if (bloqueVerifactu) {
+            bloqueVerifactu.style.display = 'none';
+        }
+    } else {
+        // Si está habilitado, mostrar solo si hay datos
+        const verifactuDisponible = datos.codigo_qr && datos.codigo_qr.length > 50;
+        if (!verifactuDisponible && bloqueVerifactu) {
+            bloqueVerifactu.style.display = 'none';
+        } else {
+            // QR
+            if (verifactuDisponible) {
+                const imgQR = document.getElementById('qr-verifactu');
+                imgQR.src = `data:image/png;base64,${datos.codigo_qr}`;
+            }
 
-    // QR
-    if (verifactuDisponible) {
-        const imgQR = document.getElementById('qr-verifactu');
-        imgQR.src = `data:image/png;base64,${datos.codigo_qr}`;
-    }
-
-    // CSV / Hash (se usa CSV como identificador comprobante)
-    if (datos.csv) {
-        const csvElem = document.getElementById('hash-ticket');
-        if (csvElem) csvElem.textContent = `CSV: ${datos.csv}`;
+            // CSV / Hash (se usa CSV como identificador comprobante)
+            if (datos.csv) {
+                const csvElem = document.getElementById('hash-ticket');
+                if (csvElem) csvElem.textContent = `CSV: ${datos.csv}`;
+            }
+        }
     }
 
     // ---- Esperar carga QR ----
