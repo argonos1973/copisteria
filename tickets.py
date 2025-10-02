@@ -188,14 +188,16 @@ def tickets_paginado():
                 FROM tickets t{where_sql}
             '''
             cursor.execute(totales_sql, params)
-            totales_row = cursor.fetchone() or {}
-
-            totales_globales = {
-                'total_base': format_currency_es_two(totales_row.get('total_base', 0)),
-                'total_iva': format_currency_es_two(totales_row.get('total_iva', 0)),
-                'total_cobrado': format_currency_es_two(totales_row.get('total_cobrado', 0)),
-                'total_total': format_currency_es_two(totales_row.get('total_total', 0))
-            }
+            totales_row = cursor.fetchone()
+            
+            if totales_row:
+                totales_dict = dict(totales_row)
+                totales_globales = {
+                    'total_base': format_currency_es_two(totales_dict.get('total_base', 0)),
+                    'total_iva': format_currency_es_two(totales_dict.get('total_iva', 0)),
+                    'total_cobrado': format_currency_es_two(totales_dict.get('total_cobrado', 0)),
+                    'total_total': format_currency_es_two(totales_dict.get('total_total', 0))
+                }
 
         total_pages = (total_rows + page_size - 1) // page_size if page_size else 1
 
