@@ -966,13 +966,16 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                 {where_sql}
             '''
             cursor.execute(totales_sql, params)
-            tot_row = cursor.fetchone() or {}
-            totales_globales = {
-                'total_base': format_currency_es_two((tot_row['total_base'] if isinstance(tot_row, sqlite3.Row) else None) or 0),
-                'total_iva': format_currency_es_two((tot_row['total_iva'] if isinstance(tot_row, sqlite3.Row) else None) or 0),
-                'total_cobrado': format_currency_es_two((tot_row['total_cobrado'] if isinstance(tot_row, sqlite3.Row) else None) or 0),
-                'total_total': format_total_es_two((tot_row['total_total'] if isinstance(tot_row, sqlite3.Row) else None) or 0)
-            }
+            tot_row = cursor.fetchone()
+            
+            if tot_row:
+                tot_dict = dict(tot_row)
+                totales_globales = {
+                    'total_base': format_currency_es_two(tot_dict.get('total_base', 0) or 0),
+                    'total_iva': format_currency_es_two(tot_dict.get('total_iva', 0) or 0),
+                    'total_cobrado': format_currency_es_two(tot_dict.get('total_cobrado', 0) or 0),
+                    'total_total': format_total_es_two(tot_dict.get('total_total', 0) or 0)
+                }
 
         total = int(total or 0)
         total_pages = (total + page_size - 1) // page_size if page_size else 1
