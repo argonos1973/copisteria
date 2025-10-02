@@ -721,6 +721,8 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
             subtotal = res_detalle.get('subtotal', 0.0)
             iva_linea = res_detalle.get('iva', 0.0)
             total_detalle = res_detalle.get('total', subtotal + iva_linea)
+            # Redondear el total a 2 decimales para evitar diferencias de 0.01€
+            total_detalle = round(total_detalle, 2)
             cursor.execute(
                 '''
                 INSERT INTO detalle_tickets (

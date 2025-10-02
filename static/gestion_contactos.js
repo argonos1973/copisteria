@@ -7,180 +7,41 @@ let cargandoContacto = false;
 
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion } from './notificaciones.js';
+import { inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar } from './scripts_utils.js';
 
 const API_URL = `http://${IP_SERVER}:${PORT}/api`;
 
 // Element references --------------------------------------------------------
 const form = document.getElementById('contactForm');
-const btnGuardar = document.getElementById('btnGuardar');
 const btnCancelar = document.getElementById('btnCancelar');
 const sugerenciasContainer = document.getElementById('sugerenciasCarrer');
 const cpDatalist = document.getElementById('listaCP');
 
 const fields = {
-  razonsocial: document.getElementById('razonsocial'),
-  identificador: document.getElementById('identificador'),
+  razonsocial: document.getElementById('razonsocial').addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+        marcarCambiosSinGuardar();
+    }),
   mail: document.getElementById('mail'),
   telf1: document.getElementById('telf1'),
   telf2: document.getElementById('telf2'),
-  direccion: document.getElementById('direccion'),
+  direccion: document.getElementById('direccion').addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+        marcarCambiosSinGuardar();
+    }),
   cp: document.getElementById('cp'),
-  poblacio: document.getElementById('poblacio'),
-  provincia: document.getElementById('provincia'),
+  poblacion: document.getElementById('poblacion').addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+        marcarCambiosSinGuardar();
+    }),
   facturacion: document.getElementById('facturacion_automatica'),
   dir3Oficina: document.getElementById('dir3_oficina'),
   dir3Organo: document.getElementById('dir3_organo'),
   dir3Unidad: document.getElementById('dir3_unidad')
 };
 
-const icons = {
-  identificador: document.getElementById('icon-identificador'),
-  mail: document.getElementById('icon-mail'),
-  telf1: document.getElementById('icon-telf1'),
-  telf2: document.getElementById('icon-telf2'),
-  cp: document.getElementById('icon-cp')
-};
-
-// ------------------------ Validación helpers ------------------------------
-const regex = {
-  email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  telefono: /^[0-9]{9,10}$/,
-  vat: /^([A-Z]{2})?[0-9]{8,10}$/,
-  nif: /^[0-9]{8}[A-Z]$/,
-  nie: /^[XYZ][0-9]{7}[A-Z]$/,
-  cif: /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/
-};
-
-const letrasNIF = 'TRWAGMYFPDXBNJZSQVHLCKET';
-
-function validarNIF(nif) {
-  const numero = nif.substring(0, 8);
-  const letra = nif.charAt(8);
-  return letra === letrasNIF.charAt(parseInt(numero, 10) % 23);
-}
-function validarNIE(nie) {
-  const mapa = { X: '0', Y: '1', Z: '2' };
-  const numero = mapa[nie.charAt(0)] + nie.substring(1, 8);
-  const letra = nie.charAt(8);
-  return letra === letrasNIF.charAt(parseInt(numero, 10) % 23);
-}
-function validarCIF(cif) {
-  // Convertir a mayúsculas
-  cif = cif.toUpperCase();
-  // Validar formato básico
-  if (!/^[A-Z][0-9]{7}[0-9A-Z]$/.test(cif)) {
-    return false;
-  }
-  
-  // Extraer los números
-  const nums = cif.substring(1, 8).split('').map(Number);
-  
-  // Calcular suma de posiciones pares (0-indexed: 0,2,4,6)
-  let s1 = 0;
-  for (let i = 0; i < nums.length; i += 2) {
-    const n = nums[i];
-    const prod = n * 2;
-    s1 += Math.floor(prod / 10) + (prod % 10);
-  }
-  
-  // Calcular suma de posiciones impares (0-indexed: 1,3,5)
-  let s2 = 0;
-  for (let i = 1; i < nums.length; i += 2) {
-    s2 += nums[i];
-  }
-  
-  // Calcular dígito de control
-  const c = (10 - (s1 + s2) % 10) % 10;
-  const tabla = "JABCDEFGHI";
-  const letra = cif.charAt(0);
-  const ctrl = cif.charAt(8);
-  
-  // Determinar control esperado según la letra inicial
-  let ctrl_esp;
-  if (["P", "Q", "R", "S", "N", "W"].includes(letra)) {
-    // Control es letra
-    ctrl_esp = tabla[c];
-  } else if (["A", "B", "E", "H"].includes(letra)) {
-    // Control es número
-    ctrl_esp = c.toString();
-  } else {
-    // Control puede ser letra o número
-    ctrl_esp = [c.toString(), tabla[c]];
-  }
-  
-  // Validar
-  if (typeof ctrl_esp === 'string') {
-    return ctrl === ctrl_esp;
-  } else {
-    return ctrl_esp.includes(ctrl);
-  }
-}
-
-function setIcon(valid, icon) {
-  if (!icon) return;
-  icon.className = 'validation-icon fa ' + (valid ? 'fa-check valid' : 'fa-times invalid');
-}
-
-function markValidity(field, valid) {
-  if (!field) return;
-  field.style.border = valid ? '' : '2px solid #e74c3c';
-}
-
-function validateIdentificador() {
-  const value = fields.identificador.value.toUpperCase();
-  let ok = false;
-  if (value.includes('/')) ok = true;
-  else if (regex.vat.test(value)) ok = true;
-  else if (regex.nif.test(value)) ok = validarNIF(value);
-  else if (regex.nie.test(value)) ok = validarNIE(value);
-  else if (regex.cif.test(value)) ok = validarCIF(value);
-  setIcon(ok, icons.identificador);
-  markValidity(fields.identificador, ok);
-  return ok;
-}
-function validateEmail() {
-  const val = fields.mail.value.trim();
-  if (!val) { // campo vacío es válido
-    setIcon(true, icons.mail);
-    return true;
-  }
-  const ok = regex.email.test(val);
-  setIcon(ok, icons.mail);
-  markValidity(fields.mail, ok);
-  return ok;
-}
-function validateTelf(field, icon) {
-  const val = field.value;
-  const ok = !val || regex.telefono.test(val);
-  setIcon(ok, icon);
-  return ok;
-}
-
-function markMissing(field, missing) {
-  if (!field) return;
-  field.style.border = missing ? '2px solid #e74c3c' : '';
-}
-
-function validateRequired() {
-  const required = ['razonsocial','identificador','direccion'];
-  let ok = true;
-  required.forEach(name => {
-    const el = fields[name];
-    const missing = !el || !el.value.trim();
-    markMissing(el, missing);
-    if (missing) ok = false;
-  });
-  return ok;
-}
-
-// ------------------------ Sugerencias de dirección ------------------------
-// ---------------- Debounce util -------------------
-function debounceFn(fn, delay=300){
-  let t;return (...args)=>{clearTimeout(t);t=setTimeout(()=>fn(...args),delay);} }
-
 // ---- Dirección sugerencias ----
 const dirDebounce = debounceFn((q)=>buscarSugerenciasCarrer(q),300);
-fields.direccion.addEventListener('input', e=>dirDebounce(e.target.value));
 
 async function buscarSugerenciasCarrer(query) {
   if (!query || query.length < 3) return (sugerenciasContainer.innerHTML = '');

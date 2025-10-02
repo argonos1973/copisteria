@@ -1294,3 +1294,79 @@ export function invalidateGlobalCache() {
   try { if (typeof globalFetchLock !== 'undefined') globalFetchLock = false; } catch (e) {}
   try { console.log('[cache] invalidateGlobalCache ejecutado'); } catch (e) {}
 }
+
+/**
+ * Sistema de detección de cambios sin guardar
+ * Uso:
+ * 1. Llamar inicializarDeteccionCambios() al cargar la página
+ * 2. Llamar marcarCambiosSinGuardar() cuando se edite algo
+ * 3. Llamar resetearCambiosSinGuardar() después de guardar
+ */
+let cambiosSinGuardarGlobal = false;
+
+export function marcarCambiosSinGuardar() {
+  cambiosSinGuardarGlobal = true;
+}
+
+export function resetearCambiosSinGuardar() {
+  cambiosSinGuardarGlobal = false;
+}
+
+export function hayCambiosSinGuardar() {
+  return cambiosSinGuardarGlobal;
+}
+
+export async function inicializarDeteccionCambios(callbackGuardar = null) {
+  // Importar mostrarConfirmacion dinámicamente para evitar dependencias circulares
+  const { mostrarConfirmacion } = await import('./notificaciones.js');
+  
+  // Interceptar clics en enlaces de navegación
+  document.addEventListener('click', async (e) => {
+    const link = e.target.closest('a[href], a[data-target], button[data-navigate]');
+    
+    if (link && cambiosSinGuardarGlobal) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const guardar = await mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
+      if (guardar && callbackGuardar) {
+        try {
+          await callbackGuardar();
+          cambiosSinGuardarGlobal = false;
+          
+          // Continuar con la navegación
+          setTimeout(() => {
+            if (link.dataset.target) {
+              window.location.href = link.dataset.target;
+            } else if (link.dataset.navigate) {
+              window.location.href = link.dataset.navigate;
+            } else if (link.href) {
+              window.location.href = link.href;
+            }
+          }, 500);
+        } catch (e) {
+          console.error('[Cambios] Error al guardar:', e);
+        }
+      } else {
+        // Descartar cambios y continuar
+        cambiosSinGuardarGlobal = false;
+        if (link.dataset.target) {
+          window.location.href = link.dataset.target;
+        } else if (link.dataset.navigate) {
+          window.location.href = link.dataset.navigate;
+        } else if (link.href) {
+          window.location.href = link.href;
+        }
+      }
+    }
+  }, true);
+  
+  // Fallback para beforeunload (cierre de pestaña, recarga)
+  window.addEventListener('beforeunload', (e) => {
+    if (cambiosSinGuardarGlobal) {
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    }
+  });
+}

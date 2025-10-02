@@ -928,8 +928,13 @@ def actualizar_producto(id_producto, data):
         import sys
         print(f"DEBUG actualizar_producto - ID: {id_producto}", file=sys.stderr)
         print(f"DEBUG config_franjas recibido: {config_franjas}", file=sys.stderr)
-        print(f"DEBUG no_generar_franjas raw: {config_franjas.get('no_generar_franjas')}", file=sys.stderr)
-        print(f"DEBUG no_generar_franjas convertido: {no_generar_franjas_val}", file=sys.stderr)
+        print(f"DEBUG Valores a actualizar:", file=sys.stderr)
+        print(f"  - franja_inicial: {config_franjas.get('franja_inicial', 1)}", file=sys.stderr)
+        print(f"  - numero_franjas: {config_franjas.get('numero_franjas', 50)}", file=sys.stderr)
+        print(f"  - ancho_franja: {config_franjas.get('ancho_franja', 10)}", file=sys.stderr)
+        print(f"  - descuento_inicial: {config_franjas.get('descuento_inicial', 5.0)}", file=sys.stderr)
+        print(f"  - incremento_franja: {config_franjas.get('incremento_franja', 5.0)}", file=sys.stderr)
+        print(f"  - no_generar_franjas: {no_generar_franjas_val}", file=sys.stderr)
         sys.stderr.flush()
         
         cursor.execute('''
@@ -970,6 +975,7 @@ def actualizar_producto(id_producto, data):
         # Gestionar franjas según configuración
         try:
             config_franjas = data.get('config_franjas', {})
+            
             # Verificar que hay configuración de franjas
             if config_franjas:
                 # Si está marcado "no generar franjas", eliminar todas las franjas existentes
@@ -977,18 +983,24 @@ def actualizar_producto(id_producto, data):
                     eliminar_todas_franjas_producto(id_producto)
                     print(f"[DESCUENTOS] Eliminadas todas las franjas del producto {id_producto}")
                 else:
-                    # Usar siempre los valores de configuración de la pantalla
-                    franjas_cfg = {
-                        'franja_inicio': config_franjas.get('franja_inicial', 1),
-                        'bandas': config_franjas.get('numero_franjas', 50),
-                        'ancho': config_franjas.get('ancho_franja', 10),
-                        'descuento_inicial': config_franjas.get('descuento_inicial', 5.0),
-                        'incremento': config_franjas.get('incremento_franja', 5.0)
-                    }
+                    # Verificar si el producto ya tiene franjas
+                    cursor.execute('SELECT COUNT(*) as total FROM descuento_producto_franja WHERE producto_id = ?', (id_producto,))
+                    tiene_franjas = cursor.fetchone()['total'] > 0
                     
-                    # Regenerar franjas siempre con los parámetros de configuración
-                    regenerar_franjas_producto(id_producto, franjas_cfg)
-                    print(f"[DESCUENTOS] Franjas regeneradas para producto {id_producto} con config: {franjas_cfg}")
+                    # Solo generar franjas si NO tiene franjas y el check está activo
+                    if not tiene_franjas and config_franjas.get('calculo_automatico'):
+                        franjas_cfg = {
+                            'franja_inicio': config_franjas.get('franja_inicial', 1),
+                            'bandas': config_franjas.get('numero_franjas', 50),
+                            'ancho': config_franjas.get('ancho_franja', 10),
+                            'descuento_inicial': config_franjas.get('descuento_inicial', 5.0),
+                            'incremento': config_franjas.get('incremento_franja', 5.0)
+                        }
+                        
+                        regenerar_franjas_producto(id_producto, franjas_cfg)
+                        print(f"[DESCUENTOS] Franjas generadas para producto {id_producto} (no tenía franjas)")
+                    else:
+                        print(f"[DESCUENTOS] Producto {id_producto} ya tiene franjas o check desactivado - NO se regeneran")
         except Exception as e_fr:
             # No fallar la actualización del producto si las franjas fallan, solo registrar
             print(f"[DESCUENTOS] Advertencia al gestionar franjas automáticas para producto {id_producto}: {e_fr}")

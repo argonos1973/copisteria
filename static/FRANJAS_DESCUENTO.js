@@ -155,7 +155,10 @@ function renderFranjas() {
   // Recalcular precios y vincular listeners para % descuento
   actualizarPreciosAplicados();
   tbody.querySelectorAll('input.descuento').forEach((inp) => {
-    inp.addEventListener('input', () => actualizarPreciosAplicados());
+    inp.addEventListener('input', () => {
+      actualizarPreciosAplicados();
+      cambiosSinGuardar = true;
+    });
     inp.addEventListener('blur', () => {
       let n = parsearImporte(inp.value);
       if (!Number.isFinite(n)) n = 0;
@@ -163,13 +166,20 @@ function renderFranjas() {
       n = Math.max(0, Math.min(60, n));
       inp.value = n.toLocaleString('es-ES', { minimumFractionDigits: 5, maximumFractionDigits: 5 });
       actualizarPreciosAplicados();
+      cambiosSinGuardar = true;
     });
   });
   
   // Vincular listeners para precio final con IVA (recalcula descuento)
   tbody.querySelectorAll('input.precio-final-iva').forEach((inp, idx) => {
-    inp.addEventListener('input', () => recalcularDescuentoDesdePrecioFinal(idx));
-    inp.addEventListener('blur', () => recalcularDescuentoDesdePrecioFinal(idx));
+    inp.addEventListener('input', () => {
+      recalcularDescuentoDesdePrecioFinal(idx);
+      cambiosSinGuardar = true;
+    });
+    inp.addEventListener('blur', () => {
+      recalcularDescuentoDesdePrecioFinal(idx);
+      cambiosSinGuardar = true;
+    });
   });
 }
 
@@ -428,6 +438,10 @@ async function saveFranjas(productoId, franjasListado) {
   return false;
 }
 
+// Variable para trackear cambios sin guardar
+let cambiosSinGuardar = false;
+let franjasOriginales = [];
+
 async function cargarFranjasSeleccionado() {
   const id = getSelectedProductoId();
   if (!id) { setStatus('Seleccione un producto válido', false); return; }
@@ -443,6 +457,9 @@ async function cargarFranjasSeleccionado() {
       return { min, max, descuento: d };
     });
     franjas = normalizeFranjasArray(franjas);
+    // Guardar copia de las franjas originales para detectar cambios
+    franjasOriginales = JSON.parse(JSON.stringify(franjas));
+    cambiosSinGuardar = false;
     renderFranjas();
     setStatus(`Cargadas ${franjas.length} franjas`);
   } catch (e) {
@@ -460,13 +477,19 @@ btnGuardar.addEventListener('click', async () => {
     const id = getSelectedProductoId();
     if (!id) { setStatus('Seleccione un producto válido', false); return; }
     let listado = leerFranjasDeTabla(); // ya normalizado
+    console.log('[FRANJAS] Datos leídos de tabla:', listado);
     // Asegurar precios con IVA estrictamente decrecientes sin repetición
     listado = enforceStrictDecreasingPrices(listado);
+    console.log('[FRANJAS] Datos después de enforce:', listado);
     await saveFranjas(id, listado);
     franjas = listado;
+    // Actualizar franjas originales y resetear flag de cambios
+    franjasOriginales = JSON.parse(JSON.stringify(listado));
+    cambiosSinGuardar = false;
     setStatus('Guardado correctamente');
+    console.log('[FRANJAS] Guardado exitoso');
   } catch (e) {
-    console.error(e);
+    console.error('[FRANJAS] Error al guardar:', e);
     setStatus(`Error al guardar: ${e.message}`, false);
   }
 });
@@ -543,12 +566,100 @@ if (productoSearch && productoSelect) {
 
 // Al cambiar el producto, cargar sus franjas
 if (productoSelect) {
-  productoSelect.addEventListener('change', () => {
+  productoSelect.addEventListener('change', async () => {
+    // Si hay cambios sin guardar, preguntar antes de cambiar
+    if (cambiosSinGuardar) {
+      const guardar = await mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de cambiar de producto?');
+      if (guardar) {
+        // Intentar guardar
+        try {
+          const id = getSelectedProductoId();
+          if (id) {
+            let listado = leerFranjasDeTabla();
+            listado = enforceStrictDecreasingPrices(listado);
+            await saveFranjas(id, listado);
+            cambiosSinGuardar = false;
+          }
+        } catch (e) {
+          console.error('[FRANJAS] Error al guardar:', e);
+          setStatus(`Error al guardar: ${e.message}`, false);
+          return; // No cambiar de producto si falla el guardado
+        }
+      } else {
+        cambiosSinGuardar = false; // Descartar cambios
+      }
+    }
+    
     if (getSelectedProductoId()) {
       actualizarCabeceraPrecioIVA();
       cargarFranjasSeleccionado();
     }
   });
 }
+
+// Detectar cuando el usuario intenta salir de la página con cambios sin guardar
+// Interceptar clics en enlaces y botones de navegación
+document.addEventListener('click', async (e) => {
+  // Detectar si es un clic en un enlace de navegación o botón volver
+  const link = e.target.closest('a[href], a[data-target]');
+  const btnVolver = e.target.closest('#btnVolver');
+  
+  if ((link || btnVolver) && cambiosSinGuardar) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const guardar = await mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
+    if (guardar) {
+      // Intentar guardar
+      try {
+        const id = getSelectedProductoId();
+        if (id) {
+          let listado = leerFranjasDeTabla();
+          listado = enforceStrictDecreasingPrices(listado);
+          await saveFranjas(id, listado);
+          cambiosSinGuardar = false;
+          setStatus('Guardado correctamente');
+          
+          // Continuar con la navegación
+          setTimeout(() => {
+            if (link) {
+              if (link.dataset.target) {
+                window.location.href = link.dataset.target;
+              } else {
+                window.location.href = link.href;
+              }
+            } else if (btnVolver) {
+              window.history.back();
+            }
+          }, 500);
+        }
+      } catch (e) {
+        console.error('[FRANJAS] Error al guardar:', e);
+        setStatus(`Error al guardar: ${e.message}`, false);
+      }
+    } else {
+      // Descartar cambios y continuar
+      cambiosSinGuardar = false;
+      if (link) {
+        if (link.dataset.target) {
+          window.location.href = link.dataset.target;
+        } else {
+          window.location.href = link.href;
+        }
+      } else if (btnVolver) {
+        window.history.back();
+      }
+    }
+  }
+}, true); // Usar capture para interceptar antes
+
+// Fallback para beforeunload (cierre de pestaña, recarga)
+window.addEventListener('beforeunload', (e) => {
+  if (cambiosSinGuardar) {
+    e.preventDefault();
+    e.returnValue = ''; // Chrome requiere esto
+    return ''; // Para navegadores antiguos
+  }
+});
 
 //

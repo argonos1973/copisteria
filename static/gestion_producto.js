@@ -1,6 +1,6 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
-import { mostrarCargando, ocultarCargando } from './scripts_utils.js';
+import { mostrarCargando, ocultarCargando, inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar } from './scripts_utils.js';
 
 // Utilidades de redondeo
 const round5 = (v) => Number(v ?? 0).toFixed(5);
@@ -152,18 +152,29 @@ document.addEventListener('DOMContentLoaded', () => {
     inputSubtotal.value = round5(base);
   };
 
-  // Uppercase en tiempo real
+  // Uppercase en tiempo real + marcar cambios
   inputNombre.addEventListener('input', () => {
     inputNombre.value = (inputNombre.value || '').toUpperCase();
+    marcarCambiosSinGuardar();
   });
   inputDescripcion.addEventListener('input', () => {
     inputDescripcion.value = (inputDescripcion.value || '').toUpperCase();
+    marcarCambiosSinGuardar();
   });
 
-  // Recalcular
-  inputSubtotal.addEventListener('input', recalcDesdeSubtotal);
-  inputTotal.addEventListener('input', recalcDesdeTotal);
-  selectImpuestos.addEventListener('change', recalcDesdeSubtotal);
+  // Recalcular + marcar cambios
+  inputSubtotal.addEventListener('input', () => {
+    recalcDesdeSubtotal();
+    marcarCambiosSinGuardar();
+  });
+  inputTotal.addEventListener('input', () => {
+    recalcDesdeTotal();
+    marcarCambiosSinGuardar();
+  });
+  selectImpuestos.addEventListener('change', () => {
+    recalcDesdeSubtotal();
+    marcarCambiosSinGuardar();
+  });
 
   // Navegación
   btnCancelar.addEventListener('click', () => {
@@ -470,6 +481,9 @@ document.addEventListener('DOMContentLoaded', () => {
         resp = await axios.post(`${API_BASE}/productos`, payload);
       }
       if (resp.data?.success) {
+        // Resetear flag de cambios sin guardar
+        resetearCambiosSinGuardar();
+        
         if (state.modoEdicion) {
           mostrarNotificacion('Producto actualizado correctamente', 'success');
           setTimeout(() => { window.location.href = 'CONSULTA_PRODUCTOS.html'; }, 800);
@@ -495,6 +509,15 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       state.cargando = false;
       ocultarCargando();
+    }
+  });
+  
+  // Inicializar sistema de detección de cambios sin guardar
+  inicializarDeteccionCambios(async () => {
+    // Callback para guardar cuando el usuario acepta
+    const formProducto = document.getElementById('formProducto');
+    if (formProducto) {
+      formProducto.dispatchEvent(new Event('submit'));
     }
   });
 });
