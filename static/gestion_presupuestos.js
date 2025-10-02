@@ -3,24 +3,24 @@ import {
     PRODUCTO_ID_LIBRE,
     formatearImporte,
     redondearImporte,
-    formatearImporteVariable,
-    formatearApunto,
-    debounce,
     parsearImporte,
-    calcularPrecioConDescuento,
-    calcularTotalDetalle,
-    getEstadoFormateado,
-    getCodigoEstado,
     formatearFechaSoloDia,
-    convertirFechaParaAPI,
-    formatearFecha,
-    parsearNumeroBackend,
-    normalizarImportesBackend,
-    normalizarDetallesBackend,
+    mostrarCargando,
+    ocultarCargando,
+    debounce,
     normalizarContactoBackend,
-    fetchContactoPorId,
+    normalizarDetalleBackend,
+    normalizarDetallesBackend,
+    normalizarImportesBackend,
+    parsearNumeroBackend,
+    convertirFechaParaAPI,
+    formatearApunto,
+    extraerFranjaDeDataset,
     invalidateGlobalCache,
-    inicializarInfoPrecioPopup
+    inicializarInfoPrecioPopup,
+    inicializarDeteccionCambios,
+    marcarCambiosSinGuardar,
+    resetearCambiosSinGuardar
 } from './scripts_utils.js';
 import { 
     calcularTotalPresupuesto,
@@ -395,6 +395,7 @@ function validarYAgregarDetalle() {
 
   detalles.push(detalle);
   actualizarTablaDetalles();
+  marcarCambiosSinGuardar();
 
   const formElements = {
     conceptoDetalle: document.getElementById('concepto-detalle'),
@@ -423,6 +424,7 @@ function inicializarEventDelegation() {
         const index = parseInt(fila.dataset.index);
         detalles.splice(index, 1);
         actualizarTablaDetalles();
+        marcarCambiosSinGuardar();
         mostrarNotificacion('Detalle eliminado correctamente', 'success');
       }
       event.stopPropagation();
@@ -629,6 +631,7 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='B') {
     // Invalidar cachés globales tras guardar
     try { invalidateGlobalCache(); } catch(e) { console.warn('No se pudo invalidar cache', e); }
 
+    resetearCambiosSinGuardar();
     mostrarNotificacion('Presupuesto guardado correctamente', 'success');
     
     // Guardar filtros iniciales antes de redirigir (primer día del mes actual al último día)
@@ -907,4 +910,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (error) {
     console.error('Error durante la inicialización:', error);
   }
+  
+  // Inicializar sistema de detección de cambios sin guardar
+  inicializarDeteccionCambios(async () => {
+    const btnGuardar = document.getElementById('btn-guardar');
+    if (btnGuardar) {
+      btnGuardar.click();
+    }
+  });
+  
+  // Marcar cambios en inputs principales
+  const inputsToWatch = [
+    'fecha-presupuesto',
+    'numero-presupuesto',
+    'busqueda-contacto',
+    'cantidad-detalle',
+    'precio-detalle',
+    'impuestos-detalle'
+  ];
+  
+  inputsToWatch.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', () => marcarCambiosSinGuardar());
+      input.addEventListener('change', () => marcarCambiosSinGuardar());
+    }
+  });
 });

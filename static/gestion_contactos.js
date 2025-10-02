@@ -128,10 +128,24 @@ async function handleCP() {
 }
 
 // ------------------------ Validations events --------------------
-fields.identificador.addEventListener('input', validateIdentificador);
-fields.mail.addEventListener('input', validateEmail);
-fields.telf1.addEventListener('input', () => validateTelf(fields.telf1, icons.telf1));
-fields.telf2.addEventListener('input', () => validateTelf(fields.telf2, icons.telf2));
+fields.identificador.addEventListener('input', () => {
+  validateIdentificador();
+  marcarCambiosSinGuardar();
+});
+fields.mail.addEventListener('input', () => {
+  validateEmail();
+  marcarCambiosSinGuardar();
+});
+fields.telf1.addEventListener('input', () => {
+  validateTelf(fields.telf1, icons.telf1);
+  marcarCambiosSinGuardar();
+});
+fields.telf2.addEventListener('input', () => {
+  validateTelf(fields.telf2, icons.telf2);
+  marcarCambiosSinGuardar();
+});
+fields.cp.addEventListener('change', () => marcarCambiosSinGuardar());
+if (fields.facturacion) fields.facturacion.addEventListener('change', () => marcarCambiosSinGuardar());
 
 // ------------------------ Submit & Cancel -----------------------
 btnGuardar.addEventListener('click', submitForm);
@@ -189,6 +203,7 @@ async function submitForm() {
       throw new Error(errData.message || errData.error || 'Error');
     }
     const data = await res.json();
+    resetearCambiosSinGuardar();
     mostrarNotificacion(data.message || 'Contacto guardado correctamente', 'success');
     setTimeout(() => (window.location.href = 'CONSULTA_CONTACTOS.html'), 1500);
   } catch (err) {
@@ -235,3 +250,11 @@ async function submitForm() {
     cargandoContacto = false;
   }
 })();
+
+// Inicializar sistema de detección de cambios sin guardar
+inicializarDeteccionCambios(async () => {
+  const form = document.getElementById('contactForm');
+  if (form) {
+    form.dispatchEvent(new Event('submit'));
+  }
+});
