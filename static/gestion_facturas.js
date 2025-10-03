@@ -1286,10 +1286,11 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
             const btnGuardar = document.getElementById("btnGuardar");
             const btnAgregarDetalle = document.getElementById("btn-agregar-detalle");
             
-            const estadoActual = factura.estado || 'P';
-            const pendiente = (estadoActual === 'P' || estadoActual === 'V');
-            const cobrada = (estadoActual === 'C');
-            const anulada = (estadoActual === 'A');
+            // Usar el estado original (código) antes de la conversión a texto
+            const estadoFactura = factura.estado || 'P';
+            const pendiente = (estadoFactura === 'P' || estadoFactura === 'V');
+            const cobrada = (estadoFactura === 'C');
+            const anulada = (estadoFactura === 'A');
             
             // Actualizar flag global
             facturaCobrada = cobrada;
@@ -1297,7 +1298,7 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
             // Configurar visibilidad del botón Cobrar (pendiente o vencida)
             if (btnCobrarp) {
                 btnCobrarp.style.display = pendiente ? 'inline-block' : 'none';
-                console.log(`Botón Cobrar: ${pendiente ? 'visible' : 'oculto'} (estado: ${estadoActual})`);
+                console.log(`Botón Cobrar: ${pendiente ? 'visible' : 'oculto'} (estado: ${estadoFactura})`);
             }
             
             // Configurar visibilidad del botón Anular (solo si no está anulada ni pendiente)
