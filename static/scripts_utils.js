@@ -1361,7 +1361,22 @@ export async function inicializarDeteccionCambios(callbackGuardar = null) {
     }
   }, true);
   
-  // Fallback para beforeunload (cierre de pestaña, recarga)
+  // Interceptar recarga de página
+  const originalReload = window.location.reload;
+  window.location.reload = function() {
+    if (cambiosSinGuardarGlobal) {
+      mostrarConfirmacion('Hay cambios sin guardar. ¿Desea recargar la página y perderlos?').then(confirmar => {
+        if (confirmar) {
+          cambiosSinGuardarGlobal = false;
+          originalReload.call(window.location);
+        }
+      });
+    } else {
+      originalReload.call(window.location);
+    }
+  };
+  
+  // Para cierre de pestaña/ventana, usar el nativo del navegador (no se puede personalizar)
   window.addEventListener('beforeunload', (e) => {
     if (cambiosSinGuardarGlobal) {
       e.preventDefault();
