@@ -2014,13 +2014,11 @@ def actualizar_factura(id, data):
             ))
 
         # Detectar si debemos generar Facturae/VERI*FACTU tras la actualización
-        # Generar SIEMPRE al cobrar (transición a estado C)
-        transicion_a_cobrada = (estado == 'C' and estado_anterior != 'C')
-        trigger_generar_facturae = transicion_a_cobrada
+        # Generar SIEMPRE que se cobre una factura (estado C)
+        # El botón Cobrar solo aparece en facturas P/V, no hay riesgo de regenerar
+        trigger_generar_facturae = (estado == 'C')
         
-        print(f"[DEBUG estados] estado_anterior={estado_anterior}, estado_nuevo={estado}")
-        print(f"[DEBUG transicion] transicion_a_cobrada={transicion_a_cobrada}")
-        print(f"[DEBUG trigger] trigger_generar_facturae={trigger_generar_facturae}, estado={estado}, presentar_face={presentar_face_flag}")
+        print(f"[DEBUG trigger] trigger_generar_facturae={trigger_generar_facturae}, estado={estado}")
         
         try:
             with safe_append_debug('facturae_debug.log') as log_file:
@@ -2297,10 +2295,10 @@ def actualizar_factura(id, data):
         try:
             print("[VERIFACTU] Actualizando datos VERI*FACTU para factura_id:", id)
             
-            # Verificar si VERI*FACTU está disponible y si hay transición a cobrada
-            # Generar XML de VERIFACTU solo si está activo y se cobró la factura
-            if VERIFACTU_DISPONIBLE and transicion_a_cobrada:
-                print(f"[VERIFACTU] Detectada transición a cobrada: {estado_anterior} -> {estado}")
+            # Verificar si VERI*FACTU está disponible y si la factura está cobrada
+            # Generar XML de VERIFACTU solo si está activo y estado es C
+            if VERIFACTU_DISPONIBLE and estado == 'C':
+                print(f"[VERIFACTU] Generando datos para factura cobrada (estado: {estado})")
                 try:
                     # Llamar a la función que implementa el flujo completo:
                     # 1. Validar XML
