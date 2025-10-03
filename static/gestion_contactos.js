@@ -7,7 +7,7 @@ let cargandoContacto = false;
 
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion } from './notificaciones.js';
-import { inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar } from './scripts_utils.js';
+import { inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar, debounce } from './scripts_utils.js';
 
 const API_URL = `http://${IP_SERVER}:${PORT}/api`;
 
@@ -52,7 +52,7 @@ if (fields.poblacion) {
 }
 
 // ---- Dirección sugerencias ----
-const dirDebounce = debounceFn((q)=>buscarSugerenciasCarrer(q),300);
+const dirDebounce = debounce((q)=>buscarSugerenciasCarrer(q),300);
 
 async function buscarSugerenciasCarrer(query) {
   if (!query || query.length < 3) return (sugerenciasContainer.innerHTML = '');
@@ -89,7 +89,7 @@ async function seleccionarDireccion(sug) {
 }
 
 // ------------------------ CP lookup & suggestions ------------------------
-const cpDebounce = debounceFn((p)=>buscarCPSuggestions(p),300);
+const cpDebounce = debounce((p)=>buscarCPSuggestions(p),300);
 fields.cp.addEventListener('input', (e)=>{
   cpDebounce(e.target.value);
   handleCP();
