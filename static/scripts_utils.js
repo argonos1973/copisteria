@@ -1299,9 +1299,9 @@ export function invalidateGlobalCache() {
 /**
  * Sistema de detección de cambios sin guardar
  * Uso:
- * 1. Llamar inicializarDeteccionCambios() al cargar la página
- * 2. Llamar marcarCambiosSinGuardar() cuando se edite algo
- * 3. Llamar resetearCambiosSinGuardar() después de guardar
+ * 1. Llamar inicializarDeteccionCambios(callbackGuardar, verificarCambios) al cargar la página
+ * 2. verificarCambios: función que retorna true si hay cambios (compara totales, etc.)
+ * 3. callbackGuardar: función async que guarda los cambios
  */
 let cambiosSinGuardarGlobal = false;
 
@@ -1317,12 +1317,52 @@ export function hayCambiosSinGuardar() {
   return cambiosSinGuardarGlobal;
 }
 
-export function inicializarDeteccionCambios(callbackGuardar = null) {
+// Función global para navegar con verificación de cambios
+window.navegarSeguro = async function(url) {
+  const verificarCambios = window.__verificarCambiosGlobal;
+  const hayCambios = verificarCambios ? verificarCambios() : cambiosSinGuardarGlobal;
+  
+  if (hayCambios) {
+    const guardar = await mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
+    const callbackGuardar = window.__callbackGuardarGlobal;
+    
+    if (guardar && callbackGuardar) {
+      try {
+        await callbackGuardar();
+      } catch (e) {
+        console.error('[Cambios] Error al guardar:', e);
+        return;  // No navegar si falla el guardado
+      }
+    } else if (!guardar) {
+      // Usuario decidió no guardar, continuar
+    } else {
+      return;  // Cancelar navegación
+    }
+  }
+  window.location.href = url;
+};
+
+export function inicializarDeteccionCambios(callbackGuardar = null, verificarCambios = null) {
+  // Guardar callbacks globalmente
+  window.__callbackGuardarGlobal = callbackGuardar;
+  window.__verificarCambiosGlobal = verificarCambios;
+  
+  // Interceptar navegación mediante beforeunload (capa de seguridad final)
+  window.addEventListener('beforeunload', (e) => {
+    const hayCambios = verificarCambios ? verificarCambios() : cambiosSinGuardarGlobal;
+    if (hayCambios) {
+      e.preventDefault();
+      e.returnValue = 'Hay cambios sin guardar';
+      return 'Hay cambios sin guardar';
+    }
+  });
+  
   // Interceptar clics en enlaces de navegación
   document.addEventListener('click', async (e) => {
     const link = e.target.closest('a[href], a[data-target], button[data-navigate]');
+    const hayCambios = verificarCambios ? verificarCambios() : cambiosSinGuardarGlobal;
     
-    if (link && cambiosSinGuardarGlobal) {
+    if (link && hayCambios) {
       e.preventDefault();
       e.stopPropagation();
       

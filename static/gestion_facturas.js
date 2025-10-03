@@ -50,6 +50,8 @@ let botonUsandose = null;
 // Flag global para indicar si la factura está cobrada
 let facturaCobrada = false;
 let contactoActual = null;
+// Total inicial para detectar cambios
+let totalInicial = 0;
 
 function abrirModalPagos() {
   // Usar el total de detalles del día actual para la modal
@@ -263,8 +265,8 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
                 mostrarNotificacion(m, 'info');
             });
         }
-        // Resetear flag de cambios sin guardar
-        resetearCambiosSinGuardar();
+        // Actualizar total inicial después de guardar
+        totalInicial = calcularTotalConImpuestos();
         
         // Mostrar notificación final de éxito
         mostrarNotificacion('Factura guardada correctamente', 'success');
@@ -302,7 +304,6 @@ async function eliminarDetalle(index) {
       detalles.splice(index, 1);
       actualizarTablaDetalles();
       actualizarTotales();
-      marcarCambiosSinGuardar();
       mostrarNotificacion('Detalle eliminado correctamente', 'success');
     }
   } catch (error) {
@@ -554,9 +555,6 @@ function validarYAgregarDetalle() {
   console.log('Detalle antes de agregar:', detalle);
   detalles.push(detalle);
   console.log('Detalles después de agregar:', detalles);
-  
-  // Marcar cambios sin guardar
-  marcarCambiosSinGuardar();
   
   // Reset detalleEnEdicion después de agregar/actualizar
   detalleEnEdicion = null;
@@ -1146,21 +1144,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.getElementById('busqueda-producto').focus();
     
-    // Inicializar sistema de detección de cambios sin guardar
-    inicializarDeteccionCambios(async () => {
-      const btnGuardar = document.getElementById('btnGuardar');
-      if (btnGuardar) {
-        btnGuardar.click();
-      }
-    });
+    // Guardar total inicial al cargar
+    totalInicial = calcularTotalConImpuestos();
     
-    // Marcar cambios cuando se editan campos
-    const camposFormulario = ['fecha', 'razonSocial', 'identificador', 'direccion', 'cp', 'localidad', 'provincia'];
-    camposFormulario.forEach(id => {
-      const campo = document.getElementById(id);
-      if (campo) {
-        campo.addEventListener('input', marcarCambiosSinGuardar);
+    // Inicializar sistema de detección de cambios sin guardar (comparando totales)
+    inicializarDeteccionCambios(async () => {
+      const totalActual = calcularTotalConImpuestos();
+      if (totalActual !== totalInicial) {
+        const btnGuardar = document.getElementById('btnGuardar');
+        if (btnGuardar) {
+          btnGuardar.click();
+        }
       }
+    }, () => {
+      // Función para verificar si hay cambios (comparar total)
+      const totalActual = calcularTotalConImpuestos();
+      return totalActual !== totalInicial;
     });
     
   } catch (error) {

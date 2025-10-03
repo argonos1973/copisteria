@@ -317,7 +317,13 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             if (!['A','RE'].includes(factura.estado)) {
                 cells.forEach(cell => {
                     cell.addEventListener('click', () => {
-                        window.location.href = `GESTION_FACTURAS.html?idFactura=${factura.id}&idContacto=${factura.idcontacto}`;
+                        // Usar navegarSeguro si existe (verifica cambios sin guardar)
+                        const url = `GESTION_FACTURAS.html?idFactura=${factura.id}&idContacto=${factura.idcontacto}`;
+                        if (window.navegarSeguro) {
+                            window.navegarSeguro(url);
+                        } else {
+                            window.location.href = url;
+                        }
                     });
                 });
             }
