@@ -24,7 +24,8 @@ import {
   resetearCambiosSinGuardar,
   calcularCambio as calcularCambioModal,
   inicializarEventosModal,
-  formatearFecha
+  formatearFecha,
+  inicializarInfoPrecioPopup
 } from './scripts_utils.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
