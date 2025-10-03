@@ -18,27 +18,38 @@ const sugerenciasContainer = document.getElementById('sugerenciasCarrer');
 const cpDatalist = document.getElementById('listaCP');
 
 const fields = {
-  razonsocial: document.getElementById('razonsocial').addEventListener('input', function() {
-        this.value = this.value.toUpperCase();
-        marcarCambiosSinGuardar();
-    }),
+  razonsocial: document.getElementById('razonsocial'),
   mail: document.getElementById('mail'),
   telf1: document.getElementById('telf1'),
   telf2: document.getElementById('telf2'),
-  direccion: document.getElementById('direccion').addEventListener('input', function() {
-        this.value = this.value.toUpperCase();
-        marcarCambiosSinGuardar();
-    }),
+  direccion: document.getElementById('direccion'),
   cp: document.getElementById('cp'),
-  poblacion: document.getElementById('poblacion').addEventListener('input', function() {
-        this.value = this.value.toUpperCase();
-        marcarCambiosSinGuardar();
-    }),
+  poblacion: document.getElementById('poblacion'),
   facturacion: document.getElementById('facturacion_automatica'),
   dir3Oficina: document.getElementById('dir3_oficina'),
   dir3Organo: document.getElementById('dir3_organo'),
   dir3Unidad: document.getElementById('dir3_unidad')
 };
+
+// Añadir listeners para uppercase y marcar cambios
+if (fields.razonsocial) {
+  fields.razonsocial.addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+    marcarCambiosSinGuardar();
+  });
+}
+if (fields.direccion) {
+  fields.direccion.addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+    marcarCambiosSinGuardar();
+  });
+}
+if (fields.poblacion) {
+  fields.poblacion.addEventListener('input', function() {
+    this.value = this.value.toUpperCase();
+    marcarCambiosSinGuardar();
+  });
+}
 
 // ---- Dirección sugerencias ----
 const dirDebounce = debounceFn((q)=>buscarSugerenciasCarrer(q),300);

@@ -31,7 +31,8 @@ import {
   obtenerUltimaFranjaAplicada,
   resetInfoPrecio,
   actualizarInfoPrecio,
-  calcularPrecioConDescuento
+  calcularPrecioConDescuento,
+  calcularTotalDetalle
 } from './scripts_utils.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
