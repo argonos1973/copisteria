@@ -134,7 +134,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.error("Error durante la inicialización:", error);
     mostrarNotificacion("Error durante la inicialización", "error");
   }
-
+  
+  // Inicializar sistema de detección de cambios sin guardar
+  inicializarDeteccionCambios(async () => {
+    const btnGuardar = document.getElementById('btn-guardar-ticket');
+    if (btnGuardar) {
+      btnGuardar.click();
+    }
+  });
+  
+  // Marcar cambios en inputs principales
+  const inputsToWatch = [
+    'busqueda-producto',
+    'cantidad-detalle',
+    'precio-detalle',
+    'total-detalle',
+    'concepto-input'
+  ];
+  
+  inputsToWatch.forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', () => marcarCambiosSinGuardar());
+      input.addEventListener('change', () => marcarCambiosSinGuardar());
+    }
+  });
 
 });
 
@@ -492,6 +516,7 @@ export function agregarDetalle(
   `;
   tbody.appendChild(tr);
   sumarTotales();
+  marcarCambiosSinGuardar();
   mostrarNotificacion('Detalle agregado correctamente', 'success');
 }
 
@@ -637,6 +662,7 @@ export async function eliminarFila(icono) {
     if (confirmado) {
       icono.closest('tr').remove();
       sumarTotales();
+      marcarCambiosSinGuardar();
       mostrarNotificacion('Detalle eliminado correctamente', 'success');
     }
   } catch (error) {
@@ -873,6 +899,7 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
       throw new Error(`Error al guardar el ticket: ${responseData.error || response.statusText}`);
     }
 
+    resetearCambiosSinGuardar();
     mostrarNotificacion("Ticket guardado correctamente", "success");
     
     // Recargar la lista de productos para mantenerla actualizada
