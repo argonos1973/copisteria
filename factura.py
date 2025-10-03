@@ -2018,6 +2018,8 @@ def actualizar_factura(id, data):
         transicion_a_cobrada = (estado == 'C' and estado_anterior != 'C')
         trigger_generar_facturae = transicion_a_cobrada
         
+        print(f"[DEBUG estados] estado_anterior={estado_anterior}, estado_nuevo={estado}")
+        print(f"[DEBUG transicion] transicion_a_cobrada={transicion_a_cobrada}")
         print(f"[DEBUG trigger] trigger_generar_facturae={trigger_generar_facturae}, estado={estado}, presentar_face={presentar_face_flag}")
         
         try:
