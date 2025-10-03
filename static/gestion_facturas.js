@@ -18,7 +18,10 @@ import {
     convertirFechaParaAPI,
     formatearFecha,
     normalizarContactoBackend,
-    validarContactoFace
+    validarContactoFace,
+    inicializarDeteccionCambios,
+    marcarCambiosSinGuardar,
+    resetearCambiosSinGuardar
 } from './scripts_utils.js';
 import { 
     calcularTotalesDocumento, 
@@ -260,6 +263,9 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
                 mostrarNotificacion(m, 'info');
             });
         }
+        // Resetear flag de cambios sin guardar
+        resetearCambiosSinGuardar();
+        
         // Mostrar notificación final de éxito
         mostrarNotificacion('Factura guardada correctamente', 'success');
         // Esperar suficiente tiempo (3.5s) para que el usuario vea las notificaciones
@@ -296,6 +302,7 @@ async function eliminarDetalle(index) {
       detalles.splice(index, 1);
       actualizarTablaDetalles();
       actualizarTotales();
+      marcarCambiosSinGuardar();
       mostrarNotificacion('Detalle eliminado correctamente', 'success');
     }
   } catch (error) {
@@ -547,6 +554,9 @@ function validarYAgregarDetalle() {
   console.log('Detalle antes de agregar:', detalle);
   detalles.push(detalle);
   console.log('Detalles después de agregar:', detalles);
+  
+  // Marcar cambios sin guardar
+  marcarCambiosSinGuardar();
   
   // Reset detalleEnEdicion después de agregar/actualizar
   detalleEnEdicion = null;
@@ -1135,6 +1145,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     document.getElementById('busqueda-producto').focus();
+    
+    // Inicializar sistema de detección de cambios sin guardar
+    inicializarDeteccionCambios(async () => {
+      const btnGuardar = document.getElementById('btnGuardar');
+      if (btnGuardar) {
+        btnGuardar.click();
+      }
+    });
+    
+    // Marcar cambios cuando se editan campos
+    const camposFormulario = ['fecha', 'razonSocial', 'identificador', 'direccion', 'cp', 'localidad', 'provincia'];
+    camposFormulario.forEach(id => {
+      const campo = document.getElementById(id);
+      if (campo) {
+        campo.addEventListener('input', marcarCambiosSinGuardar);
+      }
+    });
+    
   } catch (error) {
     console.error("Error durante la inicialización:", error);
   }
