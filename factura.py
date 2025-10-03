@@ -2294,8 +2294,8 @@ def actualizar_factura(id, data):
         try:
             print("[VERIFACTU] Actualizando datos VERI*FACTU para factura_id:", id)
             
-            # Verificar si VERI*FACTU está disponible (desactivado en actualización para evitar duplicados)
-            if VERIFACTU_DISPONIBLE:
+            # Verificar si VERI*FACTU está disponible y si la factura está cobrada
+            if VERIFACTU_DISPONIBLE and estado == 'C':
                 try:
                     # Llamar a la función que implementa el flujo completo:
                     # 1. Validar XML
