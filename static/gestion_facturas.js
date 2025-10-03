@@ -719,7 +719,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       let pendiente = false;
       let cobrada = false;
       if (btnCobrarp) {
-        pendiente = facturaData ? facturaData.estado === 'P' : true;
+        // Permitir cobrar también cuando la factura esté Vencida ('V')
+        pendiente = facturaData ? (facturaData.estado === 'P' || facturaData.estado === 'V') : true;
         cobrada = facturaData ? facturaData.estado === 'C' : false;
         // Actualizar flag global
         facturaCobrada = cobrada;
@@ -1277,6 +1278,57 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
                 console.log("No hay detalles para cargar");
                 detalles = [];
                 actualizarTablaDetalles();
+            }
+            
+            // Actualizar visibilidad de botones según el estado de la factura
+            const btnCobrarp = document.getElementById("btnCobrarp");
+            const btnAnular = document.getElementById("btnAnular");
+            const btnGuardar = document.getElementById("btnGuardar");
+            const btnAgregarDetalle = document.getElementById("btn-agregar-detalle");
+            
+            const estadoActual = factura.estado || 'P';
+            const pendiente = (estadoActual === 'P' || estadoActual === 'V');
+            const cobrada = (estadoActual === 'C');
+            const anulada = (estadoActual === 'A');
+            
+            // Actualizar flag global
+            facturaCobrada = cobrada;
+            
+            // Configurar visibilidad del botón Cobrar (pendiente o vencida)
+            if (btnCobrarp) {
+                btnCobrarp.style.display = pendiente ? 'inline-block' : 'none';
+                console.log(`Botón Cobrar: ${pendiente ? 'visible' : 'oculto'} (estado: ${estadoActual})`);
+            }
+            
+            // Configurar visibilidad del botón Anular (solo si no está anulada ni pendiente)
+            if (btnAnular) {
+                const anularVisible = !anulada && !pendiente && cobrada;
+                btnAnular.style.display = anularVisible ? 'inline-block' : 'none';
+            }
+            
+            // Configurar visibilidad del botón Guardar (ocultar si anular está visible)
+            if (btnGuardar && btnAnular) {
+                const anularVisible = !anulada && !pendiente && cobrada;
+                btnGuardar.style.display = anularVisible ? 'none' : 'inline-block';
+            }
+            
+            // Configurar visibilidad del botón Añadir detalle
+            if (btnAgregarDetalle) {
+                btnAgregarDetalle.style.display = cobrada ? 'none' : 'inline-block';
+            }
+            
+            // Deshabilitar botones Eliminar cuando factura cobrada
+            const botonesEliminar = document.querySelectorAll('.btn-icon');
+            botonesEliminar.forEach(btn => {
+                btn.disabled = cobrada;
+                btn.style.pointerEvents = cobrada ? 'none' : '';
+                btn.style.opacity = cobrada ? '0.4' : '';
+            });
+            
+            // Cambiar cursor del grid de detalles
+            const gridBody = document.querySelector('table#tabla-detalle-proforma tbody');
+            if (gridBody) {
+                gridBody.style.cursor = cobrada ? 'not-allowed' : 'default';
             }
         }
     } catch (error) {
