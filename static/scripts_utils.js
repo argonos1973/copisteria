@@ -1317,10 +1317,7 @@ export function hayCambiosSinGuardar() {
   return cambiosSinGuardarGlobal;
 }
 
-export async function inicializarDeteccionCambios(callbackGuardar = null) {
-  // Importar mostrarConfirmacion dinámicamente para evitar dependencias circulares
-  const { mostrarConfirmacion } = await import('./notificaciones.js');
-  
+export function inicializarDeteccionCambios(callbackGuardar = null) {
   // Interceptar clics en enlaces de navegación
   document.addEventListener('click', async (e) => {
     const link = e.target.closest('a[href], a[data-target], button[data-navigate]');
@@ -1362,20 +1359,20 @@ export async function inicializarDeteccionCambios(callbackGuardar = null) {
     }
   }, true);
   
-  // Interceptar recarga de página
-  const originalReload = window.location.reload;
-  window.location.reload = function() {
-    if (cambiosSinGuardarGlobal) {
-      mostrarConfirmacion('Hay cambios sin guardar. ¿Desea recargar la página y perderlos?').then(confirmar => {
+  // Interceptar teclas de recarga (F5, Ctrl+R, Cmd+R)
+  window.addEventListener('keydown', async (e) => {
+    // F5 o Ctrl+R o Cmd+R
+    if ((e.key === 'F5') || ((e.ctrlKey || e.metaKey) && e.key === 'r')) {
+      if (cambiosSinGuardarGlobal) {
+        e.preventDefault();
+        const confirmar = await mostrarConfirmacion('Hay cambios sin guardar. ¿Desea recargar la página y perderlos?');
         if (confirmar) {
           cambiosSinGuardarGlobal = false;
-          originalReload.call(window.location);
+          window.location.reload();
         }
-      });
-    } else {
-      originalReload.call(window.location);
+      }
     }
-  };
+  }, true);
   
   // Para cierre de pestaña/ventana, usar el nativo del navegador (no se puede personalizar)
   window.addEventListener('beforeunload', (e) => {
