@@ -26,7 +26,12 @@ import {
   calcularCambio as calcularCambioModal,
   inicializarEventosModal,
   formatearFecha,
-  inicializarInfoPrecioPopup
+  inicializarInfoPrecioPopup,
+  registrarFranjaAplicada,
+  obtenerUltimaFranjaAplicada,
+  resetInfoPrecio,
+  actualizarInfoPrecio,
+  calcularPrecioConDescuento
 } from './scripts_utils.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
