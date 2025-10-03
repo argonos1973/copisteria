@@ -21,15 +21,10 @@ import {
   formatearPrecioUnitario,
   inicializarDeteccionCambios,
   marcarCambiosSinGuardar,
-  resetearCambiosSinGuardar
-} from './scripts_utils.js';
-import { 
+  resetearCambiosSinGuardar,
   calcularCambio as calcularCambioModal,
   inicializarEventosModal,
-  convertirFechaParaAPI,
-  formatearFecha,
-  redondearImporte,
-  formatearPrecioUnitario
+  formatearFecha
 } from './scripts_utils.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
