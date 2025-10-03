@@ -2351,7 +2351,6 @@ def actualizar_factura(id, data):
                         }
                 except Exception as e:
                     print(f"[!] Error al regenerar datos VERI*FACTU: {str(e)}")
-                    import traceback
                     print(traceback.format_exc())
                     respuesta['datos_adicionales'] = {
                         'verifactu': False,
@@ -2369,7 +2368,6 @@ def actualizar_factura(id, data):
                 }
         except Exception as e:
             print(f"[VERIFACTU][ERROR] Error al actualizar datos VERI*FACTU: {e}")
-            import traceback
             print(traceback.format_exc())
             respuesta['datos_adicionales'] = {
                 'verifactu': False,
