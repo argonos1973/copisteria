@@ -2389,7 +2389,6 @@ def actualizar_factura(id, data):
     except Exception as e:
         if conn:
             conn.rollback()
-        import traceback
         tb = traceback.format_exc()
         # Volcar a stdout y a log UTF-8 para diagnóstico
         try:
