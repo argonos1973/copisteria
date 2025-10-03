@@ -1,3 +1,4 @@
+import { IP_SERVER, PORT } from './constantes.js';
 import { 
   PRODUCTO_ID_LIBRE,
   truncarDecimales,
