@@ -19,17 +19,27 @@ const cpDatalist = document.getElementById('listaCP');
 
 const fields = {
   razonsocial: document.getElementById('razonsocial'),
+  identificador: document.getElementById('identificador'),
   mail: document.getElementById('mail'),
   telf1: document.getElementById('telf1'),
   telf2: document.getElementById('telf2'),
   direccion: document.getElementById('direccion'),
   cp: document.getElementById('cp'),
   poblacion: document.getElementById('poblacion'),
+  poblacio: document.getElementById('poblacio'),
+  provincia: document.getElementById('provincia'),
   facturacion: document.getElementById('facturacion_automatica'),
   dir3Oficina: document.getElementById('dir3_oficina'),
   dir3Organo: document.getElementById('dir3_organo'),
   dir3Unidad: document.getElementById('dir3_unidad')
 };
+
+const icons = {
+  telf1: document.getElementById('icon-telf1'),
+  telf2: document.getElementById('icon-telf2')
+};
+
+const btnGuardar = document.getElementById('btnGuardar');
 
 // Añadir listeners para uppercase y marcar cambios
 if (fields.razonsocial) {
@@ -139,30 +149,46 @@ async function handleCP() {
 }
 
 // ------------------------ Validations events --------------------
-fields.identificador.addEventListener('input', () => {
-  validateIdentificador();
-  marcarCambiosSinGuardar();
-});
-fields.mail.addEventListener('input', () => {
-  validateEmail();
-  marcarCambiosSinGuardar();
-});
-fields.telf1.addEventListener('input', () => {
-  validateTelf(fields.telf1, icons.telf1);
-  marcarCambiosSinGuardar();
-});
-fields.telf2.addEventListener('input', () => {
-  validateTelf(fields.telf2, icons.telf2);
-  marcarCambiosSinGuardar();
-});
-fields.cp.addEventListener('change', () => marcarCambiosSinGuardar());
-if (fields.facturacion) fields.facturacion.addEventListener('change', () => marcarCambiosSinGuardar());
+if (fields.identificador) {
+  fields.identificador.addEventListener('input', () => {
+    validateIdentificador();
+    marcarCambiosSinGuardar();
+  });
+}
+if (fields.mail) {
+  fields.mail.addEventListener('input', () => {
+    validateEmail();
+    marcarCambiosSinGuardar();
+  });
+}
+if (fields.telf1) {
+  fields.telf1.addEventListener('input', () => {
+    validateTelf(fields.telf1, icons.telf1);
+    marcarCambiosSinGuardar();
+  });
+}
+if (fields.telf2) {
+  fields.telf2.addEventListener('input', () => {
+    validateTelf(fields.telf2, icons.telf2);
+    marcarCambiosSinGuardar();
+  });
+}
+if (fields.cp) {
+  fields.cp.addEventListener('change', () => marcarCambiosSinGuardar());
+}
+if (fields.facturacion) {
+  fields.facturacion.addEventListener('change', () => marcarCambiosSinGuardar());
+}
 
 // ------------------------ Submit & Cancel -----------------------
-btnGuardar.addEventListener('click', submitForm);
-btnCancelar.addEventListener('click', () => {
-  window.location.href = 'CONSULTA_CONTACTOS.html';
-});
+if (btnGuardar) {
+  btnGuardar.addEventListener('click', submitForm);
+}
+if (btnCancelar) {
+  btnCancelar.addEventListener('click', () => {
+    window.location.href = 'CONSULTA_CONTACTOS.html';
+  });
+}
 
 function allValid() {
   const requiredOk = validateRequired();
