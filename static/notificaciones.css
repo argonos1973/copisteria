@@ -170,17 +170,28 @@
 
 .confirmacion-dialog {
     background-color: white;
-    padding: 20px;
+    padding: 25px;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    max-width: 400px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 450px;
     width: 90%;
+    border-left: 5px solid #ff9800;
 }
 
 .confirmacion-dialog p {
-    margin: 0 0 20px 0;
+    margin: 0 0 25px 0;
     font-size: 16px;
     color: #333;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.confirmacion-dialog p::before {
+    content: '⚠';
+    font-size: 28px;
+    color: #ff9800;
+    flex-shrink: 0;
 }
 
 .confirmacion-buttons {
@@ -190,28 +201,36 @@
 }
 
 .btn-confirmar, .btn-cancelar {
-    padding: 8px 16px;
+    padding: 10px 24px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    min-width: 100px;
 }
 
 .btn-confirmar {
     background-color: #4CAF50;
     color: white;
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
 }
 
 .btn-confirmar:hover {
     background-color: #45a049;
+    box-shadow: 0 3px 6px rgba(76, 175, 80, 0.4);
+    transform: translateY(-1px);
 }
 
 .btn-cancelar {
     background-color: #f44336;
     color: white;
+    box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
 }
 
 .btn-cancelar:hover {
     background-color: #da190b;
+    box-shadow: 0 3px 6px rgba(244, 67, 54, 0.4);
+    transform: translateY(-1px);
 }
