@@ -2294,8 +2294,12 @@ def actualizar_factura(id, data):
         try:
             print("[VERIFACTU] Actualizando datos VERI*FACTU para factura_id:", id)
             
-            # Verificar si VERI*FACTU está disponible y si la factura está cobrada
-            if VERIFACTU_DISPONIBLE and estado == 'C':
+            # Verificar si VERI*FACTU está disponible y si hay transición a cobrada
+            # Generar XML cuando se cobra la factura (transición de cualquier estado a 'C')
+            transicion_a_cobrada = (estado == 'C' and estado_anterior != 'C')
+            
+            if VERIFACTU_DISPONIBLE and transicion_a_cobrada:
+                print(f"[VERIFACTU] Detectada transición a cobrada: {estado_anterior} -> {estado}")
                 try:
                     # Llamar a la función que implementa el flujo completo:
                     # 1. Validar XML
