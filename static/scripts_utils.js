@@ -1,4 +1,5 @@
 import { IP_SERVER, PORT } from './constantes.js?v=20250911_1135';
+import { mostrarConfirmacion } from './notificaciones.js';
 
 export const PRODUCTO_ID_LIBRE = '94';
 
