@@ -8,6 +8,7 @@ import {
     parsearImporte,
     redondearImporte
 } from './scripts_utils.js';
+import { mostrarNotificacion } from './notificaciones.js';
 
 window.onload = function() {
     const idTicket = obtenerIdTicket(); // Obtener el ID del ticket desde la URL
@@ -18,7 +19,7 @@ window.onload = function() {
         });
     }).catch(error => {
         console.error('Error al obtener los datos del ticket:', error);
-        alert('Hubo un problema al obtener los datos del ticket.');
+        mostrarNotificacion('Hubo un problema al obtener los datos del ticket.', 'error');
     });
 };
 
@@ -70,7 +71,7 @@ async function rellenarFactura(datos) {
     // Procesamos la información y, al final, esperamos a que el QR (si existe) acabe de cargar
     // Asegurarnos de que 'datos' tiene la estructura esperada
     if (!datos.ticket || !datos.detalles) {
-        alert('Datos del ticket incompletos');
+        mostrarNotificacion('Datos del ticket incompletos', 'error');
         return;
     }
 

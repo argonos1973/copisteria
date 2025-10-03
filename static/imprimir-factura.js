@@ -1,5 +1,6 @@
 import { IP_SERVER, PORT } from './constantes.js';
 import { formatearImporte, formatearFecha, formatearFechaSoloDia } from './scripts_utils.js';
+import { mostrarNotificacion } from './notificaciones.js';
 
 /**
  * Función principal que se ejecuta al cargar la página.
@@ -17,7 +18,7 @@ window.onload = function() {
         }, 2000); // Esperar 2 segundos para que se cargue el QR (aumentado de 1,5 a 2 segundos para mayor seguridad)
     }).catch(error => {
         console.error('Error al obtener los datos de la factura:', error);
-        alert('Hubo un problema al obtener los datos de la factura.');
+        mostrarNotificacion('Hubo un problema al obtener los datos de la factura.', 'error');
     });
 };
 
