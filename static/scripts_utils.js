@@ -1373,13 +1373,4 @@ export function inicializarDeteccionCambios(callbackGuardar = null) {
       }
     }
   }, true);
-  
-  // Para cierre de pestaña/ventana, usar el nativo del navegador (no se puede personalizar)
-  window.addEventListener('beforeunload', (e) => {
-    if (cambiosSinGuardarGlobal) {
-      e.preventDefault();
-      e.returnValue = '';
-      return '';
-    }
-  });
 }
