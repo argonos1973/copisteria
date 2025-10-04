@@ -21,8 +21,6 @@ import {
   redondearImporte,
   formatearPrecioUnitario,
   inicializarDeteccionCambios,
-  marcarCambiosSinGuardar,
-  resetearCambiosSinGuardar,
   calcularCambio as calcularCambioModal,
   inicializarEventosModal,
   formatearFecha,
@@ -44,6 +42,18 @@ import {
   seleccionarProducto as seleccionarProductoCommon,
   validarDetalle
 } from './common.js';
+
+// Variable global para detectar cambios
+let totalInicial = 0;
+
+/**
+ * Obtiene el total actual del ticket
+ */
+function obtenerTotalActual() {
+  const totalElement = document.getElementById('total-ticket');
+  if (!totalElement || !totalElement.value) return 0;
+  return parsearImporte(totalElement.value);
+}
 
 /**
  * Se ejecuta al cargar el DOM. Inicializa la delegación de eventos en la tabla
@@ -136,35 +146,33 @@ document.addEventListener("DOMContentLoaded", async () => {
       btnCobrar.removeEventListener('click', procesarPago);
       btnCobrar.addEventListener('click', procesarPago);
     }
-
   } catch (error) {
     console.error("Error durante la inicialización:", error);
     mostrarNotificacion("Error durante la inicialización", "error");
   }
   
-  // Inicializar sistema de detección de cambios sin guardar
+  // Guardar total inicial al cargar
+  totalInicial = obtenerTotalActual();
+  console.log('[Tickets] Total inicial:', totalInicial);
+  
+  // Inicializar sistema de detección de cambios sin guardar (comparando totales)
   inicializarDeteccionCambios(async () => {
+    console.log('[Tickets] Callback guardar ejecutado');
     const btnGuardar = document.getElementById('btn-guardar-ticket');
     if (btnGuardar) {
+      console.log('[Tickets] Haciendo clic en btn-guardar-ticket');
       btnGuardar.click();
+      // Esperar a que se complete el guardado
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } else {
+      console.error('[Tickets] No se encontró btn-guardar-ticket');
     }
-  });
-  
-  // Marcar cambios en inputs principales
-  const inputsToWatch = [
-    'busqueda-producto',
-    'cantidad-detalle',
-    'precio-detalle',
-    'total-detalle',
-    'concepto-input'
-  ];
-  
-  inputsToWatch.forEach(id => {
-    const input = document.getElementById(id);
-    if (input) {
-      input.addEventListener('input', () => marcarCambiosSinGuardar());
-      input.addEventListener('change', () => marcarCambiosSinGuardar());
-    }
+  }, () => {
+    // Función para verificar si hay cambios (comparar total)
+    const totalActual = obtenerTotalActual();
+    const hayCambios = totalActual !== totalInicial;
+    console.log(`[Tickets] Verificar cambios: ${hayCambios} (inicial: ${totalInicial}, actual: ${totalActual})`);
+    return hayCambios;
   });
 
 });
@@ -906,7 +914,10 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
       throw new Error(`Error al guardar el ticket: ${responseData.error || response.statusText}`);
     }
 
-    resetearCambiosSinGuardar();
+    // Actualizar total inicial después de guardar
+    totalInicial = obtenerTotalActual();
+    console.log('[Tickets] Total actualizado después de guardar:', totalInicial);
+    
     mostrarNotificacion("Ticket guardado correctamente", "success");
     
     // Recargar la lista de productos para mantenerla actualizada
