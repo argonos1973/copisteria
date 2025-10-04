@@ -22,7 +22,8 @@ import {
     inicializarDeteccionCambios,
     marcarCambiosSinGuardar,
     resetearCambiosSinGuardar,
-    fetchContactoPorId
+    fetchContactoPorId,
+    calcularTotalDetalle
 } from './scripts_utils.js';
 import { 
     calcularTotalPresupuesto,
