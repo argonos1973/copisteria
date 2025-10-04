@@ -144,9 +144,7 @@ function renderFranjas() {
   tbody.innerHTML = franjas.map(f => filaHTML(f)).join('');
   tbody.querySelectorAll('.btn-icon').forEach((btn, idx) => {
     btn.addEventListener('click', async () => {
-      const ok = (typeof mostrarConfirmacion === 'function')
-        ? await mostrarConfirmacion('¿Eliminar esta franja?')
-        : window.confirm('¿Eliminar esta franja?');
+      const ok = await mostrarConfirmacion('¿Eliminar esta franja?');
       if (!ok) return;
       franjas.splice(idx, 1);
       renderFranjas(); // volverá a normalizar desde 1 consecutivo

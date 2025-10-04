@@ -313,9 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
       mostrarNotificacion('No hay producto para eliminar', 'error');
       return;
     }
-    const ok = (typeof mostrarConfirmacion === 'function')
-      ? await mostrarConfirmacion('¿Está seguro de eliminar este producto?')
-      : window.confirm('¿Está seguro de eliminar este producto?');
+    const ok = await mostrarConfirmacion('¿Está seguro de eliminar este producto?');
     if (!ok) return;
     try {
       state.cargando = true;
