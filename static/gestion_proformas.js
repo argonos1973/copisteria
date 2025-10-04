@@ -22,7 +22,8 @@ import {
   normalizarContactoBackend,
   fetchContactoPorId,
   invalidateGlobalCache,
-  inicializarInfoPrecioPopup
+  inicializarInfoPrecioPopup,
+  inicializarDeteccionCambios
 } from './scripts_utils.js';
 import { 
   calcularTotalProforma,
@@ -45,6 +46,16 @@ let idProforma = null;
 let idContacto = null;
 let productosOriginales = [];
 let detalleEnEdicion = null;
+let totalInicial = 0;
+
+/**
+ * Obtiene el total actual de la proforma
+ */
+function obtenerTotalActual() {
+  const totalElement = document.getElementById('total-proforma');
+  if (!totalElement || !totalElement.value) return 0;
+  return parsearImporte(totalElement.value);
+}
 
 // Función para eliminar detalle
 async function eliminarDetalle(index) {
@@ -537,6 +548,41 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
     }
+    
+    // Guardar total inicial al cargar
+    totalInicial = obtenerTotalActual();
+    console.log('[Proformas] Total inicial:', totalInicial);
+    
+    // Inicializar sistema de detección de cambios sin guardar (comparando totales)
+    inicializarDeteccionCambios(async () => {
+      console.log('[Proformas] Callback guardar ejecutado desde menú');
+      
+      // Indicar que estamos guardando desde el menú
+      window.__guardandoDesdeMenu = true;
+      
+      // Hacer clic en el botón para abrir el modal de pagos
+      const btnGuardar = document.getElementById('btnGuardar');
+      if (btnGuardar) {
+        console.log('[Proformas] Haciendo clic en btnGuardar para abrir modal');
+        btnGuardar.click();
+        
+        // Esperar a que el usuario cobre o cierre el modal
+        return new Promise((resolve, reject) => {
+          window.__resolveGuardadoMenu = resolve;
+          window.__rechazarGuardadoMenu = reject;
+        });
+      } else {
+        console.error('[Proformas] No se encontró btnGuardar');
+        throw new Error('No se encontró btnGuardar');
+      }
+    }, () => {
+      // Función para verificar si hay cambios (comparar total)
+      const totalActual = obtenerTotalActual();
+      const hayCambios = totalActual !== totalInicial;
+      console.log(`[Proformas] Verificar cambios: ${hayCambios} (inicial: ${totalInicial}, actual: ${totalActual})`);
+      return hayCambios;
+    });
+    
   } catch (error) {
     console.error("Error durante la inicialización:", error);
   }
@@ -662,6 +708,10 @@ async function cargarProforma(id) {
       fechaDetalle: d?.fechaDetalle
     }));
     actualizarTablaDetalles();
+    
+    // Actualizar total inicial después de cargar la proforma
+    totalInicial = obtenerTotalActual();
+    console.log('[Proformas] Total inicial actualizado después de cargar:', totalInicial);
   } catch (error) {
     console.error('Error al cargar la proforma:', error);
     mostrarNotificacion('Error al cargar la proforma', "error");
@@ -1003,14 +1053,38 @@ async function guardarProforma(formaPago = 'E', totalPago = 0, estado = 'A') {
             throw new Error(result.error || 'Error al guardar la proforma');
         }
 
-        // Mostrar notificación y esperar antes de redirigir
+        // Actualizar total inicial después de guardar
+        totalInicial = obtenerTotalActual();
+        console.log('[Proformas] Total actualizado después de guardar:', totalInicial);
+
+        // Mostrar notificación
         mostrarNotificacion('Proforma guardada correctamente', 'success');
-        setTimeout(() => {
-            volverSegunOrigen();
-        }, 1000);
+        
+        // Si estamos guardando desde el menú, resolver la promesa
+        if (window.__resolveGuardadoMenu) {
+            console.log('[Proformas] Resolviendo promesa de guardado desde menú');
+            window.__guardandoDesdeMenu = false;
+            window.__resolveGuardadoMenu();
+            window.__resolveGuardadoMenu = null;
+            window.__rechazarGuardadoMenu = null;
+        } else {
+            // Solo redirigir si NO se está guardando desde el menú
+            setTimeout(() => {
+                volverSegunOrigen();
+            }, 1000);
+        }
     } catch (error) {
         console.error('Error al guardar la proforma:', error);
         mostrarNotificacion(error.message || 'Error al guardar la proforma', "error");
+        
+        // Si estamos guardando desde el menú, rechazar la promesa
+        if (window.__rechazarGuardadoMenu) {
+            console.log('[Proformas] Rechazando promesa por error al guardar');
+            window.__guardandoDesdeMenu = false;
+            window.__rechazarGuardadoMenu(error);
+            window.__rechazarGuardadoMenu = null;
+            window.__resolveGuardadoMenu = null;
+        }
     }
 }
 
