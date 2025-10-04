@@ -158,16 +158,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   // Inicializar sistema de detección de cambios sin guardar (comparando totales)
   inicializarDeteccionCambios(async () => {
-    console.log('[Tickets] Callback guardar ejecutado');
-    const btnGuardar = document.getElementById('btn-guardar-ticket');
-    if (btnGuardar) {
-      console.log('[Tickets] Haciendo clic en btn-guardar-ticket');
-      btnGuardar.click();
-      // Esperar a que se complete el guardado
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } else {
-      console.error('[Tickets] No se encontró btn-guardar-ticket');
-    }
+    console.log('[Tickets] Callback guardar ejecutado desde menú');
+    // No hacer click en el botón porque abre el modal de pagos
+    // En su lugar, guardar directamente el ticket con estado 'P' (Pendiente)
+    const totalTicket = obtenerTotalActual();
+    console.log('[Tickets] Guardando con total:', totalTicket);
+    
+    // Guardar sin redirección (el menú se encarga de navegar)
+    window.__guardandoDesdeMenu = true;
+    await guardarTicket('E', totalTicket, totalTicket, 'P');
+    window.__guardandoDesdeMenu = false;
+    
+    console.log('[Tickets] Guardado completado desde menú');
   }, () => {
     // Función para verificar si hay cambios (comparar total)
     const totalActual = obtenerTotalActual();
@@ -922,10 +924,15 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
     // Recargar la lista de productos para mantenerla actualizada
     await cargarProductos();
     
-    // Redirigir a la página de consulta después de un breve retraso
-    setTimeout(() => {
-      window.location.href = 'CONSULTA_TICKETS.html';
-    }, 1000);
+    // Solo redirigir si NO se está guardando desde el menú
+    if (!window.__guardandoDesdeMenu) {
+      // Redirigir a la página de consulta después de un breve retraso
+      setTimeout(() => {
+        window.location.href = 'CONSULTA_TICKETS.html';
+      }, 1000);
+    } else {
+      console.log('[Tickets] Guardado desde menú, no redirigir');
+    }
 
   } catch (error) {
     console.error('Error al guardar el ticket:', error);
@@ -965,6 +972,10 @@ export async function cargarTicket(idTicket) {
     if (data.ticket) {
       mostrarDatosTicket(data.ticket);
       mostrarDetallesTicket(data.detalles);
+
+      // Actualizar total inicial después de cargar el ticket
+      totalInicial = obtenerTotalActual();
+      console.log('[Tickets] Total inicial actualizado después de cargar:', totalInicial);
 
       const estadoTicket = data.ticket.estado.toUpperCase();
       const btnGuardar   = document.getElementById("btn-guardar-ticket");

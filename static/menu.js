@@ -63,8 +63,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     console.log('[Menu] Ejecutando callback de guardar...');
                                     await callbackGuardar();
                                     console.log('[Menu] Guardado completado');
-                                    // Esperar un poco más para asegurar que el guardado termine
-                                    await new Promise(resolve => setTimeout(resolve, 1000));
+                                    // Esperar brevemente para mostrar la notificación
+                                    await new Promise(resolve => setTimeout(resolve, 500));
                                     console.log('[Menu] Navegando después de guardar a:', url);
                                     contentFrame.src = url;
                                     return;
