@@ -31,7 +31,8 @@ import {
   actualizarInfoPrecio,
   calcularPrecioConDescuento,
   calcularTotalDetalle,
-  abrirModalPagos as abrirModalPagosUtil
+  abrirModalPagos as abrirModalPagosUtil,
+  cerrarModalPagos as cerrarModalPagosUtil
 } from './scripts_utils.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
@@ -320,7 +321,7 @@ export function abrirModalPagos() {
  * Cierra el modal de pagos
  */
 export function cerrarModalPagos() {
-  cerrarModal();
+  cerrarModalPagosUtil();
 }
 
 /**
