@@ -270,13 +270,33 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
         
         // Mostrar notificación final de éxito
         mostrarNotificacion('Factura guardada correctamente', 'success');
-        // Esperar suficiente tiempo (3.5s) para que el usuario vea las notificaciones
-        setTimeout(() => {
-            volverSegunOrigen();
-        }, 3500);
+        
+        // Si estamos guardando desde el menú, resolver la promesa
+        if (window.__resolveGuardadoMenu) {
+            console.log('[Facturas] Resolviendo promesa de guardado desde menú');
+            window.__guardandoDesdeMenu = false;
+            window.__resolveGuardadoMenu();
+            window.__resolveGuardadoMenu = null;
+            window.__rechazarGuardadoMenu = null;
+        } else {
+            // Solo redirigir si NO se está guardando desde el menú
+            // Esperar suficiente tiempo (3.5s) para que el usuario vea las notificaciones
+            setTimeout(() => {
+                volverSegunOrigen();
+            }, 3500);
+        }
     } catch (error) {
         console.error('Error al guardar la factura:', error);
         mostrarNotificacion(error.message || 'Error al guardar la factura', "error");
+        
+        // Si estamos guardando desde el menú, rechazar la promesa
+        if (window.__rechazarGuardadoMenu) {
+            console.log('[Facturas] Rechazando promesa por error al guardar');
+            window.__guardandoDesdeMenu = false;
+            window.__rechazarGuardadoMenu(error);
+            window.__rechazarGuardadoMenu = null;
+            window.__resolveGuardadoMenu = null;
+        }
     }
 }
 
@@ -1149,15 +1169,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     // Inicializar sistema de detección de cambios sin guardar (comparando totales)
     inicializarDeteccionCambios(async () => {
-      console.log('[Facturas] Callback guardar ejecutado');
+      console.log('[Facturas] Callback guardar ejecutado desde menú');
+      
+      // Indicar que estamos guardando desde el menú
+      window.__guardandoDesdeMenu = true;
+      
+      // Hacer clic en el botón para abrir el modal de pagos
       const btnGuardar = document.getElementById('btnGuardar');
       if (btnGuardar) {
-        console.log('[Facturas] Haciendo clic en btnGuardar');
+        console.log('[Facturas] Haciendo clic en btnGuardar para abrir modal');
         btnGuardar.click();
-        // Esperar a que se complete el guardado
-        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Esperar a que el usuario cobre o cierre el modal
+        return new Promise((resolve, reject) => {
+          window.__resolveGuardadoMenu = resolve;
+          window.__rechazarGuardadoMenu = reject;
+        });
       } else {
         console.error('[Facturas] No se encontró btnGuardar');
+        throw new Error('No se encontró btnGuardar');
       }
     }, () => {
       // Función para verificar si hay cambios (comparar total)
