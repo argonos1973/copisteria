@@ -1336,24 +1336,29 @@ window.navegarSeguro = async function(url) {
   
   if (hayCambios) {
     const guardar = await mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
-    const callbackGuardar = window.__callbackGuardarGlobal;
     
-    if (guardar && callbackGuardar) {
+    // Si el usuario canceló (guardar === null), no hacer nada
+    if (guardar === null) {
+      console.log('[Cambios] Usuario canceló, quedarse en la página');
+      return; // No navegar
+    }
+    
+    const callbackGuardar = window.__callbackGuardarGlobal;
+    if (guardar === true && callbackGuardar) {
       try {
         await callbackGuardar();
       } catch (e) {
-        // Si el usuario canceló, es comportamiento esperado, no es error
+        // Si el usuario canceló modal de pagos, es comportamiento esperado, no es error
         if (e.message === 'Usuario canceló') {
-          console.log('[Cambios] Usuario canceló el guardado');
+          console.log('[Cambios] Usuario canceló modal de pagos');
         } else {
           console.error('[Cambios] Error al guardar:', e);
         }
         return;  // No navegar si falla el guardado o se cancela
       }
-    } else if (!guardar) {
-      // Usuario decidió no guardar, continuar
-    } else {
-      return;  // Cancelar navegación
+    } else if (guardar === false) {
+      // Usuario decidió no guardar, pero SÍ navegar
+      console.log('[Cambios] Usuario decidió no guardar, navegando...');
     }
   }
   window.location.href = url;
@@ -1374,7 +1379,14 @@ export function inicializarDeteccionCambios(callbackGuardar = null, verificarCam
       e.stopPropagation();
       
       const guardar = await mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
-      if (guardar && callbackGuardar) {
+      
+      // Si el usuario canceló (guardar === null), no hacer nada
+      if (guardar === null) {
+        console.log('[Cambios] Usuario canceló, quedarse en la página');
+        return; // No navegar
+      }
+      
+      if (guardar === true && callbackGuardar) {
         try {
           await callbackGuardar();
           cambiosSinGuardarGlobal = false;
@@ -1390,15 +1402,16 @@ export function inicializarDeteccionCambios(callbackGuardar = null, verificarCam
             }
           }, 500);
         } catch (e) {
-          // Si el usuario canceló, es comportamiento esperado, no es error
+          // Si el usuario canceló modal de pagos, es comportamiento esperado, no es error
           if (e.message === 'Usuario canceló') {
-            console.log('[Cambios] Usuario canceló el guardado');
+            console.log('[Cambios] Usuario canceló modal de pagos');
           } else {
             console.error('[Cambios] Error al guardar:', e);
           }
         }
-      } else {
-        // Descartar cambios y continuar
+      } else if (guardar === false) {
+        // Usuario decidió no guardar, pero SÍ navegar
+        console.log('[Cambios] Usuario decidió no guardar, navegando...');
         cambiosSinGuardarGlobal = false;
         if (link.dataset.target) {
           window.location.href = link.dataset.target;

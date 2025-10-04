@@ -103,15 +103,20 @@ export function mostrarConfirmacion(mensaje) {
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'confirmacion-buttons';
         
-        const confirmarBtn = document.createElement('button');
-        confirmarBtn.textContent = 'Confirmar';
-        confirmarBtn.className = 'btn-confirmar';
+        const guardarBtn = document.createElement('button');
+        guardarBtn.textContent = 'Guardar';
+        guardarBtn.className = 'btn-confirmar';
+        
+        const noGuardarBtn = document.createElement('button');
+        noGuardarBtn.textContent = 'No guardar';
+        noGuardarBtn.className = 'btn-advertencia';
         
         const cancelarBtn = document.createElement('button');
         cancelarBtn.textContent = 'Cancelar';
         cancelarBtn.className = 'btn-cancelar';
         
-        buttonContainer.appendChild(confirmarBtn);
+        buttonContainer.appendChild(guardarBtn);
+        buttonContainer.appendChild(noGuardarBtn);
         buttonContainer.appendChild(cancelarBtn);
         
         dialog.appendChild(mensajeElement);
@@ -124,14 +129,19 @@ export function mostrarConfirmacion(mensaje) {
             document.body.removeChild(overlay);
         };
         
-        confirmarBtn.onclick = () => {
+        guardarBtn.onclick = () => {
             cleanup();
-            resolve(true);
+            resolve(true);  // Guardar y navegar
+        };
+        
+        noGuardarBtn.onclick = () => {
+            cleanup();
+            resolve(false);  // NO guardar pero SÍ navegar
         };
         
         cancelarBtn.onclick = () => {
             cleanup();
-            resolve(false);
+            resolve(null);  // Cancelar: NO navegar, quedarse en página
         };
     });
 }

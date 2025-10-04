@@ -56,9 +56,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Usar mostrarConfirmacion global del padre (index.html)
                         if (window.mostrarConfirmacion) {
                             const guardar = await window.mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
-                            console.log('[Menu] Usuario respondió:', guardar ? 'Guardar' : 'No guardar');
+                            console.log('[Menu] Usuario respondió:', guardar === true ? 'Guardar' : guardar === false ? 'No guardar' : 'Cancelar');
+                            
+                            // Si el usuario canceló (guardar === null), no hacer nada
+                            if (guardar === null) {
+                                console.log('[Menu] Usuario canceló, quedarse en la página');
+                                return; // No navegar
+                            }
+                            
                             const callbackGuardar = iframeWindow.__callbackGuardarGlobal;
-                            if (guardar && callbackGuardar) {
+                            if (guardar === true && callbackGuardar) {
                                 try {
                                     console.log('[Menu] Ejecutando callback de guardar...');
                                     await callbackGuardar();
@@ -69,18 +76,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                     contentFrame.src = url;
                                     return;
                                 } catch (e) {
-                                    console.log('[Menu] Usuario canceló o error al guardar:', e.message);
+                                    console.log('[Menu] Usuario canceló modal de pagos o error al guardar:', e.message);
                                     // No navegar si el usuario canceló o si falló el guardado
                                     return;
                                 }
-                            } else if (!guardar) {
-                                // Usuario decidió no guardar, continuar
+                            } else if (guardar === false) {
+                                // Usuario decidió no guardar, pero SÍ navegar
                                 console.log('[Menu] Navegando sin guardar');
                                 contentFrame.src = url;
                                 return;
-                            } else {
-                                console.log('[Menu] Cancelando navegación');
-                                return; // Cancelar navegación
                             }
                         }
                     }
