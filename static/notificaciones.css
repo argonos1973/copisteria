@@ -200,7 +200,7 @@
     gap: 10px;
 }
 
-.btn-confirmar, .btn-advertencia, .btn-cancelar {
+.btn-confirmar, .btn-cancelar {
     padding: 10px 24px;
     border: none;
     border-radius: 4px;
@@ -220,18 +220,6 @@
 .btn-confirmar:hover {
     background-color: #45a049;
     box-shadow: 0 3px 6px rgba(76, 175, 80, 0.4);
-    transform: translateY(-1px);
-}
-
-.btn-advertencia {
-    background-color: #ff9800;
-    color: white;
-    box-shadow: 0 2px 4px rgba(255, 152, 0, 0.3);
-}
-
-.btn-advertencia:hover {
-    background-color: #f57c00;
-    box-shadow: 0 3px 6px rgba(255, 152, 0, 0.4);
     transform: translateY(-1px);
 }
 

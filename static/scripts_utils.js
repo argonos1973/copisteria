@@ -1337,14 +1337,14 @@ window.navegarSeguro = async function(url) {
   if (hayCambios) {
     const guardar = await mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
     
-    // Si el usuario canceló (guardar === null), no hacer nada
-    if (guardar === null) {
+    // Si el usuario canceló (!guardar), no hacer nada
+    if (!guardar) {
       console.log('[Cambios] Usuario canceló, quedarse en la página');
       return; // No navegar
     }
     
     const callbackGuardar = window.__callbackGuardarGlobal;
-    if (guardar === true && callbackGuardar) {
+    if (guardar && callbackGuardar) {
       try {
         await callbackGuardar();
       } catch (e) {
@@ -1356,9 +1356,6 @@ window.navegarSeguro = async function(url) {
         }
         return;  // No navegar si falla el guardado o se cancela
       }
-    } else if (guardar === false) {
-      // Usuario decidió no guardar, pero SÍ navegar
-      console.log('[Cambios] Usuario decidió no guardar, navegando...');
     }
   }
   window.location.href = url;
@@ -1380,13 +1377,13 @@ export function inicializarDeteccionCambios(callbackGuardar = null, verificarCam
       
       const guardar = await mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
       
-      // Si el usuario canceló (guardar === null), no hacer nada
-      if (guardar === null) {
+      // Si el usuario canceló (!guardar), no hacer nada
+      if (!guardar) {
         console.log('[Cambios] Usuario canceló, quedarse en la página');
         return; // No navegar
       }
       
-      if (guardar === true && callbackGuardar) {
+      if (guardar && callbackGuardar) {
         try {
           await callbackGuardar();
           cambiosSinGuardarGlobal = false;
@@ -1408,17 +1405,6 @@ export function inicializarDeteccionCambios(callbackGuardar = null, verificarCam
           } else {
             console.error('[Cambios] Error al guardar:', e);
           }
-        }
-      } else if (guardar === false) {
-        // Usuario decidió no guardar, pero SÍ navegar
-        console.log('[Cambios] Usuario decidió no guardar, navegando...');
-        cambiosSinGuardarGlobal = false;
-        if (link.dataset.target) {
-          window.location.href = link.dataset.target;
-        } else if (link.dataset.navigate) {
-          window.location.href = link.dataset.navigate;
-        } else if (link.href) {
-          window.location.href = link.href;
         }
       }
     }
