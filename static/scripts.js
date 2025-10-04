@@ -32,7 +32,8 @@ import {
   resetInfoPrecio,
   actualizarInfoPrecio,
   calcularPrecioConDescuento,
-  calcularTotalDetalle
+  calcularTotalDetalle,
+  abrirModalPagos as abrirModalPagosUtil
 } from './scripts_utils.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import {
@@ -296,7 +297,7 @@ export function abrirModalPagos() {
   
   const formaPago = window.ticketFormaPago || 'E';
   
-  abrirModal({
+  abrirModalPagosUtil({
     total: totalDisplay,
     fecha: fechaFormateada,
     formaPago: formaPago,
