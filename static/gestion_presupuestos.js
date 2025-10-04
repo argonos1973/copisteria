@@ -939,14 +939,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Inicializar sistema de detección de cambios sin guardar (comparando totales)
   inicializarDeteccionCambios(async () => {
     console.log('[Presupuestos] Callback guardar ejecutado desde menú');
-    const btnGuardar = document.getElementById('btn-guardar');
+    const btnGuardar = document.getElementById('btnGuardar');
     if (btnGuardar) {
-      console.log('[Presupuestos] Haciendo clic en btn-guardar');
+      console.log('[Presupuestos] Haciendo clic en btnGuardar');
       btnGuardar.click();
       // Esperar a que se complete el guardado
       await new Promise(resolve => setTimeout(resolve, 500));
     } else {
-      console.error('[Presupuestos] No se encontró btn-guardar');
+      console.error('[Presupuestos] No se encontró btnGuardar');
     }
   }, () => {
     // Función para verificar si hay cambios (comparar total)
