@@ -532,7 +532,6 @@ export function agregarDetalle(
   `;
   tbody.appendChild(tr);
   sumarTotales();
-  marcarCambiosSinGuardar();
   mostrarNotificacion('Detalle agregado correctamente', 'success');
 }
 
@@ -678,7 +677,6 @@ export async function eliminarFila(icono) {
     if (confirmado) {
       icono.closest('tr').remove();
       sumarTotales();
-      marcarCambiosSinGuardar();
       mostrarNotificacion('Detalle eliminado correctamente', 'success');
     }
   } catch (error) {
