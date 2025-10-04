@@ -41,6 +41,19 @@ const icons = {
 
 const btnGuardar = document.getElementById('btnGuardar');
 
+// Funciones de validación (placeholder - siempre retornan true)
+function validateIdentificador() {
+  return true;
+}
+
+function validateEmail() {
+  return true;
+}
+
+function validateTelf(field, icon) {
+  return true;
+}
+
 // Añadir listeners para uppercase y marcar cambios
 if (fields.razonsocial) {
   fields.razonsocial.addEventListener('input', function() {
