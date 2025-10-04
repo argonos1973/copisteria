@@ -159,17 +159,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Inicializar sistema de detección de cambios sin guardar (comparando totales)
   inicializarDeteccionCambios(async () => {
     console.log('[Tickets] Callback guardar ejecutado desde menú');
-    // No hacer click en el botón porque abre el modal de pagos
-    // En su lugar, guardar directamente el ticket con estado 'P' (Pendiente)
-    const totalTicket = obtenerTotalActual();
-    console.log('[Tickets] Guardando con total:', totalTicket);
     
-    // Guardar sin redirección (el menú se encarga de navegar)
+    // Indicar que estamos guardando desde el menú
     window.__guardandoDesdeMenu = true;
-    await guardarTicket('E', totalTicket, totalTicket, 'P');
-    window.__guardandoDesdeMenu = false;
+    window.__urlDestinoMenu = null; // Se establecerá cuando el usuario cobre
     
-    console.log('[Tickets] Guardado completado desde menú');
+    // Abrir el modal de pagos para que el usuario elija forma de pago
+    console.log('[Tickets] Abriendo modal de pagos...');
+    abrirModalPagos();
+    
+    // Esperar a que el usuario cobre o cierre el modal
+    // El guardado real ocurrirá en procesarPago()
+    return new Promise((resolve, reject) => {
+      // Guardar el resolve y reject para llamarlos después del guardado o cancelación
+      window.__resolveGuardadoMenu = resolve;
+      window.__rechazarGuardadoMenu = reject;
+    });
   }, () => {
     // Función para verificar si hay cambios (comparar total)
     const totalActual = obtenerTotalActual();
@@ -1176,7 +1181,25 @@ export function procesarPago() {
   // Primero cerramos el modal para mejorar la UX y evitar bloqueos visuales
   cerrarModalPagos();
   // Luego realizamos la llamada de guardado
-  guardarTicket(formaPago, importeCobrado, totalTicket, estadoTicket);
+  guardarTicket(formaPago, importeCobrado, totalTicket, estadoTicket).then(() => {
+    // Si estamos guardando desde el menú, resolver la promesa
+    if (window.__resolveGuardadoMenu) {
+      console.log('[Tickets] Resolviendo promesa de guardado desde menú');
+      window.__guardandoDesdeMenu = false;
+      window.__resolveGuardadoMenu();
+      window.__resolveGuardadoMenu = null;
+      window.__rechazarGuardadoMenu = null;
+    }
+  }).catch((error) => {
+    console.error('[Tickets] Error al guardar:', error);
+    // Rechazar si hay error para no bloquear la navegación
+    if (window.__rechazarGuardadoMenu) {
+      window.__guardandoDesdeMenu = false;
+      window.__rechazarGuardadoMenu(error);
+      window.__rechazarGuardadoMenu = null;
+      window.__resolveGuardadoMenu = null;
+    }
+  });
 }
 
 /**

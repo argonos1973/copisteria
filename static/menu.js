@@ -69,8 +69,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     contentFrame.src = url;
                                     return;
                                 } catch (e) {
-                                    console.error('[Menu] Error al guardar:', e);
-                                    return; // No navegar si falla el guardado
+                                    console.log('[Menu] Usuario canceló o error al guardar:', e.message);
+                                    // No navegar si el usuario canceló o si falló el guardado
+                                    return;
                                 }
                             } else if (!guardar) {
                                 // Usuario decidió no guardar, continuar

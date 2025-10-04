@@ -930,6 +930,18 @@ export function cerrarModalPagos() {
   // Ocultar el modal
   modal.style.display = 'none';
   
+  // Si estamos guardando desde el menú y el usuario cancela, rechazar la promesa
+  if (window.__resolveGuardadoMenu && window.__guardandoDesdeMenu) {
+    console.log('[Modal] Usuario canceló guardado desde menú');
+    window.__guardandoDesdeMenu = false;
+    // Rechazar para que el menú no navegue
+    if (window.__rechazarGuardadoMenu) {
+      window.__rechazarGuardadoMenu(new Error('Usuario canceló'));
+      window.__rechazarGuardadoMenu = null;
+    }
+    window.__resolveGuardadoMenu = null;
+  }
+  
   // Limpiar el callback
   onCobrarCallback = null;
 }
