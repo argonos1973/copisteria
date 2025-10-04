@@ -20,7 +20,8 @@ import {
     inicializarInfoPrecioPopup,
     inicializarDeteccionCambios,
     marcarCambiosSinGuardar,
-    resetearCambiosSinGuardar
+    resetearCambiosSinGuardar,
+    fetchContactoPorId
 } from './scripts_utils.js';
 import { 
     calcularTotalPresupuesto,

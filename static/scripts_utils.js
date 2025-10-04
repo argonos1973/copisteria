@@ -1342,8 +1342,13 @@ window.navegarSeguro = async function(url) {
       try {
         await callbackGuardar();
       } catch (e) {
-        console.error('[Cambios] Error al guardar:', e);
-        return;  // No navegar si falla el guardado
+        // Si el usuario canceló, es comportamiento esperado, no es error
+        if (e.message === 'Usuario canceló') {
+          console.log('[Cambios] Usuario canceló el guardado');
+        } else {
+          console.error('[Cambios] Error al guardar:', e);
+        }
+        return;  // No navegar si falla el guardado o se cancela
       }
     } else if (!guardar) {
       // Usuario decidió no guardar, continuar
@@ -1385,7 +1390,12 @@ export function inicializarDeteccionCambios(callbackGuardar = null, verificarCam
             }
           }, 500);
         } catch (e) {
-          console.error('[Cambios] Error al guardar:', e);
+          // Si el usuario canceló, es comportamiento esperado, no es error
+          if (e.message === 'Usuario canceló') {
+            console.log('[Cambios] Usuario canceló el guardado');
+          } else {
+            console.error('[Cambios] Error al guardar:', e);
+          }
         }
       } else {
         // Descartar cambios y continuar
