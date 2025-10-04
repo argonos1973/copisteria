@@ -63,6 +63,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     console.log('[Menu] Ejecutando callback de guardar...');
                                     await callbackGuardar();
                                     console.log('[Menu] Guardado completado');
+                                    // Esperar un poco más para asegurar que el guardado termine
+                                    await new Promise(resolve => setTimeout(resolve, 1000));
+                                    console.log('[Menu] Navegando después de guardar a:', url);
+                                    contentFrame.src = url;
+                                    return;
                                 } catch (e) {
                                     console.error('[Menu] Error al guardar:', e);
                                     return; // No navegar si falla el guardado
@@ -70,13 +75,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             } else if (!guardar) {
                                 // Usuario decidió no guardar, continuar
                                 console.log('[Menu] Navegando sin guardar');
+                                contentFrame.src = url;
+                                return;
                             } else {
                                 console.log('[Menu] Cancelando navegación');
                                 return; // Cancelar navegación
                             }
                         }
                     }
-                    console.log('[Menu] Navegando a:', url);
+                    console.log('[Menu] No hay cambios, navegando a:', url);
                     contentFrame.src = url;
                 } else {
                     contentFrame.src = url;
