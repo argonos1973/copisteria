@@ -51,25 +51,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     await iframeWindow.navegarSeguro(url);
                 } else if (iframeWindow && iframeWindow.__verificarCambiosGlobal) {
                     const hayCambios = iframeWindow.__verificarCambiosGlobal();
+                    console.log('[Menu] Verificando cambios:', hayCambios);
                     if (hayCambios) {
                         // Usar mostrarConfirmacion global del padre (index.html)
                         if (window.mostrarConfirmacion) {
                             const guardar = await window.mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
+                            console.log('[Menu] Usuario respondió:', guardar ? 'Guardar' : 'No guardar');
                             const callbackGuardar = iframeWindow.__callbackGuardarGlobal;
                             if (guardar && callbackGuardar) {
                                 try {
+                                    console.log('[Menu] Ejecutando callback de guardar...');
                                     await callbackGuardar();
+                                    console.log('[Menu] Guardado completado');
                                 } catch (e) {
                                     console.error('[Menu] Error al guardar:', e);
                                     return; // No navegar si falla el guardado
                                 }
                             } else if (!guardar) {
                                 // Usuario decidió no guardar, continuar
+                                console.log('[Menu] Navegando sin guardar');
                             } else {
+                                console.log('[Menu] Cancelando navegación');
                                 return; // Cancelar navegación
                             }
                         }
                     }
+                    console.log('[Menu] Navegando a:', url);
                     contentFrame.src = url;
                 } else {
                     contentFrame.src = url;

@@ -1149,17 +1149,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     
     // Inicializar sistema de detección de cambios sin guardar (comparando totales)
     inicializarDeteccionCambios(async () => {
-      const totalActual = calcularTotalConImpuestos();
-      if (totalActual !== totalInicial) {
-        const btnGuardar = document.getElementById('btnGuardar');
-        if (btnGuardar) {
-          btnGuardar.click();
-        }
+      console.log('[Facturas] Callback guardar ejecutado');
+      const btnGuardar = document.getElementById('btnGuardar');
+      if (btnGuardar) {
+        console.log('[Facturas] Haciendo clic en btnGuardar');
+        btnGuardar.click();
+        // Esperar a que se complete el guardado
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } else {
+        console.error('[Facturas] No se encontró btnGuardar');
       }
     }, () => {
       // Función para verificar si hay cambios (comparar total)
       const totalActual = calcularTotalConImpuestos();
-      return totalActual !== totalInicial;
+      const hayCambios = totalActual !== totalInicial;
+      console.log(`[Facturas] Verificar cambios: ${hayCambios} (inicial: ${totalInicial}, actual: ${totalActual})`);
+      return hayCambios;
     });
     
   } catch (error) {
