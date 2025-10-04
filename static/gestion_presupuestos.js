@@ -48,12 +48,22 @@ let idPresupuesto = null;
 let idContacto = null;
 let productosOriginales = [];
 let detalleEnEdicion = null;
+let totalInicial = 0;
 
 // Variables para modal de contactos
 let contactosData = [];
 let currentPageContactos = 1;
 let totalPagesContactos = 1;
 let filtrosContactos = { razonSocial: '', nif: '' };
+
+/**
+ * Obtiene el total actual del presupuesto
+ */
+function obtenerTotalActual() {
+  const totalElement = document.getElementById('total-presupuesto');
+  if (!totalElement || !totalElement.value) return 0;
+  return parsearImporte(totalElement.value);
+}
 
 const CONTACTO_CANDIDATO_KEYS = [
   'contacto',
@@ -487,6 +497,10 @@ async function cargarPresupuesto(id) {
       detalles = [];
     }
     actualizarTablaDetalles();
+    
+    // Actualizar total inicial después de cargar el presupuesto
+    totalInicial = obtenerTotalActual();
+    console.log('[Presupuestos] Total inicial actualizado después de cargar:', totalInicial);
   } catch (e) {
     console.error('Error al cargar presupuesto:', e);
     mostrarNotificacion('Error al cargar el presupuesto', 'error');
@@ -633,6 +647,10 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='B') {
 
     // Invalidar cachés globales tras guardar
     try { invalidateGlobalCache(); } catch(e) { console.warn('No se pudo invalidar cache', e); }
+
+    // Actualizar total inicial después de guardar
+    totalInicial = obtenerTotalActual();
+    console.log('[Presupuestos] Total actualizado después de guardar:', totalInicial);
 
     resetearCambiosSinGuardar();
     mostrarNotificacion('Presupuesto guardado correctamente', 'success');
@@ -914,12 +932,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Error durante la inicialización:', error);
   }
   
-  // Inicializar sistema de detección de cambios sin guardar
+  // Guardar total inicial al cargar
+  totalInicial = obtenerTotalActual();
+  console.log('[Presupuestos] Total inicial:', totalInicial);
+  
+  // Inicializar sistema de detección de cambios sin guardar (comparando totales)
   inicializarDeteccionCambios(async () => {
+    console.log('[Presupuestos] Callback guardar ejecutado desde menú');
     const btnGuardar = document.getElementById('btn-guardar');
     if (btnGuardar) {
+      console.log('[Presupuestos] Haciendo clic en btn-guardar');
       btnGuardar.click();
+      // Esperar a que se complete el guardado
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } else {
+      console.error('[Presupuestos] No se encontró btn-guardar');
     }
+  }, () => {
+    // Función para verificar si hay cambios (comparar total)
+    const totalActual = obtenerTotalActual();
+    const hayCambios = totalActual !== totalInicial;
+    console.log(`[Presupuestos] Verificar cambios: ${hayCambios} (inicial: ${totalInicial}, actual: ${totalActual})`);
+    return hayCambios;
   });
   
   // Marcar cambios en inputs principales
