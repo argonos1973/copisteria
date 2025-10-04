@@ -309,6 +309,11 @@
         </div>
     </div>
 
+    <link rel="stylesheet" href="../static/notificaciones.css">
+    <script type="module">
+        import { mostrarConfirmacion } from '../static/notificaciones.js';
+        window.mostrarConfirmacion = mostrarConfirmacion;
+    </script>
     <script src="../static/menu.js" defer></script>
     <script>
         // Asegurar scroll en el iframe y evitar errores de política Same-Origin

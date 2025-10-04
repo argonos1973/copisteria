@@ -651,13 +651,6 @@ document.addEventListener('click', async (e) => {
   }
 }, true); // Usar capture para interceptar antes
 
-// Fallback para beforeunload (cierre de pestaña, recarga)
-window.addEventListener('beforeunload', (e) => {
-  if (cambiosSinGuardar) {
-    e.preventDefault();
-    e.returnValue = ''; // Chrome requiere esto
-    return ''; // Para navegadores antiguos
-  }
-});
+// Navegación mediante clics ya interceptada por listener global de document
 
 //

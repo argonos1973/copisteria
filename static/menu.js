@@ -41,10 +41,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Cargar página en el iframe
-    function loadPage(url) {
+    // Cargar página en el iframe con verificación de cambios
+    async function loadPage(url) {
         if (url && url !== '#') {
-            contentFrame.src = url;
+            // Si hay función navegarSeguro en el iframe, usarla
+            try {
+                const iframeWindow = contentFrame.contentWindow;
+                if (iframeWindow && iframeWindow.navegarSeguro) {
+                    await iframeWindow.navegarSeguro(url);
+                } else if (iframeWindow && iframeWindow.__verificarCambiosGlobal) {
+                    const hayCambios = iframeWindow.__verificarCambiosGlobal();
+                    if (hayCambios) {
+                        // Usar mostrarConfirmacion global del padre (index.html)
+                        if (window.mostrarConfirmacion) {
+                            const guardar = await window.mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
+                            const callbackGuardar = iframeWindow.__callbackGuardarGlobal;
+                            if (guardar && callbackGuardar) {
+                                try {
+                                    await callbackGuardar();
+                                } catch (e) {
+                                    console.error('[Menu] Error al guardar:', e);
+                                    return; // No navegar si falla el guardado
+                                }
+                            } else if (!guardar) {
+                                // Usuario decidió no guardar, continuar
+                            } else {
+                                return; // Cancelar navegación
+                            }
+                        }
+                    }
+                    contentFrame.src = url;
+                } else {
+                    contentFrame.src = url;
+                }
+            } catch (e) {
+                // Si falla, navegar normalmente
+                contentFrame.src = url;
+            }
         }
     }
     
@@ -58,9 +91,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Cargar página si el enlace tiene un target
         if (link.dataset.target && link.dataset.target !== '#') {
-            link.addEventListener('click', function(e) {
+            link.addEventListener('click', async function(e) {
                 e.preventDefault();
-                loadPage(link.dataset.target);
+                await loadPage(link.dataset.target);
             });
         }
         
@@ -91,14 +124,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Manejar los enlaces de submenú
     const submenuLinks = document.querySelectorAll('.submenu-item');
     submenuLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', async (e) => {
             // Si es un submenu-block, pero tiene data-target, SÍ debe cargar la página
             if (link.parentElement.classList.contains('submenu-block') && !link.dataset.target) return;
             e.preventDefault();
             
             // Cargar la página en el iframe si tiene un target
             if (link.dataset.target && link.dataset.target !== '#') {
-                loadPage(link.dataset.target);
+                await loadPage(link.dataset.target);
             }
             
             // Actualizar la clase activa en el menú principal

@@ -1347,16 +1347,6 @@ export function inicializarDeteccionCambios(callbackGuardar = null, verificarCam
   window.__callbackGuardarGlobal = callbackGuardar;
   window.__verificarCambiosGlobal = verificarCambios;
   
-  // Interceptar navegación mediante beforeunload (capa de seguridad final)
-  window.addEventListener('beforeunload', (e) => {
-    const hayCambios = verificarCambios ? verificarCambios() : cambiosSinGuardarGlobal;
-    if (hayCambios) {
-      e.preventDefault();
-      e.returnValue = 'Hay cambios sin guardar';
-      return 'Hay cambios sin guardar';
-    }
-  });
-  
   // Interceptar clics en enlaces de navegación
   document.addEventListener('click', async (e) => {
     const link = e.target.closest('a[href], a[data-target], button[data-navigate]');
