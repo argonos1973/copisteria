@@ -422,12 +422,30 @@ inicializarDeteccionCambios(async () => {
 // Inicializar pestañas primero
 inicializarPestanas();
 
-// Configurar listener para autocompletado de direcciones
+// Configurar listeners para TODOS los campos después de inicializar pestañas
+const todosLosCampos = [
+  'razonsocial', 'identificador', 'mail', 'telf1', 'telf2',
+  'direccion', 'cp', 'poblacio', 'provincia',
+  'dir3_oficina', 'dir3_organo', 'dir3_unidad'
+];
+
+todosLosCampos.forEach(fieldId => {
+  const element = document.getElementById(fieldId);
+  if (element) {
+    element.addEventListener('input', function() {
+      if (!cargandoContacto) {
+        console.log(`[Contactos] Campo ${fieldId} modificado - marcando cambios`);
+        marcarCambiosSinGuardar();
+      }
+    });
+  }
+});
+
+// Configurar listener especial para autocompletado de direcciones
 const direccionInput = document.getElementById('direccion');
 if (direccionInput) {
   direccionInput.addEventListener('input', function(e) {
     this.value = this.value.toUpperCase();
-    if (!cargandoContacto) marcarCambiosSinGuardar();
     // Activar búsqueda de sugerencias
     dirDebounce(this.value);
   });
@@ -435,6 +453,19 @@ if (direccionInput) {
 } else {
   console.error('[Contactos] No se pudo configurar listener de dirección');
 }
+
+// Listener para checkbox de facturación
+const facturacionCheckbox = document.getElementById('facturacion_automatica');
+if (facturacionCheckbox) {
+  facturacionCheckbox.addEventListener('change', function() {
+    if (!cargandoContacto) {
+      console.log('[Contactos] Checkbox facturación modificado - marcando cambios');
+      marcarCambiosSinGuardar();
+    }
+  });
+}
+
+console.log('[Contactos] Todos los listeners configurados');
 
 // Luego cargar el contacto si hay ID en la URL
 loadContacto();
