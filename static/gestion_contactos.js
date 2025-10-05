@@ -255,7 +255,13 @@ async function submitForm() {
     const data = await res.json();
     resetearCambiosSinGuardar();
     mostrarNotificacion(data.message || 'Contacto guardado correctamente', 'success');
-    setTimeout(() => (window.location.href = 'CONSULTA_CONTACTOS.html'), 1500);
+    
+    // Solo redirigir si NO se está guardando desde el menú
+    if (!window.__guardandoDesdeMenu) {
+      setTimeout(() => (window.location.href = 'CONSULTA_CONTACTOS.html'), 1500);
+    } else {
+      console.log('[Contactos] Guardado desde menú, no redirigir');
+    }
   } catch (err) {
     console.error(err);
     mostrarNotificacion(err.message || 'Error al guardar el contacto', 'error');
@@ -303,8 +309,17 @@ async function submitForm() {
 
 // Inicializar sistema de detección de cambios sin guardar
 inicializarDeteccionCambios(async () => {
-  const form = document.getElementById('contactForm');
-  if (form) {
-    form.dispatchEvent(new Event('submit'));
+  console.log('[Contactos] Callback guardar ejecutado desde menú');
+  
+  // Indicar que estamos guardando desde el menú
+  window.__guardandoDesdeMenu = true;
+  
+  try {
+    // Llamar directamente a submitForm
+    await submitForm();
+    console.log('[Contactos] Guardado completado desde menú');
+  } finally {
+    // Limpiar el flag
+    window.__guardandoDesdeMenu = false;
   }
 });
