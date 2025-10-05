@@ -388,13 +388,12 @@
                 </div>
               </div>
               <div class="field-item half-width">
-                <label for="mail">Email *</label>
+                <label for="mail">Email</label>
                 <div class="input-container">
                   <input
                     type="email"
                     id="mail"
                     maxlength="90"
-                    required
                     class="input-mail"
                   />
                   <i id="icon-mail" class="validation-icon"></i>
@@ -438,11 +437,12 @@
           <div class="tab-section">
             <div class="field-row">
               <div class="field-item full-width">
-                <label for="direccion">Dirección</label>
+                <label for="direccion">Dirección *</label>
                 <div class="direccion-container">
                   <input
                     type="text"
                     id="direccion"
+                    required
                     class="form-control"
                   />
                   <div id="sugerenciasCarrer" class="sugerencias-lista"></div>
@@ -452,13 +452,14 @@
 
             <div class="field-row">
               <div class="field-item quarter-width">
-                <label for="cp">Código Postal</label>
+                <label for="cp">Código Postal *</label>
                 <div class="input-container">
                   <input
                     type="text"
                     id="cp"
                     list="listaCP"
                     maxlength="5"
+                    required
                     class="input-cp"
                   />
                   <datalist id="listaCP"></datalist>
@@ -466,22 +467,24 @@
                 </div>
               </div>
               <div class="field-item third-width">
-                <label for="poblacio">Población</label>
+                <label for="poblacio">Población *</label>
                 <input
                   type="text"
                   id="poblacio"
                   maxlength="80"
+                  required
                   class="input-poblacio"
                 />
                 <!-- Campo oculto para compatibilidad -->
                 <input type="hidden" id="poblacion" />
               </div>
               <div class="field-item third-width">
-                <label for="provincia">Provincia</label>
+                <label for="provincia">Provincia *</label>
                 <input
                   type="text"
                   id="provincia"
                   maxlength="20"
+                  required
                   class="input-provincia"
                 />
               </div>
