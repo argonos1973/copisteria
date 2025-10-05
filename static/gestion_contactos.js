@@ -225,13 +225,19 @@ async function submitForm() {
     return;
   }
 
+  // Obtener valores directamente del DOM para asegurar que se lean correctamente
+  const direccionElement = document.getElementById('direccion');
+  const direccionValue = direccionElement ? direccionElement.value : '';
+  
+  console.log('[Contactos] Dirección a guardar:', direccionValue);
+
   const contactoData = {
     razonsocial: fields.razonsocial.value.trim().toUpperCase(),
     identificador: fields.identificador.value.trim().toUpperCase(),
     mail: fields.mail.value.trim(),
     telf1: fields.telf1.value ? fields.telf1.value.trim() : null,
     telf2: fields.telf2.value ? fields.telf2.value.trim() : null,
-    direccion: fields.direccion.value ? fields.direccion.value.trim().toUpperCase() : null,
+    direccion: direccionValue ? direccionValue.trim().toUpperCase() : null,
     cp: fields.cp.value.trim(),
     poblacio: fields.poblacio.value.trim().toUpperCase(),
     localidad: fields.poblacio.value.trim().toUpperCase(),
@@ -241,6 +247,8 @@ async function submitForm() {
     dir3_organo: fields.dir3Organo.value.trim() || null,
     dir3_unidad: fields.dir3Unidad.value.trim() || null
   };
+  
+  console.log('[Contactos] Datos a enviar:', contactoData);
 
   const urlParams = new URLSearchParams(window.location.search);
   const id = urlParams.get('id');
