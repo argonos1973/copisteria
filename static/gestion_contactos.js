@@ -86,19 +86,19 @@ function validateTelf(field, icon) {
 if (fields.razonsocial) {
   fields.razonsocial.addEventListener('input', function() {
     this.value = this.value.toUpperCase();
-    marcarCambiosSinGuardar();
+    if (!cargandoContacto) marcarCambiosSinGuardar();
   });
 }
 if (fields.direccion) {
   fields.direccion.addEventListener('input', function() {
     this.value = this.value.toUpperCase();
-    marcarCambiosSinGuardar();
+    if (!cargandoContacto) marcarCambiosSinGuardar();
   });
 }
 if (fields.poblacion) {
   fields.poblacion.addEventListener('input', function() {
     this.value = this.value.toUpperCase();
-    marcarCambiosSinGuardar();
+    if (!cargandoContacto) marcarCambiosSinGuardar();
   });
 }
 
@@ -387,6 +387,11 @@ async function loadContacto() {
   }
 }
 
+// Función para verificar si hay cambios reales
+function verificarCambiosContacto() {
+  return window.cambiosSinGuardarGlobal || false;
+}
+
 // Inicializar sistema de detección de cambios sin guardar
 inicializarDeteccionCambios(async () => {
   console.log('[Contactos] Callback guardar ejecutado desde menú');
@@ -412,7 +417,7 @@ inicializarDeteccionCambios(async () => {
     // Limpiar el flag
     window.__guardandoDesdeMenu = false;
   }
-});
+}, verificarCambiosContacto);
 
 // Inicializar pestañas primero
 inicializarPestanas();
@@ -422,7 +427,7 @@ const direccionInput = document.getElementById('direccion');
 if (direccionInput) {
   direccionInput.addEventListener('input', function(e) {
     this.value = this.value.toUpperCase();
-    marcarCambiosSinGuardar();
+    if (!cargandoContacto) marcarCambiosSinGuardar();
     // Activar búsqueda de sugerencias
     dirDebounce(this.value);
   });
