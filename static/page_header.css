@@ -1,7 +1,7 @@
 /* Page header bar consistent across pages */
 .page-header {
     position: relative; /* para pseudo-elementos */
-    background: linear-gradient(90deg, #000000 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.1) 80%, transparent 100%) !important;
+    background: linear-gradient(90deg, #2c3e50 0%, rgba(44,62,80,0.8) 30%, rgba(44,62,80,0.4) 60%, rgba(44,62,80,0.1) 80%, transparent 100%) !important;
     color: #ffffff;
     padding: 25px 30px;
     margin: 0 0 20px 0;
