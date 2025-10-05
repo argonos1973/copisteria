@@ -42,6 +42,10 @@ const icons = {
 const btnGuardar = document.getElementById('btnGuardar');
 
 // Funciones de validación (placeholder - siempre retornan true)
+function validateRequired() {
+  return true;
+}
+
 function validateIdentificador() {
   return true;
 }
