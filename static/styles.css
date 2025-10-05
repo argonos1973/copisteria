@@ -2306,11 +2306,11 @@ table:not(.fixed-footer table) tbody tr:hover {
 #tabla-detalle-proforma thead th {
     position: sticky;
     top: 0;
-    background-color: var(--color-fondo);
+    background-color: var(--color-primario);
     padding: 10px;
     text-align: left;
     font-weight: bold;
-    color: var(--color-primario);
+    color: #ffffff;
     border-bottom: 2px solid var(--color-borde);
 }
 
