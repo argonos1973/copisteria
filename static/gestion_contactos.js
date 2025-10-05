@@ -287,6 +287,10 @@ async function submitForm() {
     const res = await fetch(`${API_URL}/contactos/get_contacto/${id}`);
     if (!res.ok) throw new Error('Error al obtener el contacto');
     const data = await res.json();
+    
+    console.log('[Contactos] Datos recibidos del backend:', data);
+    console.log('[Contactos] Dirección recibida:', data.direccion);
+    
     Object.keys(fields).forEach((k) => {
       if (k === 'facturacion') {
         fields[k].checked = data.tipo === 1;
@@ -300,6 +304,13 @@ async function submitForm() {
         fields[k].value = data[key] ?? '';
       }
     });
+    
+    // Cargar dirección directamente del DOM para asegurar que se cargue
+    const direccionElement = document.getElementById('direccion');
+    if (direccionElement && data.direccion) {
+      direccionElement.value = data.direccion;
+      console.log('[Contactos] Dirección cargada en el campo:', direccionElement.value);
+    }
     validateIdentificador();
     validateEmail();
     validateTelf(fields.telf1, icons.telf1);
