@@ -730,10 +730,6 @@ def crear():
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400
 
-        # Log para debug
-        app.logger.info(f"[DEBUG] Datos recibidos en create_contacto: {data}")
-        app.logger.info(f"[DEBUG] Dirección recibida: '{data.get('direccion')}' (tipo: {type(data.get('direccion'))})")
-
         # Validar campos requeridos
         required_fields = ['razonsocial', 'identificador']
         for field in required_fields:
@@ -755,10 +751,6 @@ def actualizar(idContacto):
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400
-
-        # Log para debug
-        app.logger.info(f"[DEBUG] Datos recibidos en update_contacto: {data}")
-        app.logger.info(f"[DEBUG] Dirección recibida: '{data.get('direccion')}' (tipo: {type(data.get('direccion'))})")
 
         # Validar campos requeridos
         required_fields = ['razonsocial', 'identificador']
