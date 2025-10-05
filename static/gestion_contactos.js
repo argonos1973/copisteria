@@ -8,6 +8,7 @@ let cargandoContacto = false;
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion } from './notificaciones.js';
 import { inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar, debounce } from './scripts_utils.js';
+import { inicializarPestanas } from './tabs.js';
 
 const API_URL = `http://${IP_SERVER}:${PORT}/api`;
 
@@ -327,3 +328,6 @@ inicializarDeteccionCambios(async () => {
     window.__guardandoDesdeMenu = false;
   }
 });
+
+// Inicializar pestañas
+inicializarPestanas();

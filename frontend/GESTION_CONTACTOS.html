@@ -22,11 +22,12 @@
   <link rel="stylesheet" href="../static/styles.css" />
   <link rel="stylesheet" href="../static/page_header.css" />
   <link rel="stylesheet" href="../static/notificaciones.css" />
+  <link rel="stylesheet" href="../static/tabs.css" />
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script type="module" src="../static/notificaciones.js?v=3"></script>
-  <script type="module" src="../static/gestion_contactos.js?v=3"></script>
+  <script type="module" src="../static/gestion_contactos.js?v=4"></script>
 
 
   <style>
@@ -342,229 +343,201 @@
 
     <form id="contactForm">
       
-      <!-- Fila 1: Razón social -->
-      <div class="form-row">
-        <div class="form-column col-12">
-          <div class="form-group">
-            <label for="razonsocial">Razón Social</label>
-            <input
-              type="text"
-              id="razonsocial"
-              v-model="contacto.razonsocial"
-              maxlength="90"
-              required
-              class="input-razonsocial"
-            />
-          </div>
+      <!-- Sistema de pestañas -->
+      <div class="tabs-container">
+        <div class="tabs-header">
+          <button type="button" class="tab-button" data-tab="datos-basicos">
+            <i class="fas fa-user"></i> Datos Básicos
+          </button>
+          <button type="button" class="tab-button" data-tab="direccion">
+            <i class="fas fa-map-marker-alt"></i> Dirección
+          </button>
+          <button type="button" class="tab-button" data-tab="dir3">
+            <i class="fas fa-building"></i> DIR3 / Facturación
+          </button>
         </div>
-      </div>
 
-      <!-- Fila 2: Identificador -->
-      <div class="form-row">
-        <div class="form-column col-12">
-          <div class="form-group">
-            <label for="identificador">Identificador</label>
-            <div class="input-container">
-              <input
-                type="text"
-                id="identificador"
-                v-model="contacto.identificador"
-                maxlength="20"
-                required
-                @input="validateIdentificador"
-                class="input-identificador"
-              />
-              <i
-                v-if="contacto.identificador"
-                class="validation-icon"
-                :class="valid.identificador ? 'fa fa-check valid' : 'fa fa-times invalid'"
-              ></i>
+        <!-- Pestaña 1: Datos Básicos -->
+        <div class="tab-content" id="datos-basicos">
+          <div class="tab-section">
+            <div class="field-row">
+              <div class="field-item full-width">
+                <label for="razonsocial">Razón Social *</label>
+                <input
+                  type="text"
+                  id="razonsocial"
+                  maxlength="90"
+                  required
+                  class="input-razonsocial"
+                />
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field-item half-width">
+                <label for="identificador">NIF / CIF *</label>
+                <div class="input-container">
+                  <input
+                    type="text"
+                    id="identificador"
+                    maxlength="20"
+                    required
+                    class="input-identificador"
+                  />
+                  <i id="icon-identificador" class="validation-icon"></i>
+                </div>
+              </div>
+              <div class="field-item half-width">
+                <label for="mail">Email *</label>
+                <div class="input-container">
+                  <input
+                    type="email"
+                    id="mail"
+                    maxlength="90"
+                    required
+                    class="input-mail"
+                  />
+                  <i id="icon-mail" class="validation-icon"></i>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field-item half-width">
+                <label for="telf1">Teléfono 1</label>
+                <div class="input-container">
+                  <input
+                    type="tel"
+                    id="telf1"
+                    maxlength="10"
+                    pattern="^[0-9]{9,10}$"
+                    class="input-telf1"
+                  />
+                  <i id="icon-telf1" class="validation-icon"></i>
+                </div>
+              </div>
+              <div class="field-item half-width">
+                <label for="telf2">Teléfono 2</label>
+                <div class="input-container">
+                  <input
+                    type="tel"
+                    id="telf2"
+                    maxlength="10"
+                    pattern="^[0-9]{9,10}$"
+                    class="input-telf2"
+                  />
+                  <i id="icon-telf2" class="validation-icon"></i>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Fila 3: Email -->
-      <div class="form-row">
-        <div class="form-column col-3">
-          <div class="form-group">
-            <label for="mail">Email</label>
-            <div class="input-container">
-              <input
-                type="email"
-                id="mail"
-                v-model="contacto.mail"
-                maxlength="90"
-                required
-                @input="validateEmail"
-                class="input-mail"
-              />
-              <i
-                v-if="contacto.mail"
-                class="validation-icon"
-                :class="valid.mail ? 'fa fa-check valid' : 'fa fa-times invalid'"
-              ></i>
+        <!-- Pestaña 2: Dirección -->
+        <div class="tab-content" id="direccion">
+          <div class="tab-section">
+            <div class="field-row">
+              <div class="field-item full-width">
+                <label for="direccion">Dirección</label>
+                <div class="direccion-container">
+                  <input
+                    type="text"
+                    id="direccion"
+                    class="form-control"
+                  />
+                  <div id="sugerenciasCarrer" class="sugerencias-lista"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field-item quarter-width">
+                <label for="cp">Código Postal</label>
+                <div class="input-container">
+                  <input
+                    type="text"
+                    id="cp"
+                    list="listaCP"
+                    maxlength="5"
+                    class="input-cp"
+                  />
+                  <datalist id="listaCP"></datalist>
+                  <i id="icon-cp" class="validation-icon"></i>
+                </div>
+              </div>
+              <div class="field-item third-width">
+                <label for="poblacio">Población</label>
+                <input
+                  type="text"
+                  id="poblacio"
+                  maxlength="80"
+                  class="input-poblacio"
+                />
+                <!-- Campo oculto para compatibilidad -->
+                <input type="hidden" id="poblacion" />
+              </div>
+              <div class="field-item third-width">
+                <label for="provincia">Provincia</label>
+                <input
+                  type="text"
+                  id="provincia"
+                  maxlength="20"
+                  class="input-provincia"
+                />
+              </div>
             </div>
           </div>
         </div>
-        <div class="form-column col-3">
-          <div class="form-group">
-            <label for="dir3_oficina">DIR3 Oficina contable</label>
-            <input type="text" id="dir3_oficina" maxlength="10" class="input-dir3 input-dir3-small" v-model="contacto.dir3_oficina" />
-          </div>
-        </div>
-        <div class="form-column col-3">
-          <div class="form-group">
-            <label for="dir3_organo">DIR3 Órgano gestor</label>
-            <input type="text" id="dir3_organo" maxlength="10" class="input-dir3 input-dir3-small" v-model="contacto.dir3_organo" />
-          </div>
-        </div>
-        <div class="form-column col-3">
-          <div class="form-group">
-            <label for="dir3_unidad">DIR3 Unidad tramitadora</label>
-            <input type="text" id="dir3_unidad" maxlength="10" class="input-dir3 input-dir3-small" v-model="contacto.dir3_unidad" />
-          </div>
-        </div>
-      </div>
 
-      <!-- Fila 4: Teléfonos -->
-      <div class="form-row">
-        <div class="form-column col-6">
-          <div class="form-group">
-            <label for="direccion">Dirección</label>
-            <div class="direccion-container">
-              <input
-                type="text"
-                id="direccion"
-                class="form-control"
-              />
-              <!-- Lista de sugerencias -->
-              <div id="sugerenciasCarrer" class="sugerencias-lista"></div>
+        <!-- Pestaña 3: DIR3 / Facturación -->
+        <div class="tab-content" id="dir3">
+          <div class="tab-section">
+            <div class="tab-section-title">Códigos DIR3</div>
+            <div class="field-row">
+              <div class="field-item third-width">
+                <label for="dir3_oficina">Oficina Contable</label>
+                <input
+                  type="text"
+                  id="dir3_oficina"
+                  maxlength="10"
+                  class="input-dir3 input-dir3-small"
+                />
+              </div>
+              <div class="field-item third-width">
+                <label for="dir3_organo">Órgano Gestor</label>
+                <input
+                  type="text"
+                  id="dir3_organo"
+                  maxlength="10"
+                  class="input-dir3 input-dir3-small"
+                />
+              </div>
+              <div class="field-item third-width">
+                <label for="dir3_unidad">Unidad Tramitadora</label>
+                <input
+                  type="text"
+                  id="dir3_unidad"
+                  maxlength="10"
+                  class="input-dir3 input-dir3-small"
+                />
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Fila 5: Teléfono 1 y Teléfono 2 -->
-      <div class="form-row" style="display: flex; gap: 10px; margin: 0; padding: 0;">
-        <div style="margin: 0; padding: 0;">
-          <div class="form-group" style="margin-right: 0;">
-            <label for="telf1">Teléfono 1</label>
-            <div class="input-container">
-              <input
-                type="tel"
-                id="telf1"
-                v-model="contacto.telf1"
-                maxlength="10"
-                pattern="^[0-9]{9,10}$"
-                @input="validateTelf1"
-                class="input-telf1"
-                style="width: 120px !important; margin-right: 0;"
-              />
-              <i
-                v-if="contacto.telf1"
-                class="validation-icon"
-                :class="valid.telf1 ? 'fa fa-check valid' : 'fa fa-times invalid'"
-              ></i>
+            <div class="tab-section-title" style="margin-top: 30px;">Opciones de Facturación</div>
+            <div class="field-row">
+              <div class="field-item full-width">
+                <div class="checkbox-group">
+                  <label for="facturacion_automatica" class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      id="facturacion_automatica"
+                      class="input-checkbox"
+                    />
+                    <span class="checkbox-text">Facturación Automática</span>
+                  </label>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div style="margin: 0; padding: 0;">
-          <div class="form-group" style="margin-left: 0;">
-            <label for="telf2">Teléfono 2</label>
-            <div class="input-container">
-              <input
-                type="tel"
-                id="telf2"
-                v-model="contacto.telf2"
-                maxlength="10"
-                pattern="^[0-9]{9,10}$"
-                @input="validateTelf2"
-                class="input-telf2"
-                style="width: 120px !important; margin-left: 0;"
-              />
-              <i
-                v-if="contacto.telf2"
-                class="validation-icon"
-                :class="valid.telf2 ? 'fa fa-check valid' : 'fa fa-times invalid'"
-              ></i>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Fila 6: Código Postal -->
-      <div class="form-row">
-        <div class="form-column col-12">
-          <div class="form-group">
-            <label for="cp">Código Postal</label>
-            <div class="input-container">
-              <input
-                type="text"
-                id="cp"
-                list="listaCP"
-                maxlength="5"
-                class="input-cp"
-              />
-              <datalist id="listaCP"></datalist>
-              <i
-                v-if="contacto.cp"
-                class="validation-icon"
-                :class="valid.cp ? 'fa fa-check valid' : 'fa fa-times invalid'"
-              ></i>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Fila 7: Población y Provincia -->
-      <div class="form-row" style="display: flex; gap: 10px; margin: 0; padding: 0;">
-        <div style="margin: 0; padding: 0;">
-          <div class="form-group" style="margin-right: 0;">
-            <label for="poblacio">Población</label>
-            <input
-              type="text"
-              id="poblacio"
-              v-model="contacto.poblacio"
-              class="input-poblacio"
-              
-              maxlength="80"
-              style="width: 120px !important; margin-right: 0;"
-            />
-          </div>
-        </div>
-        <div style="margin: 0; padding: 0;">
-          <div class="form-group" style="margin-left: 0;">
-            <label for="provincia">Provincia</label>
-            <input
-              type="text"
-              id="provincia"
-              v-model="contacto.provincia"
-              class="input-provincia"
-              
-              maxlength="20"
-              style="width: 200px !important; margin-left: 0;"
-            />
-          </div>
-        </div>
-      </div>
-
-      <!-- Fila 8: Facturación Automática -->
-      <div class="form-row">
-        <div class="form-column col-12" style="padding-left: 0;">
-          <div class="form-group checkbox-group" style="margin-left: 0; padding-left: 0; flex-direction: row;">
-            <label for="facturacion_automatica" class="checkbox-label" style="margin-left: 0; padding-left: 0; text-transform: none;">
-              <input
-                type="checkbox"
-                id="facturacion_automatica"
-                v-model="contacto.tipo"
-                :true-value="1"
-                :false-value="0"
-                class="input-checkbox"
-                style="margin-left: 0; margin-right: 8px;"
-              />
-              <span class="checkbox-text">Facturación Automática</span>
-            </label>
           </div>
         </div>
       </div>
@@ -581,363 +554,15 @@
     </form>
   </div>
 
-  <!-- Archivo JS -->
-  <script type="text/plain">
-    import { IP_SERVER, PORT } from '../static/constantes.js?v=1758744785';
-    import { mostrarNotificacion } from '../static/notificaciones.js';
 
-    const { createApp, ref, onMounted } = Vue;
-
-    createApp({
-      setup() {
-        const API_URL = `http://${IP_SERVER}:${PORT}/api`;
-        const contacto = ref({
-          razonsocial: '',
-          identificador: '',
-          mail: '',
-          telf1: '',
-          telf2: '',
-          direccion: '',
-          cp: '',
-          poblacio: '',
-          localidad: '', // Añadido campo localidad como copia de poblacio
-          provincia: '',
-          tipo: 0  // Valor por defecto: 0 (no facturación automática)
-        });
-        const sugerenciasCarrer = ref([]);
-        const loading = ref(false);
-        const valid = ref({
-          identificador: true,
-          mail: true,
-          telf1: true,
-          telf2: true,
-          cp: true
-        });
-
-        // Validaciones
-        const validateIdentificador = () => {
-  const identificador = contacto.value.identificador.toUpperCase();
-
-  // Aceptar identificadores personalizados con "/"
-  if (identificador.indexOf('/') !== -1) {
-    valid.value.identificador = true;
-    return;
-  }
-
-  // Aceptar VAT IDs extranjeros como ES514950749 o solo números (mínimo 8-10 dígitos)
-  const vatPattern = /^([A-Z]{2})?[0-9]{8,10}$/;
-  if (vatPattern.test(identificador)) {
-    valid.value.identificador = true;
-    return;
-  }
-
-  // Validación clásica NIF/NIE/CIF (opcional, puedes eliminar esto si solo quieres VATs)
-  const nifPattern = /^[0-9]{8}[A-Z]$/;
-  const niePattern = /^[XYZ][0-9]{7}[A-Z]$/;
-  const cifPattern = /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/;
-
-  valid.value.identificador = false;
-
-  const letrasNIF = "TRWAGMYFPDXBNJZSQVHLCKET";
-
-  const validarNIF = (nif) => {
-    const numero = nif.substring(0, 8);
-    const letra = nif.charAt(8);
-    const indice = parseInt(numero, 10) % 23;
-    return letra === letrasNIF.charAt(indice);
-  };
-
-  const validarNIE = (nie) => {
-    const letraInicial = nie.charAt(0);
-    let numero;
-    switch (letraInicial) {
-      case 'X': numero = '0' + nie.substring(1, 8); break;
-      case 'Y': numero = '1' + nie.substring(1, 8); break;
-      case 'Z': numero = '2' + nie.substring(1, 8); break;
-      default: return false;
-    }
-    const letra = nie.charAt(8);
-    const indice = parseInt(numero, 10) % 23;
-    return letra === letrasNIF.charAt(indice);
-  };
-
-  const validarCIF = (cif) => {
-    const letraInicial = cif.charAt(0);
-    const numeros = cif.substring(1, 8);
-    const control = cif.charAt(8);
-    let sumaPares = 0;
-    for (let i = 1; i < 7; i += 2) {
-      sumaPares += parseInt(numeros.charAt(i), 10);
-    }
-    let sumaImpares = 0;
-    for (let i = 0; i < 7; i += 2) {
-      const n = parseInt(numeros.charAt(i), 10) * 2;
-      sumaImpares += Math.floor(n / 10) + (n % 10);
-    }
-    const total = sumaPares + sumaImpares;
-    const unidad = total % 10;
-    const controlNumero = (unidad === 0) ? 0 : 10 - unidad;
-    const letrasControl = "JABCDEFGHI";
-    const letraEsperada = letrasControl.charAt(controlNumero);
-
-    if (/[PQSKW]/.test(letraInicial)) {
-      return control === letraEsperada;
-    } else {
-      return control === controlNumero.toString();
-    }
-  };
-
-  if (nifPattern.test(identificador)) {
-    valid.value.identificador = validarNIF(identificador);
-  } else if (niePattern.test(identificador)) {
-    valid.value.identificador = validarNIE(identificador);
-  } else if (cifPattern.test(identificador)) {
-    valid.value.identificador = validarCIF(identificador);
-  }
-};
-
-
-        const validateEmail = () => {
-          const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          valid.value.mail = regex.test(contacto.value.mail);
-        };
-
-        const validateTelf1 = () => {
-          const regex = /^[0-9]{9,10}$/;
-          valid.value.telf1 = regex.test(contacto.value.telf1);
-        };
-
-        const validateTelf2 = () => {
-          const regex = /^[0-9]{9,10}$/;
-          valid.value.telf2 = !contacto.value.telf2 || regex.test(contacto.value.telf2);
-        };
-
-        // Función para buscar sugerencias de direcciones
-        const buscarSugerenciasCarrer = async (query) => {
-          if (!query || query.length < 3) {
-            sugerenciasCarrer.value = [];
-            return;
-          }
-
-          try {
-            const response = await fetch(`${API_URL}/contactos/searchCarrer?query=${encodeURIComponent(query)}`);
-            if (!response.ok) throw new Error('Error al buscar direcciones');
-            const data = await response.json();
-            sugerenciasCarrer.value = data;
-          } catch (error) {
-            console.error('Error:', error);
-            sugerenciasCarrer.value = [];
-          }
-        };
-
-        // Función para seleccionar una dirección
-        const seleccionarDireccion = async (sugerencia) => {
-          contacto.value.direccion = sugerencia.carrer;
-          contacto.value.cp = sugerencia.cp;
-
-          // Obtener datos adicionales del CP
-          try {
-            const response = await fetch(`${API_URL}/contactos/get_cp?cp=${sugerencia.cp}`);
-            if (!response.ok) throw new Error('Error al obtener datos del CP');
-            const data = await response.json();
-            if (data && data.length > 0) {
-              contacto.value.poblacio = data[0].poblacio;
-              contacto.value.provincia = data[0].provincia;
-            }
-          } catch (error) {
-            console.error('Error:', error);
-          }
-
-          // Limpiar sugerencias
-          sugerenciasCarrer.value = [];
-        };
-
-        // Debounce para la búsqueda de direcciones
-        let timeoutId = null;
-        const handleDireccionInput = (event) => {
-          clearTimeout(timeoutId);
-          const query = event.target.value;
-          timeoutId = setTimeout(() => buscarSugerenciasCarrer(query), 300);
-        };
-
-        // Manejar el CP
-        const handleCP = async (cp) => {
-          // Limpiar los campos si el CP no tiene 5 dígitos
-          if (!cp || cp.length !== 5) {
-            contacto.value.poblacio = '';
-            contacto.value.provincia = '';
-            valid.value.cp = true;
-            return;
-          }
-
-          try {
-            const response = await fetch(`${API_URL}/contactos/get_cp?cp=${cp}`);
-            if (!response.ok) throw new Error('Error al obtener datos del CP');
-            
-            const data = await response.json();
-            if (data && data.length > 0) {
-              // Actualizar los campos con los datos recibidos
-              contacto.value.poblacio = data[0].poblacio;
-              contacto.value.provincia = data[0].provincia;
-              valid.value.cp = true;
-            } else {
-              // Limpiar campos si no se encuentran datos
-              contacto.value.poblacio = '';
-              contacto.value.provincia = '';
-              valid.value.cp = false;
-            }
-          } catch (error) {
-            console.error('Error:', error);
-            // Limpiar campos en caso de error
-            contacto.value.poblacio = '';
-            contacto.value.provincia = '';
-            valid.value.cp = false;
-          }
-        };
-
-        // Función para validar el formulario
-        const validateForm = () => {
-          validateIdentificador();
-          validateEmail();
-          validateTelf1();
-          validateTelf2();
-          
-          // Validar que CP, población y provincia no estén vacíos
-          const cpValid = contacto.value.cp && valid.value.cp;
-          const poblacioValid = contacto.value.poblacio && contacto.value.poblacio.trim() !== '';
-          const provinciaValid = contacto.value.provincia && contacto.value.provincia.trim() !== '';
-          
-          return valid.value.identificador && 
-                 valid.value.mail && 
-                 (contacto.value.telf1 ? valid.value.telf1 : true) &&
-                 (contacto.value.telf2 ? valid.value.telf2 : true) &&
-                 cpValid && poblacioValid && provinciaValid;
-        };
-
-        // Manejar el envío del formulario
-        const handleSubmit = async () => {
-          // Validar antes de enviar
-          if (!validateForm()) return;
-
-          // Convertir todos los campos de texto a mayúsculas antes de enviar, excepto el campo 'mail'
-          Object.keys(contacto.value).forEach(key => {
-            if (key !== 'mail' && typeof contacto.value[key] === 'string') {
-              contacto.value[key] = contacto.value[key].toUpperCase();
-            }
-          });
-
-          try {
-            // Preparar los datos para enviar
-            const contactoData = {
-              razonsocial: contacto.value.razonsocial.trim(),
-              identificador: contacto.value.identificador.trim().toUpperCase(),
-              mail: contacto.value.mail.trim(),
-              telf1: contacto.value.telf1 ? contacto.value.telf1.trim() : null,
-              telf2: contacto.value.telf2 ? contacto.value.telf2.trim() : null,
-              direccion: contacto.value.direccion ? contacto.value.direccion.trim() : null,
-              cp: contacto.value.cp ? contacto.value.cp.trim() : null,
-              poblacio: contacto.value.poblacio ? contacto.value.poblacio.trim() : null,
-              localidad: contacto.value.poblacio ? contacto.value.poblacio.trim() : null, // Añadido campo localidad
-              provincia: contacto.value.provincia ? contacto.value.provincia.trim() : null,
-              tipo: contacto.value.tipo
-            };
-
-            const url = contacto.value.idContacto 
-              ? `${API_URL}/contactos/update_contacto/${contacto.value.idContacto}`
-              : `${API_URL}/contactos/create_contacto`;
-            
-            const method = contacto.value.idContacto ? 'PUT' : 'POST';
-            
-            const response = await fetch(url, {
-              method,
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(contactoData)
-            });
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(errorData.error || 'Error al guardar el contacto');
-            }
-            
-            const result = await response.json();
-            mostrarNotificacion(result.message || 'Contacto guardado correctamente', 'success');
-            
-            // Volver a la consulta después de guardar exitosamente
-            setTimeout(() => {
-              window.location.href = 'CONSULTA_CONTACTOS.html';
-            }, 1500);
-          } catch (error) {
-            console.error('Error:', error);
-            mostrarNotificacion(error.message || 'Error al guardar el contacto', 'error');
-          }
-        };
-
-        // Función para volver a la consulta
-        const cerrarFormulario = () => {
-          window.location.href = 'CONSULTA_CONTACTOS.html';
-        };
-
-        // Cargar contacto existente si hay ID en la URL
-        onMounted(async () => {
-          const urlParams = new URLSearchParams(window.location.search);
-          const id = urlParams.get('id');
-          
-          if (id) {
-            try {
-              const response = await fetch(`${API_URL}/contactos/get_contacto/${id}`);
-              if (!response.ok) throw new Error('Error al obtener el contacto');
-              const data = await response.json();
-              contacto.value = { ...data };
-
-              // Si el contacto tiene CP, validar y obtener población y provincia
-              if (contacto.value.cp) {
-                try {
-                  const cpResponse = await fetch(`${API_URL}/contactos/get_cp?cp=${contacto.value.cp}`);
-                  if (cpResponse.ok) {
-                    const cpData = await cpResponse.json();
-                    if (cpData && cpData.length > 0) {
-                      contacto.value.poblacio = cpData[0].poblacio;
-                      contacto.value.provincia = cpData[0].provincia;
-                      valid.value.cp = true;
-                    }
-                  }
-                } catch (error) {
-                  console.error('Error al obtener datos del CP:', error);
-                }
-              }
-
-              // Validar todos los campos al cargar
-              if (contacto.value.identificador) validateIdentificador();
-              if (contacto.value.mail) validateEmail();
-              if (contacto.value.telf1) validateTelf1();
-              if (contacto.value.telf2) validateTelf2();
-            } catch (error) {
-              console.error('Error:', error);
-              mostrarNotificacion('Error al cargar el contacto', 'error');
-            }
-          }
-        });
-
-        return {
-          contacto,
-          sugerenciasCarrer,
-          loading,
-          valid,
-          handleDireccionInput,
-          seleccionarDireccion,
-          validateIdentificador,
-          validateEmail,
-          validateTelf1,
-          validateTelf2,
-          handleCP,
-          handleSubmit,
-          cerrarFormulario,
-          validateForm
-        };
-      }
-    }).mount('#app');
+  <!-- Script para inicializar pestañas -->
+  <script type="module">
+    import { inicializarPestanas } from '../static/tabs.js';
+    
+    // Inicializar pestañas cuando el DOM esté listo
+    document.addEventListener('DOMContentLoaded', () => {
+      inicializarPestanas();
+    });
   </script>
 </body>
 </html>
