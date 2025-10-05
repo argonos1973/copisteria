@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Subtotal set from backend (no rounding):', inputSubtotal.value, 'Type:', typeof inputSubtotal.value);
       recalcDesdeSubtotal();
       state.modoEdicion = true;
-      titulo.textContent = 'Producto';
+      if (titulo) titulo.textContent = 'Producto';
       // Mantener visible el bloque de franjas automáticas también en edición para poder enviar parámetros
       if (fieldsetFranjas) fieldsetFranjas.style.display = '';
       if (btnGuardar) btnGuardar.textContent = 'Guardar';
