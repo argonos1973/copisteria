@@ -7,7 +7,7 @@ let cargandoContacto = false;
 
 import { IP_SERVER, PORT } from './constantes.js';
 import { mostrarNotificacion } from './notificaciones.js';
-import { inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar, debounce } from './scripts_utils.js';
+import { inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar, hayCambiosSinGuardar, debounce } from './scripts_utils.js';
 import { inicializarPestanas } from './tabs.js';
 
 const API_URL = `http://${IP_SERVER}:${PORT}/api`;
@@ -389,7 +389,9 @@ async function loadContacto() {
 
 // Función para verificar si hay cambios reales
 function verificarCambiosContacto() {
-  return window.cambiosSinGuardarGlobal || false;
+  const hayCambios = hayCambiosSinGuardar();
+  console.log('[Contactos] Verificando cambios:', hayCambios);
+  return hayCambios;
 }
 
 // Inicializar sistema de detección de cambios sin guardar
