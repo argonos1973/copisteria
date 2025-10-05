@@ -278,7 +278,7 @@ async function submitForm() {
 }
 
 // ------------------------ Load existing contact ---------------------------
-(async function loadContacto() {
+async function loadContacto() {
   const urlParams = new URLSearchParams(window.location.search);
   const id = urlParams.get('id');
   if (!id) return;
@@ -307,9 +307,12 @@ async function submitForm() {
     
     // Cargar dirección directamente del DOM para asegurar que se cargue
     const direccionElement = document.getElementById('direccion');
+    console.log('[Contactos] Elemento direccion encontrado:', !!direccionElement);
     if (direccionElement && data.direccion) {
       direccionElement.value = data.direccion;
       console.log('[Contactos] Dirección cargada en el campo:', direccionElement.value);
+    } else if (!direccionElement) {
+      console.error('[Contactos] ERROR: No se encontró el elemento direccion');
     }
     validateIdentificador();
     validateEmail();
@@ -325,7 +328,7 @@ async function submitForm() {
     await new Promise(resolve => setTimeout(resolve, 100));
     cargandoContacto = false;
   }
-})();
+}
 
 // Inicializar sistema de detección de cambios sin guardar
 inicializarDeteccionCambios(async () => {
@@ -344,5 +347,8 @@ inicializarDeteccionCambios(async () => {
   }
 });
 
-// Inicializar pestañas
+// Inicializar pestañas primero
 inicializarPestanas();
+
+// Luego cargar el contacto si hay ID en la URL
+loadContacto();
