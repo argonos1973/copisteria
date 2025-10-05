@@ -359,5 +359,19 @@ inicializarDeteccionCambios(async () => {
 // Inicializar pestañas primero
 inicializarPestanas();
 
+// Configurar listener para autocompletado de direcciones
+const direccionInput = document.getElementById('direccion');
+if (direccionInput) {
+  direccionInput.addEventListener('input', function(e) {
+    this.value = this.value.toUpperCase();
+    marcarCambiosSinGuardar();
+    // Activar búsqueda de sugerencias
+    dirDebounce(this.value);
+  });
+  console.log('[Contactos] Listener de dirección configurado correctamente');
+} else {
+  console.error('[Contactos] No se pudo configurar listener de dirección');
+}
+
 // Luego cargar el contacto si hay ID en la URL
 loadContacto();
