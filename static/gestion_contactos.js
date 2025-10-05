@@ -42,9 +42,32 @@ const icons = {
 
 const btnGuardar = document.getElementById('btnGuardar');
 
-// Funciones de validación (placeholder - siempre retornan true)
+// Funciones de validación
 function validateRequired() {
-  return true;
+  let allValid = true;
+  
+  // Campos obligatorios
+  const requiredFields = [
+    { id: 'razonsocial', name: 'Razón Social' },
+    { id: 'identificador', name: 'NIF/CIF' },
+    { id: 'direccion', name: 'Dirección' },
+    { id: 'cp', name: 'Código Postal' },
+    { id: 'poblacio', name: 'Población' },
+    { id: 'provincia', name: 'Provincia' }
+  ];
+  
+  requiredFields.forEach(field => {
+    const element = document.getElementById(field.id);
+    if (element && !element.value.trim()) {
+      element.style.borderColor = 'red';
+      allValid = false;
+      console.log(`[Validación] Campo obligatorio vacío: ${field.name}`);
+    } else if (element) {
+      element.style.borderColor = '';
+    }
+  });
+  
+  return allValid;
 }
 
 function validateIdentificador() {
@@ -220,8 +243,28 @@ function allValid() {
 }
 
 async function submitForm() {
-  if (!allValid()) {
-    mostrarNotificacion('Completa los campos obligatorios marcados en rojo', 'error');
+  const isValid = allValid();
+  if (!isValid) {
+    mostrarNotificacion('Por favor, completa todos los campos obligatorios (Razón Social, NIF/CIF, Dirección, CP, Población, Provincia)', 'error');
+    
+    // Activar la pestaña que contiene campos vacíos
+    const direccion = document.getElementById('direccion');
+    const cp = document.getElementById('cp');
+    const poblacio = document.getElementById('poblacio');
+    const provincia = document.getElementById('provincia');
+    
+    if (!direccion?.value.trim() || !cp?.value.trim() || !poblacio?.value.trim() || !provincia?.value.trim()) {
+      // Activar pestaña de dirección si falta algún campo de dirección
+      const tabButtons = document.querySelectorAll('.tab-button');
+      const tabContents = document.querySelectorAll('.tab-content');
+      
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      tabContents.forEach(content => content.classList.remove('active'));
+      
+      tabButtons[1]?.classList.add('active'); // Pestaña Dirección
+      document.getElementById('tab-direccion')?.classList.add('active');
+    }
+    
     return;
   }
 
