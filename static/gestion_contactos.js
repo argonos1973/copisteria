@@ -243,29 +243,34 @@ function allValid() {
 }
 
 async function submitForm() {
-  const isValid = allValid();
-  if (!isValid) {
-    mostrarNotificacion('Por favor, completa todos los campos obligatorios (Razón Social, NIF/CIF, Dirección, CP, Población, Provincia)', 'error');
-    
-    // Activar la pestaña que contiene campos vacíos
-    const direccion = document.getElementById('direccion');
-    const cp = document.getElementById('cp');
-    const poblacio = document.getElementById('poblacio');
-    const provincia = document.getElementById('provincia');
-    
-    if (!direccion?.value.trim() || !cp?.value.trim() || !poblacio?.value.trim() || !provincia?.value.trim()) {
-      // Activar pestaña de dirección si falta algún campo de dirección
-      const tabButtons = document.querySelectorAll('.tab-button');
-      const tabContents = document.querySelectorAll('.tab-content');
+  // Si se está guardando desde el menú, solo validar campos mínimos
+  if (!window.__guardandoDesdeMenu) {
+    const isValid = allValid();
+    if (!isValid) {
+      mostrarNotificacion('Por favor, completa todos los campos obligatorios (Razón Social, NIF/CIF, Dirección, CP, Población, Provincia)', 'error');
       
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      tabContents.forEach(content => content.classList.remove('active'));
+      // Activar la pestaña que contiene campos vacíos
+      const direccion = document.getElementById('direccion');
+      const cp = document.getElementById('cp');
+      const poblacio = document.getElementById('poblacio');
+      const provincia = document.getElementById('provincia');
       
-      tabButtons[1]?.classList.add('active'); // Pestaña Dirección
-      document.getElementById('tab-direccion')?.classList.add('active');
+      if (!direccion?.value.trim() || !cp?.value.trim() || !poblacio?.value.trim() || !provincia?.value.trim()) {
+        // Activar pestaña de dirección si falta algún campo de dirección
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        tabButtons[1]?.classList.add('active'); // Pestaña Dirección
+        document.getElementById('tab-direccion')?.classList.add('active');
+      }
+      
+      return;
     }
-    
-    return;
+  } else {
+    console.log('[Contactos] Guardando desde menú - validación mínima');
   }
 
   // Obtener dirección directamente del DOM para asegurar que se lea correctamente
@@ -390,7 +395,17 @@ inicializarDeteccionCambios(async () => {
   window.__guardandoDesdeMenu = true;
   
   try {
-    // Llamar directamente a submitForm
+    // Verificar si hay campos obligatorios vacíos
+    const razonsocial = document.getElementById('razonsocial')?.value.trim();
+    const identificador = document.getElementById('identificador')?.value.trim();
+    
+    if (!razonsocial || !identificador) {
+      mostrarNotificacion('Razón Social y NIF/CIF son obligatorios', 'error');
+      window.__guardandoDesdeMenu = false;
+      throw new Error('Usuario canceló');
+    }
+    
+    // Llamar directamente a submitForm sin validación estricta
     await submitForm();
     console.log('[Contactos] Guardado completado desde menú');
   } finally {
