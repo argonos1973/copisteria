@@ -310,7 +310,16 @@ async function loadContacto() {
     console.log('[Contactos] Elemento direccion encontrado:', !!direccionElement);
     if (direccionElement && data.direccion) {
       direccionElement.value = data.direccion;
+      direccionElement.setAttribute('value', data.direccion);
       console.log('[Contactos] Dirección cargada en el campo:', direccionElement.value);
+      console.log('[Contactos] Atributo value establecido:', direccionElement.getAttribute('value'));
+      console.log('[Contactos] HTML del elemento:', direccionElement.outerHTML);
+      console.log('[Contactos] Estilos computados display:', window.getComputedStyle(direccionElement).display);
+      console.log('[Contactos] Estilos computados visibility:', window.getComputedStyle(direccionElement).visibility);
+      console.log('[Contactos] Estilos computados color:', window.getComputedStyle(direccionElement).color);
+      
+      // Forzar evento input para que se detecte el cambio
+      direccionElement.dispatchEvent(new Event('input', { bubbles: true }));
     } else if (!direccionElement) {
       console.error('[Contactos] ERROR: No se encontró el elemento direccion');
     }
