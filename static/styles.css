@@ -421,9 +421,12 @@
   /* Tabla principal */
   table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     margin-bottom: 20px;
     border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
     table-layout: fixed; /* Respeta anchos fijos */
   }
   thead {
@@ -432,6 +435,12 @@
     position: sticky;
     top: 0;
     z-index: 2;
+  }
+  thead tr:first-child th:first-child {
+    border-top-left-radius: 8px;
+  }
+  thead tr:first-child th:last-child {
+    border-top-right-radius: 8px;
   }
   th, td {
     padding: 6px 8px;
