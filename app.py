@@ -243,7 +243,7 @@ def exportar():
                 SELECT
                     f.fecha,
                     f.numero,
-                    f.nif,
+                    c.identificador AS nif,
                     c.razonSocial,
                     f.importe_bruto,
                     f.importe_impuestos,
