@@ -329,23 +329,27 @@
             font-weight: bold;
         }
 
-        /* Estilos de paginación */
+        /* Estilos de paginación - Consistente con tickets */
         .pagination {
             display: flex;
-            justify-content: center;
+            flex-wrap: wrap;
             align-items: center;
-            gap: 10px;
-            margin-top: 20px;
-            padding: 15px;
+            gap: 8px;
+            margin-top: 6px;
+            margin-bottom: 4px;
+            padding: 6px 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
         }
 
         .pagination button {
-            padding: 8px 12px;
+            padding: 4px 8px;
+            font-size: 12px;
             border: 1px solid #ddd;
             background: white;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 14px;
         }
 
         .pagination button:hover:not(:disabled) {
@@ -358,15 +362,22 @@
         }
 
         .pagination .page-info {
-            font-size: 14px;
+            font-size: 12px;
             color: #666;
         }
 
         .pagination select {
-            padding: 6px 10px;
+            padding: 2px 6px;
+            font-size: 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 14px;
+        }
+
+        .pagination label {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
     </style>
 </head>
@@ -442,27 +453,21 @@
             
             <!-- Paginación Pendientes -->
             <div class="pagination" id="pagination-pendientes" style="display:none;">
-                <button onclick="cambiarPaginaPendientes('primera')">
-                    <i class="fas fa-angle-double-left"></i>
-                </button>
-                <button onclick="cambiarPaginaPendientes('anterior')">
-                    <i class="fas fa-angle-left"></i> Anterior
-                </button>
-                <span class="page-info">
-                    Página <span id="pagina-actual-pendientes">1</span> de <span id="total-paginas-pendientes">1</span>
-                </span>
-                <button onclick="cambiarPaginaPendientes('siguiente')">
-                    Siguiente <i class="fas fa-angle-right"></i>
-                </button>
-                <button onclick="cambiarPaginaPendientes('ultima')">
-                    <i class="fas fa-angle-double-right"></i>
-                </button>
-                <select id="items-por-pagina-pendientes" onchange="cambiarItemsPorPagina()">
-                    <option value="10">10 por página</option>
-                    <option value="25" selected>25 por página</option>
-                    <option value="50">50 por página</option>
-                    <option value="100">100 por página</option>
-                </select>
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button id="prevPagePendientes" onclick="cambiarPaginaPendientes('anterior')">⟨</button>
+                    <span class="page-info" id="pageInfoPendientes">Página 1 de 1</span>
+                    <button id="nextPagePendientes" onclick="cambiarPaginaPendientes('siguiente')">⟩</button>
+                </div>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+                    <label>Por página:
+                        <select id="items-por-pagina-pendientes" onchange="cambiarItemsPorPagina()">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </label>
+                </div>
             </div>
         </div>
 

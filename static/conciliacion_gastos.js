@@ -10,7 +10,7 @@ let coincidenciaSeleccionada = null;
 // Variables de paginación
 let gastosPendientesCompletos = [];
 let paginaActualPendientes = 1;
-let itemsPorPaginaPendientes = 25;
+let itemsPorPaginaPendientes = 20;
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -118,15 +118,11 @@ function renderizarPaginaPendientes() {
 function actualizarControlesPaginacion() {
     const totalPaginas = Math.ceil(gastosPendientesCompletos.length / itemsPorPaginaPendientes);
     
-    document.getElementById('pagina-actual-pendientes').textContent = paginaActualPendientes;
-    document.getElementById('total-paginas-pendientes').textContent = totalPaginas;
+    document.getElementById('pageInfoPendientes').textContent = `Página ${paginaActualPendientes} de ${totalPaginas}`;
     
     // Actualizar estado de botones
-    const botones = document.querySelectorAll('#pagination-pendientes button');
-    botones[0].disabled = paginaActualPendientes === 1; // Primera
-    botones[1].disabled = paginaActualPendientes === 1; // Anterior
-    botones[2].disabled = paginaActualPendientes === totalPaginas; // Siguiente
-    botones[3].disabled = paginaActualPendientes === totalPaginas; // Última
+    document.getElementById('prevPagePendientes').disabled = paginaActualPendientes === 1;
+    document.getElementById('nextPagePendientes').disabled = paginaActualPendientes === totalPaginas;
 }
 
 window.cambiarPaginaPendientes = function(accion) {
