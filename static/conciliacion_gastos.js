@@ -98,12 +98,12 @@ function renderizarPaginaPendientes() {
     gastosPagina.forEach(gasto => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${formatearFecha(gasto.fecha_operacion)}</td>
+            <td style="width: 100px;">${formatearFecha(gasto.fecha_operacion)}</td>
             <td>${gasto.concepto || '-'}</td>
-            <td class="${gasto.importe_eur >= 0 ? 'importe-positivo' : 'importe-negativo'}">
+            <td style="width: 120px;" class="text-right ${gasto.importe_eur >= 0 ? 'importe-positivo' : 'importe-negativo'}">
                 ${formatearImporte(gasto.importe_eur)}
             </td>
-            <td>
+            <td style="width: 120px;" class="text-center">
                 <button class="btn btn-primary" onclick="buscarCoincidencias(${gasto.id})">
                     <i class="fas fa-search"></i> Buscar
                 </button>
