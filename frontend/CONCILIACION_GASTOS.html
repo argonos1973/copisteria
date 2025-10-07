@@ -329,6 +329,16 @@
             font-weight: bold;
         }
 
+        /* Filas clickeables en tabla pendientes */
+        #tabla-pendientes tbody tr {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #tabla-pendientes tbody tr:hover {
+            background-color: #f0f8ff;
+        }
+
         /* Estilos de paginación - Consistente con tickets */
         .pagination {
             display: flex;
@@ -445,7 +455,6 @@
                         <th style="width: 100px;">Fecha</th>
                         <th>Concepto</th>
                         <th style="width: 120px;" class="text-right">Importe</th>
-                        <th style="width: 80px;" class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-pendientes"></tbody>

@@ -103,12 +103,13 @@ function renderizarPaginaPendientes() {
             <td style="width: 120px;" class="text-right ${gasto.importe_eur >= 0 ? 'importe-positivo' : 'importe-negativo'}">
                 ${formatearImporte(gasto.importe_eur)}
             </td>
-            <td style="width: 80px;" class="text-center">
-                <button class="btn btn-primary" onclick="buscarCoincidencias(${gasto.id})" title="Buscar coincidencias">
-                    <i class="fas fa-search"></i>
-                </button>
-            </td>
         `;
+        
+        // Hacer toda la fila clickeable
+        tr.addEventListener('click', () => {
+            window.buscarCoincidencias(gasto.id);
+        });
+        
         tbody.appendChild(tr);
     });
     
