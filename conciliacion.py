@@ -393,13 +393,14 @@ def eliminar_conciliacion(conciliacion_id):
 def procesar_automatico():
     """Procesar conciliaciones automáticas para todos los gastos pendientes"""
     try:
-        data = request.json
-        umbral_score = data.get('umbral_score', 90)  # Score mínimo para conciliar automáticamente
+        data = request.json or {}
+        umbral_score = data.get('umbral_score', 85)  # Score mínimo reducido a 85%
+        auto_conciliar = data.get('auto_conciliar', True)  # Por defecto concilia automáticamente
         
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Obtener gastos pendientes
+        # Obtener gastos pendientes (solo ingresos positivos)
         cursor.execute('''
             SELECT * FROM gastos
             WHERE id NOT IN (
@@ -416,6 +417,7 @@ def procesar_automatico():
             'procesados': 0,
             'conciliados': 0,
             'pendientes': 0,
+            'sugerencias': 0,
             'detalles': []
         }
         
@@ -425,23 +427,46 @@ def procesar_automatico():
             # Buscar coincidencias
             coincidencias = buscar_coincidencias_automaticas(gasto)
             
-            if coincidencias and coincidencias[0]['score'] >= umbral_score:
-                # Conciliar automáticamente la mejor coincidencia
+            if coincidencias and len(coincidencias) > 0:
                 mejor = coincidencias[0]
-                success, message = conciliar_automaticamente(
-                    gasto['id'],
-                    mejor['tipo'],
-                    mejor['id'],
-                    'automatico'
-                )
                 
-                if success:
-                    resultados['conciliados'] += 1
+                # Si el score es muy alto (>=85), conciliar automáticamente
+                if mejor['score'] >= umbral_score and auto_conciliar:
+                    success, message = conciliar_automaticamente(
+                        gasto['id'],
+                        mejor['tipo'],
+                        mejor['id'],
+                        'automatico'
+                    )
+                    
+                    if success:
+                        resultados['conciliados'] += 1
+                        resultados['detalles'].append({
+                            'gasto_id': gasto['id'],
+                            'fecha': gasto['fecha_operacion'],
+                            'concepto': gasto['concepto'],
+                            'importe': gasto['importe_eur'],
+                            'documento': f"{mejor['tipo'].upper()} {mejor['numero']}",
+                            'score': mejor['score'],
+                            'estado': 'conciliado'
+                        })
+                    else:
+                        resultados['pendientes'] += 1
+                        resultados['detalles'].append({
+                            'gasto_id': gasto['id'],
+                            'error': message
+                        })
+                # Si el score es medio (70-84), marcar como sugerencia
+                elif mejor['score'] >= 70:
+                    resultados['sugerencias'] += 1
                     resultados['detalles'].append({
                         'gasto_id': gasto['id'],
-                        'documento': f"{mejor['tipo']} {mejor['numero']}",
+                        'fecha': gasto['fecha_operacion'],
+                        'concepto': gasto['concepto'],
+                        'importe': gasto['importe_eur'],
+                        'documento': f"{mejor['tipo'].upper()} {mejor['numero']}",
                         'score': mejor['score'],
-                        'estado': 'conciliado'
+                        'estado': 'sugerencia'
                     })
                 else:
                     resultados['pendientes'] += 1
@@ -451,6 +476,58 @@ def procesar_automatico():
         return jsonify({
             'success': True,
             'resultados': resultados
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/ejecutar-cron', methods=['GET'])
+def ejecutar_cron():
+    """
+    Endpoint para ejecutar desde cron
+    Procesa automáticamente todos los gastos pendientes
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener gastos pendientes
+        cursor.execute('''
+            SELECT * FROM gastos
+            WHERE id NOT IN (
+                SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
+            )
+            AND importe_eur > 0
+            ORDER BY fecha_operacion DESC
+        ''')
+        
+        gastos_pendientes = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        
+        conciliados = 0
+        
+        for gasto in gastos_pendientes:
+            # Buscar coincidencias
+            coincidencias = buscar_coincidencias_automaticas(gasto)
+            
+            # Solo conciliar si hay una coincidencia con score >= 90%
+            if coincidencias and coincidencias[0]['score'] >= 90:
+                mejor = coincidencias[0]
+                success, _ = conciliar_automaticamente(
+                    gasto['id'],
+                    mejor['tipo'],
+                    mejor['id'],
+                    'automatico'
+                )
+                
+                if success:
+                    conciliados += 1
+        
+        return jsonify({
+            'success': True,
+            'procesados': len(gastos_pendientes),
+            'conciliados': conciliados,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         })
         
     except Exception as e:

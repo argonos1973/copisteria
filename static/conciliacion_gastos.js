@@ -14,6 +14,11 @@ let coincidenciaSeleccionada = null;
 document.addEventListener('DOMContentLoaded', () => {
     inicializarPestanas();
     cargarDatos();
+    
+    // Ejecutar conciliación automática al cargar (si hay pendientes)
+    setTimeout(() => {
+        ejecutarConciliacionInicial();
+    }, 1000);
 });
 
 function inicializarPestanas() {
@@ -350,11 +355,34 @@ window.inicializarSistema = async function() {
     }
 };
 
-window.procesarAutomatico = async function() {
-    if (!confirm('¿Procesar conciliaciones automáticas para todos los gastos pendientes?\n\nSolo se conciliarán coincidencias con score >= 90%')) {
-        return;
+async function ejecutarConciliacionInicial() {
+    // Ejecutar conciliación automática al cargar la página
+    try {
+        const response = await fetch(`${API_URL}/conciliacion/procesar-automatico`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                umbral_score: 85,
+                auto_conciliar: true
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.resultados.conciliados > 0) {
+            const res = data.resultados;
+            mostrarNotificacion(
+                `Conciliación automática: ${res.conciliados} gastos conciliados`,
+                'success'
+            );
+            cargarDatos();
+        }
+    } catch (error) {
+        console.error('Error en conciliación inicial:', error);
     }
-    
+}
+
+window.procesarAutomatico = async function() {
     mostrarNotificacion('Procesando conciliaciones automáticas...', 'info');
     
     try {
@@ -362,7 +390,8 @@ window.procesarAutomatico = async function() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                umbral_score: 90
+                umbral_score: 85,
+                auto_conciliar: true
             })
         });
         
@@ -370,11 +399,27 @@ window.procesarAutomatico = async function() {
         
         if (data.success) {
             const res = data.resultados;
-            mostrarNotificacion(
-                `Procesados: ${res.procesados} | Conciliados: ${res.conciliados} | Pendientes: ${res.pendientes}`,
-                'success'
-            );
+            
+            let mensaje = `Procesados: ${res.procesados} | Conciliados: ${res.conciliados}`;
+            if (res.sugerencias > 0) {
+                mensaje += ` | Sugerencias: ${res.sugerencias}`;
+            }
+            mensaje += ` | Pendientes: ${res.pendientes}`;
+            
+            mostrarNotificacion(mensaje, 'success');
             cargarDatos();
+            
+            // Mostrar detalles en consola
+            if (res.detalles && res.detalles.length > 0) {
+                console.log('Detalles de conciliación:');
+                res.detalles.forEach(d => {
+                    if (d.estado === 'conciliado') {
+                        console.log(`  ✓ ${d.fecha} - ${d.concepto} (${d.importe}€) → ${d.documento} [Score: ${d.score}%]`);
+                    } else if (d.estado === 'sugerencia') {
+                        console.log(`  ? ${d.fecha} - ${d.concepto} (${d.importe}€) → ${d.documento} [Score: ${d.score}%] (revisar manualmente)`);
+                    }
+                });
+            }
         } else {
             mostrarNotificacion(data.error || 'Error al procesar', 'error');
         }
