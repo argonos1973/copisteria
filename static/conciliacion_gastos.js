@@ -403,9 +403,17 @@ function cargarPDFEnVisor(tipo, id, numero) {
     const pdfTitle = document.getElementById('pdf-title');
     const pdfDownload = document.getElementById('pdf-download');
     
-    // Construir URL del PDF
+    // Construir URL del PDF según el tipo
     const tipoMayus = tipo.toUpperCase();
-    const pdfUrl = `${API_URL}/${tipo}s/${id}/imprimir`;
+    let pdfUrl;
+    
+    if (tipo === 'factura') {
+        pdfUrl = `${API_URL}/imprimir_factura_pdf/${id}`;
+    } else if (tipo === 'ticket') {
+        pdfUrl = `${API_URL}/imprimir_ticket_pdf/${id}`;
+    } else {
+        pdfUrl = `${API_URL}/imprimir_${tipo}_pdf/${id}`;
+    }
     
     // Actualizar título y enlace
     pdfTitle.textContent = `${tipoMayus} ${numero}`;
