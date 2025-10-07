@@ -1023,27 +1023,43 @@ def conciliar_liquidacion():
             conn.close()
             return jsonify({'success': False, 'error': 'No hay documentos para conciliar'}), 400
         
-        # Conciliar cada gasto con los documentos
+        # Conciliar liquidaciones TPV: marcar como conciliados
+        # Estrategia: marcar cada gasto y cada documento como conciliado
+        # sin crear relaciones 1:1 (porque son agrupaciones por fecha)
         conciliados = 0
+        
+        # Marcar cada liquidación como conciliada con una referencia genérica
         for gasto_id in ids_gastos:
             if not gasto_id.strip():
                 continue
-                
-            for doc in documentos:
+            
+            # Obtener el importe del gasto
+            cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
+            gasto_row = cursor.fetchone()
+            if not gasto_row:
+                continue
+            
+            importe_gasto = gasto_row['importe_eur']
+            
+            # Crear UNA SOLA entrada de conciliación por liquidación
+            # usando el primer documento como referencia
+            if documentos:
+                doc = documentos[0]
                 try:
                     cursor.execute('''
                         INSERT OR IGNORE INTO conciliacion_gastos 
                         (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
-                         importe_gasto, importe_documento, diferencia, estado, metodo, notificado)
-                        VALUES (?, ?, ?, datetime('now'), 
-                                (SELECT importe_eur FROM gastos WHERE id = ?),
-                                ?, 0, 'conciliado', 'manual', 0)
-                    ''', (int(gasto_id), doc['tipo'], doc['id'], int(gasto_id), doc['total']))
+                         importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
+                        VALUES (?, ?, ?, datetime('now'), ?, ?, 
+                                0, 'conciliado', 'automatico', 0, ?)
+                    ''', (int(gasto_id), 'liquidacion_tpv', 0, 
+                          importe_gasto, 0,
+                          f'Liquidación TPV {fecha} - {len(documentos)} documentos'))
                     
                     if cursor.rowcount > 0:
                         conciliados += 1
                 except Exception as e:
-                    print(f"Error conciliando gasto {gasto_id} con {doc['tipo']} {doc['numero']}: {e}")
+                    print(f"Error conciliando liquidación {gasto_id}: {e}")
                     continue
         
         conn.commit()
