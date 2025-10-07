@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 from constantes import *
 from db_utils import get_db_connection
+from notificaciones_utils import guardar_notificacion
 
 # Configurar logging
 logging.basicConfig(
@@ -74,6 +75,14 @@ def actualizar_facturas_vencidas():
         
         conn.commit()
         logger.info(f"Proceso completado. Facturas actualizadas a vencidas: {facturas_actualizadas}")
+        
+        # Generar notificación si hubo actualizaciones
+        if facturas_actualizadas > 0:
+            guardar_notificacion(
+                f"{facturas_actualizadas} factura(s) marcada(s) como vencida(s) (>15 días)",
+                tipo='warning',
+                db_path=DB_NAME
+            )
         
     except Exception as e:
         logger.error(f"Error en el proceso de actualización de facturas vencidas: {e}")

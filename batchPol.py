@@ -6,6 +6,7 @@ import logging
 import sqlite3
 from datetime import datetime
 from pathlib import Path
+from notificaciones_utils import guardar_notificacion
 
 # Configuración
 # Permitir configurar la ruta del CSV por variable de entorno para compatibilidad con www-data
@@ -389,11 +390,28 @@ def main():
             if proforma:
                 logger.info(f"Proforma existente encontrada: {proforma['numero']}")
                 if actualizar_proforma_existente(proforma['id'], detalles, conn):
+                    guardar_notificacion(
+                        f"Proforma {proforma['numero']} actualizada con {len(detalles)} items desde batchPol",
+                        tipo='success',
+                        db_path=DB_NAME
+                    )
                     return 0
                 return 1
             else:
                 logger.info("No existe proforma activa, creando nueva")
                 if crear_nueva_proforma(detalles, conn):
+                    # Obtener el número de la proforma recién creada
+                    nueva_proforma = conn.execute('''
+                        SELECT numero FROM proforma
+                        WHERE idContacto = ? AND estado = 'A'
+                        ORDER BY id DESC LIMIT 1
+                    ''', (ID_CONTACTO,)).fetchone()
+                    if nueva_proforma:
+                        guardar_notificacion(
+                            f"Nueva proforma {nueva_proforma['numero']} creada con {len(detalles)} items desde batchPol",
+                            tipo='success',
+                            db_path=DB_NAME
+                        )
                     return 0
                 return 1
     

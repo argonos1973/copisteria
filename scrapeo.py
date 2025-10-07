@@ -10,6 +10,8 @@ from pathlib import Path
 import pandas as pd
 
 from db_utils import get_db_connection
+from notificaciones_utils import guardar_notificacion
+from constantes import DB_NAME
 
 # Registrar inicio del script
 print("=== scrapeo.py iniciado ===")
@@ -172,6 +174,14 @@ def importar_desde_excel(ruta_excel: str):
         inserted = max(despues - antes, 0)
         logging.info("%d registros nuevos insertados en 'gastos'", inserted)
         print(f"Registros insertados: {inserted}")
+        
+        # Generar notificación si hubo inserciones
+        if inserted > 0:
+            guardar_notificacion(
+                f"{inserted} nuevo(s) movimiento(s) bancario(s) importado(s) desde scraping",
+                tipo='info',
+                db_path=DB_NAME
+            )
     else:
         logging.info("No se encontraron registros nuevos para insertar en 'gastos'")
         print("No hay registros nuevos para insertar (evitados duplicados)")
