@@ -339,6 +339,31 @@
             background-color: #f0f8ff;
         }
 
+        /* Estados de liquidaciones TPV */
+        .estado-exacto {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .estado-aceptable {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .estado-revisar {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
         /* Estilos de paginación - Consistente con tickets */
         .pagination {
             display: flex;
@@ -432,6 +457,9 @@
             <button class="tab active" data-tab="pendientes">
                 <i class="fas fa-clock"></i> Pendientes
             </button>
+            <button class="tab" data-tab="liquidaciones">
+                <i class="fas fa-credit-card"></i> Liquidaciones TPV
+            </button>
             <button class="tab" data-tab="conciliados">
                 <i class="fas fa-check-circle"></i> Conciliados
             </button>
@@ -475,6 +503,31 @@
                     </label>
                 </div>
             </div>
+        </div>
+
+        <!-- Contenido: Liquidaciones TPV -->
+        <div class="tab-content" id="tab-liquidaciones">
+            <div id="loading-liquidaciones" class="loading" style="display:none;">
+                <i class="fas fa-spinner fa-spin"></i> Cargando...
+            </div>
+            <div id="empty-liquidaciones" class="empty-state" style="display:none;">
+                <i class="fas fa-check-circle"></i>
+                <p>No hay liquidaciones TPV pendientes de revisar</p>
+            </div>
+            <table class="gastos-table" id="tabla-liquidaciones" style="display:none;">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Fecha</th>
+                        <th style="width: 100px;" class="text-center">Liquidaciones</th>
+                        <th style="width: 120px;" class="text-right">Total Liq.</th>
+                        <th style="width: 100px;" class="text-center">Tickets</th>
+                        <th style="width: 120px;" class="text-right">Total Tickets</th>
+                        <th style="width: 100px;" class="text-right">Diferencia</th>
+                        <th style="width: 80px;" class="text-center">Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-liquidaciones"></tbody>
+            </table>
         </div>
 
         <!-- Contenido: Conciliados -->

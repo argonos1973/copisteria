@@ -50,6 +50,7 @@ function inicializarPestanas() {
 window.cargarDatos = async function() {
     await Promise.all([
         cargarGastosPendientes(),
+        cargarLiquidacionesTPV(),
         cargarConciliados(),
         cargarEstadisticas()
     ]);
@@ -575,4 +576,67 @@ function formatearImporte(importe) {
         style: 'currency',
         currency: 'EUR'
     }).format(importe);
+}
+
+// ============================================================================
+// LIQUIDACIONES TPV
+// ============================================================================
+
+async function cargarLiquidacionesTPV() {
+    const loading = document.getElementById('loading-liquidaciones');
+    const empty = document.getElementById('empty-liquidaciones');
+    const tabla = document.getElementById('tabla-liquidaciones');
+    const tbody = document.getElementById('tbody-liquidaciones');
+    
+    loading.style.display = 'block';
+    empty.style.display = 'none';
+    tabla.style.display = 'none';
+    
+    try {
+        const response = await fetch(`${API_URL}/conciliacion/liquidaciones-tpv`);
+        const data = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (data.success && data.liquidaciones.length > 0) {
+            tbody.innerHTML = '';
+            
+            data.liquidaciones.forEach(liq => {
+                const tr = document.createElement('tr');
+                
+                let estadoClass = '';
+                let estadoTexto = '';
+                if (liq.estado === 'exacto') {
+                    estadoClass = 'estado-exacto';
+                    estadoTexto = 'Exacto';
+                } else if (liq.estado === 'aceptable') {
+                    estadoClass = 'estado-aceptable';
+                    estadoTexto = 'Aceptable';
+                } else {
+                    estadoClass = 'estado-revisar';
+                    estadoTexto = 'Revisar';
+                }
+                
+                tr.innerHTML = `
+                    <td>${formatearFecha(liq.fecha)}</td>
+                    <td class="text-center">${liq.num_liquidaciones}</td>
+                    <td class="text-right">${formatearImporte(Math.abs(liq.total_liquidaciones))}</td>
+                    <td class="text-center">${liq.num_tickets}</td>
+                    <td class="text-right">${formatearImporte(liq.total_tickets)}</td>
+                    <td class="text-right">${formatearImporte(liq.diferencia)}</td>
+                    <td class="text-center"><span class="${estadoClass}">${estadoTexto}</span></td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
+            
+            tabla.style.display = 'table';
+        } else {
+            empty.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error al cargar liquidaciones TPV:', error);
+        loading.style.display = 'none';
+        empty.style.display = 'block';
+    }
 }

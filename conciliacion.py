@@ -821,34 +821,105 @@ def contador_notificaciones():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Verificar si la tabla existe
-        cursor.execute("""
-            SELECT name FROM sqlite_master 
-            WHERE type='table' AND name='conciliacion_gastos'
-        """)
-        
-        if not cursor.fetchone():
-            # Tabla no existe, devolver 0
-            conn.close()
-            return jsonify({
-                'success': True,
-                'total': 0
-            })
-        
         cursor.execute('''
             SELECT COUNT(*) as total
             FROM conciliacion_gastos
             WHERE notificado = 0 AND estado = 'conciliado'
         ''')
         
-        result = cursor.fetchone()
-        total = result['total'] if result else 0
+        resultado = cursor.fetchone()
         conn.close()
         
         return jsonify({
             'success': True,
-            'total': total
+            'total': resultado['total']
         })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/liquidaciones-tpv', methods=['GET'])
+def obtener_liquidaciones_tpv():
+    """Obtener liquidaciones TPV agrupadas por fecha y compararlas con tickets"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
         
+        # Obtener liquidaciones agrupadas por fecha
+        cursor.execute('''
+            SELECT 
+                fecha_operacion,
+                COUNT(*) as num_liquidaciones,
+                SUM(importe_eur) as total_liquidaciones,
+                GROUP_CONCAT(id) as ids_gastos
+            FROM gastos
+            WHERE concepto LIKE '%Liquidacion%'
+            AND id NOT IN (
+                SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
+            )
+            GROUP BY fecha_operacion
+            ORDER BY fecha_operacion DESC
+        ''')
+        
+        liquidaciones = cursor.fetchall()
+        resultado = []
+        
+        for liq in liquidaciones:
+            fecha_str = liq['fecha_operacion']
+            
+            # Convertir fecha a formato YYYY-MM-DD para buscar tickets
+            try:
+                if '/' in fecha_str:
+                    fecha_obj = datetime.strptime(fecha_str, '%d/%m/%Y')
+                else:
+                    fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d')
+                fecha_busqueda = fecha_obj.strftime('%Y-%m-%d')
+            except:
+                continue
+            
+            # Buscar tickets con tarjeta de esa fecha
+            cursor.execute('''
+                SELECT 
+                    COUNT(*) as num_tickets,
+                    SUM(total) as total_tickets
+                FROM tickets
+                WHERE fecha = ?
+                AND formaPago = 'T'
+                AND estado = 'C'
+            ''', (fecha_busqueda,))
+            
+            tickets_info = cursor.fetchone()
+            total_tickets = tickets_info['total_tickets'] or 0
+            num_tickets = tickets_info['num_tickets'] or 0
+            
+            # Calcular diferencia
+            diferencia = abs(liq['total_liquidaciones'] - total_tickets)
+            porcentaje_diferencia = (diferencia / liq['total_liquidaciones'] * 100) if liq['total_liquidaciones'] > 0 else 0
+            
+            # Determinar estado
+            if diferencia <= 0.02:
+                estado = 'exacto'
+            elif porcentaje_diferencia <= 5:
+                estado = 'aceptable'
+            else:
+                estado = 'revisar'
+            
+            resultado.append({
+                'fecha': fecha_str,
+                'num_liquidaciones': liq['num_liquidaciones'],
+                'total_liquidaciones': round(liq['total_liquidaciones'], 2),
+                'num_tickets': num_tickets,
+                'total_tickets': round(total_tickets, 2),
+                'diferencia': round(diferencia, 2),
+                'porcentaje_diferencia': round(porcentaje_diferencia, 2),
+                'estado': estado,
+                'ids_gastos': liq['ids_gastos']
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'liquidaciones': resultado
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
