@@ -331,18 +331,34 @@ def gastos_pendientes():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Verificar si la tabla existe
+        cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='conciliacion_gastos'
+        """)
+        
+        tabla_existe = cursor.fetchone() is not None
+        
         # Obtener parámetros de filtro
         fecha_inicio = request.args.get('fecha_inicio')
         fecha_fin = request.args.get('fecha_fin')
         
-        query = '''
-            SELECT g.*
-            FROM gastos g
-            WHERE g.id NOT IN (
-                SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
-            )
-            AND g.importe_eur > 0
-        '''
+        if tabla_existe:
+            query = '''
+                SELECT g.*
+                FROM gastos g
+                WHERE g.id NOT IN (
+                    SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
+                )
+                AND g.importe_eur > 0
+            '''
+        else:
+            # Si no existe la tabla, todos los gastos son pendientes
+            query = '''
+                SELECT g.*
+                FROM gastos g
+                WHERE g.importe_eur > 0
+            '''
         
         params = []
         if fecha_inicio:
@@ -374,6 +390,21 @@ def conciliados():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Verificar si la tabla existe
+        cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='conciliacion_gastos'
+        """)
+        
+        if not cursor.fetchone():
+            # Tabla no existe, devolver vacío
+            conn.close()
+            return jsonify({
+                'success': True,
+                'conciliaciones': [],
+                'total': 0
+            })
         
         cursor.execute('''
             SELECT 

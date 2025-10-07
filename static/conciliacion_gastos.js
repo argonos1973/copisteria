@@ -42,7 +42,7 @@ function inicializarPestanas() {
 // CARGA DE DATOS
 // ============================================================================
 
-async function cargarDatos() {
+window.cargarDatos = async function() {
     await Promise.all([
         cargarGastosPendientes(),
         cargarConciliados(),
