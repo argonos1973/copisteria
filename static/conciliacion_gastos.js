@@ -10,7 +10,7 @@ let coincidenciaSeleccionada = null;
 // Variables de paginación
 let gastosPendientesCompletos = [];
 let paginaActualPendientes = 1;
-let itemsPorPaginaPendientes = 20;
+let itemsPorPaginaPendientes = 10;
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -103,9 +103,9 @@ function renderizarPaginaPendientes() {
             <td style="width: 120px;" class="text-right ${gasto.importe_eur >= 0 ? 'importe-positivo' : 'importe-negativo'}">
                 ${formatearImporte(gasto.importe_eur)}
             </td>
-            <td style="width: 120px;" class="text-center">
-                <button class="btn btn-primary" onclick="buscarCoincidencias(${gasto.id})">
-                    <i class="fas fa-search"></i> Buscar
+            <td style="width: 80px;" class="text-center">
+                <button class="btn btn-primary" onclick="buscarCoincidencias(${gasto.id})" title="Buscar coincidencias">
+                    <i class="fas fa-search"></i>
                 </button>
             </td>
         `;
@@ -325,6 +325,9 @@ window.buscarCoincidencias = async function(gastoId) {
                             id: coin.id
                         };
                         btnConfirmar.disabled = false;
+                        
+                        // Cargar PDF en el visor
+                        cargarPDFEnVisor(coin.tipo, coin.id, coin.numero);
                     });
                     
                     lista.appendChild(div);
@@ -386,7 +389,34 @@ window.cerrarModal = function() {
     document.getElementById('modal-coincidencias').classList.remove('active');
     gastoSeleccionado = null;
     coincidenciaSeleccionada = null;
+    
+    // Ocultar visor de PDF
+    document.getElementById('pdf-viewer').style.display = 'none';
+    document.getElementById('pdf-placeholder').style.display = 'flex';
 };
+
+function cargarPDFEnVisor(tipo, id, numero) {
+    const pdfViewer = document.getElementById('pdf-viewer');
+    const pdfPlaceholder = document.getElementById('pdf-placeholder');
+    const pdfFrame = document.getElementById('pdf-frame');
+    const pdfTitle = document.getElementById('pdf-title');
+    const pdfDownload = document.getElementById('pdf-download');
+    
+    // Construir URL del PDF
+    const tipoMayus = tipo.toUpperCase();
+    const pdfUrl = `${API_URL}/${tipo}s/${id}/imprimir`;
+    
+    // Actualizar título y enlace
+    pdfTitle.textContent = `${tipoMayus} ${numero}`;
+    pdfDownload.href = pdfUrl;
+    
+    // Cargar PDF en iframe
+    pdfFrame.src = pdfUrl;
+    
+    // Mostrar visor
+    pdfViewer.style.display = 'block';
+    pdfPlaceholder.style.display = 'none';
+}
 
 // ============================================================================
 // ACCIONES

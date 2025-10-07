@@ -415,7 +415,7 @@
             <button class="btn btn-success" onclick="procesarAutomatico()">
                 <i class="fas fa-magic"></i> Conciliar Automático
             </button>
-            <button class="btn btn-primary" onclick="cargarDatos()">
+            <button class="btn btn-secondary" onclick="cargarDatos()">
                 <i class="fas fa-sync"></i> Actualizar
             </button>
         </div>
@@ -445,7 +445,7 @@
                         <th style="width: 100px;">Fecha</th>
                         <th>Concepto</th>
                         <th style="width: 120px;" class="text-right">Importe</th>
-                        <th style="width: 120px;" class="text-center">Acciones</th>
+                        <th style="width: 80px;" class="text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tbody-pendientes"></tbody>
@@ -454,15 +454,15 @@
             <!-- Paginación Pendientes -->
             <div class="pagination" id="pagination-pendientes" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPagePendientes" onclick="cambiarPaginaPendientes('anterior')">⟨</button>
-                    <span class="page-info" id="pageInfoPendientes">Página 1 de 1</span>
-                    <button id="nextPagePendientes" onclick="cambiarPaginaPendientes('siguiente')">⟩</button>
+                    <button id="prevPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaPendientes('anterior')">⟨</button>
+                    <span id="pageInfoPendientes">Página 1 de 1</span>
+                    <button id="nextPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaPendientes('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
-                        <select id="items-por-pagina-pendientes" onchange="cambiarItemsPorPagina()">
-                            <option value="10">10</option>
-                            <option value="20" selected>20</option>
+                        <select id="items-por-pagina-pendientes" style="padding:2px 6px;font-size:12px;" onchange="cambiarItemsPorPagina()">
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
                             <option value="50">50</option>
                             <option value="100">100</option>
                         </select>
@@ -500,21 +500,45 @@
 
     <!-- Modal de Coincidencias -->
     <div class="modal" id="modal-coincidencias">
-        <div class="modal-content">
+        <div class="modal-content" style="max-width: 1200px;">
             <div class="modal-header">
                 <h2>Buscar Coincidencias</h2>
                 <span class="close-modal" onclick="cerrarModal()">&times;</span>
             </div>
             
-            <div id="gasto-info" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <!-- Info del gasto se cargará aquí -->
-            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Columna izquierda: Información y coincidencias -->
+                <div>
+                    <div id="gasto-info" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <!-- Info del gasto se cargará aquí -->
+                    </div>
 
-            <div id="loading-coincidencias" class="loading" style="display:none;">
-                <i class="fas fa-spinner fa-spin"></i> Buscando coincidencias...
-            </div>
+                    <div id="loading-coincidencias" class="loading" style="display:none;">
+                        <i class="fas fa-spinner fa-spin"></i> Buscando coincidencias...
+                    </div>
 
-            <div id="coincidencias-container"></div>
+                    <div id="coincidencias-container"></div>
+                </div>
+                
+                <!-- Columna derecha: Visor de PDF -->
+                <div>
+                    <div id="pdf-viewer" style="display:none; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                        <div style="background: #2c3e50; color: white; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+                            <span id="pdf-title">Vista Previa</span>
+                            <a id="pdf-download" href="#" target="_blank" style="color: white;">
+                                <i class="fas fa-external-link-alt"></i> Abrir
+                            </a>
+                        </div>
+                        <iframe id="pdf-frame" style="width: 100%; height: 600px; border: none;"></iframe>
+                    </div>
+                    <div id="pdf-placeholder" style="background: #f8f9fa; padding: 40px; text-align: center; color: #999; border: 2px dashed #ddd; border-radius: 8px; height: 600px; display: flex; align-items: center; justify-content: center;">
+                        <div>
+                            <i class="fas fa-file-pdf" style="font-size: 48px; margin-bottom: 15px;"></i>
+                            <p>Selecciona una coincidencia para ver el documento</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div style="margin-top: 20px; text-align: right;">
                 <button class="btn btn-danger" onclick="cerrarModal()">Cancelar</button>
