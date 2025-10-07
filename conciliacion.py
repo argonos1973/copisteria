@@ -75,9 +75,9 @@ def buscar_coincidencias_automaticas(gasto):
     except:
         fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
     
-    # Si hay número de documento en concepto, ampliar rango a ±60 días
+    # Si hay número de documento en concepto, ampliar rango a ±90 días (3 meses)
     # Si no, usar ±15 días
-    dias_rango = 60 if tiene_numero_documento else 15
+    dias_rango = 90 if tiene_numero_documento else 15
     fecha_inicio = (fecha_gasto - timedelta(days=dias_rango)).strftime('%Y-%m-%d')
     fecha_fin = (fecha_gasto + timedelta(days=dias_rango)).strftime('%Y-%m-%d')
     
