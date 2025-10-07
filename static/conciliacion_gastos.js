@@ -459,6 +459,15 @@ window.eliminarConciliacion = async function(conciliacionId) {
 
 function formatearFecha(fecha) {
     if (!fecha) return '-';
+    
+    // Manejar formato DD/MM/YYYY
+    if (fecha.includes('/')) {
+        const [dia, mes, anio] = fecha.split('/');
+        const d = new Date(anio, mes - 1, dia);
+        return d.toLocaleDateString('es-ES');
+    }
+    
+    // Manejar formato YYYY-MM-DD
     const d = new Date(fecha + 'T00:00:00');
     return d.toLocaleDateString('es-ES');
 }
