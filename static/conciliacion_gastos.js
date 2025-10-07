@@ -460,11 +460,13 @@ window.eliminarConciliacion = async function(conciliacionId) {
 function formatearFecha(fecha) {
     if (!fecha) return '-';
     
-    // Manejar formato DD/MM/YYYY
+    // Manejar formato DD/MM/YYYY o D/M/YYYY
     if (fecha.includes('/')) {
         const [dia, mes, anio] = fecha.split('/');
-        const d = new Date(anio, mes - 1, dia);
-        return d.toLocaleDateString('es-ES');
+        // Asegurar formato DD/MM/YYYY con ceros a la izquierda
+        const diaFormateado = dia.padStart(2, '0');
+        const mesFormateado = mes.padStart(2, '0');
+        return `${diaFormateado}/${mesFormateado}/${anio}`;
     }
     
     // Manejar formato YYYY-MM-DD
