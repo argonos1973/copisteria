@@ -120,7 +120,9 @@ def buscar_coincidencias_automaticas(gasto):
                 'numero': row['numero'],
                 'fecha': row['fecha'],
                 'importe': row['total'],
-                'estado': row['estado']
+                'estado': row['estado'],
+                'diferencia': abs(row['total'] - importe),
+                'score': calcular_score(gasto, dict(row))
             })
     else:
         # Si NO hay número, buscar por fecha e importe (lógica original)
