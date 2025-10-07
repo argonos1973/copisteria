@@ -9,24 +9,37 @@ from datetime import datetime, timedelta
 from constantes import DB_NAME
 
 def get_db_connection():
-    """Obtener conexión a la base de datos"""
     conn = sqlite3.connect(DB_NAME, timeout=30)
     conn.row_factory = sqlite3.Row
     return conn
 
 def buscar_coincidencias_automaticas(gasto):
-    """
-    Buscar coincidencias automáticas para un gasto bancario
-    """
+    """Buscar coincidencias automáticas para un gasto bancario"""
+    import re
     conn = get_db_connection()
     cursor = conn.cursor()
     
     gasto_id = gasto['id']
     importe = abs(gasto['importe_eur'])
-    fecha_gasto = datetime.strptime(gasto['fecha_operacion'], '%Y-%m-%d')
-    fecha_inicio = (fecha_gasto - timedelta(days=7)).strftime('%Y-%m-%d')
-    fecha_fin = (fecha_gasto + timedelta(days=7)).strftime('%Y-%m-%d')
+    concepto = (gasto.get('concepto') or '').upper()
     
+    # Detectar si hay un número de factura o ticket en el concepto
+    tiene_numero_documento = bool(re.search(r'[FT]\d{6}', concepto))
+    
+    # Manejar múltiples formatos de fecha
+    fecha_gasto_str = gasto['fecha_operacion']
+    try:
+        if '/' in fecha_gasto_str:
+            fecha_gasto = datetime.strptime(fecha_gasto_str, '%d/%m/%Y')
+        else:
+            fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
+    except:
+        fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
+    
+    # Si hay número de documento en concepto, ampliar rango a ±60 días
+    dias_rango = 60 if tiene_numero_documento else 15
+    fecha_inicio = (fecha_gasto - timedelta(days=dias_rango)).strftime('%Y-%m-%d')
+    fecha_fin = (fecha_gasto + timedelta(days=dias_rango)).strftime('%Y-%m-%d')
     tolerancia = 0.02
     
     coincidencias = []

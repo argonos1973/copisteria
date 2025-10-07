@@ -51,13 +51,19 @@ def buscar_coincidencias_automaticas(gasto):
     Buscar coincidencias automáticas para un gasto bancario
     Criterios:
     1. Importe exacto o muy cercano (±0.02€)
-    2. Fecha cercana (±7 días)
+    2. Fecha cercana (±15 días) - EXCEPTO si hay número de factura/ticket en concepto
     """
+    import re
     conn = get_db_connection()
     cursor = conn.cursor()
     
     gasto_id = gasto['id']
     importe = abs(gasto['importe_eur'])
+    concepto = (gasto.get('concepto') or '').upper()
+    
+    # Detectar si hay un número de factura o ticket en el concepto
+    # Patrones: F250046, T255678, etc.
+    tiene_numero_documento = bool(re.search(r'[FT]\d{6}', concepto))
     
     # Manejar múltiples formatos de fecha
     fecha_gasto_str = gasto['fecha_operacion']
@@ -69,8 +75,11 @@ def buscar_coincidencias_automaticas(gasto):
     except:
         fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
     
-    fecha_inicio = (fecha_gasto - timedelta(days=15)).strftime('%Y-%m-%d')
-    fecha_fin = (fecha_gasto + timedelta(days=15)).strftime('%Y-%m-%d')
+    # Si hay número de documento en concepto, ampliar rango a ±60 días
+    # Si no, usar ±15 días
+    dias_rango = 60 if tiene_numero_documento else 15
+    fecha_inicio = (fecha_gasto - timedelta(days=dias_rango)).strftime('%Y-%m-%d')
+    fecha_fin = (fecha_gasto + timedelta(days=dias_rango)).strftime('%Y-%m-%d')
     
     tolerancia = 0.02
     
