@@ -889,11 +889,11 @@ def obtener_liquidaciones_tpv():
         
         resultado = []
         
-        # Ordenar por fecha ascendente (más antiguas primero)
+        # Ordenar por fecha descendente (más recientes primero)
         liquidaciones_ordenadas = sorted(
             liquidaciones_agrupadas.items(),
             key=lambda x: datetime.strptime(x[0], '%d/%m/%Y') if '/' in x[0] else datetime.strptime(x[0], '%Y-%m-%d'),
-            reverse=False
+            reverse=True
         )
         
         for fecha_str, datos in liquidaciones_ordenadas:
