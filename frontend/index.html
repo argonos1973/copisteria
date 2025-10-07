@@ -200,6 +200,109 @@
             border-radius: 4px;
             border: 1px solid #ddd;
         }
+
+        /* Estilos para panel de notificaciones */
+        #notificaciones-panel {
+            display: none;
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            width: 400px;
+            max-height: 500px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        #notificaciones-panel.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .notif-header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notif-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .notif-close {
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .notif-body {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+
+        .notif-item {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .notif-item:hover {
+            background: #f8f9fa;
+        }
+
+        .notif-item:last-child {
+            border-bottom: none;
+        }
+
+        .notif-title {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .notif-desc {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .notif-time {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .notif-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: #999;
+        }
+
+        .notif-footer {
+            padding: 10px 15px;
+            border-top: 1px solid #eee;
+            text-align: center;
+        }
+
+        .notif-footer button {
+            background: transparent;
+            border: none;
+            color: #2c3e50;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .notif-footer button:hover {
+            text-decoration: underline;
+        }
     </style>
     <style>
         /* Estilos específicos para forzar el scroll vertical en el iframe */
@@ -226,6 +329,15 @@
             <div class="logo-container" style="padding: 1rem; margin-bottom: 1rem; text-align: center;">
                 <img src="../static/img/logo.png" alt="Logo" style="max-width: 200px; height: auto;">
             </div>
+            
+            <!-- Icono de notificaciones -->
+            <div style="padding: 0.5rem 1rem; display: flex; justify-content: flex-end;">
+                <div id="notificaciones-icon" style="position: relative; cursor: pointer;">
+                    <i class="fas fa-bell" style="font-size: 20px; color: white;"></i>
+                    <span id="notificaciones-badge" style="display: none; position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: bold; text-align: center; line-height: 20px;">0</span>
+                </div>
+            </div>
+            
             <ul class="menu-list">
                 <!-- Inicio -->
                 <li class="menu-item">
@@ -309,6 +421,23 @@
         </div>
     </div>
 
+    <!-- Panel de notificaciones -->
+    <div id="notificaciones-panel">
+        <div class="notif-header">
+            <h3><i class="fas fa-bell"></i> Conciliaciones Automáticas</h3>
+            <span class="notif-close" onclick="cerrarNotificaciones()">&times;</span>
+        </div>
+        <div class="notif-body" id="notificaciones-lista">
+            <div class="notif-empty">
+                <i class="fas fa-check-circle" style="font-size: 32px; color: #ddd;"></i>
+                <p>No hay notificaciones nuevas</p>
+            </div>
+        </div>
+        <div class="notif-footer">
+            <button onclick="marcarTodasLeidas()">Marcar todas como leídas</button>
+        </div>
+    </div>
+
     <link rel="stylesheet" href="../static/notificaciones.css">
     <script type="module">
         import { mostrarConfirmacion } from '../static/notificaciones.js';
@@ -373,7 +502,158 @@
                     /* Distinto origen: no hacemos nada para evitar SecurityError */
                 }
             });
+            
+            // Sistema de notificaciones de conciliación
+            inicializarNotificaciones();
         });
+        
+        // ============================================================================
+        // SISTEMA DE NOTIFICACIONES
+        // ============================================================================
+        
+        const API_URL = 'http://192.168.1.23:5001/api';
+        let notificacionesActuales = [];
+        
+        async function inicializarNotificaciones() {
+            // Cargar notificaciones al iniciar
+            await cargarNotificaciones();
+            
+            // Actualizar cada 30 segundos
+            setInterval(cargarNotificaciones, 30000);
+            
+            // Click en el icono
+            document.getElementById('notificaciones-icon').addEventListener('click', toggleNotificaciones);
+            
+            // Cerrar al hacer click fuera
+            document.addEventListener('click', (e) => {
+                const panel = document.getElementById('notificaciones-panel');
+                const icon = document.getElementById('notificaciones-icon');
+                
+                if (panel.classList.contains('active') && 
+                    !panel.contains(e.target) && 
+                    !icon.contains(e.target)) {
+                    cerrarNotificaciones();
+                }
+            });
+        }
+        
+        async function cargarNotificaciones() {
+            try {
+                const response = await fetch(`${API_URL}/conciliacion/notificaciones`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    notificacionesActuales = data.notificaciones;
+                    actualizarBadge(data.total);
+                }
+            } catch (error) {
+                console.error('Error al cargar notificaciones:', error);
+            }
+        }
+        
+        function actualizarBadge(total) {
+            const badge = document.getElementById('notificaciones-badge');
+            
+            if (total > 0) {
+                badge.textContent = total > 99 ? '99+' : total;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        function toggleNotificaciones() {
+            const panel = document.getElementById('notificaciones-panel');
+            
+            if (panel.classList.contains('active')) {
+                cerrarNotificaciones();
+            } else {
+                abrirNotificaciones();
+            }
+        }
+        
+        function abrirNotificaciones() {
+            const panel = document.getElementById('notificaciones-panel');
+            const lista = document.getElementById('notificaciones-lista');
+            
+            panel.classList.add('active');
+            
+            if (notificacionesActuales.length > 0) {
+                lista.innerHTML = '';
+                
+                notificacionesActuales.forEach(notif => {
+                    const item = document.createElement('div');
+                    item.className = 'notif-item';
+                    item.dataset.id = notif.id;
+                    
+                    const fecha = new Date(notif.fecha_operacion + 'T00:00:00');
+                    const fechaStr = fecha.toLocaleDateString('es-ES');
+                    
+                    const importe = new Intl.NumberFormat('es-ES', {
+                        style: 'currency',
+                        currency: 'EUR'
+                    }).format(notif.importe_gasto);
+                    
+                    item.innerHTML = `
+                        <div class="notif-title">
+                            <i class="fas fa-check-circle" style="color: #27ae60;"></i>
+                            Conciliación automática
+                        </div>
+                        <div class="notif-desc">
+                            ${notif.concepto_gasto || 'Gasto bancario'} (${importe}) 
+                            → ${notif.tipo_documento.toUpperCase()} ${notif.numero_documento}
+                        </div>
+                        <div class="notif-time">
+                            <i class="fas fa-calendar"></i> ${fechaStr}
+                            ${notif.metodo === 'automatico' ? '<span style="color: #27ae60;"> • Auto</span>' : ''}
+                        </div>
+                    `;
+                    
+                    item.addEventListener('click', () => {
+                        // Navegar a la página de conciliación
+                        document.getElementById('content-frame').src = 'CONCILIACION_GASTOS.html';
+                        cerrarNotificaciones();
+                    });
+                    
+                    lista.appendChild(item);
+                });
+            } else {
+                lista.innerHTML = `
+                    <div class="notif-empty">
+                        <i class="fas fa-check-circle" style="font-size: 32px; color: #ddd;"></i>
+                        <p>No hay notificaciones nuevas</p>
+                    </div>
+                `;
+            }
+        }
+        
+        window.cerrarNotificaciones = function() {
+            document.getElementById('notificaciones-panel').classList.remove('active');
+        };
+        
+        window.marcarTodasLeidas = async function() {
+            if (notificacionesActuales.length === 0) return;
+            
+            try {
+                const ids = notificacionesActuales.map(n => n.id);
+                
+                const response = await fetch(`${API_URL}/conciliacion/marcar-notificadas`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    notificacionesActuales = [];
+                    actualizarBadge(0);
+                    cerrarNotificaciones();
+                }
+            } catch (error) {
+                console.error('Error al marcar como leídas:', error);
+            }
+        };
     </script>
 </body>
 </html>

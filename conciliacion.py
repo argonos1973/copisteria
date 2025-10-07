@@ -31,6 +31,7 @@ def crear_tabla_conciliacion():
             estado TEXT DEFAULT 'conciliado', -- 'conciliado', 'pendiente', 'rechazado'
             metodo TEXT, -- 'automatico', 'manual'
             notas TEXT,
+            notificado INTEGER DEFAULT 0, -- 0: no notificado, 1: notificado
             FOREIGN KEY(gasto_id) REFERENCES gastos(id),
             UNIQUE(gasto_id, tipo_documento, documento_id)
         )
@@ -40,6 +41,7 @@ def crear_tabla_conciliacion():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_conciliacion_gasto ON conciliacion_gastos(gasto_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_conciliacion_documento ON conciliacion_gastos(tipo_documento, documento_id)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_conciliacion_estado ON conciliacion_gastos(estado)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_conciliacion_notificado ON conciliacion_gastos(notificado)')
     
     conn.commit()
     conn.close()
@@ -528,6 +530,106 @@ def ejecutar_cron():
             'procesados': len(gastos_pendientes),
             'conciliados': conciliados,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/notificaciones', methods=['GET'])
+def obtener_notificaciones():
+    """Obtener conciliaciones no notificadas"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                c.id,
+                c.fecha_conciliacion,
+                c.importe_gasto,
+                c.importe_documento,
+                c.diferencia,
+                c.metodo,
+                g.fecha_operacion,
+                g.concepto as concepto_gasto,
+                CASE 
+                    WHEN c.tipo_documento = 'factura' THEN f.numero
+                    WHEN c.tipo_documento = 'ticket' THEN t.numero
+                END as numero_documento,
+                c.tipo_documento
+            FROM conciliacion_gastos c
+            LEFT JOIN gastos g ON c.gasto_id = g.id
+            LEFT JOIN factura f ON c.tipo_documento = 'factura' AND c.documento_id = f.id
+            LEFT JOIN tickets t ON c.tipo_documento = 'ticket' AND c.documento_id = t.id
+            WHERE c.notificado = 0 AND c.estado = 'conciliado'
+            ORDER BY c.fecha_conciliacion DESC
+            LIMIT 50
+        ''')
+        
+        notificaciones = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'notificaciones': notificaciones,
+            'total': len(notificaciones)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/marcar-notificadas', methods=['POST'])
+def marcar_notificadas():
+    """Marcar notificaciones como leídas"""
+    try:
+        data = request.json
+        ids = data.get('ids', [])
+        
+        if not ids:
+            return jsonify({'success': False, 'error': 'No se proporcionaron IDs'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        placeholders = ','.join('?' * len(ids))
+        cursor.execute(f'''
+            UPDATE conciliacion_gastos 
+            SET notificado = 1 
+            WHERE id IN ({placeholders})
+        ''', ids)
+        
+        conn.commit()
+        affected = cursor.rowcount
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'{affected} notificaciones marcadas como leídas'
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/contador-notificaciones', methods=['GET'])
+def contador_notificaciones():
+    """Obtener contador de notificaciones no leídas"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT COUNT(*) as total
+            FROM conciliacion_gastos
+            WHERE notificado = 0 AND estado = 'conciliado'
+        ''')
+        
+        result = cursor.fetchone()
+        total = result['total'] if result else 0
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'total': total
         })
         
     except Exception as e:
