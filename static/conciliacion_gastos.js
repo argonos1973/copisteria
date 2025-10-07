@@ -7,6 +7,11 @@ const API_URL = `http://${IP_SERVER}:${PORT}/api`;
 let gastoSeleccionado = null;
 let coincidenciaSeleccionada = null;
 
+// Variables de paginación
+let gastosPendientesCompletos = [];
+let paginaActualPendientes = 1;
+let itemsPorPaginaPendientes = 25;
+
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
@@ -54,37 +59,23 @@ async function cargarGastosPendientes() {
     const loading = document.getElementById('loading-pendientes');
     const empty = document.getElementById('empty-pendientes');
     const tabla = document.getElementById('tabla-pendientes');
-    const tbody = document.getElementById('tbody-pendientes');
+    const pagination = document.getElementById('pagination-pendientes');
     
     loading.style.display = 'block';
     empty.style.display = 'none';
     tabla.style.display = 'none';
+    pagination.style.display = 'none';
     
     try {
         const response = await fetch(`${API_URL}/conciliacion/gastos-pendientes`);
         const data = await response.json();
         
         if (data.success && data.gastos.length > 0) {
-            tbody.innerHTML = '';
-            
-            data.gastos.forEach(gasto => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${formatearFecha(gasto.fecha_operacion)}</td>
-                    <td>${gasto.concepto || '-'}</td>
-                    <td class="${gasto.importe_eur >= 0 ? 'importe-positivo' : 'importe-negativo'}">
-                        ${formatearImporte(gasto.importe_eur)}
-                    </td>
-                    <td>
-                        <button class="btn btn-primary" onclick="buscarCoincidencias(${gasto.id})">
-                            <i class="fas fa-search"></i> Buscar
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-            
+            gastosPendientesCompletos = data.gastos;
+            paginaActualPendientes = 1;
+            renderizarPaginaPendientes();
             tabla.style.display = 'table';
+            pagination.style.display = 'flex';
         } else {
             empty.style.display = 'block';
         }
@@ -95,6 +86,75 @@ async function cargarGastosPendientes() {
         loading.style.display = 'none';
     }
 }
+
+function renderizarPaginaPendientes() {
+    const tbody = document.getElementById('tbody-pendientes');
+    tbody.innerHTML = '';
+    
+    const inicio = (paginaActualPendientes - 1) * itemsPorPaginaPendientes;
+    const fin = inicio + itemsPorPaginaPendientes;
+    const gastosPagina = gastosPendientesCompletos.slice(inicio, fin);
+    
+    gastosPagina.forEach(gasto => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${formatearFecha(gasto.fecha_operacion)}</td>
+            <td>${gasto.concepto || '-'}</td>
+            <td class="${gasto.importe_eur >= 0 ? 'importe-positivo' : 'importe-negativo'}">
+                ${formatearImporte(gasto.importe_eur)}
+            </td>
+            <td>
+                <button class="btn btn-primary" onclick="buscarCoincidencias(${gasto.id})">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    actualizarControlesPaginacion();
+}
+
+function actualizarControlesPaginacion() {
+    const totalPaginas = Math.ceil(gastosPendientesCompletos.length / itemsPorPaginaPendientes);
+    
+    document.getElementById('pagina-actual-pendientes').textContent = paginaActualPendientes;
+    document.getElementById('total-paginas-pendientes').textContent = totalPaginas;
+    
+    // Actualizar estado de botones
+    const botones = document.querySelectorAll('#pagination-pendientes button');
+    botones[0].disabled = paginaActualPendientes === 1; // Primera
+    botones[1].disabled = paginaActualPendientes === 1; // Anterior
+    botones[2].disabled = paginaActualPendientes === totalPaginas; // Siguiente
+    botones[3].disabled = paginaActualPendientes === totalPaginas; // Última
+}
+
+window.cambiarPaginaPendientes = function(accion) {
+    const totalPaginas = Math.ceil(gastosPendientesCompletos.length / itemsPorPaginaPendientes);
+    
+    switch(accion) {
+        case 'primera':
+            paginaActualPendientes = 1;
+            break;
+        case 'anterior':
+            if (paginaActualPendientes > 1) paginaActualPendientes--;
+            break;
+        case 'siguiente':
+            if (paginaActualPendientes < totalPaginas) paginaActualPendientes++;
+            break;
+        case 'ultima':
+            paginaActualPendientes = totalPaginas;
+            break;
+    }
+    
+    renderizarPaginaPendientes();
+};
+
+window.cambiarItemsPorPagina = function() {
+    itemsPorPaginaPendientes = parseInt(document.getElementById('items-por-pagina-pendientes').value);
+    paginaActualPendientes = 1;
+    renderizarPaginaPendientes();
+};
 
 async function cargarConciliados() {
     const loading = document.getElementById('loading-conciliados');
