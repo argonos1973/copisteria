@@ -913,9 +913,28 @@ def obtener_liquidaciones_tpv():
             total_tickets = tickets_info['total_tickets'] or 0
             num_tickets = tickets_info['num_tickets'] or 0
             
+            # Buscar facturas con tarjeta de esa fecha
+            cursor.execute('''
+                SELECT 
+                    COUNT(*) as num_facturas,
+                    SUM(total) as total_facturas
+                FROM factura
+                WHERE fecha = ?
+                AND formaPago = 'T'
+                AND estado = 'C'
+            ''', (fecha_busqueda,))
+            
+            facturas_info = cursor.fetchone()
+            total_facturas = facturas_info['total_facturas'] or 0
+            num_facturas = facturas_info['num_facturas'] or 0
+            
+            # Sumar tickets y facturas
+            total_documentos = total_tickets + total_facturas
+            num_documentos = num_tickets + num_facturas
+            
             # Calcular diferencia
             total_liq = datos['total']
-            diferencia = abs(total_liq - total_tickets)
+            diferencia = abs(total_liq - total_documentos)
             porcentaje_diferencia = (diferencia / abs(total_liq) * 100) if total_liq != 0 else 0
             
             # Determinar estado
@@ -931,7 +950,10 @@ def obtener_liquidaciones_tpv():
                 'num_liquidaciones': datos['count'],
                 'total_liquidaciones': round(total_liq, 2),
                 'num_tickets': num_tickets,
+                'num_facturas': num_facturas,
                 'total_tickets': round(total_tickets, 2),
+                'total_facturas': round(total_facturas, 2),
+                'total_documentos': round(total_documentos, 2),
                 'diferencia': round(diferencia, 2),
                 'porcentaje_diferencia': round(porcentaje_diferencia, 2),
                 'estado': estado,

@@ -622,7 +622,8 @@ async function cargarLiquidacionesTPV() {
                     <td class="text-center">${liq.num_liquidaciones}</td>
                     <td class="text-right">${formatearImporte(Math.abs(liq.total_liquidaciones))}</td>
                     <td class="text-center">${liq.num_tickets}</td>
-                    <td class="text-right">${formatearImporte(liq.total_tickets)}</td>
+                    <td class="text-center">${liq.num_facturas || 0}</td>
+                    <td class="text-right">${formatearImporte(liq.total_documentos)}</td>
                     <td class="text-right">${formatearImporte(liq.diferencia)}</td>
                     <td class="text-center"><span class="${estadoClass}">${estadoTexto}</span></td>
                 `;
