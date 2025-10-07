@@ -63,89 +63,141 @@ def buscar_coincidencias_automaticas(gasto):
     
     # Detectar si hay un número de factura o ticket en el concepto
     # Patrones: F250046, T255678, etc.
-    tiene_numero_documento = bool(re.search(r'[FT]\d{6}', concepto))
-    
-    # Manejar múltiples formatos de fecha
-    fecha_gasto_str = gasto['fecha_operacion']
-    try:
-        if '/' in fecha_gasto_str:
-            fecha_gasto = datetime.strptime(fecha_gasto_str, '%d/%m/%Y')
-        else:
-            fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
-    except:
-        fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
-    
-    # Si hay número de documento en concepto, ampliar rango a ±90 días (3 meses)
-    # Si no, usar ±15 días
-    dias_rango = 90 if tiene_numero_documento else 15
-    fecha_inicio = (fecha_gasto - timedelta(days=dias_rango)).strftime('%Y-%m-%d')
-    fecha_fin = (fecha_gasto + timedelta(days=dias_rango)).strftime('%Y-%m-%d')
+    patron_numero = re.search(r'[FT](\d{6})', concepto)
+    tiene_numero_documento = bool(patron_numero)
     
     tolerancia = 0.02
-    
     coincidencias = []
     
-    # Buscar en facturas cobradas
-    cursor.execute('''
-        SELECT 
-            'factura' as tipo,
-            id,
-            numero,
-            fecha,
-            total,
-            estado,
-            importe_cobrado
-        FROM factura
-        WHERE estado = 'C'
-        AND fecha BETWEEN ? AND ?
-        AND ABS(total - ?) <= ?
-        AND id NOT IN (
-            SELECT documento_id FROM conciliacion_gastos 
-            WHERE tipo_documento = 'factura' AND estado = 'conciliado'
-        )
-    ''', (fecha_inicio, fecha_fin, importe, tolerancia))
-    
-    for row in cursor.fetchall():
-        coincidencias.append({
-            'tipo': 'factura',
-            'id': row['id'],
-            'numero': row['numero'],
-            'fecha': row['fecha'],
-            'importe': row['total'],
-            'diferencia': abs(row['total'] - importe),
-            'score': calcular_score(gasto, dict(row))
-        })
-    
-    # Buscar en tickets cobrados
-    cursor.execute('''
-        SELECT 
-            'ticket' as tipo,
-            id,
-            numero,
-            fecha,
-            total,
-            estado,
-            importe_cobrado
-        FROM tickets
-        WHERE estado = 'C'
-        AND fecha BETWEEN ? AND ?
-        AND ABS(total - ?) <= ?
-        AND id NOT IN (
-            SELECT documento_id FROM conciliacion_gastos 
-            WHERE tipo_documento = 'ticket' AND estado = 'conciliado'
-        )
-    ''', (fecha_inicio, fecha_fin, importe, tolerancia))
-    
-    for row in cursor.fetchall():
-        coincidencias.append({
-            'tipo': 'ticket',
-            'id': row['id'],
-            'numero': row['numero'],
-            'fecha': row['fecha'],
-            'importe': row['total'],
-            'diferencia': abs(row['total'] - importe),
-            'score': calcular_score(gasto, dict(row))
-        })
+    if tiene_numero_documento:
+        # Si hay número de documento, buscar SOLO por número e importe (sin filtro de fecha)
+        numero_buscado = patron_numero.group(0)  # F250046 o T255678
+        tipo_doc = 'factura' if numero_buscado.startswith('F') else 'ticket'
+        
+        if tipo_doc == 'factura':
+            cursor.execute('''
+                SELECT 
+                    'factura' as tipo,
+                    id,
+                    numero,
+                    fecha,
+                    total,
+                    estado,
+                    importe_cobrado
+                FROM factura
+                WHERE estado = 'C'
+                AND numero = ?
+                AND ABS(total - ?) <= ?
+                AND id NOT IN (
+                    SELECT documento_id FROM conciliacion_gastos 
+                    WHERE tipo_documento = 'factura' AND estado = 'conciliado'
+                )
+            ''', (numero_buscado, importe, tolerancia))
+        else:
+            cursor.execute('''
+                SELECT 
+                    'ticket' as tipo,
+                    id,
+                    numero,
+                    fecha,
+                    total,
+                    estado,
+                    importe_cobrado
+                FROM tickets
+                WHERE estado = 'C'
+                AND numero = ?
+                AND ABS(total - ?) <= ?
+                AND id NOT IN (
+                    SELECT documento_id FROM conciliacion_gastos 
+                    WHERE tipo_documento = 'ticket' AND estado = 'conciliado'
+                )
+            ''', (numero_buscado, importe, tolerancia))
+        
+        for row in cursor.fetchall():
+            coincidencias.append({
+                'tipo': row['tipo'],
+                'id': row['id'],
+                'numero': row['numero'],
+                'fecha': row['fecha'],
+                'importe': row['total'],
+                'estado': row['estado']
+            })
+    else:
+        # Si NO hay número, buscar por fecha e importe (lógica original)
+        # Manejar múltiples formatos de fecha
+        fecha_gasto_str = gasto['fecha_operacion']
+        try:
+            if '/' in fecha_gasto_str:
+                fecha_gasto = datetime.strptime(fecha_gasto_str, '%d/%m/%Y')
+            else:
+                fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
+        except:
+            fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
+        
+        fecha_inicio = (fecha_gasto - timedelta(days=15)).strftime('%Y-%m-%d')
+        fecha_fin = (fecha_gasto + timedelta(days=15)).strftime('%Y-%m-%d')
+        
+        # Buscar en facturas cobradas
+        cursor.execute('''
+            SELECT 
+                'factura' as tipo,
+                id,
+                numero,
+                fecha,
+                total,
+                estado,
+                importe_cobrado
+            FROM factura
+            WHERE estado = 'C'
+            AND fecha BETWEEN ? AND ?
+            AND ABS(total - ?) <= ?
+            AND id NOT IN (
+                SELECT documento_id FROM conciliacion_gastos 
+                WHERE tipo_documento = 'factura' AND estado = 'conciliado'
+            )
+        ''', (fecha_inicio, fecha_fin, importe, tolerancia))
+        
+        for row in cursor.fetchall():
+            coincidencias.append({
+                'tipo': 'factura',
+                'id': row['id'],
+                'numero': row['numero'],
+                'fecha': row['fecha'],
+                'importe': row['total'],
+                'diferencia': abs(row['total'] - importe),
+                'score': calcular_score(gasto, dict(row))
+            })
+        
+        # Buscar en tickets cobrados
+        cursor.execute('''
+            SELECT 
+                'ticket' as tipo,
+                id,
+                numero,
+                fecha,
+                total,
+                estado,
+                importe_cobrado
+            FROM tickets
+            WHERE estado = 'C'
+            AND fecha BETWEEN ? AND ?
+            AND ABS(total - ?) <= ?
+            AND id NOT IN (
+                SELECT documento_id FROM conciliacion_gastos 
+                WHERE tipo_documento = 'ticket' AND estado = 'conciliado'
+            )
+        ''', (fecha_inicio, fecha_fin, importe, tolerancia))
+        
+        for row in cursor.fetchall():
+            coincidencias.append({
+                'tipo': 'ticket',
+                'id': row['id'],
+                'numero': row['numero'],
+                'fecha': row['fecha'],
+                'importe': row['total'],
+                'diferencia': abs(row['total'] - importe),
+                'score': calcular_score(gasto, dict(row))
+            })
     
     conn.close()
     
