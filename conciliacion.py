@@ -69,8 +69,8 @@ def buscar_coincidencias_automaticas(gasto):
     except:
         fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
     
-    fecha_inicio = (fecha_gasto - timedelta(days=7)).strftime('%Y-%m-%d')
-    fecha_fin = (fecha_gasto + timedelta(days=7)).strftime('%Y-%m-%d')
+    fecha_inicio = (fecha_gasto - timedelta(days=15)).strftime('%Y-%m-%d')
+    fecha_fin = (fecha_gasto + timedelta(days=15)).strftime('%Y-%m-%d')
     
     tolerancia = 0.02
     
@@ -193,6 +193,8 @@ def calcular_score(gasto, documento):
     elif diferencia_dias <= 3:
         score += 20
     elif diferencia_dias <= 7:
+        score += 15
+    elif diferencia_dias <= 15:
         score += 10
     
     # Score por exactitud del importe (20 puntos)

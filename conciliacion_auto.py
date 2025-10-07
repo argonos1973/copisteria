@@ -142,6 +142,8 @@ def calcular_score(gasto, documento):
     elif diferencia_dias <= 3:
         score += 20
     elif diferencia_dias <= 7:
+        score += 15
+    elif diferencia_dias <= 15:
         score += 10
     
     # Score por exactitud del importe (20 puntos)
