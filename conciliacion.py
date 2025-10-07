@@ -889,7 +889,14 @@ def obtener_liquidaciones_tpv():
         
         resultado = []
         
-        for fecha_str, datos in liquidaciones_agrupadas.items():
+        # Ordenar por fecha descendente
+        liquidaciones_ordenadas = sorted(
+            liquidaciones_agrupadas.items(),
+            key=lambda x: datetime.strptime(x[0], '%d/%m/%Y') if '/' in x[0] else datetime.strptime(x[0], '%Y-%m-%d'),
+            reverse=True
+        )
+        
+        for fecha_str, datos in liquidaciones_ordenadas:
             # Convertir fecha a formato YYYY-MM-DD para buscar tickets
             try:
                 if '/' in fecha_str:
