@@ -459,13 +459,15 @@ def gastos_pendientes():
                     SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
                 )
                 AND g.importe_eur > 0
+                AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
             '''
         else:
-            # Si no existe la tabla, todos los gastos son pendientes
+            # Si no existe la tabla, todos los gastos son pendientes (excepto liquidaciones)
             query = '''
                 SELECT g.*
                 FROM gastos g
                 WHERE g.importe_eur > 0
+                AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
             '''
         
         params = []
