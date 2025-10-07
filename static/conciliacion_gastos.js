@@ -173,14 +173,19 @@ async function cargarConciliados() {
             
             data.conciliaciones.forEach(conc => {
                 const tr = document.createElement('tr');
+                
+                // Formatear según el tipo
+                let tipoDocumento = '';
+                if (conc.tipo_documento === 'liquidacion_tpv') {
+                    tipoDocumento = `<span class="badge badge-info">LIQUIDACIÓN TPV (${conc.num_liquidaciones || 0})</span>`;
+                } else {
+                    tipoDocumento = `<span class="badge badge-info">${conc.tipo_documento.toUpperCase()} ${conc.numero_documento || ''}</span>`;
+                }
+                
                 tr.innerHTML = `
                     <td>${formatearFecha(conc.fecha_operacion)}</td>
                     <td>${conc.concepto_gasto || '-'}</td>
-                    <td>
-                        <span class="badge badge-info">
-                            ${conc.tipo_documento.toUpperCase()} ${conc.numero_documento}
-                        </span>
-                    </td>
+                    <td>${tipoDocumento}</td>
                     <td>${formatearImporte(conc.importe_gasto)}</td>
                     <td>${formatearImporte(conc.importe_documento)}</td>
                     <td class="${Math.abs(conc.diferencia) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">

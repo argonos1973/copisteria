@@ -516,6 +516,7 @@ def conciliados():
                 'total': 0
             })
         
+        # Obtener conciliaciones normales (no liquidaciones TPV)
         cursor.execute('''
             SELECT 
                 c.*,
@@ -530,10 +531,43 @@ def conciliados():
             LEFT JOIN factura f ON c.tipo_documento = 'factura' AND c.documento_id = f.id
             LEFT JOIN tickets t ON c.tipo_documento = 'ticket' AND c.documento_id = t.id
             WHERE c.estado = 'conciliado'
+            AND c.tipo_documento != 'liquidacion_tpv'
             ORDER BY c.fecha_conciliacion DESC
         ''')
         
-        conciliaciones = [dict(row) for row in cursor.fetchall()]
+        conciliaciones_normales = [dict(row) for row in cursor.fetchall()]
+        
+        # Obtener liquidaciones TPV agrupadas por fecha
+        cursor.execute('''
+            SELECT 
+                MIN(c.id) as id,
+                g.fecha_operacion,
+                'Liquidación TPV ' || g.fecha_operacion as concepto_gasto,
+                'liquidacion_tpv' as tipo_documento,
+                COUNT(c.id) as num_liquidaciones,
+                SUM(c.importe_gasto) as importe_gasto,
+                0 as importe_documento,
+                0 as diferencia,
+                'conciliado' as estado,
+                'automatico' as metodo,
+                MAX(c.fecha_conciliacion) as fecha_conciliacion,
+                GROUP_CONCAT(c.notas, ' | ') as notas
+            FROM conciliacion_gastos c
+            LEFT JOIN gastos g ON c.gasto_id = g.id
+            WHERE c.estado = 'conciliado'
+            AND c.tipo_documento = 'liquidacion_tpv'
+            GROUP BY g.fecha_operacion
+            ORDER BY MAX(c.fecha_conciliacion) DESC
+        ''')
+        
+        liquidaciones_agrupadas = [dict(row) for row in cursor.fetchall()]
+        
+        # Combinar ambas listas
+        conciliaciones = conciliaciones_normales + liquidaciones_agrupadas
+        
+        # Ordenar por fecha de conciliación
+        conciliaciones.sort(key=lambda x: x['fecha_conciliacion'], reverse=True)
+        
         conn.close()
         
         return jsonify({
