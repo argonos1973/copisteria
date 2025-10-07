@@ -571,6 +571,21 @@ def obtener_notificaciones():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Verificar si la tabla existe
+        cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='conciliacion_gastos'
+        """)
+        
+        if not cursor.fetchone():
+            # Tabla no existe, devolver vacío
+            conn.close()
+            return jsonify({
+                'success': True,
+                'notificaciones': [],
+                'total': 0
+            })
+        
         cursor.execute('''
             SELECT 
                 c.id,
@@ -645,6 +660,20 @@ def contador_notificaciones():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Verificar si la tabla existe
+        cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='conciliacion_gastos'
+        """)
+        
+        if not cursor.fetchone():
+            # Tabla no existe, devolver 0
+            conn.close()
+            return jsonify({
+                'success': True,
+                'total': 0
+            })
         
         cursor.execute('''
             SELECT COUNT(*) as total
