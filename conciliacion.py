@@ -138,26 +138,27 @@ def buscar_coincidencias_automaticas(gasto):
 
 def calcular_score(gasto, documento):
     """
-    Calcular score de coincidencia (0-100)
+    Calcular score de coincidencia (0-120, luego normalizado a 100)
     Factores:
-    - Diferencia de importe (50 puntos)
+    - Diferencia de importe (40 puntos)
     - Diferencia de fecha (30 puntos)
     - Exactitud del importe (20 puntos)
+    - Coincidencia en concepto (30 puntos) - NUEVO
     """
     score = 0
     
-    # Score por diferencia de importe
+    # Score por diferencia de importe (40 puntos)
     diferencia_importe = abs(abs(gasto['importe_eur']) - documento['total'])
     if diferencia_importe == 0:
-        score += 50
-    elif diferencia_importe <= 0.01:
-        score += 45
-    elif diferencia_importe <= 0.02:
         score += 40
+    elif diferencia_importe <= 0.01:
+        score += 35
+    elif diferencia_importe <= 0.02:
+        score += 30
     else:
-        score += max(0, 50 - (diferencia_importe * 100))
+        score += max(0, 40 - (diferencia_importe * 100))
     
-    # Score por diferencia de fecha
+    # Score por diferencia de fecha (30 puntos)
     fecha_gasto = datetime.strptime(gasto['fecha_operacion'], '%Y-%m-%d')
     fecha_doc = datetime.strptime(documento['fecha'], '%Y-%m-%d')
     diferencia_dias = abs((fecha_gasto - fecha_doc).days)
@@ -171,13 +172,41 @@ def calcular_score(gasto, documento):
     elif diferencia_dias <= 7:
         score += 10
     
-    # Score por exactitud (si el importe es exacto)
+    # Score por exactitud del importe (20 puntos)
     if diferencia_importe == 0:
         score += 20
     elif diferencia_importe <= 0.01:
         score += 15
     
-    return min(100, score)
+    # Score por coincidencia en concepto (30 puntos) - NUEVO
+    concepto_gasto = (gasto.get('concepto') or '').upper()
+    numero_documento = (documento.get('numero') or '').upper()
+    
+    if numero_documento and concepto_gasto:
+        # Buscar el número de documento en el concepto del gasto
+        # Ejemplos: "F250123", "T255678", "250123", etc.
+        
+        # Extraer solo los dígitos del número de documento
+        import re
+        digitos_doc = re.sub(r'[^0-9]', '', numero_documento)
+        
+        # Si el número completo aparece en el concepto
+        if numero_documento in concepto_gasto:
+            score += 30  # Coincidencia exacta
+        # Si los dígitos del número aparecen en el concepto
+        elif digitos_doc and len(digitos_doc) >= 4 and digitos_doc in concepto_gasto:
+            score += 25  # Coincidencia de dígitos
+        # Si aparece parte del número (últimos 4 dígitos)
+        elif digitos_doc and len(digitos_doc) >= 4:
+            ultimos_4 = digitos_doc[-4:]
+            if ultimos_4 in concepto_gasto:
+                score += 20  # Coincidencia parcial
+    
+    # Normalizar a escala 0-100
+    # Máximo posible: 40 + 30 + 20 + 30 = 120
+    score_normalizado = min(100, int((score / 120) * 100))
+    
+    return score_normalizado
 
 def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='automatico'):
     """Crear una conciliación entre un gasto y un documento"""
