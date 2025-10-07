@@ -601,17 +601,23 @@ async function cargarLiquidacionesTPV() {
         if (data.success && data.liquidaciones.length > 0) {
             tbody.innerHTML = '';
             
-            data.liquidaciones.forEach(liq => {
+            // Procesar liquidaciones automáticamente
+            for (const liq of data.liquidaciones) {
                 const tr = document.createElement('tr');
                 
                 let estadoClass = '';
                 let estadoTexto = '';
+                let accion = '';
+                
                 if (liq.estado === 'exacto') {
                     estadoClass = 'estado-exacto';
                     estadoTexto = 'Exacto';
+                    // Conciliar automáticamente las exactas
+                    await conciliarLiquidacionAutomatica(liq);
                 } else if (liq.estado === 'aceptable') {
                     estadoClass = 'estado-aceptable';
                     estadoTexto = 'Aceptable';
+                    accion = `<button class="btn btn-primary btn-sm" onclick='confirmarConciliacionLiquidacion(${JSON.stringify(liq)})'>Conciliar</button>`;
                 } else {
                     estadoClass = 'estado-revisar';
                     estadoTexto = 'Revisar';
@@ -626,10 +632,11 @@ async function cargarLiquidacionesTPV() {
                     <td class="text-right">${formatearImporte(liq.total_documentos)}</td>
                     <td class="text-right">${formatearImporte(liq.diferencia)}</td>
                     <td class="text-center"><span class="${estadoClass}">${estadoTexto}</span></td>
+                    ${accion ? `<td class="text-center">${accion}</td>` : ''}
                 `;
                 
                 tbody.appendChild(tr);
-            });
+            }
             
             tabla.style.display = 'table';
         } else {
@@ -639,5 +646,59 @@ async function cargarLiquidacionesTPV() {
         console.error('Error al cargar liquidaciones TPV:', error);
         loading.style.display = 'none';
         empty.style.display = 'block';
+    }
+}
+
+async function conciliarLiquidacionAutomatica(liq) {
+    try {
+        const response = await fetch(`${API_URL}/conciliacion/conciliar-liquidacion`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ids_gastos: liq.ids_gastos,
+                fecha: liq.fecha
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            console.log(`Liquidación ${liq.fecha} conciliada automáticamente`);
+        }
+    } catch (error) {
+        console.error('Error al conciliar liquidación automática:', error);
+    }
+}
+
+window.confirmarConciliacionLiquidacion = async function(liq) {
+    const confirmar = confirm(
+        `¿Conciliar liquidación del ${liq.fecha}?\n\n` +
+        `Liquidaciones: ${liq.num_liquidaciones} (${liq.total_liquidaciones}€)\n` +
+        `Tickets: ${liq.num_tickets}\n` +
+        `Facturas: ${liq.num_facturas}\n` +
+        `Total documentos: ${liq.total_documentos}€\n` +
+        `Diferencia: ${liq.diferencia}€ (${liq.porcentaje_diferencia}%)`
+    );
+    
+    if (!confirmar) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/conciliacion/conciliar-liquidacion`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ids_gastos: liq.ids_gastos,
+                fecha: liq.fecha
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert(`✅ Liquidación conciliada: ${result.conciliados} documentos`);
+            cargarLiquidacionesTPV();
+        } else {
+            alert(`❌ Error: ${result.error}`);
+        }
+    } catch (error) {
+        alert(`❌ Error al conciliar: ${error.message}`);
     }
 }

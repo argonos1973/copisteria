@@ -977,3 +977,82 @@ def obtener_liquidaciones_tpv():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/conciliar-liquidacion', methods=['POST'])
+def conciliar_liquidacion():
+    """Conciliar una liquidación TPV con sus tickets/facturas"""
+    try:
+        data = request.json
+        ids_gastos = data.get('ids_gastos', '').split(',')
+        fecha = data.get('fecha')
+        
+        if not ids_gastos or not fecha:
+            return jsonify({'success': False, 'error': 'Faltan parámetros'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Convertir fecha a formato YYYY-MM-DD
+        try:
+            if '/' in fecha:
+                fecha_obj = datetime.strptime(fecha, '%d/%m/%Y')
+            else:
+                fecha_obj = datetime.strptime(fecha, '%Y-%m-%d')
+            fecha_busqueda = fecha_obj.strftime('%Y-%m-%d')
+        except:
+            return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
+        
+        # Obtener tickets y facturas con tarjeta de esa fecha
+        cursor.execute('''
+            SELECT 'ticket' as tipo, id, numero, total
+            FROM tickets
+            WHERE fecha = ? AND formaPago = 'T' AND estado = 'C'
+        ''', (fecha_busqueda,))
+        tickets = cursor.fetchall()
+        
+        cursor.execute('''
+            SELECT 'factura' as tipo, id, numero, total
+            FROM factura
+            WHERE fecha = ? AND formaPago = 'T' AND estado = 'C'
+        ''', (fecha_busqueda,))
+        facturas = cursor.fetchall()
+        
+        documentos = list(tickets) + list(facturas)
+        
+        if not documentos:
+            conn.close()
+            return jsonify({'success': False, 'error': 'No hay documentos para conciliar'}), 400
+        
+        # Conciliar cada gasto con los documentos
+        conciliados = 0
+        for gasto_id in ids_gastos:
+            if not gasto_id.strip():
+                continue
+                
+            for doc in documentos:
+                try:
+                    cursor.execute('''
+                        INSERT OR IGNORE INTO conciliacion_gastos 
+                        (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
+                         importe_gasto, importe_documento, diferencia, estado, metodo, notificado)
+                        VALUES (?, ?, ?, datetime('now'), 
+                                (SELECT importe_eur FROM gastos WHERE id = ?),
+                                ?, 0, 'conciliado', 'manual', 0)
+                    ''', (int(gasto_id), doc['tipo'], doc['id'], int(gasto_id), doc['total']))
+                    
+                    if cursor.rowcount > 0:
+                        conciliados += 1
+                except Exception as e:
+                    print(f"Error conciliando gasto {gasto_id} con {doc['tipo']} {doc['numero']}: {e}")
+                    continue
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'conciliados': conciliados,
+            'mensaje': f'Liquidación conciliada: {conciliados} documentos'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
