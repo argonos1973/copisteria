@@ -1,0 +1,457 @@
+# conciliacion.py
+# Sistema de conciliación automática entre gastos bancarios y facturas/tickets
+import sqlite3
+from datetime import datetime, timedelta
+from flask import Blueprint, jsonify, request
+from constantes import DB_NAME
+
+conciliacion_bp = Blueprint('conciliacion', __name__)
+
+def get_db_connection():
+    """Obtener conexión a la base de datos"""
+    conn = sqlite3.connect(DB_NAME, timeout=30)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def crear_tabla_conciliacion():
+    """Crear tabla para almacenar conciliaciones si no existe"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS conciliacion_gastos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            gasto_id INTEGER NOT NULL,
+            tipo_documento TEXT NOT NULL, -- 'factura', 'ticket', 'proforma'
+            documento_id INTEGER NOT NULL,
+            fecha_conciliacion TEXT NOT NULL,
+            importe_gasto REAL NOT NULL,
+            importe_documento REAL NOT NULL,
+            diferencia REAL,
+            estado TEXT DEFAULT 'conciliado', -- 'conciliado', 'pendiente', 'rechazado'
+            metodo TEXT, -- 'automatico', 'manual'
+            notas TEXT,
+            FOREIGN KEY(gasto_id) REFERENCES gastos(id),
+            UNIQUE(gasto_id, tipo_documento, documento_id)
+        )
+    ''')
+    
+    # Índices para mejorar rendimiento
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_conciliacion_gasto ON conciliacion_gastos(gasto_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_conciliacion_documento ON conciliacion_gastos(tipo_documento, documento_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_conciliacion_estado ON conciliacion_gastos(estado)')
+    
+    conn.commit()
+    conn.close()
+
+def buscar_coincidencias_automaticas(gasto):
+    """
+    Buscar coincidencias automáticas para un gasto bancario
+    Criterios:
+    1. Importe exacto o muy cercano (±0.02€)
+    2. Fecha cercana (±7 días)
+    3. Estado cobrado/pagado
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    gasto_id = gasto['id']
+    importe = abs(gasto['importe_eur'])  # Valor absoluto para comparar
+    fecha_gasto = datetime.strptime(gasto['fecha_operacion'], '%Y-%m-%d')
+    fecha_inicio = (fecha_gasto - timedelta(days=7)).strftime('%Y-%m-%d')
+    fecha_fin = (fecha_gasto + timedelta(days=7)).strftime('%Y-%m-%d')
+    
+    tolerancia = 0.02  # Tolerancia de 2 céntimos
+    
+    coincidencias = []
+    
+    # Buscar en facturas cobradas
+    cursor.execute('''
+        SELECT 
+            'factura' as tipo,
+            id,
+            numero,
+            fecha,
+            total,
+            estado,
+            importe_cobrado
+        FROM factura
+        WHERE estado = 'C'
+        AND fecha BETWEEN ? AND ?
+        AND ABS(total - ?) <= ?
+        AND id NOT IN (
+            SELECT documento_id FROM conciliacion_gastos 
+            WHERE tipo_documento = 'factura' AND estado = 'conciliado'
+        )
+    ''', (fecha_inicio, fecha_fin, importe, tolerancia))
+    
+    for row in cursor.fetchall():
+        coincidencias.append({
+            'tipo': 'factura',
+            'id': row['id'],
+            'numero': row['numero'],
+            'fecha': row['fecha'],
+            'importe': row['total'],
+            'diferencia': abs(row['total'] - importe),
+            'score': calcular_score(gasto, dict(row))
+        })
+    
+    # Buscar en tickets cobrados
+    cursor.execute('''
+        SELECT 
+            'ticket' as tipo,
+            id,
+            numero,
+            fecha,
+            total,
+            estado,
+            importe_cobrado
+        FROM tickets
+        WHERE estado = 'C'
+        AND fecha BETWEEN ? AND ?
+        AND ABS(total - ?) <= ?
+        AND id NOT IN (
+            SELECT documento_id FROM conciliacion_gastos 
+            WHERE tipo_documento = 'ticket' AND estado = 'conciliado'
+        )
+    ''', (fecha_inicio, fecha_fin, importe, tolerancia))
+    
+    for row in cursor.fetchall():
+        coincidencias.append({
+            'tipo': 'ticket',
+            'id': row['id'],
+            'numero': row['numero'],
+            'fecha': row['fecha'],
+            'importe': row['total'],
+            'diferencia': abs(row['total'] - importe),
+            'score': calcular_score(gasto, dict(row))
+        })
+    
+    conn.close()
+    
+    # Ordenar por score (mayor score = mejor coincidencia)
+    coincidencias.sort(key=lambda x: x['score'], reverse=True)
+    
+    return coincidencias
+
+def calcular_score(gasto, documento):
+    """
+    Calcular score de coincidencia (0-100)
+    Factores:
+    - Diferencia de importe (50 puntos)
+    - Diferencia de fecha (30 puntos)
+    - Exactitud del importe (20 puntos)
+    """
+    score = 0
+    
+    # Score por diferencia de importe
+    diferencia_importe = abs(abs(gasto['importe_eur']) - documento['total'])
+    if diferencia_importe == 0:
+        score += 50
+    elif diferencia_importe <= 0.01:
+        score += 45
+    elif diferencia_importe <= 0.02:
+        score += 40
+    else:
+        score += max(0, 50 - (diferencia_importe * 100))
+    
+    # Score por diferencia de fecha
+    fecha_gasto = datetime.strptime(gasto['fecha_operacion'], '%Y-%m-%d')
+    fecha_doc = datetime.strptime(documento['fecha'], '%Y-%m-%d')
+    diferencia_dias = abs((fecha_gasto - fecha_doc).days)
+    
+    if diferencia_dias == 0:
+        score += 30
+    elif diferencia_dias <= 1:
+        score += 25
+    elif diferencia_dias <= 3:
+        score += 20
+    elif diferencia_dias <= 7:
+        score += 10
+    
+    # Score por exactitud (si el importe es exacto)
+    if diferencia_importe == 0:
+        score += 20
+    elif diferencia_importe <= 0.01:
+        score += 15
+    
+    return min(100, score)
+
+def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='automatico'):
+    """Crear una conciliación entre un gasto y un documento"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Obtener datos del gasto
+        cursor.execute('SELECT * FROM gastos WHERE id = ?', (gasto_id,))
+        gasto = dict(cursor.fetchone())
+        
+        # Obtener datos del documento
+        if tipo_documento == 'factura':
+            cursor.execute('SELECT * FROM factura WHERE id = ?', (documento_id,))
+        elif tipo_documento == 'ticket':
+            cursor.execute('SELECT * FROM tickets WHERE id = ?', (documento_id,))
+        else:
+            raise ValueError(f'Tipo de documento no válido: {tipo_documento}')
+        
+        documento = dict(cursor.fetchone())
+        
+        # Calcular diferencia
+        diferencia = abs(gasto['importe_eur']) - documento['total']
+        
+        # Insertar conciliación
+        cursor.execute('''
+            INSERT INTO conciliacion_gastos 
+            (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
+             importe_gasto, importe_documento, diferencia, estado, metodo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'conciliado', ?)
+        ''', (
+            gasto_id,
+            tipo_documento,
+            documento_id,
+            datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            gasto['importe_eur'],
+            documento['total'],
+            diferencia,
+            metodo
+        ))
+        
+        conn.commit()
+        return True, 'Conciliación creada exitosamente'
+        
+    except sqlite3.IntegrityError:
+        return False, 'Esta conciliación ya existe'
+    except Exception as e:
+        conn.rollback()
+        return False, str(e)
+    finally:
+        conn.close()
+
+# ============================================================================
+# RUTAS API
+# ============================================================================
+
+@conciliacion_bp.route('/api/conciliacion/inicializar', methods=['POST'])
+def inicializar_sistema():
+    """Crear tabla de conciliación"""
+    try:
+        crear_tabla_conciliacion()
+        return jsonify({'success': True, 'message': 'Sistema de conciliación inicializado'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/buscar/<int:gasto_id>', methods=['GET'])
+def buscar_coincidencias(gasto_id):
+    """Buscar coincidencias automáticas para un gasto"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener el gasto
+        cursor.execute('SELECT * FROM gastos WHERE id = ?', (gasto_id,))
+        gasto = cursor.fetchone()
+        
+        if not gasto:
+            return jsonify({'success': False, 'error': 'Gasto no encontrado'}), 404
+        
+        gasto_dict = dict(gasto)
+        conn.close()
+        
+        # Buscar coincidencias
+        coincidencias = buscar_coincidencias_automaticas(gasto_dict)
+        
+        return jsonify({
+            'success': True,
+            'gasto': gasto_dict,
+            'coincidencias': coincidencias
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/conciliar', methods=['POST'])
+def conciliar():
+    """Conciliar un gasto con un documento"""
+    try:
+        data = request.json
+        gasto_id = data.get('gasto_id')
+        tipo_documento = data.get('tipo_documento')
+        documento_id = data.get('documento_id')
+        metodo = data.get('metodo', 'manual')
+        
+        if not all([gasto_id, tipo_documento, documento_id]):
+            return jsonify({'success': False, 'error': 'Faltan parámetros'}), 400
+        
+        success, message = conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo)
+        
+        if success:
+            return jsonify({'success': True, 'message': message})
+        else:
+            return jsonify({'success': False, 'error': message}), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/gastos-pendientes', methods=['GET'])
+def gastos_pendientes():
+    """Obtener gastos sin conciliar"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener parámetros de filtro
+        fecha_inicio = request.args.get('fecha_inicio')
+        fecha_fin = request.args.get('fecha_fin')
+        
+        query = '''
+            SELECT g.*
+            FROM gastos g
+            WHERE g.id NOT IN (
+                SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
+            )
+            AND g.importe_eur > 0
+        '''
+        
+        params = []
+        if fecha_inicio:
+            query += ' AND g.fecha_operacion >= ?'
+            params.append(fecha_inicio)
+        if fecha_fin:
+            query += ' AND g.fecha_operacion <= ?'
+            params.append(fecha_fin)
+        
+        query += ' ORDER BY g.fecha_operacion DESC'
+        
+        cursor.execute(query, params)
+        gastos = [dict(row) for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'gastos': gastos,
+            'total': len(gastos)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/conciliados', methods=['GET'])
+def conciliados():
+    """Obtener conciliaciones realizadas"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                c.*,
+                g.fecha_operacion,
+                g.concepto as concepto_gasto,
+                CASE 
+                    WHEN c.tipo_documento = 'factura' THEN f.numero
+                    WHEN c.tipo_documento = 'ticket' THEN t.numero
+                END as numero_documento
+            FROM conciliacion_gastos c
+            LEFT JOIN gastos g ON c.gasto_id = g.id
+            LEFT JOIN factura f ON c.tipo_documento = 'factura' AND c.documento_id = f.id
+            LEFT JOIN tickets t ON c.tipo_documento = 'ticket' AND c.documento_id = t.id
+            WHERE c.estado = 'conciliado'
+            ORDER BY c.fecha_conciliacion DESC
+        ''')
+        
+        conciliaciones = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'conciliaciones': conciliaciones,
+            'total': len(conciliaciones)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/eliminar/<int:conciliacion_id>', methods=['DELETE'])
+def eliminar_conciliacion(conciliacion_id):
+    """Eliminar una conciliación"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('DELETE FROM conciliacion_gastos WHERE id = ?', (conciliacion_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Conciliación eliminada'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/procesar-automatico', methods=['POST'])
+def procesar_automatico():
+    """Procesar conciliaciones automáticas para todos los gastos pendientes"""
+    try:
+        data = request.json
+        umbral_score = data.get('umbral_score', 90)  # Score mínimo para conciliar automáticamente
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener gastos pendientes
+        cursor.execute('''
+            SELECT * FROM gastos
+            WHERE id NOT IN (
+                SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
+            )
+            AND importe_eur > 0
+            ORDER BY fecha_operacion DESC
+        ''')
+        
+        gastos_pendientes = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        
+        resultados = {
+            'procesados': 0,
+            'conciliados': 0,
+            'pendientes': 0,
+            'detalles': []
+        }
+        
+        for gasto in gastos_pendientes:
+            resultados['procesados'] += 1
+            
+            # Buscar coincidencias
+            coincidencias = buscar_coincidencias_automaticas(gasto)
+            
+            if coincidencias and coincidencias[0]['score'] >= umbral_score:
+                # Conciliar automáticamente la mejor coincidencia
+                mejor = coincidencias[0]
+                success, message = conciliar_automaticamente(
+                    gasto['id'],
+                    mejor['tipo'],
+                    mejor['id'],
+                    'automatico'
+                )
+                
+                if success:
+                    resultados['conciliados'] += 1
+                    resultados['detalles'].append({
+                        'gasto_id': gasto['id'],
+                        'documento': f"{mejor['tipo']} {mejor['numero']}",
+                        'score': mejor['score'],
+                        'estado': 'conciliado'
+                    })
+                else:
+                    resultados['pendientes'] += 1
+            else:
+                resultados['pendientes'] += 1
+        
+        return jsonify({
+            'success': True,
+            'resultados': resultados
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500

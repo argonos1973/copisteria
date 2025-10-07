@@ -33,6 +33,7 @@ import proforma
 import presupuesto
 import tickets
 import verifactu
+import conciliacion
 
 # Configuración externa para habilitar o deshabilitar VeriFactu
 try:
@@ -60,6 +61,7 @@ application = Flask(__name__,
 app = application
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(gastos_bp, url_prefix='')
+app.register_blueprint(conciliacion.conciliacion_bp, url_prefix='')
 # Configurar CORS
 CORS(app, resources={
     r"/*": {"origins": "*"}  # Permitir cualquier ruta

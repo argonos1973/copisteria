@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conciliación Bancaria</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="../static/page_header.css">
+    <link rel="stylesheet" href="../static/styles.css">
+    <link rel="stylesheet" href="../static/notificaciones.css">
+    <style>
+        .container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .actions-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #34495e;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab.active {
+            color: #2c3e50;
+            border-bottom-color: #2c3e50;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .gastos-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .gastos-table thead {
+            background: #2c3e50;
+            color: white;
+        }
+
+        .gastos-table th,
+        .gastos-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .gastos-table tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .gastos-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+        }
+
+        .close-modal {
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-modal:hover {
+            color: #333;
+        }
+
+        .coincidencias-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .coincidencia-item {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .coincidencia-item:hover {
+            border-color: #2c3e50;
+            background: #f8f9fa;
+        }
+
+        .coincidencia-item.selected {
+            border-color: #27ae60;
+            background: #d4edda;
+        }
+
+        .coincidencia-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .score-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .score-high {
+            background: #27ae60;
+            color: white;
+        }
+
+        .score-medium {
+            background: #f39c12;
+            color: white;
+        }
+
+        .score-low {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .coincidencia-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            font-size: 13px;
+        }
+
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-label {
+            color: #666;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+
+        .detail-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+
+        .importe-positivo {
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .importe-negativo {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>Conciliación Bancaria Automática</h1>
+        </div>
+
+        <!-- Estadísticas -->
+        <div class="stats-cards">
+            <div class="stat-card">
+                <h3>Gastos Pendientes</h3>
+                <div class="value" id="stat-pendientes">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Conciliados</h3>
+                <div class="value" id="stat-conciliados">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Pendiente</h3>
+                <div class="value" id="stat-total-pendiente">0.00 €</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Conciliado</h3>
+                <div class="value" id="stat-total-conciliado">0.00 €</div>
+            </div>
+        </div>
+
+        <!-- Acciones -->
+        <div class="actions-bar">
+            <button class="btn btn-primary" onclick="inicializarSistema()">
+                <i class="fas fa-cog"></i> Inicializar Sistema
+            </button>
+            <button class="btn btn-success" onclick="procesarAutomatico()">
+                <i class="fas fa-magic"></i> Conciliar Automático
+            </button>
+            <button class="btn btn-primary" onclick="cargarDatos()">
+                <i class="fas fa-sync"></i> Actualizar
+            </button>
+        </div>
+
+        <!-- Pestañas -->
+        <div class="tabs">
+            <button class="tab active" data-tab="pendientes">
+                <i class="fas fa-clock"></i> Pendientes
+            </button>
+            <button class="tab" data-tab="conciliados">
+                <i class="fas fa-check-circle"></i> Conciliados
+            </button>
+        </div>
+
+        <!-- Contenido: Gastos Pendientes -->
+        <div class="tab-content active" id="tab-pendientes">
+            <div id="loading-pendientes" class="loading" style="display:none;">
+                <i class="fas fa-spinner fa-spin"></i> Cargando...
+            </div>
+            <div id="empty-pendientes" class="empty-state" style="display:none;">
+                <i class="fas fa-check-circle"></i>
+                <p>No hay gastos pendientes de conciliar</p>
+            </div>
+            <table class="gastos-table" id="tabla-pendientes" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Concepto</th>
+                        <th>Importe</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-pendientes"></tbody>
+            </table>
+        </div>
+
+        <!-- Contenido: Conciliados -->
+        <div class="tab-content" id="tab-conciliados">
+            <div id="loading-conciliados" class="loading" style="display:none;">
+                <i class="fas fa-spinner fa-spin"></i> Cargando...
+            </div>
+            <div id="empty-conciliados" class="empty-state" style="display:none;">
+                <i class="fas fa-info-circle"></i>
+                <p>No hay conciliaciones realizadas</p>
+            </div>
+            <table class="gastos-table" id="tabla-conciliados" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Fecha Gasto</th>
+                        <th>Concepto</th>
+                        <th>Documento</th>
+                        <th>Importe Gasto</th>
+                        <th>Importe Doc.</th>
+                        <th>Diferencia</th>
+                        <th>Método</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-conciliados"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal de Coincidencias -->
+    <div class="modal" id="modal-coincidencias">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Buscar Coincidencias</h2>
+                <span class="close-modal" onclick="cerrarModal()">&times;</span>
+            </div>
+            
+            <div id="gasto-info" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <!-- Info del gasto se cargará aquí -->
+            </div>
+
+            <div id="loading-coincidencias" class="loading" style="display:none;">
+                <i class="fas fa-spinner fa-spin"></i> Buscando coincidencias...
+            </div>
+
+            <div id="coincidencias-container"></div>
+
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn btn-danger" onclick="cerrarModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="confirmarConciliacion()" id="btn-confirmar" disabled>
+                    <i class="fas fa-check"></i> Confirmar Conciliación
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor de notificaciones -->
+    <div id="notificaciones-contenedor"></div>
+
+    <script type="module" src="../static/conciliacion_gastos.js"></script>
+</body>
+</html>
