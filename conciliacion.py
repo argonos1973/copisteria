@@ -52,18 +52,27 @@ def buscar_coincidencias_automaticas(gasto):
     Criterios:
     1. Importe exacto o muy cercano (±0.02€)
     2. Fecha cercana (±7 días)
-    3. Estado cobrado/pagado
     """
     conn = get_db_connection()
     cursor = conn.cursor()
     
     gasto_id = gasto['id']
-    importe = abs(gasto['importe_eur'])  # Valor absoluto para comparar
-    fecha_gasto = datetime.strptime(gasto['fecha_operacion'], '%Y-%m-%d')
+    importe = abs(gasto['importe_eur'])
+    
+    # Manejar múltiples formatos de fecha
+    fecha_gasto_str = gasto['fecha_operacion']
+    try:
+        if '/' in fecha_gasto_str:
+            fecha_gasto = datetime.strptime(fecha_gasto_str, '%d/%m/%Y')
+        else:
+            fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
+    except:
+        fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
+    
     fecha_inicio = (fecha_gasto - timedelta(days=7)).strftime('%Y-%m-%d')
     fecha_fin = (fecha_gasto + timedelta(days=7)).strftime('%Y-%m-%d')
     
-    tolerancia = 0.02  # Tolerancia de 2 céntimos
+    tolerancia = 0.02
     
     coincidencias = []
     
@@ -159,7 +168,17 @@ def calcular_score(gasto, documento):
         score += max(0, 40 - (diferencia_importe * 100))
     
     # Score por diferencia de fecha (30 puntos)
-    fecha_gasto = datetime.strptime(gasto['fecha_operacion'], '%Y-%m-%d')
+    # Manejar múltiples formatos de fecha
+    fecha_gasto_str = gasto['fecha_operacion']
+    try:
+        if '/' in fecha_gasto_str:
+            fecha_gasto = datetime.strptime(fecha_gasto_str, '%d/%m/%Y')
+        else:
+            fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
+    except:
+        # Si falla, asumir formato ISO
+        fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
+    
     fecha_doc = datetime.strptime(documento['fecha'], '%Y-%m-%d')
     diferencia_dias = abs((fecha_gasto - fecha_doc).days)
     
