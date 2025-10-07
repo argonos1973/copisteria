@@ -284,10 +284,23 @@ def buscar_coincidencias(gasto_id):
         gasto = cursor.fetchone()
         
         if not gasto:
+            conn.close()
             return jsonify({'success': False, 'error': 'Gasto no encontrado'}), 404
         
         gasto_dict = dict(gasto)
+        
+        # Verificar si la tabla existe
+        cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='conciliacion_gastos'
+        """)
+        
+        tabla_existe = cursor.fetchone() is not None
         conn.close()
+        
+        if not tabla_existe:
+            # Crear tabla automáticamente
+            crear_tabla_conciliacion()
         
         # Buscar coincidencias
         coincidencias = buscar_coincidencias_automaticas(gasto_dict)
@@ -461,6 +474,29 @@ def procesar_automatico():
         
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Verificar si la tabla existe
+        cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='conciliacion_gastos'
+        """)
+        
+        tabla_existe = cursor.fetchone() is not None
+        
+        if not tabla_existe:
+            # Tabla no existe, no se puede conciliar
+            conn.close()
+            return jsonify({
+                'success': True,
+                'resultados': {
+                    'procesados': 0,
+                    'conciliados': 0,
+                    'pendientes': 0,
+                    'sugerencias': 0,
+                    'detalles': [],
+                    'mensaje': 'Sistema no inicializado. Por favor, haz clic en "Inicializar Sistema" primero.'
+                }
+            })
         
         # Obtener gastos pendientes (solo ingresos positivos)
         cursor.execute('''
