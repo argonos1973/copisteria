@@ -104,6 +104,8 @@ def calcular_score(gasto, documento):
     """
     Calcular score de coincidencia (0-120, luego normalizado a 100)
     Incluye comparación por concepto
+    
+    CASO ESPECIAL: Si número de documento aparece en concepto + importe exacto = 100%
     """
     import re
     score = 0
@@ -120,7 +122,16 @@ def calcular_score(gasto, documento):
         score += max(0, 40 - (diferencia_importe * 100))
     
     # Score por diferencia de fecha (30 puntos)
-    fecha_gasto = datetime.strptime(gasto['fecha_operacion'], '%Y-%m-%d')
+    # Manejar múltiples formatos de fecha
+    fecha_gasto_str = gasto['fecha_operacion']
+    try:
+        if '/' in fecha_gasto_str:
+            fecha_gasto = datetime.strptime(fecha_gasto_str, '%d/%m/%Y')
+        else:
+            fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
+    except:
+        fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
+    
     fecha_doc = datetime.strptime(documento['fecha'], '%Y-%m-%d')
     diferencia_dias = abs((fecha_gasto - fecha_doc).days)
     
@@ -142,6 +153,8 @@ def calcular_score(gasto, documento):
     # Score por coincidencia en concepto (30 puntos)
     concepto_gasto = (gasto.get('concepto') or '').upper()
     numero_documento = (documento.get('numero') or '').upper()
+    puntos_concepto = 0
+    coincidencia_numero = False
     
     if numero_documento and concepto_gasto:
         # Extraer solo los dígitos del número de documento
@@ -149,15 +162,24 @@ def calcular_score(gasto, documento):
         
         # Si el número completo aparece en el concepto
         if numero_documento in concepto_gasto:
-            score += 30  # Coincidencia exacta
+            puntos_concepto = 30  # Coincidencia exacta
+            coincidencia_numero = True
         # Si los dígitos del número aparecen en el concepto
         elif digitos_doc and len(digitos_doc) >= 4 and digitos_doc in concepto_gasto:
-            score += 25  # Coincidencia de dígitos
+            puntos_concepto = 25  # Coincidencia de dígitos
+            coincidencia_numero = True
         # Si aparece parte del número (últimos 4 dígitos)
         elif digitos_doc and len(digitos_doc) >= 4:
             ultimos_4 = digitos_doc[-4:]
             if ultimos_4 in concepto_gasto:
-                score += 20  # Coincidencia parcial
+                puntos_concepto = 20  # Coincidencia parcial
+                coincidencia_numero = True
+    
+    score += puntos_concepto
+    
+    # CASO ESPECIAL: Número en concepto + importe exacto = 100%
+    if coincidencia_numero and diferencia_importe == 0:
+        return 100
     
     # Normalizar a escala 0-100
     score_normalizado = min(100, int((score / 120) * 100))

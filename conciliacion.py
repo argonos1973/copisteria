@@ -152,8 +152,12 @@ def calcular_score(gasto, documento):
     - Diferencia de importe (40 puntos)
     - Diferencia de fecha (30 puntos)
     - Exactitud del importe (20 puntos)
-    - Coincidencia en concepto (30 puntos) - NUEVO
+    - Coincidencia en concepto (30 puntos)
+    
+    CASO ESPECIAL: Si número de documento aparece en concepto + importe exacto = 100%
     """
+    import re
+    
     score = 0
     
     # Score por diferencia de importe (40 puntos)
@@ -197,29 +201,36 @@ def calcular_score(gasto, documento):
     elif diferencia_importe <= 0.01:
         score += 15
     
-    # Score por coincidencia en concepto (30 puntos) - NUEVO
+    # Score por coincidencia en concepto (30 puntos)
     concepto_gasto = (gasto.get('concepto') or '').upper()
     numero_documento = (documento.get('numero') or '').upper()
+    puntos_concepto = 0
+    coincidencia_numero = False
     
     if numero_documento and concepto_gasto:
-        # Buscar el número de documento en el concepto del gasto
-        # Ejemplos: "F250123", "T255678", "250123", etc.
-        
         # Extraer solo los dígitos del número de documento
-        import re
         digitos_doc = re.sub(r'[^0-9]', '', numero_documento)
         
         # Si el número completo aparece en el concepto
         if numero_documento in concepto_gasto:
-            score += 30  # Coincidencia exacta
+            puntos_concepto = 30  # Coincidencia exacta
+            coincidencia_numero = True
         # Si los dígitos del número aparecen en el concepto
         elif digitos_doc and len(digitos_doc) >= 4 and digitos_doc in concepto_gasto:
-            score += 25  # Coincidencia de dígitos
+            puntos_concepto = 25  # Coincidencia de dígitos
+            coincidencia_numero = True
         # Si aparece parte del número (últimos 4 dígitos)
         elif digitos_doc and len(digitos_doc) >= 4:
             ultimos_4 = digitos_doc[-4:]
             if ultimos_4 in concepto_gasto:
-                score += 20  # Coincidencia parcial
+                puntos_concepto = 20  # Coincidencia parcial
+                coincidencia_numero = True
+    
+    score += puntos_concepto
+    
+    # CASO ESPECIAL: Número en concepto + importe exacto = 100%
+    if coincidencia_numero and diferencia_importe == 0:
+        return 100
     
     # Normalizar a escala 0-100
     # Máximo posible: 40 + 30 + 20 + 30 = 120
