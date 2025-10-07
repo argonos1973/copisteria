@@ -844,28 +844,50 @@ def obtener_liquidaciones_tpv():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Obtener liquidaciones agrupadas por fecha
+        # Obtener todas las liquidaciones
+        # Filtro específico: "Liquidacion Efectuada" para evitar capturar otros conceptos
         cursor.execute('''
             SELECT 
+                id,
                 fecha_operacion,
-                COUNT(*) as num_liquidaciones,
-                SUM(importe_eur) as total_liquidaciones,
-                GROUP_CONCAT(id) as ids_gastos
+                concepto,
+                importe_eur
             FROM gastos
-            WHERE concepto LIKE '%Liquidacion%'
+            WHERE concepto LIKE '%Liquidacion Efectuada%'
             AND id NOT IN (
                 SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
             )
-            GROUP BY fecha_operacion
             ORDER BY fecha_operacion DESC
         ''')
         
-        liquidaciones = cursor.fetchall()
+        liquidaciones_raw = cursor.fetchall()
+        
+        # Agrupar por fecha extraída del concepto
+        import re
+        liquidaciones_agrupadas = {}
+        
+        for liq in liquidaciones_raw:
+            # Extraer fecha del concepto: "Liquidacion Efectuada El 31/01/2025..."
+            match = re.search(r'El (\d{2}/\d{2}/\d{4})', liq['concepto'])
+            if match:
+                fecha_liquidacion = match.group(1)
+            else:
+                fecha_liquidacion = liq['fecha_operacion']
+            
+            if fecha_liquidacion not in liquidaciones_agrupadas:
+                liquidaciones_agrupadas[fecha_liquidacion] = {
+                    'ids': [],
+                    'total': 0,
+                    'count': 0
+                }
+            
+            liquidaciones_agrupadas[fecha_liquidacion]['ids'].append(str(liq['id']))
+            liquidaciones_agrupadas[fecha_liquidacion]['total'] += liq['importe_eur']
+            liquidaciones_agrupadas[fecha_liquidacion]['count'] += 1
+        
         resultado = []
         
-        for liq in liquidaciones:
-            fecha_str = liq['fecha_operacion']
-            
+        for fecha_str, datos in liquidaciones_agrupadas.items():
             # Convertir fecha a formato YYYY-MM-DD para buscar tickets
             try:
                 if '/' in fecha_str:
@@ -892,8 +914,9 @@ def obtener_liquidaciones_tpv():
             num_tickets = tickets_info['num_tickets'] or 0
             
             # Calcular diferencia
-            diferencia = abs(liq['total_liquidaciones'] - total_tickets)
-            porcentaje_diferencia = (diferencia / liq['total_liquidaciones'] * 100) if liq['total_liquidaciones'] > 0 else 0
+            total_liq = datos['total']
+            diferencia = abs(total_liq - total_tickets)
+            porcentaje_diferencia = (diferencia / abs(total_liq) * 100) if total_liq != 0 else 0
             
             # Determinar estado
             if diferencia <= 0.02:
@@ -905,14 +928,14 @@ def obtener_liquidaciones_tpv():
             
             resultado.append({
                 'fecha': fecha_str,
-                'num_liquidaciones': liq['num_liquidaciones'],
-                'total_liquidaciones': round(liq['total_liquidaciones'], 2),
+                'num_liquidaciones': datos['count'],
+                'total_liquidaciones': round(total_liq, 2),
                 'num_tickets': num_tickets,
                 'total_tickets': round(total_tickets, 2),
                 'diferencia': round(diferencia, 2),
                 'porcentaje_diferencia': round(porcentaje_diferencia, 2),
                 'estado': estado,
-                'ids_gastos': liq['ids_gastos']
+                'ids_gastos': ','.join(datos['ids'])
             })
         
         conn.close()
