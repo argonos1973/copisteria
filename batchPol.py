@@ -175,9 +175,10 @@ def generar_detalles_proforma(lineas):
             else:
                 continue
             
-            bruto = cantidad * tarifa
-            iva = bruto * (IVA / 100)
-            total = bruto + iva
+            # Cálculo correcto: IVA desde bruto sin redondear
+            bruto_raw = cantidad * tarifa  # SIN redondear
+            iva = redondear_importe(bruto_raw * (IVA / 100))  # Redondear IVA
+            total = redondear_importe(bruto_raw + iva)  # Total desde bruto sin redondear
             
             detalles.append({
                 'concepto': concepto,
@@ -186,7 +187,7 @@ def generar_detalles_proforma(lineas):
                 'cantidad': cantidad,
                 'precio': tarifa,
                 'impuestos': IVA,
-                'total': redondear_importe(total),
+                'total': total,
                 'formaPago': 'R',
                 'fechaDetalle': datetime.now().strftime('%Y-%m-%d')
             })

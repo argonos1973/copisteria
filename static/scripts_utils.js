@@ -695,9 +695,9 @@ export async function calcularTotalDetalle() {
       actualizarInfoPrecio(precioUnitario, impuestos);
     } else {
       const precioUnitario = parseFloat(precioDetalleElem.value) || 0;
-      const subtotal = precioUnitario * cantidad;
-      const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
-      const total = Number((subtotal + impuestoCalc).toFixed(2));
+      const subtotalRaw = precioUnitario * cantidad; // SIN redondear
+      const impuestoCalc = Number((subtotalRaw * (impuestos / 100)).toFixed(2));
+      const total = Number((subtotalRaw + impuestoCalc).toFixed(2)); // Usar subtotalRaw
       totalElem.value = total.toFixed(2);
       actualizarInfoPrecio(precioUnitario, impuestos);
     }
@@ -769,9 +769,9 @@ export async function calcularTotalDetalle() {
   }
 
   const precioRedondeado = Number(precioFinal.toFixed(5));
-  const subtotal = precioRedondeado * cantidad;
-  const impuestoCalc = Number((subtotal * (impuestos / 100)).toFixed(2));
-  const total = Number((subtotal + impuestoCalc).toFixed(2));
+  const subtotalRaw = precioRedondeado * cantidad; // SIN redondear
+  const impuestoCalc = Number((subtotalRaw * (impuestos / 100)).toFixed(2));
+  const total = Number((subtotalRaw + impuestoCalc).toFixed(2)); // Usar subtotalRaw
 
   precioDetalleElem.value = precioRedondeado.toFixed(5);
   totalElem.value = total.toFixed(2);

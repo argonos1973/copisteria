@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 def calcular_importes(cantidad, precio, impuestos):
     """
     Calcula importes con precisión decimal
+    REGLA FUNDAMENTAL: IVA se calcula desde subtotal SIN redondear
     Devuelve: {'subtotal': float, 'iva': float, 'total': float}
     """
     try:
@@ -11,9 +12,17 @@ def calcular_importes(cantidad, precio, impuestos):
         precio = Decimal(str(precio))
         impuestos = Decimal(str(impuestos))
         
-        subtotal = (cantidad * precio).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        iva = (subtotal * impuestos / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        total = (subtotal + iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        # Subtotal SIN redondear (mantener precisión completa)
+        subtotal_raw = cantidad * precio
+        
+        # IVA se calcula desde subtotal SIN redondear, luego se redondea
+        iva = (subtotal_raw * impuestos / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        # Total = subtotal sin redondear + IVA redondeado, luego redondear el total
+        total = (subtotal_raw + iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        # Subtotal para mostrar (redondeado solo para visualización)
+        subtotal = subtotal_raw.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
         
         return {
             'subtotal': float(subtotal),

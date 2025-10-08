@@ -764,57 +764,108 @@ def ejecutar_cron():
 
 @conciliacion_bp.route('/api/conciliacion/notificaciones', methods=['GET'])
 def obtener_notificaciones():
-    """Obtener conciliaciones no notificadas"""
+    """Obtener notificaciones generales y de conciliación"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Verificar si la tabla existe
+        todas_notificaciones = []
+        
+        # 1. Obtener notificaciones generales de la tabla notificaciones
+        cursor.execute("""
+            SELECT name FROM sqlite_master 
+            WHERE type='table' AND name='notificaciones'
+        """)
+        
+        if cursor.fetchone():
+            cursor.execute('''
+                SELECT 
+                    id,
+                    tipo,
+                    mensaje,
+                    timestamp as fecha_conciliacion,
+                    'general' as origen
+                FROM notificaciones
+                ORDER BY timestamp DESC
+                LIMIT 50
+            ''')
+            notificaciones_generales = [dict(row) for row in cursor.fetchall()]
+            todas_notificaciones.extend(notificaciones_generales)
+        
+        # 2. Obtener notificaciones de conciliación
         cursor.execute("""
             SELECT name FROM sqlite_master 
             WHERE type='table' AND name='conciliacion_gastos'
         """)
         
-        if not cursor.fetchone():
-            # Tabla no existe, devolver vacío
-            conn.close()
-            return jsonify({
-                'success': True,
-                'notificaciones': [],
-                'total': 0
-            })
+        if cursor.fetchone():
+            cursor.execute('''
+                SELECT 
+                    c.id,
+                    c.fecha_conciliacion,
+                    c.importe_gasto,
+                    c.importe_documento,
+                    c.diferencia,
+                    c.metodo,
+                    g.fecha_operacion,
+                    g.concepto as concepto_gasto,
+                    CASE 
+                        WHEN c.tipo_documento = 'factura' THEN f.numero
+                        WHEN c.tipo_documento = 'ticket' THEN t.numero
+                    END as numero_documento,
+                    c.tipo_documento,
+                    'conciliacion' as origen
+                FROM conciliacion_gastos c
+                LEFT JOIN gastos g ON c.gasto_id = g.id
+                LEFT JOIN factura f ON c.tipo_documento = 'factura' AND c.documento_id = f.id
+                LEFT JOIN tickets t ON c.tipo_documento = 'ticket' AND c.documento_id = t.id
+                WHERE c.notificado = 0 AND c.estado = 'conciliado'
+                ORDER BY c.fecha_conciliacion DESC
+                LIMIT 50
+            ''')
+            notificaciones_conciliacion = [dict(row) for row in cursor.fetchall()]
+            todas_notificaciones.extend(notificaciones_conciliacion)
         
-        cursor.execute('''
-            SELECT 
-                c.id,
-                c.fecha_conciliacion,
-                c.importe_gasto,
-                c.importe_documento,
-                c.diferencia,
-                c.metodo,
-                g.fecha_operacion,
-                g.concepto as concepto_gasto,
-                CASE 
-                    WHEN c.tipo_documento = 'factura' THEN f.numero
-                    WHEN c.tipo_documento = 'ticket' THEN t.numero
-                END as numero_documento,
-                c.tipo_documento
-            FROM conciliacion_gastos c
-            LEFT JOIN gastos g ON c.gasto_id = g.id
-            LEFT JOIN factura f ON c.tipo_documento = 'factura' AND c.documento_id = f.id
-            LEFT JOIN tickets t ON c.tipo_documento = 'ticket' AND c.documento_id = t.id
-            WHERE c.notificado = 0 AND c.estado = 'conciliado'
-            ORDER BY c.fecha_conciliacion DESC
-            LIMIT 50
-        ''')
+        # Ordenar todas por fecha
+        todas_notificaciones.sort(key=lambda x: x.get('fecha_conciliacion', ''), reverse=True)
         
-        notificaciones = [dict(row) for row in cursor.fetchall()]
         conn.close()
         
         return jsonify({
             'success': True,
-            'notificaciones': notificaciones,
-            'total': len(notificaciones)
+            'notificaciones': todas_notificaciones,
+            'total': len(todas_notificaciones)
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/notificaciones/eliminar', methods=['POST'])
+def eliminar_notificaciones():
+    """Eliminar notificaciones generales"""
+    try:
+        data = request.json
+        ids = data.get('ids', [])
+        
+        if not ids:
+            return jsonify({'success': False, 'error': 'No se proporcionaron IDs'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Eliminar notificaciones generales
+        placeholders = ','.join('?' * len(ids))
+        cursor.execute(f'''
+            DELETE FROM notificaciones
+            WHERE id IN ({placeholders})
+        ''', ids)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'eliminadas': cursor.rowcount
         })
         
     except Exception as e:

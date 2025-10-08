@@ -1014,9 +1014,10 @@ def enviar_email_presupuesto(id):
             precio_unitario = float(detalle['precio'])
             cantidad = int(detalle['cantidad'])
             impuestos = float(detalle['impuestos'])
-            subtotal_linea = precio_unitario * cantidad
-            iva_linea = subtotal_linea * (impuestos / 100)
-            total_linea = subtotal_linea + iva_linea
+            # Cálculo correcto: IVA desde subtotal sin redondear
+            subtotal_raw = precio_unitario * cantidad
+            iva_linea = round(subtotal_raw * (impuestos / 100), 2)
+            total_linea = round(subtotal_raw + iva_linea, 2)
             
             detalles_html += f"""
             <tr>

@@ -167,13 +167,14 @@ def generar_factura_pdf(id_factura):
                 c.localidad,
                 c.provincia
             FROM factura f
-            INNER JOIN contactos c ON f.idcontacto = c.idContacto
+            LEFT JOIN contactos c ON f.idContacto = c.idContacto
             WHERE f.id = ?
         """
         cursor.execute(query, (id_factura,))
         factura = cursor.fetchone()
         
         print(f"Resultado de la consulta para PDF: {factura}")
+        print(f"ID factura: {id_factura}")
 
         if not factura:
             print(f"Factura {id_factura} no encontrada")
@@ -182,6 +183,14 @@ def generar_factura_pdf(id_factura):
         # Convertir la tupla de la factura en un diccionario con nombres de columnas
         nombres_columnas = [description[0] for description in cursor.description]
         factura_dict = dict(zip(nombres_columnas, factura))
+        
+        print(f"Datos del cliente en factura_dict:")
+        print(f"  razonsocial: {factura_dict.get('razonsocial')}")
+        print(f"  direccion: {factura_dict.get('direccion')}")
+        print(f"  cp: {factura_dict.get('cp')}")
+        print(f"  localidad: {factura_dict.get('localidad')}")
+        print(f"  provincia: {factura_dict.get('provincia')}")
+        print(f"  identificador: {factura_dict.get('identificador')}")
         
         # Obtener detalles de la factura
         cursor.execute("""
@@ -381,16 +390,16 @@ def generar_factura_pdf(id_factura):
                 '<p>info@aleph70.com</p>'
             ).replace(
                 '<p id="razonsocial"></p>',
-                f'<p>{factura_dict["razonsocial"]}</p>'
+                f'<p>{factura_dict.get("razonsocial") or ""}</p>'
             ).replace(
                 '<p id="direccion"></p>',
-                f'<p>{factura_dict["direccion"] or ""}</p>'
+                f'<p>{factura_dict.get("direccion") or ""}</p>'
             ).replace(
                 '<p id="cp-localidad"></p>',
-                f'<p>{", ".join(filter(None, [factura_dict["cp"], factura_dict["localidad"], factura_dict["provincia"]]))}</p>'
+                f'<p>{", ".join(filter(None, [factura_dict.get("cp"), factura_dict.get("localidad"), factura_dict.get("provincia")]))}</p>'
             ).replace(
                 '<p id="nif"></p>',
-                f'<p>{factura_dict["identificador"] or ""}</p>'
+                f'<p>{factura_dict.get("identificador") or ""}</p>'
             ).replace(
                 '<div id="rectificativa-info"></div>',
                 rectificativa_html if rectificativa_html else ''

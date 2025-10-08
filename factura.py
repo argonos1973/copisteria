@@ -2014,11 +2014,10 @@ def actualizar_factura(id, data):
             ))
 
         # Detectar si debemos generar Facturae/VERI*FACTU tras la actualización
-        # Generar SIEMPRE que se cobre una factura (estado C)
-        # El botón Cobrar solo aparece en facturas P/V, no hay riesgo de regenerar
-        trigger_generar_facturae = (estado == 'C')
+        # Generar si el checkbox presentar_face está marcado y la factura está cobrada
+        trigger_generar_facturae = (estado == 'C' and presentar_face_flag == 1)
         
-        print(f"[DEBUG trigger] trigger_generar_facturae={trigger_generar_facturae}, estado={estado}")
+        print(f"[DEBUG trigger] trigger_generar_facturae={trigger_generar_facturae}, estado={estado}, presentar_face={presentar_face_flag}")
         
         try:
             with safe_append_debug('facturae_debug.log') as log_file:
@@ -2295,10 +2294,8 @@ def actualizar_factura(id, data):
         try:
             print("[VERIFACTU] Actualizando datos VERI*FACTU para factura_id:", id)
             
-            # Verificar si VERI*FACTU está disponible y si la factura está cobrada
-            # Generar XML de VERIFACTU solo si está activo y estado es C
-            if VERIFACTU_DISPONIBLE and estado == 'C':
-                print(f"[VERIFACTU] Generando datos para factura cobrada (estado: {estado})")
+            # Verificar si VERI*FACTU está disponible (desactivado en actualización para evitar duplicados)
+            if VERIFACTU_DISPONIBLE:
                 try:
                     # Llamar a la función que implementa el flujo completo:
                     # 1. Validar XML
@@ -2351,6 +2348,7 @@ def actualizar_factura(id, data):
                         }
                 except Exception as e:
                     print(f"[!] Error al regenerar datos VERI*FACTU: {str(e)}")
+                    import traceback
                     print(traceback.format_exc())
                     respuesta['datos_adicionales'] = {
                         'verifactu': False,
@@ -2368,6 +2366,7 @@ def actualizar_factura(id, data):
                 }
         except Exception as e:
             print(f"[VERIFACTU][ERROR] Error al actualizar datos VERI*FACTU: {e}")
+            import traceback
             print(traceback.format_exc())
             respuesta['datos_adicionales'] = {
                 'verifactu': False,
@@ -2387,6 +2386,7 @@ def actualizar_factura(id, data):
     except Exception as e:
         if conn:
             conn.rollback()
+        import traceback
         tb = traceback.format_exc()
         # Volcar a stdout y a log UTF-8 para diagnóstico
         try:

@@ -968,8 +968,10 @@ def actualizar_ticket():
                 cantidad = float(d['cantidad'])
                 precio = float(d['precio'])
                 impuestos = float(d['impuestos'])
-                subtotal = cantidad * precio
-                total_detalle = redondear_importe(subtotal * (1 + impuestos / 100.0))
+                # Cálculo correcto: IVA desde subtotal sin redondear
+                subtotal_raw = cantidad * precio
+                iva_detalle = redondear_importe(subtotal_raw * (impuestos / 100.0))
+                total_detalle = redondear_importe(subtotal_raw + iva_detalle)
                 cursor.execute('''
                     INSERT INTO detalle_tickets (
                         id_ticket, concepto, descripcion, cantidad, precio, impuestos, total, productoId
@@ -1476,8 +1478,10 @@ def actualizar_ticket_legacy():
             precio = float(detalle['precio'])
             impuestos = float(detalle['impuestos'])
             
-            subtotal = cantidad * precio
-            total_detalle = subtotal * (1 + impuestos / 100)
+            # Cálculo correcto: IVA desde subtotal sin redondear
+            subtotal_raw = cantidad * precio
+            iva_detalle = redondear_importe(subtotal_raw * (impuestos / 100))
+            total_detalle = redondear_importe(subtotal_raw + iva_detalle)
             
             cursor.execute('''
                 INSERT INTO detalle_tickets (
@@ -1749,10 +1753,21 @@ def actualizar_proforma():
             
             detalles_finales.append(detalle_procesado)
 
-        # Calcular importes
-        importe_bruto = redondear_importe(sum(float(d['precio']) * int(d['cantidad']) for d in detalles_finales))
-        importe_impuestos = redondear_importe(sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles_finales))
-        total_proforma = redondear_importe(total)
+        # Calcular importes usando función unificada
+        from utilities import calcular_importes
+        importe_bruto = 0
+        importe_impuestos = 0
+        total_calculado = 0
+        
+        for detalle in detalles_finales:
+            res = calcular_importes(detalle['cantidad'], detalle['precio'], detalle['impuestos'])
+            importe_bruto += res['subtotal']
+            importe_impuestos += res['iva']
+            total_calculado += res['total']
+            # Actualizar el total del detalle con el calculado
+            detalle['total'] = res['total']
+        
+        total_proforma = redondear_importe(total_calculado)
 
         print(f"Importes calculados: bruto={importe_bruto}, impuestos={importe_impuestos}, total={total_proforma}, cobrado={importe_cobrado}")
 
@@ -1968,7 +1983,7 @@ def obtener_factura_para_imprimir(factura_id):
                 d.productoId,
                 d.fechaDetalle
             FROM factura f
-            INNER JOIN contactos c ON f.idcontacto = c.idContacto
+            INNER JOIN contactos c ON f.idContacto = c.idContacto
             INNER JOIN detalle_factura d ON f.id = d.id_factura
             WHERE f.id = ?
             ORDER BY d.id
