@@ -665,11 +665,12 @@ async function cargarLiquidacionesTPV() {
     const loading = document.getElementById('loading-liquidaciones');
     const empty = document.getElementById('empty-liquidaciones');
     const tabla = document.getElementById('tabla-liquidaciones');
-    const tbody = document.getElementById('tbody-liquidaciones');
+    const pagination = document.getElementById('pagination-liquidaciones');
     
     loading.style.display = 'block';
     empty.style.display = 'none';
     tabla.style.display = 'none';
+    pagination.style.display = 'none';
     
     try {
         const response = await fetch(`${API_URL}/conciliacion/liquidaciones-tpv`);
@@ -678,46 +679,11 @@ async function cargarLiquidacionesTPV() {
         loading.style.display = 'none';
         
         if (data.success && data.liquidaciones.length > 0) {
-            tbody.innerHTML = '';
-            
-            // Procesar liquidaciones automáticamente
-            for (const liq of data.liquidaciones) {
-                const tr = document.createElement('tr');
-                
-                let estadoClass = '';
-                let estadoTexto = '';
-                let accion = '';
-                
-                if (liq.estado === 'exacto') {
-                    estadoClass = 'estado-exacto';
-                    estadoTexto = 'Exacto';
-                    // Conciliar automáticamente las exactas
-                    await conciliarLiquidacionAutomatica(liq);
-                } else if (liq.estado === 'aceptable') {
-                    estadoClass = 'estado-aceptable';
-                    estadoTexto = 'Aceptable';
-                    accion = `<i class="fas fa-check-circle" onclick='confirmarConciliacionLiquidacion(${JSON.stringify(liq)})' style="cursor:pointer;color:#28a745;font-size:20px;" title="Conciliar"></i>`;
-                } else {
-                    estadoClass = 'estado-revisar';
-                    estadoTexto = 'Revisar';
-                }
-                
-                tr.innerHTML = `
-                    <td>${formatearFecha(liq.fecha)}</td>
-                    <td class="text-center">${liq.num_liquidaciones}</td>
-                    <td class="text-right">${formatearImporte(Math.abs(liq.total_liquidaciones))}</td>
-                    <td class="text-center">${liq.num_tickets}</td>
-                    <td class="text-center">${liq.num_facturas || 0}</td>
-                    <td class="text-right">${formatearImporte(liq.total_documentos)}</td>
-                    <td class="text-right">${formatearImporte(liq.diferencia)}</td>
-                    <td class="text-center"><span class="${estadoClass}">${estadoTexto}</span></td>
-                    ${accion ? `<td class="text-center">${accion}</td>` : ''}
-                `;
-                
-                tbody.appendChild(tr);
-            }
-            
+            liquidacionesCompletas = data.liquidaciones;
+            paginaActualLiquidaciones = 1;
+            await renderizarPaginaLiquidaciones();
             tabla.style.display = 'table';
+            pagination.style.display = 'flex';
         } else {
             empty.style.display = 'block';
         }
@@ -727,6 +693,74 @@ async function cargarLiquidacionesTPV() {
         empty.style.display = 'block';
     }
 }
+
+async function renderizarPaginaLiquidaciones() {
+    const tbody = document.getElementById('tbody-liquidaciones');
+    tbody.innerHTML = '';
+    
+    const inicio = (paginaActualLiquidaciones - 1) * itemsPorPaginaLiquidaciones;
+    const fin = inicio + itemsPorPaginaLiquidaciones;
+    const liquidacionesPagina = liquidacionesCompletas.slice(inicio, fin);
+    
+    // Procesar liquidaciones automáticamente
+    for (const liq of liquidacionesPagina) {
+        const tr = document.createElement('tr');
+        
+        let estadoClass = '';
+        let estadoTexto = '';
+        let accion = '';
+        
+        if (liq.estado === 'exacto') {
+            estadoClass = 'estado-exacto';
+            estadoTexto = 'Exacto';
+            // Conciliar automáticamente las exactas
+            await conciliarLiquidacionAutomatica(liq);
+        } else if (liq.estado === 'aceptable') {
+            estadoClass = 'estado-aceptable';
+            estadoTexto = 'Aceptable';
+            accion = `<i class="fas fa-check-circle" onclick='confirmarConciliacionLiquidacion(${JSON.stringify(liq)})' style="cursor:pointer;color:#28a745;font-size:20px;" title="Conciliar"></i>`;
+        } else {
+            estadoClass = 'estado-revisar';
+            estadoTexto = 'Revisar';
+        }
+        
+        tr.innerHTML = `
+            <td>${formatearFecha(liq.fecha)}</td>
+            <td class="text-center">${liq.num_liquidaciones}</td>
+            <td class="text-right">${formatearImporte(Math.abs(liq.total_liquidaciones))}</td>
+            <td class="text-center">${liq.num_tickets}</td>
+            <td class="text-center">${liq.num_facturas || 0}</td>
+            <td class="text-right">${formatearImporte(liq.total_documentos)}</td>
+            <td class="text-right">${formatearImporte(liq.diferencia)}</td>
+            <td class="text-center"><span class="${estadoClass}">${estadoTexto}</span></td>
+            ${accion ? `<td class="text-center">${accion}</td>` : ''}
+        `;
+        
+        tbody.appendChild(tr);
+    }
+    
+    actualizarControlesPaginacionLiquidaciones();
+}
+
+function actualizarControlesPaginacionLiquidaciones() {
+    const totalPaginas = Math.ceil(liquidacionesCompletas.length / itemsPorPaginaLiquidaciones);
+    document.getElementById('pageInfoLiquidaciones').textContent = `Página ${paginaActualLiquidaciones} de ${totalPaginas}`;
+    document.getElementById('prevPageLiquidaciones').disabled = paginaActualLiquidaciones === 1;
+    document.getElementById('nextPageLiquidaciones').disabled = paginaActualLiquidaciones === totalPaginas;
+}
+
+window.cambiarPaginaLiquidaciones = function(accion) {
+    const totalPaginas = Math.ceil(liquidacionesCompletas.length / itemsPorPaginaLiquidaciones);
+    if (accion === 'anterior' && paginaActualLiquidaciones > 1) paginaActualLiquidaciones--;
+    if (accion === 'siguiente' && paginaActualLiquidaciones < totalPaginas) paginaActualLiquidaciones++;
+    renderizarPaginaLiquidaciones();
+};
+
+window.cambiarItemsPorPaginaLiquidaciones = function() {
+    itemsPorPaginaLiquidaciones = parseInt(document.getElementById('items-por-pagina-liquidaciones').value);
+    paginaActualLiquidaciones = 1;
+    renderizarPaginaLiquidaciones();
+};
 
 async function conciliarLiquidacionAutomatica(liq) {
     try {
@@ -775,119 +809,3 @@ window.confirmarConciliacionLiquidacion = async function(liq) {
         mostrarNotificacion(`Error al conciliar: ${error.message}`, 'error');
     }
 }
-
-// ============================================================================
-// FUNCIONES DE PAGINACIÓN ADICIONALES
-// ============================================================================
-
-// Nota: Las funciones cargarTransferencias, cargarConciliados y cargarLiquidacionesTPV
-// necesitan ser modificadas para usar estas funciones de renderizado.
-// Por ahora, estas funciones están disponibles para cuando se modifiquen las funciones de carga.
-
-function renderizarPaginaTransferencias() {
-    const tbody = document.getElementById('tbody-transferencias');
-    tbody.innerHTML = '';
-    
-    const inicio = (paginaActualTransferencias - 1) * itemsPorPaginaTransferencias;
-    const fin = inicio + itemsPorPaginaTransferencias;
-    const transferenciasPagina = transferenciasCompletas.slice(inicio, fin);
-    
-    transferenciasPagina.forEach(gasto => {
-        const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer';
-        tr.onclick = () => buscarCoincidencias(gasto.id);
-        
-        tr.innerHTML = `
-            <td>${formatearFecha(gasto.fecha_operacion)}</td>
-            <td>${gasto.concepto}</td>
-            <td class="text-right ${gasto.importe_eur >= 0 ? 'importe-positivo' : 'importe-negativo'}">
-                ${formatearImporte(gasto.importe_eur)}
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-    
-    actualizarControlesPaginacionTransferencias();
-}
-
-function actualizarControlesPaginacionTransferencias() {
-    const totalPaginas = Math.ceil(transferenciasCompletas.length / itemsPorPaginaTransferencias);
-    document.getElementById('pageInfoTransferencias').textContent = `Página ${paginaActualTransferencias} de ${totalPaginas}`;
-    document.getElementById('prevPageTransferencias').disabled = paginaActualTransferencias === 1;
-    document.getElementById('nextPageTransferencias').disabled = paginaActualTransferencias === totalPaginas;
-}
-
-window.cambiarPaginaTransferencias = function(accion) {
-    const totalPaginas = Math.ceil(transferenciasCompletas.length / itemsPorPaginaTransferencias);
-    if (accion === 'anterior' && paginaActualTransferencias > 1) paginaActualTransferencias--;
-    if (accion === 'siguiente' && paginaActualTransferencias < totalPaginas) paginaActualTransferencias++;
-    renderizarPaginaTransferencias();
-};
-
-window.cambiarItemsPorPaginaTransferencias = function() {
-    itemsPorPaginaTransferencias = parseInt(document.getElementById('items-por-pagina-transferencias').value);
-    paginaActualTransferencias = 1;
-    renderizarPaginaTransferencias();
-};
-
-function renderizarPaginaConciliados() {
-    const tbody = document.getElementById('tbody-conciliados');
-    tbody.innerHTML = '';
-    
-    const inicio = (paginaActualConciliados - 1) * itemsPorPaginaConciliados;
-    const fin = inicio + itemsPorPaginaConciliados;
-    const conciliadosPagina = conciliadosCompletos.slice(inicio, fin);
-    
-    conciliadosPagina.forEach(conc => {
-        const tr = document.createElement('tr');
-        
-        let tipoDocumento = '';
-        if (conc.tipo_documento === 'liquidacion_tpv') {
-            tipoDocumento = `<span class="badge badge-info">LIQUIDACIÓN TPV (${conc.num_liquidaciones || 0})</span>`;
-        } else {
-            tipoDocumento = `<span class="badge badge-info">${conc.tipo_documento.toUpperCase()} ${conc.numero_documento || ''}</span>`;
-        }
-        
-        tr.innerHTML = `
-            <td>${formatearFecha(conc.fecha_operacion)}</td>
-            <td>${conc.concepto_gasto || '-'}</td>
-            <td>${tipoDocumento}</td>
-            <td>${formatearImporte(conc.importe_gasto)}</td>
-            <td>${formatearImporte(conc.importe_documento)}</td>
-            <td class="${Math.abs(conc.diferencia) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
-                ${formatearImporte(conc.diferencia)}
-            </td>
-            <td>
-                <span class="badge ${conc.metodo === 'automatico' ? 'badge-success' : 'badge-warning'}">
-                    ${conc.metodo === 'automatico' ? 'Auto' : 'Manual'}
-                </span>
-            </td>
-            <td class="text-center">
-                <span class="delete-x" onclick="eliminarConciliacion(${conc.id})" title="Eliminar conciliación">✕</span>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-    
-    actualizarControlesPaginacionConciliados();
-}
-
-function actualizarControlesPaginacionConciliados() {
-    const totalPaginas = Math.ceil(conciliadosCompletos.length / itemsPorPaginaConciliados);
-    document.getElementById('pageInfoConciliados').textContent = `Página ${paginaActualConciliados} de ${totalPaginas}`;
-    document.getElementById('prevPageConciliados').disabled = paginaActualConciliados === 1;
-    document.getElementById('nextPageConciliados').disabled = paginaActualConciliados === totalPaginas;
-}
-
-window.cambiarPaginaConciliados = function(accion) {
-    const totalPaginas = Math.ceil(conciliadosCompletos.length / itemsPorPaginaConciliados);
-    if (accion === 'anterior' && paginaActualConciliados > 1) paginaActualConciliados--;
-    if (accion === 'siguiente' && paginaActualConciliados < totalPaginas) paginaActualConciliados++;
-    renderizarPaginaConciliados();
-};
-
-window.cambiarItemsPorPaginaConciliados = function() {
-    itemsPorPaginaConciliados = parseInt(document.getElementById('items-por-pagina-conciliados').value);
-    paginaActualConciliados = 1;
-    renderizarPaginaConciliados();
-};
