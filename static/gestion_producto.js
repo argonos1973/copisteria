@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
   } else {
     // Modo creación
     selectImpuestos.value = 21;
-    titulo.textContent = 'Nuevo Producto';
+    if (titulo) titulo.textContent = 'Nuevo Producto';
     if (btnGuardar) btnGuardar.textContent = 'Crear Producto';
     // La franja inicial siempre será 1
     if (inFranjaInicio) {
