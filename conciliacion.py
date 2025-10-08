@@ -1203,8 +1203,8 @@ def obtener_ingresos_efectivo():
                     fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d')
                 fecha_busqueda = fecha_obj.strftime('%Y-%m-%d')
                 
-                # Buscar en rango de ±30 días (el efectivo se deposita después)
-                fecha_inicio = (fecha_obj - timedelta(days=30)).strftime('%Y-%m-%d')
+                # Buscar en rango de 7 días previos (ingresos semanales los viernes)
+                fecha_inicio = (fecha_obj - timedelta(days=7)).strftime('%Y-%m-%d')
                 fecha_fin = fecha_obj.strftime('%Y-%m-%d')
             except:
                 continue

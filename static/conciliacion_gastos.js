@@ -1026,7 +1026,7 @@ window.cambiarItemsPorPaginaIngresos = function() {
 };
 
 window.confirmarConciliacionIngreso = async function(ing) {
-    const mensaje = `¿Conciliar ingreso del ${ing.fecha}?\nDiferencia: ${ing.diferencia}€ (${ing.porcentaje_diferencia}%)\nRango: 30 días previos`;
+    const mensaje = `¿Conciliar ingreso del ${ing.fecha}?\nDiferencia: ${ing.diferencia}€ (${ing.porcentaje_diferencia}%)\nRango: 7 días previos`;
     
     if (!confirm(mensaje)) return;
     
