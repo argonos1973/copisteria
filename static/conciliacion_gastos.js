@@ -73,11 +73,12 @@ async function cargarTransferencias() {
     const loading = document.getElementById('loading-transferencias');
     const empty = document.getElementById('empty-transferencias');
     const tabla = document.getElementById('tabla-transferencias');
-    const tbody = document.getElementById('tbody-transferencias');
+    const pagination = document.getElementById('pagination-transferencias');
     
     loading.style.display = 'block';
     empty.style.display = 'none';
     tabla.style.display = 'none';
+    pagination.style.display = 'none';
     
     try {
         const response = await fetch(`${API_URL}/conciliacion/gastos-pendientes?tipo=transferencia`);
@@ -87,30 +88,18 @@ async function cargarTransferencias() {
         
         if (data.success && data.gastos && data.gastos.length > 0) {
             // Filtrar solo transferencias
-            const transferencias = data.gastos.filter(g => 
+            transferenciasCompletas = data.gastos.filter(g => 
                 g.concepto && (
                     g.concepto.toLowerCase().includes('transferencia') ||
                     g.concepto.toLowerCase().includes('transf.')
                 )
             );
             
-            if (transferencias.length > 0) {
-                tbody.innerHTML = '';
-                transferencias.forEach(gasto => {
-                    const tr = document.createElement('tr');
-                    tr.style.cursor = 'pointer';
-                    tr.onclick = () => buscarCoincidencias(gasto.id);
-                    
-                    tr.innerHTML = `
-                        <td>${formatearFecha(gasto.fecha_operacion)}</td>
-                        <td>${gasto.concepto}</td>
-                        <td class="text-right ${gasto.importe_eur >= 0 ? 'importe-positivo' : 'importe-negativo'}">
-                            ${formatearImporte(gasto.importe_eur)}
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
+            if (transferenciasCompletas.length > 0) {
+                paginaActualTransferencias = 1;
+                renderizarPaginaTransferencias();
                 tabla.style.display = 'table';
+                pagination.style.display = 'flex';
             } else {
                 empty.style.display = 'block';
             }
@@ -238,52 +227,23 @@ async function cargarConciliados() {
     const loading = document.getElementById('loading-conciliados');
     const empty = document.getElementById('empty-conciliados');
     const tabla = document.getElementById('tabla-conciliados');
-    const tbody = document.getElementById('tbody-conciliados');
+    const pagination = document.getElementById('pagination-conciliados');
     
     loading.style.display = 'block';
     empty.style.display = 'none';
     tabla.style.display = 'none';
+    pagination.style.display = 'none';
     
     try {
         const response = await fetch(`${API_URL}/conciliacion/conciliados`);
         const data = await response.json();
         
         if (data.success && data.conciliaciones.length > 0) {
-            tbody.innerHTML = '';
-            
-            data.conciliaciones.forEach(conc => {
-                const tr = document.createElement('tr');
-                
-                // Formatear según el tipo
-                let tipoDocumento = '';
-                if (conc.tipo_documento === 'liquidacion_tpv') {
-                    tipoDocumento = `<span class="badge badge-info">LIQUIDACIÓN TPV (${conc.num_liquidaciones || 0})</span>`;
-                } else {
-                    tipoDocumento = `<span class="badge badge-info">${conc.tipo_documento.toUpperCase()} ${conc.numero_documento || ''}</span>`;
-                }
-                
-                tr.innerHTML = `
-                    <td>${formatearFecha(conc.fecha_operacion)}</td>
-                    <td>${conc.concepto_gasto || '-'}</td>
-                    <td>${tipoDocumento}</td>
-                    <td>${formatearImporte(conc.importe_gasto)}</td>
-                    <td>${formatearImporte(conc.importe_documento)}</td>
-                    <td class="${Math.abs(conc.diferencia) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
-                        ${formatearImporte(conc.diferencia)}
-                    </td>
-                    <td>
-                        <span class="badge ${conc.metodo === 'automatico' ? 'badge-success' : 'badge-warning'}">
-                            ${conc.metodo === 'automatico' ? 'Auto' : 'Manual'}
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <span class="delete-x" onclick="eliminarConciliacion(${conc.id})" title="Eliminar conciliación">×</span>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-            
+            conciliadosCompletos = data.conciliaciones;
+            paginaActualConciliados = 1;
+            renderizarPaginaConciliados();
             tabla.style.display = 'table';
+            pagination.style.display = 'flex';
         } else {
             empty.style.display = 'block';
         }
