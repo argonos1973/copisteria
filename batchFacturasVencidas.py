@@ -289,9 +289,23 @@ def actualizar_facturas_vencidas():
                 if carta_pdf:
                     cartas_generadas += 1
                     
-                    # Obtener email del cliente para preparar envío
-                    cursor.execute('SELECT mail as email FROM contactos WHERE idContacto = ?', (factura['idContacto'],))
+                    # Obtener datos del cliente para notificación
+                    cursor.execute('SELECT razonsocial, mail as email FROM contactos WHERE idContacto = ?', (factura['idContacto'],))
                     cliente = cursor.fetchone()
+                    cliente_nombre = cliente['razonsocial'] if cliente else 'Cliente desconocido'
+                    
+                    # Hacer commit antes de crear notificación para evitar bloqueo
+                    conn.commit()
+                    
+                    # Generar notificación individual por carta generada
+                    notif_mensaje = f"📄 Carta reclamación: Factura {factura_numero} - {cliente_nombre} - {factura['total']:.2f}€ ({dias_vencidos} días)"
+                    
+                    guardar_notificacion(
+                        notif_mensaje,
+                        tipo='warning',
+                        db_path=DB_NAME
+                    )
+                    logger.info(f"Notificación generada para carta {factura_numero}")
                     
                     if cliente and cliente['email']:
                         # Buscar PDF de la factura
