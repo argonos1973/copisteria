@@ -4,7 +4,9 @@
 import logging
 import sqlite3
 import sys
+import os
 from datetime import datetime, timedelta
+from weasyprint import HTML
 
 from constantes import *
 from db_utils import get_db_connection
@@ -20,6 +22,210 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger('batchFacturasVencidas')
+
+# Directorio para guardar las cartas de reclamación
+CARTAS_DIR = '/var/www/html/cartas_reclamacion'
+
+def generar_carta_reclamacion(factura_data, dias_vencidos):
+    """
+    Genera una carta de reclamación en PDF para una factura vencida
+    
+    Args:
+        factura_data: Diccionario con los datos de la factura
+        dias_vencidos: Número de días desde la emisión
+    
+    Returns:
+        str: Ruta del archivo PDF generado o None si hay error
+    """
+    try:
+        # Crear directorio si no existe
+        os.makedirs(CARTAS_DIR, exist_ok=True)
+        
+        # Obtener datos del cliente
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT c.nombre, c.direccion, c.codigoPostal, c.poblacion, c.email
+            FROM contactos c
+            WHERE c.id = ?
+        ''', (factura_data['idCliente'],))
+        
+        cliente = cursor.fetchone()
+        conn.close()
+        
+        if not cliente:
+            logger.error(f"No se encontró el cliente para la factura {factura_data['numero']}")
+            return None
+        
+        # Generar HTML de la carta
+        html_content = f'''
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    margin: 40px;
+                    line-height: 1.6;
+                }}
+                .header {{
+                    text-align: right;
+                    margin-bottom: 40px;
+                }}
+                .destinatario {{
+                    margin-bottom: 40px;
+                }}
+                .contenido {{
+                    text-align: justify;
+                    margin-bottom: 30px;
+                }}
+                .firma {{
+                    margin-top: 60px;
+                }}
+                .destacado {{
+                    font-weight: bold;
+                    color: #d32f2f;
+                }}
+                .footer {{
+                    margin-top: 40px;
+                    font-size: 12px;
+                    color: #666;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <strong>COPISTERIA ALEPH 70</strong><br>
+                C/ Aleph 70, 3<br>
+                08884 - Barcelona<br>
+                Fecha: {datetime.now().strftime('%d/%m/%Y')}
+            </div>
+            
+            <div class="destinatario">
+                <strong>{cliente['nombre']}</strong><br>
+                {cliente['direccion'] or ''}<br>
+                {cliente['codigoPostal'] or ''} {cliente['poblacion'] or ''}
+            </div>
+            
+            <div class="contenido">
+                <p><strong>Asunto: Reclamación de pago - Factura {factura_data['numero']}</strong></p>
+                
+                <p>Estimado/a cliente,</p>
+                
+                <p>Nos dirigimos a usted en relación con la factura <strong>{factura_data['numero']}</strong> 
+                con fecha de emisión <strong>{datetime.strptime(factura_data['fecha'], '%Y-%m-%d').strftime('%d/%m/%Y')}</strong>, 
+                por un importe de <strong>{factura_data['total']:.2f}€</strong>.</p>
+                
+                <p>Han transcurrido <span class="destacado">{dias_vencidos} días</span> desde la emisión de dicha factura 
+                y, hasta la fecha, no hemos recibido el pago correspondiente.</p>
+                
+                <p>Le rogamos que proceda a regularizar su situación en un plazo máximo de <strong>10 días hábiles</strong> 
+                a partir de la recepción de esta carta. En caso contrario, nos veremos obligados a iniciar las acciones 
+                legales pertinentes para el cobro de la deuda.</p>
+                
+                <p>Adjuntamos copia de la factura pendiente de pago para su revisión.</p>
+                
+                <p>Para cualquier aclaración, puede ponerse en contacto con nosotros.</p>
+            </div>
+            
+            <div class="firma">
+                <p>Atentamente,</p>
+                <p><strong>COPISTERIA ALEPH 70</strong></p>
+            </div>
+            
+            <div class="footer">
+                <p>Este documento es una comunicación privada y confidencial dirigida exclusivamente a su destinatario.</p>
+            </div>
+        </body>
+        </html>
+        '''
+        
+        # Generar PDF
+        pdf_filename = f"carta_reclamacion_{factura_data['numero']}_{datetime.now().strftime('%Y%m%d')}.pdf"
+        pdf_path = os.path.join(CARTAS_DIR, pdf_filename)
+        
+        HTML(string=html_content).write_pdf(pdf_path)
+        logger.info(f"Carta de reclamación generada: {pdf_path}")
+        
+        return pdf_path
+        
+    except Exception as e:
+        logger.error(f"Error al generar carta de reclamación para factura {factura_data['numero']}: {e}")
+        return None
+
+def enviar_email_reclamacion(cliente_email, factura_numero, carta_pdf_path, factura_pdf_path):
+    """
+    Prepara el envío de email con la carta de reclamación y la factura adjunta
+    
+    Args:
+        cliente_email: Email del cliente
+        factura_numero: Número de factura
+        carta_pdf_path: Ruta de la carta de reclamación
+        factura_pdf_path: Ruta del PDF de la factura
+    
+    Returns:
+        bool: True si se prepara correctamente (de momento no envía)
+    """
+    try:
+        # TODO: Implementar envío de email cuando se active
+        # Por ahora solo registramos que está preparado para enviar
+        
+        logger.info(f"Email preparado para enviar a {cliente_email}")
+        logger.info(f"  - Asunto: Reclamación de pago - Factura {factura_numero}")
+        logger.info(f"  - Adjunto 1: {carta_pdf_path}")
+        logger.info(f"  - Adjunto 2: {factura_pdf_path}")
+        logger.info(f"  - NOTA: Envío desactivado (preparado para activar)")
+        
+        # Aquí iría el código de envío de email:
+        # import smtplib
+        # from email.mime.multipart import MIMEMultipart
+        # from email.mime.text import MIMEText
+        # from email.mime.application import MIMEApplication
+        # 
+        # msg = MIMEMultipart()
+        # msg['From'] = 'facturacion@aleph70.com'
+        # msg['To'] = cliente_email
+        # msg['Subject'] = f'Reclamación de pago - Factura {factura_numero}'
+        # 
+        # # Cuerpo del email
+        # body = f'''
+        # Estimado/a cliente,
+        # 
+        # Adjuntamos carta de reclamación de pago correspondiente a la factura {factura_numero}.
+        # 
+        # Atentamente,
+        # COPISTERIA ALEPH 70
+        # '''
+        # msg.attach(MIMEText(body, 'plain'))
+        # 
+        # # Adjuntar carta de reclamación
+        # with open(carta_pdf_path, 'rb') as f:
+        #     attach = MIMEApplication(f.read(), _subtype='pdf')
+        #     attach.add_header('Content-Disposition', 'attachment', 
+        #                      filename=os.path.basename(carta_pdf_path))
+        #     msg.attach(attach)
+        # 
+        # # Adjuntar factura
+        # with open(factura_pdf_path, 'rb') as f:
+        #     attach = MIMEApplication(f.read(), _subtype='pdf')
+        #     attach.add_header('Content-Disposition', 'attachment', 
+        #                      filename=os.path.basename(factura_pdf_path))
+        #     msg.attach(attach)
+        # 
+        # # Enviar
+        # server = smtplib.SMTP('smtp.gmail.com', 587)
+        # server.starttls()
+        # server.login('usuario@gmail.com', 'password')
+        # server.send_message(msg)
+        # server.quit()
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error al preparar email de reclamación: {e}")
+        return False
 
 def actualizar_facturas_vencidas():
     """
@@ -40,13 +246,14 @@ def actualizar_facturas_vencidas():
         # Obtener facturas pendientes con fecha anterior a fecha_limite
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT id, numero, fecha, estado
+            SELECT id, numero, fecha, estado, idCliente, total
             FROM factura
             WHERE fecha < ? AND estado = 'P'
         ''', (fecha_limite,))
         
         facturas_vencidas = cursor.fetchall()
         facturas_actualizadas = 0
+        cartas_generadas = 0
         
         if not facturas_vencidas:
             logger.info("No se encontraron facturas vencidas pendientes de pago")
@@ -54,32 +261,70 @@ def actualizar_facturas_vencidas():
         
         logger.info(f"Se encontraron {len(facturas_vencidas)} facturas vencidas pendientes de pago")
         
-        # Actualizar el estado de cada factura a 'V' (Vencida)
+        # Actualizar el estado de cada factura a 'V' (Vencida) y generar carta de reclamación
         for factura in facturas_vencidas:
             factura_id = factura['id']
             factura_numero = factura['numero']
             factura_fecha = factura['fecha']
             
+            # Calcular días transcurridos
+            fecha_emision = datetime.strptime(factura_fecha, '%Y-%m-%d')
+            dias_vencidos = (datetime.now() - fecha_emision).days
+            
             try:
+                # Actualizar estado a Vencida
                 cursor.execute('''
                     UPDATE factura
                     SET estado = 'V'
                     WHERE id = ?
                 ''', (factura_id,))
                 
-                logger.info(f"Factura {factura_numero} (ID: {factura_id}) del {factura_fecha} actualizada a estado VENCIDA")
+                logger.info(f"Factura {factura_numero} (ID: {factura_id}) del {factura_fecha} actualizada a estado VENCIDA ({dias_vencidos} días)")
                 facturas_actualizadas += 1
+                
+                # Generar carta de reclamación
+                factura_dict = dict(factura)
+                carta_pdf = generar_carta_reclamacion(factura_dict, dias_vencidos)
+                
+                if carta_pdf:
+                    cartas_generadas += 1
+                    
+                    # Obtener email del cliente para preparar envío
+                    cursor.execute('SELECT email FROM contactos WHERE id = ?', (factura['idCliente'],))
+                    cliente = cursor.fetchone()
+                    
+                    if cliente and cliente['email']:
+                        # Buscar PDF de la factura
+                        factura_pdf_path = f"/var/www/html/facturas_pdf/factura_{factura_numero}.pdf"
+                        
+                        if os.path.exists(factura_pdf_path):
+                            # Preparar email (no envía todavía)
+                            enviar_email_reclamacion(
+                                cliente['email'],
+                                factura_numero,
+                                carta_pdf,
+                                factura_pdf_path
+                            )
+                        else:
+                            logger.warning(f"No se encontró el PDF de la factura {factura_numero} en {factura_pdf_path}")
+                    else:
+                        logger.warning(f"Cliente sin email para factura {factura_numero}")
                 
             except sqlite3.Error as e:
                 logger.error(f"Error al actualizar la factura {factura_numero} (ID: {factura_id}): {e}")
         
         conn.commit()
         logger.info(f"Proceso completado. Facturas actualizadas a vencidas: {facturas_actualizadas}")
+        logger.info(f"Cartas de reclamación generadas: {cartas_generadas}")
         
         # Generar notificación si hubo actualizaciones
         if facturas_actualizadas > 0:
+            mensaje = f"{facturas_actualizadas} factura(s) marcada(s) como vencida(s) (>30 días)"
+            if cartas_generadas > 0:
+                mensaje += f" - {cartas_generadas} carta(s) de reclamación generada(s)"
+            
             guardar_notificacion(
-                f"{facturas_actualizadas} factura(s) marcada(s) como vencida(s) (>15 días)",
+                mensaje,
                 tipo='warning',
                 db_path=DB_NAME
             )
