@@ -1143,7 +1143,7 @@ def obtener_ingresos_efectivo():
         # Filtrar solo año actual (formato DD/MM/YYYY)
         ano_actual = datetime.now().year
         
-        # Obtener ingresos en efectivo del banco
+        # Obtener ingresos en efectivo del banco (case-insensitive)
         cursor.execute('''
             SELECT 
                 id,
@@ -1152,10 +1152,10 @@ def obtener_ingresos_efectivo():
                 importe_eur
             FROM gastos
             WHERE (
-                concepto LIKE '%ingreso efectivo%'
-                OR concepto LIKE '%ingreso efvo%'
-                OR concepto LIKE '%deposito efectivo%'
-                OR concepto LIKE '%ingreso caja%'
+                LOWER(concepto) LIKE '%ingreso%efectivo%'
+                OR LOWER(concepto) LIKE '%ingreso%efvo%'
+                OR LOWER(concepto) LIKE '%deposito%efectivo%'
+                OR LOWER(concepto) LIKE '%ingreso%caja%'
             )
             AND importe_eur > 0
             AND id NOT IN (
