@@ -46,9 +46,9 @@ def generar_carta_reclamacion(factura_data, dias_vencidos):
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT c.nombre, c.direccion, c.codigoPostal, c.poblacion, c.email
+            SELECT c.razonsocial as nombre, c.direccion, c.cp as codigoPostal, c.localidad as poblacion, c.mail as email
             FROM contactos c
-            WHERE c.id = ?
+            WHERE c.idContacto = ?
         ''', (factura_data['idContacto'],))
         
         cliente = cursor.fetchone()
@@ -290,7 +290,7 @@ def actualizar_facturas_vencidas():
                     cartas_generadas += 1
                     
                     # Obtener email del cliente para preparar envío
-                    cursor.execute('SELECT email FROM contactos WHERE id = ?', (factura['idContacto'],))
+                    cursor.execute('SELECT mail as email FROM contactos WHERE idContacto = ?', (factura['idContacto'],))
                     cliente = cursor.fetchone()
                     
                     if cliente and cliente['email']:
