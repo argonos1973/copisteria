@@ -12,6 +12,18 @@ let gastosPendientesCompletos = [];
 let paginaActualPendientes = 1;
 let itemsPorPaginaPendientes = 10;
 
+let transferenciasCompletas = [];
+let paginaActualTransferencias = 1;
+let itemsPorPaginaTransferencias = 10;
+
+let liquidacionesCompletas = [];
+let paginaActualLiquidaciones = 1;
+let itemsPorPaginaLiquidaciones = 10;
+
+let conciliadosCompletos = [];
+let paginaActualConciliados = 1;
+let itemsPorPaginaConciliados = 10;
+
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
@@ -803,3 +815,119 @@ window.confirmarConciliacionLiquidacion = async function(liq) {
         mostrarNotificacion(`Error al conciliar: ${error.message}`, 'error');
     }
 }
+
+// ============================================================================
+// FUNCIONES DE PAGINACIÓN ADICIONALES
+// ============================================================================
+
+// Nota: Las funciones cargarTransferencias, cargarConciliados y cargarLiquidacionesTPV
+// necesitan ser modificadas para usar estas funciones de renderizado.
+// Por ahora, estas funciones están disponibles para cuando se modifiquen las funciones de carga.
+
+function renderizarPaginaTransferencias() {
+    const tbody = document.getElementById('tbody-transferencias');
+    tbody.innerHTML = '';
+    
+    const inicio = (paginaActualTransferencias - 1) * itemsPorPaginaTransferencias;
+    const fin = inicio + itemsPorPaginaTransferencias;
+    const transferenciasPagina = transferenciasCompletas.slice(inicio, fin);
+    
+    transferenciasPagina.forEach(gasto => {
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.onclick = () => buscarCoincidencias(gasto.id);
+        
+        tr.innerHTML = `
+            <td>${formatearFecha(gasto.fecha_operacion)}</td>
+            <td>${gasto.concepto}</td>
+            <td class="text-right ${gasto.importe_eur >= 0 ? 'importe-positivo' : 'importe-negativo'}">
+                ${formatearImporte(gasto.importe_eur)}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    actualizarControlesPaginacionTransferencias();
+}
+
+function actualizarControlesPaginacionTransferencias() {
+    const totalPaginas = Math.ceil(transferenciasCompletas.length / itemsPorPaginaTransferencias);
+    document.getElementById('pageInfoTransferencias').textContent = `Página ${paginaActualTransferencias} de ${totalPaginas}`;
+    document.getElementById('prevPageTransferencias').disabled = paginaActualTransferencias === 1;
+    document.getElementById('nextPageTransferencias').disabled = paginaActualTransferencias === totalPaginas;
+}
+
+window.cambiarPaginaTransferencias = function(accion) {
+    const totalPaginas = Math.ceil(transferenciasCompletas.length / itemsPorPaginaTransferencias);
+    if (accion === 'anterior' && paginaActualTransferencias > 1) paginaActualTransferencias--;
+    if (accion === 'siguiente' && paginaActualTransferencias < totalPaginas) paginaActualTransferencias++;
+    renderizarPaginaTransferencias();
+};
+
+window.cambiarItemsPorPaginaTransferencias = function() {
+    itemsPorPaginaTransferencias = parseInt(document.getElementById('items-por-pagina-transferencias').value);
+    paginaActualTransferencias = 1;
+    renderizarPaginaTransferencias();
+};
+
+function renderizarPaginaConciliados() {
+    const tbody = document.getElementById('tbody-conciliados');
+    tbody.innerHTML = '';
+    
+    const inicio = (paginaActualConciliados - 1) * itemsPorPaginaConciliados;
+    const fin = inicio + itemsPorPaginaConciliados;
+    const conciliadosPagina = conciliadosCompletos.slice(inicio, fin);
+    
+    conciliadosPagina.forEach(conc => {
+        const tr = document.createElement('tr');
+        
+        let tipoDocumento = '';
+        if (conc.tipo_documento === 'liquidacion_tpv') {
+            tipoDocumento = `<span class="badge badge-info">LIQUIDACIÓN TPV (${conc.num_liquidaciones || 0})</span>`;
+        } else {
+            tipoDocumento = `<span class="badge badge-info">${conc.tipo_documento.toUpperCase()} ${conc.numero_documento || ''}</span>`;
+        }
+        
+        tr.innerHTML = `
+            <td>${formatearFecha(conc.fecha_operacion)}</td>
+            <td>${conc.concepto_gasto || '-'}</td>
+            <td>${tipoDocumento}</td>
+            <td>${formatearImporte(conc.importe_gasto)}</td>
+            <td>${formatearImporte(conc.importe_documento)}</td>
+            <td class="${Math.abs(conc.diferencia) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
+                ${formatearImporte(conc.diferencia)}
+            </td>
+            <td>
+                <span class="badge ${conc.metodo === 'automatico' ? 'badge-success' : 'badge-warning'}">
+                    ${conc.metodo === 'automatico' ? 'Auto' : 'Manual'}
+                </span>
+            </td>
+            <td class="text-center">
+                <span class="delete-x" onclick="eliminarConciliacion(${conc.id})" title="Eliminar conciliación">✕</span>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    actualizarControlesPaginacionConciliados();
+}
+
+function actualizarControlesPaginacionConciliados() {
+    const totalPaginas = Math.ceil(conciliadosCompletos.length / itemsPorPaginaConciliados);
+    document.getElementById('pageInfoConciliados').textContent = `Página ${paginaActualConciliados} de ${totalPaginas}`;
+    document.getElementById('prevPageConciliados').disabled = paginaActualConciliados === 1;
+    document.getElementById('nextPageConciliados').disabled = paginaActualConciliados === totalPaginas;
+}
+
+window.cambiarPaginaConciliados = function(accion) {
+    const totalPaginas = Math.ceil(conciliadosCompletos.length / itemsPorPaginaConciliados);
+    if (accion === 'anterior' && paginaActualConciliados > 1) paginaActualConciliados--;
+    if (accion === 'siguiente' && paginaActualConciliados < totalPaginas) paginaActualConciliados++;
+    renderizarPaginaConciliados();
+};
+
+window.cambiarItemsPorPaginaConciliados = function() {
+    itemsPorPaginaConciliados = parseInt(document.getElementById('items-por-pagina-conciliados').value);
+    paginaActualConciliados = 1;
+    renderizarPaginaConciliados();
+};
