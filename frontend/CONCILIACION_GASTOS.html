@@ -369,26 +369,13 @@
             font-size: 13px;
         }
 
-        .btn-icon-delete {
-            background: none;
-            border: none;
+        .delete-x {
             color: #dc3545;
             font-size: 24px;
             font-weight: bold;
             cursor: pointer;
-            padding: 0;
-            width: 30px;
-            height: 30px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .btn-icon-delete:hover {
-            color: #fff;
-            background-color: #dc3545;
-            border-radius: 4px;
+            display: inline-block;
+            line-height: 1;
         }
 
         /* Estilos de paginación - Consistente con tickets */
@@ -576,7 +563,7 @@
                         <th style="width: 100px;" class="text-right">Total Docs.</th>
                         <th style="width: 90px;" class="text-right">Diferencia</th>
                         <th style="width: 80px;" class="text-center">Estado</th>
-                        <th style="width: 100px;" class="text-center">Acción</th>
+                        <th style="width: 50px;" class="text-center"></th>
                     </tr>
                 </thead>
                 <tbody id="tbody-liquidaciones"></tbody>
@@ -602,7 +589,7 @@
                         <th>Importe Doc.</th>
                         <th>Diferencia</th>
                         <th>Método</th>
-                        <th>Acciones</th>
+                        <th style="width: 50px;"></th>
                     </tr>
                 </thead>
                 <tbody id="tbody-conciliados"></tbody>

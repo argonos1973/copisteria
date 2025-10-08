@@ -264,10 +264,8 @@ async function cargarConciliados() {
                             ${conc.metodo === 'automatico' ? 'Auto' : 'Manual'}
                         </span>
                     </td>
-                    <td>
-                        <button class="btn-icon-delete" onclick="eliminarConciliacion(${conc.id})" title="Eliminar conciliación">
-                            ×
-                        </button>
+                    <td class="text-center">
+                        <span class="delete-x" onclick="eliminarConciliacion(${conc.id})" title="Eliminar conciliación">×</span>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -352,6 +350,18 @@ window.buscarCoincidencias = async function(gastoId) {
             
             // Mostrar coincidencias
             if (data.coincidencias.length > 0) {
+                // Verificar si hay coincidencia exacta (diferencia = 0)
+                const coincidenciaExacta = data.coincidencias.find(c => Math.abs(c.diferencia) < 0.01);
+                
+                if (coincidenciaExacta) {
+                    // Conciliar automáticamente
+                    await conciliarAutomaticamente(gastoId, coincidenciaExacta.tipo, coincidenciaExacta.id);
+                    modal.classList.remove('active');
+                    mostrarNotificacion(`Transferencia conciliada automáticamente con ${coincidenciaExacta.tipo.toUpperCase()} ${coincidenciaExacta.numero}`, 'success');
+                    await cargarDatos();
+                    return;
+                }
+                
                 container.innerHTML = '<h3>Coincidencias Encontradas:</h3><div class="coincidencias-list"></div>';
                 const lista = container.querySelector('.coincidencias-list');
                 
@@ -426,6 +436,30 @@ window.buscarCoincidencias = async function(gastoId) {
         loading.style.display = 'none';
     }
 };
+
+async function conciliarAutomaticamente(gastoId, tipoDocumento, documentoId) {
+    try {
+        const response = await fetch(`${API_URL}/conciliacion/conciliar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                gasto_id: gastoId,
+                tipo_documento: tipoDocumento,
+                documento_id: documentoId,
+                metodo: 'automatico'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            mostrarNotificacion(data.error || 'Error al conciliar automáticamente', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al realizar conciliación automática', 'error');
+    }
+}
 
 window.confirmarConciliacion = async function() {
     if (!gastoSeleccionado || !coincidenciaSeleccionada) {
@@ -690,7 +724,7 @@ async function cargarLiquidacionesTPV() {
                 } else if (liq.estado === 'aceptable') {
                     estadoClass = 'estado-aceptable';
                     estadoTexto = 'Aceptable';
-                    accion = `<button class="btn btn-primary btn-sm" onclick='confirmarConciliacionLiquidacion(${JSON.stringify(liq)})'>Conciliar</button>`;
+                    accion = `<i class="fas fa-check-circle" onclick='confirmarConciliacionLiquidacion(${JSON.stringify(liq)})' style="cursor:pointer;color:#28a745;font-size:20px;" title="Conciliar"></i>`;
                 } else {
                     estadoClass = 'estado-revisar';
                     estadoTexto = 'Revisar';
@@ -743,16 +777,10 @@ async function conciliarLiquidacionAutomatica(liq) {
 }
 
 window.confirmarConciliacionLiquidacion = async function(liq) {
-    const confirmar = confirm(
-        `¿Conciliar liquidación del ${liq.fecha}?\n\n` +
-        `Liquidaciones: ${liq.num_liquidaciones} (${liq.total_liquidaciones}€)\n` +
-        `Tickets: ${liq.num_tickets}\n` +
-        `Facturas: ${liq.num_facturas}\n` +
-        `Total documentos: ${liq.total_documentos}€\n` +
-        `Diferencia: ${liq.diferencia}€ (${liq.porcentaje_diferencia}%)`
-    );
+    // Mostrar notificación de confirmación
+    const mensaje = `¿Conciliar liquidación del ${liq.fecha}? Diferencia: ${liq.diferencia}€ (${liq.porcentaje_diferencia}%)`;
     
-    if (!confirmar) return;
+    if (!confirm(mensaje)) return;
     
     try {
         const response = await fetch(`${API_URL}/conciliacion/conciliar-liquidacion`, {
