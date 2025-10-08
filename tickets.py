@@ -183,6 +183,8 @@ def tickets_paginado():
             if concepto:
                 totales_sql = f'''
                     SELECT 
+                        SUM(d.precio * d.cantidad) as total_base,
+                        SUM(d.total - (d.precio * d.cantidad)) as total_iva,
                         SUM(d.total) as total_total
                     FROM detalle_tickets d
                     JOIN tickets t ON d.id_ticket = t.id
@@ -209,12 +211,14 @@ def tickets_paginado():
                 totales_row = cursor.fetchone()
                 
                 if totales_row:
-                    total_lineas = totales_row['total_total'] or 0
+                    total_base = totales_row['total_base'] or 0
+                    total_iva = totales_row['total_iva'] or 0
+                    total_total = totales_row['total_total'] or 0
                     totales_globales = {
-                        'total_base': '0,00',  # No calculamos base/iva por línea
-                        'total_iva': '0,00',
-                        'total_cobrado': '0,00',
-                        'total_total': format_currency_es_two(total_lineas)
+                        'total_base': format_currency_es_two(total_base),
+                        'total_iva': format_currency_es_two(total_iva),
+                        'total_cobrado': format_currency_es_two(total_total),  # Cobrado = Total para líneas
+                        'total_total': format_currency_es_two(total_total)
                     }
             else:
                 # Sin filtro de concepto, usar totales del ticket completo
