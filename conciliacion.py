@@ -490,7 +490,14 @@ def gastos_pendientes():
             params.append(fecha_fin)
         
         # Ordenar por fecha descendente (más recientes primero)
-        query += ' ORDER BY g.fecha_operacion DESC, g.id DESC'
+        # Convertir DD/MM/YYYY a formato ordenable YYYY-MM-DD
+        query += ''' ORDER BY 
+            CASE 
+                WHEN g.fecha_operacion LIKE '__/__/____' THEN 
+                    substr(g.fecha_operacion, 7, 4) || '-' || substr(g.fecha_operacion, 4, 2) || '-' || substr(g.fecha_operacion, 1, 2)
+                ELSE g.fecha_operacion 
+            END DESC, 
+            g.id DESC'''
         
         cursor.execute(query, params)
         gastos = [dict(row) for row in cursor.fetchall()]
@@ -551,7 +558,13 @@ def conciliados():
                 substr(g.fecha_operacion, -4) = ?
                 OR strftime('%Y', g.fecha_operacion) = ?
             )
-            ORDER BY c.fecha_conciliacion DESC
+            ORDER BY 
+                CASE 
+                    WHEN g.fecha_operacion LIKE '__/__/____' THEN 
+                        substr(g.fecha_operacion, 7, 4) || '-' || substr(g.fecha_operacion, 4, 2) || '-' || substr(g.fecha_operacion, 1, 2)
+                    ELSE g.fecha_operacion 
+                END DESC,
+                c.fecha_conciliacion DESC
         ''', (str(ano_actual), str(ano_actual)))
         
         conciliaciones_normales = [dict(row) for row in cursor.fetchall()]
@@ -972,7 +985,12 @@ def obtener_liquidaciones_tpv():
                 substr(fecha_operacion, -4) = ?
                 OR strftime('%Y', fecha_operacion) = ?
             )
-            ORDER BY fecha_operacion DESC
+            ORDER BY 
+                CASE 
+                    WHEN fecha_operacion LIKE '__/__/____' THEN 
+                        substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)
+                    ELSE fecha_operacion 
+                END DESC
         ''', (str(ano_actual), str(ano_actual)))
         
         liquidaciones_raw = cursor.fetchall()
