@@ -978,14 +978,15 @@ async function renderizarPaginaIngresos() {
         if (ing.estado === 'exacto') {
             estadoClass = 'estado-exacto';
             estadoTexto = 'Exacto';
-        } else if (ing.estado === 'aceptable') {
-            estadoClass = 'estado-aceptable';
-            estadoTexto = 'Aceptable';
-            accion = `<i class="fas fa-check-circle" onclick='confirmarConciliacionIngreso(${JSON.stringify(ing)})' style="cursor:pointer;color:#28a745;font-size:20px;" title="Conciliar"></i>`;
         } else {
-            estadoClass = 'estado-revisar';
-            estadoTexto = 'Revisar';
+            estadoClass = ing.estado === 'aceptable' ? 'estado-aceptable' : 'estado-revisar';
+            estadoTexto = ing.estado === 'aceptable' ? 'Aceptable' : 'Revisar';
         }
+        
+        // Siempre mostrar botón para seleccionar documentos
+        accion = `<button class="btn btn-sm btn-primary" onclick='abrirSeleccionDocumentos(${JSON.stringify(ing)})' style="padding:4px 8px;font-size:12px;">
+            <i class="fas fa-list-check"></i> Seleccionar
+        </button>`;
         
         tr.innerHTML = `
             <td>${formatearFecha(ing.fecha)}</td>
@@ -1025,8 +1026,132 @@ window.cambiarItemsPorPaginaIngresos = function() {
     renderizarPaginaIngresos();
 };
 
-window.confirmarConciliacionIngreso = async function(ing) {
-    const mensaje = `¿Conciliar ingreso del ${ing.fecha}?\nDiferencia: ${ing.diferencia}€ (${ing.porcentaje_diferencia}%)\nRango: 7 días previos`;
+// Variables para el modal de selección
+let ingresoActual = null;
+let documentosDisponibles = [];
+let documentosSeleccionados = [];
+
+window.abrirSeleccionDocumentos = async function(ing) {
+    ingresoActual = ing;
+    documentosSeleccionados = [];
+    
+    const modal = document.getElementById('modal-seleccion-documentos');
+    const loading = document.getElementById('loading-documentos');
+    const lista = document.getElementById('lista-documentos');
+    
+    // Mostrar modal y loading
+    modal.classList.add('active');
+    loading.style.display = 'block';
+    lista.style.display = 'none';
+    
+    // Actualizar info del ingreso
+    document.getElementById('ingreso-fecha').textContent = ing.fecha;
+    document.getElementById('ingreso-importe').textContent = formatearImporte(ing.total_ingresos);
+    
+    try {
+        // Cargar documentos disponibles
+        const response = await fetch(`${API_URL}/conciliacion/documentos-efectivo/${encodeURIComponent(ing.fecha)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            documentosDisponibles = data.documentos;
+            renderizarDocumentosDisponibles();
+            loading.style.display = 'none';
+            lista.style.display = 'block';
+        } else {
+            mostrarNotificacion('Error al cargar documentos', 'error');
+            cerrarModalSeleccion();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarNotificacion('Error al cargar documentos', 'error');
+        cerrarModalSeleccion();
+    }
+};
+
+function renderizarDocumentosDisponibles() {
+    const tbody = document.getElementById('tbody-documentos-seleccion');
+    tbody.innerHTML = '';
+    
+    documentosDisponibles.forEach((doc, index) => {
+        const tr = document.createElement('tr');
+        const isSelected = documentosSeleccionados.some(d => d.tipo === doc.tipo && d.id === doc.id);
+        
+        tr.innerHTML = `
+            <td class="text-center">
+                <input type="checkbox" 
+                       id="doc-${index}" 
+                       ${isSelected ? 'checked' : ''}
+                       onchange="toggleDocumento(${index})"
+                       style="cursor:pointer;width:18px;height:18px;">
+            </td>
+            <td><span class="badge ${doc.tipo === 'factura' ? 'badge-info' : 'badge-secondary'}">${doc.tipo.toUpperCase()}</span></td>
+            <td>${doc.numero}</td>
+            <td>${formatearFecha(doc.fecha)}</td>
+            <td>${doc.cliente || '-'}</td>
+            <td class="text-right">${formatearImporte(doc.total)}</td>
+        `;
+        
+        tbody.appendChild(tr);
+    });
+    
+    actualizarTotalesSeleccion();
+}
+
+window.toggleDocumento = function(index) {
+    const doc = documentosDisponibles[index];
+    const indexSeleccionado = documentosSeleccionados.findIndex(d => d.tipo === doc.tipo && d.id === doc.id);
+    
+    if (indexSeleccionado >= 0) {
+        // Deseleccionar
+        documentosSeleccionados.splice(indexSeleccionado, 1);
+    } else {
+        // Seleccionar
+        documentosSeleccionados.push(doc);
+    }
+    
+    actualizarTotalesSeleccion();
+};
+
+function actualizarTotalesSeleccion() {
+    const totalSeleccionado = documentosSeleccionados.reduce((sum, doc) => sum + doc.total, 0);
+    const diferencia = Math.abs(ingresoActual.total_ingresos - totalSeleccionado);
+    
+    document.getElementById('docs-seleccionados-count').textContent = documentosSeleccionados.length;
+    document.getElementById('total-seleccionado').textContent = formatearImporte(totalSeleccionado);
+    document.getElementById('diferencia-seleccion').textContent = formatearImporte(diferencia);
+    
+    // Colorear diferencia
+    const diffElem = document.getElementById('diferencia-seleccion');
+    if (diferencia <= 1.0) {
+        diffElem.style.color = '#28a745';
+    } else if (diferencia <= 5.0) {
+        diffElem.style.color = '#ffc107';
+    } else {
+        diffElem.style.color = '#dc3545';
+    }
+    
+    // Habilitar/deshabilitar botón
+    document.getElementById('btn-conciliar-seleccionados').disabled = documentosSeleccionados.length === 0;
+}
+
+window.cerrarModalSeleccion = function() {
+    document.getElementById('modal-seleccion-documentos').classList.remove('active');
+    ingresoActual = null;
+    documentosDisponibles = [];
+    documentosSeleccionados = [];
+};
+
+window.conciliarDocumentosSeleccionados = async function() {
+    if (documentosSeleccionados.length === 0) {
+        mostrarNotificacion('Selecciona al menos un documento', 'warning');
+        return;
+    }
+    
+    const totalSeleccionado = documentosSeleccionados.reduce((sum, doc) => sum + doc.total, 0);
+    const diferencia = Math.abs(ingresoActual.total_ingresos - totalSeleccionado);
+    
+    const mensaje = `¿Conciliar ingreso?\n\nIngreso: ${formatearImporte(ingresoActual.total_ingresos)}\nDocumentos: ${formatearImporte(totalSeleccionado)}\nDiferencia: ${formatearImporte(diferencia)}\n\n${documentosSeleccionados.length} documentos seleccionados`;
     
     if (!confirm(mensaje)) return;
     
@@ -1035,16 +1160,16 @@ window.confirmarConciliacionIngreso = async function(ing) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                ids_gastos: ing.ids_gastos,
-                fecha: ing.fecha,
-                fecha_inicio: ing.fecha_inicio,
-                fecha_fin: ing.fecha_fin
+                ids_gastos: ingresoActual.ids_gastos,
+                fecha: ingresoActual.fecha,
+                documentos_seleccionados: documentosSeleccionados
             })
         });
         
         const result = await response.json();
         if (result.success) {
             mostrarNotificacion(`Ingreso conciliado: ${result.conciliados} registros`, 'success');
+            cerrarModalSeleccion();
             cargarIngresosEfectivo();
             cargarConciliados();
         } else {

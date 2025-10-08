@@ -759,6 +759,57 @@
         </div>
     </div>
 
+    <!-- Modal de Selección de Documentos para Ingresos Efectivo -->
+    <div class="modal" id="modal-seleccion-documentos">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>Seleccionar Documentos en Efectivo</h2>
+                <span class="close-modal" onclick="cerrarModalSeleccion()">&times;</span>
+            </div>
+            
+            <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 4px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <strong>Ingreso:</strong> <span id="ingreso-fecha"></span><br>
+                        <strong>Importe:</strong> <span id="ingreso-importe" style="color: #28a745; font-size: 18px; font-weight: bold;"></span>
+                    </div>
+                    <div style="text-align: right;">
+                        <strong>Seleccionados:</strong> <span id="docs-seleccionados-count">0</span> docs<br>
+                        <strong>Total:</strong> <span id="total-seleccionado" style="color: #007bff; font-size: 18px; font-weight: bold;">0.00 €</span><br>
+                        <strong>Diferencia:</strong> <span id="diferencia-seleccion" style="font-size: 16px; font-weight: bold;">0.00 €</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="loading-documentos" style="text-align: center; padding: 20px;">
+                <i class="fas fa-spinner fa-spin"></i> Cargando documentos...
+            </div>
+            
+            <div id="lista-documentos" style="display: none; max-height: 400px; overflow-y: auto;">
+                <table class="gastos-table" style="font-size: 13px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"></th>
+                            <th style="width: 80px;">Tipo</th>
+                            <th style="width: 100px;">Número</th>
+                            <th style="width: 90px;">Fecha</th>
+                            <th>Cliente</th>
+                            <th style="width: 100px; text-align: right;">Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-documentos-seleccion"></tbody>
+                </table>
+            </div>
+            
+            <div style="margin-top: 20px; text-align: right; border-top: 2px solid #ddd; padding-top: 15px;">
+                <button class="btn btn-secondary" onclick="cerrarModalSeleccion()" style="margin-right: 10px;">Cancelar</button>
+                <button class="btn btn-primary" id="btn-conciliar-seleccionados" onclick="conciliarDocumentosSeleccionados()" disabled>
+                    <i class="fas fa-check"></i> Conciliar Seleccionados
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Contenedor de notificaciones -->
     <div id="notificaciones-contenedor"></div>
 
