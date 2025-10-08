@@ -370,12 +370,17 @@
         }
 
         .delete-x {
-            color: #dc3545;
-            font-size: 24px;
-            font-weight: bold;
+            color: #e74c3c;
+            font-size: 18px;
+            font-weight: normal;
             cursor: pointer;
             display: inline-block;
             line-height: 1;
+            transition: color 0.2s;
+        }
+        
+        .delete-x:hover {
+            color: #c0392b;
         }
 
         /* Estilos de paginación - Consistente con tickets */
@@ -484,25 +489,7 @@
 
         <!-- Contenido: Gastos Pendientes -->
         <div class="tab-content active" id="tab-pendientes">
-            <div id="loading-pendientes" class="loading" style="display:none;">
-                <i class="fas fa-spinner fa-spin"></i> Cargando...
-            </div>
-            <div id="empty-pendientes" class="empty-state" style="display:none;">
-                <i class="fas fa-check-circle"></i>
-                <p>No hay gastos pendientes de conciliar</p>
-            </div>
-            <table class="gastos-table" id="tabla-pendientes" style="display:none;">
-                <thead>
-                    <tr>
-                        <th style="width: 100px;">Fecha</th>
-                        <th>Concepto</th>
-                        <th style="width: 120px;" class="text-right">Importe</th>
-                    </tr>
-                </thead>
-                <tbody id="tbody-pendientes"></tbody>
-            </table>
-            
-            <!-- Paginación Pendientes -->
+            <!-- Paginación Pendientes (arriba) -->
             <div class="pagination" id="pagination-pendientes" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
                     <button id="prevPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaPendientes('anterior')">⟨</button>
@@ -520,10 +507,47 @@
                     </label>
                 </div>
             </div>
+            
+            <div id="loading-pendientes" class="loading" style="display:none;">
+                <i class="fas fa-spinner fa-spin"></i> Cargando...
+            </div>
+            <div id="empty-pendientes" class="empty-state" style="display:none;">
+                <i class="fas fa-check-circle"></i>
+                <p>No hay gastos pendientes de conciliar</p>
+            </div>
+            <table class="gastos-table" id="tabla-pendientes" style="display:none;">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Fecha</th>
+                        <th>Concepto</th>
+                        <th style="width: 120px;" class="text-right">Importe</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-pendientes"></tbody>
+            </table>
         </div>
 
         <!-- Contenido: Transferencias -->
         <div class="tab-content" id="tab-transferencias">
+            <!-- Paginación Transferencias (arriba) -->
+            <div class="pagination" id="pagination-transferencias" style="display:none;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button id="prevPageTransferencias" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaTransferencias('anterior')">⟨</button>
+                    <span id="pageInfoTransferencias">Página 1 de 1</span>
+                    <button id="nextPageTransferencias" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaTransferencias('siguiente')">⟩</button>
+                </div>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+                    <label>Por página:
+                        <select id="items-por-pagina-transferencias" style="padding:2px 6px;font-size:12px;" onchange="cambiarItemsPorPaginaTransferencias()">
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            
             <div id="loading-transferencias" class="loading" style="display:none;">
                 <i class="fas fa-spinner fa-spin"></i> Cargando...
             </div>
@@ -545,6 +569,25 @@
 
         <!-- Contenido: Liquidaciones TPV -->
         <div class="tab-content" id="tab-liquidaciones">
+            <!-- Paginación Liquidaciones (arriba) -->
+            <div class="pagination" id="pagination-liquidaciones" style="display:none;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button id="prevPageLiquidaciones" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaLiquidaciones('anterior')">⟨</button>
+                    <span id="pageInfoLiquidaciones">Página 1 de 1</span>
+                    <button id="nextPageLiquidaciones" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaLiquidaciones('siguiente')">⟩</button>
+                </div>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+                    <label>Por página:
+                        <select id="items-por-pagina-liquidaciones" style="padding:2px 6px;font-size:12px;" onchange="cambiarItemsPorPaginaLiquidaciones()">
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            
             <div id="loading-liquidaciones" class="loading" style="display:none;">
                 <i class="fas fa-spinner fa-spin"></i> Cargando...
             </div>
@@ -572,6 +615,25 @@
 
         <!-- Contenido: Conciliados -->
         <div class="tab-content" id="tab-conciliados">
+            <!-- Paginación Conciliados (arriba) -->
+            <div class="pagination" id="pagination-conciliados" style="display:none;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button id="prevPageConciliados" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaConciliados('anterior')">⟨</button>
+                    <span id="pageInfoConciliados">Página 1 de 1</span>
+                    <button id="nextPageConciliados" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaConciliados('siguiente')">⟩</button>
+                </div>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+                    <label>Por página:
+                        <select id="items-por-pagina-conciliados" style="padding:2px 6px;font-size:12px;" onchange="cambiarItemsPorPaginaConciliados()">
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            
             <div id="loading-conciliados" class="loading" style="display:none;">
                 <i class="fas fa-spinner fa-spin"></i> Cargando...
             </div>
