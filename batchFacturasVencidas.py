@@ -23,7 +23,7 @@ logger = logging.getLogger('batchFacturasVencidas')
 
 def actualizar_facturas_vencidas():
     """
-    Busca facturas con fecha superior a 15 días y actualiza su estado a 'V' (Vencida)
+    Busca facturas con fecha superior a 30 días y actualiza su estado a 'V' (Vencida)
     si su estado actual es 'P' (Pendiente)
     """
     conn = None
@@ -33,8 +33,8 @@ def actualizar_facturas_vencidas():
             logger.error("No se pudo establecer conexión con la base de datos")
             return
         
-        # Calcular la fecha límite (hoy - 15 días)
-        fecha_limite = (datetime.now() - timedelta(days=15)).strftime('%Y-%m-%d')
+        # Calcular la fecha límite (hoy - 30 días)
+        fecha_limite = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
         logger.info(f"Buscando facturas anteriores a {fecha_limite}")
         
         # Obtener facturas pendientes con fecha anterior a fecha_limite
