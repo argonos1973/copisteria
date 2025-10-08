@@ -369,6 +369,28 @@
             font-size: 13px;
         }
 
+        .btn-icon-delete {
+            background: none;
+            border: none;
+            color: #dc3545;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .btn-icon-delete:hover {
+            color: #fff;
+            background-color: #dc3545;
+            border-radius: 4px;
+        }
+
         /* Estilos de paginación - Consistente con tickets */
         .pagination {
             display: flex;
@@ -462,6 +484,9 @@
             <button class="tab active" data-tab="pendientes">
                 <i class="fas fa-clock"></i> Pendientes
             </button>
+            <button class="tab" data-tab="transferencias">
+                <i class="fas fa-exchange-alt"></i> Transferencias
+            </button>
             <button class="tab" data-tab="liquidaciones">
                 <i class="fas fa-credit-card"></i> Liquidaciones TPV
             </button>
@@ -508,6 +533,27 @@
                     </label>
                 </div>
             </div>
+        </div>
+
+        <!-- Contenido: Transferencias -->
+        <div class="tab-content" id="tab-transferencias">
+            <div id="loading-transferencias" class="loading" style="display:none;">
+                <i class="fas fa-spinner fa-spin"></i> Cargando...
+            </div>
+            <div id="empty-transferencias" class="empty-state" style="display:none;">
+                <i class="fas fa-check-circle"></i>
+                <p>No hay transferencias pendientes de conciliar</p>
+            </div>
+            <table class="gastos-table" id="tabla-transferencias" style="display:none;">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Fecha</th>
+                        <th>Concepto</th>
+                        <th style="width: 120px;" class="text-right">Importe</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-transferencias"></tbody>
+            </table>
         </div>
 
         <!-- Contenido: Liquidaciones TPV -->

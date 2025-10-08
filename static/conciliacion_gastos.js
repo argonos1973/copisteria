@@ -50,16 +50,73 @@ function inicializarPestanas() {
 window.cargarDatos = async function() {
     await Promise.all([
         cargarGastosPendientes(),
+        cargarTransferencias(),
         cargarLiquidacionesTPV(),
         cargarConciliados(),
         cargarEstadisticas()
     ]);
 }
 
+async function cargarTransferencias() {
+    const loading = document.getElementById('loading-transferencias');
+    const empty = document.getElementById('empty-transferencias');
+    const tabla = document.getElementById('tabla-transferencias');
+    const tbody = document.getElementById('tbody-transferencias');
+    
+    loading.style.display = 'block';
+    empty.style.display = 'none';
+    tabla.style.display = 'none';
+    
+    try {
+        const response = await fetch(`${API_URL}/conciliacion/gastos-pendientes?tipo=transferencia`);
+        const data = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (data.success && data.gastos && data.gastos.length > 0) {
+            // Filtrar solo transferencias
+            const transferencias = data.gastos.filter(g => 
+                g.concepto && (
+                    g.concepto.toLowerCase().includes('transferencia') ||
+                    g.concepto.toLowerCase().includes('transf.')
+                )
+            );
+            
+            if (transferencias.length > 0) {
+                tbody.innerHTML = '';
+                transferencias.forEach(gasto => {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.onclick = () => buscarCoincidencias(gasto.id);
+                    
+                    tr.innerHTML = `
+                        <td>${formatearFecha(gasto.fecha_operacion)}</td>
+                        <td>${gasto.concepto}</td>
+                        <td class="text-right ${gasto.importe_eur >= 0 ? 'importe-positivo' : 'importe-negativo'}">
+                            ${formatearImporte(gasto.importe_eur)}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                tabla.style.display = 'table';
+            } else {
+                empty.style.display = 'block';
+            }
+        } else {
+            empty.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error al cargar transferencias:', error);
+        loading.style.display = 'none';
+        empty.style.display = 'block';
+    }
+}
+
 async function cargarGastosPendientes() {
     const loading = document.getElementById('loading-pendientes');
     const empty = document.getElementById('empty-pendientes');
     const tabla = document.getElementById('tabla-pendientes');
+    const tbody = document.getElementById('tbody-pendientes');
     const pagination = document.getElementById('pagination-pendientes');
     
     loading.style.display = 'block';
@@ -72,11 +129,22 @@ async function cargarGastosPendientes() {
         const data = await response.json();
         
         if (data.success && data.gastos.length > 0) {
-            gastosPendientesCompletos = data.gastos;
-            paginaActualPendientes = 1;
-            renderizarPaginaPendientes();
-            tabla.style.display = 'table';
-            pagination.style.display = 'flex';
+            // Excluir transferencias de pendientes (tienen su propia pestaña)
+            gastosPendientesCompletos = data.gastos.filter(g => 
+                !g.concepto || (
+                    !g.concepto.toLowerCase().includes('transferencia') &&
+                    !g.concepto.toLowerCase().includes('transf.')
+                )
+            );
+            
+            if (gastosPendientesCompletos.length > 0) {
+                paginaActualPendientes = 1;
+                renderizarPaginaPendientes();
+                tabla.style.display = 'table';
+                pagination.style.display = 'flex';
+            } else {
+                empty.style.display = 'block';
+            }
         } else {
             empty.style.display = 'block';
         }
@@ -197,8 +265,8 @@ async function cargarConciliados() {
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-danger" onclick="eliminarConciliacion(${conc.id})">
-                            <i class="fas fa-trash"></i>
+                        <button class="btn-icon-delete" onclick="eliminarConciliacion(${conc.id})" title="Eliminar conciliación">
+                            ×
                         </button>
                     </td>
                 `;
@@ -698,12 +766,12 @@ window.confirmarConciliacionLiquidacion = async function(liq) {
         
         const result = await response.json();
         if (result.success) {
-            alert(`✅ Liquidación conciliada: ${result.conciliados} documentos`);
+            mostrarNotificacion(`Liquidación conciliada: ${result.conciliados} documentos`, 'success');
             cargarLiquidacionesTPV();
         } else {
-            alert(`❌ Error: ${result.error}`);
+            mostrarNotificacion(`Error: ${result.error}`, 'error');
         }
     } catch (error) {
-        alert(`❌ Error al conciliar: ${error.message}`);
+        mostrarNotificacion(`Error al conciliar: ${error.message}`, 'error');
     }
 }
