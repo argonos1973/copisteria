@@ -1133,6 +1133,256 @@ def obtener_liquidaciones_tpv():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@conciliacion_bp.route('/api/conciliacion/ingresos-efectivo', methods=['GET'])
+def obtener_ingresos_efectivo():
+    """Obtener ingresos en efectivo del banco agrupados por fecha y compararlos con facturas/tickets en efectivo"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Filtrar solo año actual (formato DD/MM/YYYY)
+        ano_actual = datetime.now().year
+        
+        # Obtener ingresos en efectivo del banco
+        cursor.execute('''
+            SELECT 
+                id,
+                fecha_operacion,
+                concepto,
+                importe_eur
+            FROM gastos
+            WHERE (
+                concepto LIKE '%ingreso efectivo%'
+                OR concepto LIKE '%ingreso efvo%'
+                OR concepto LIKE '%deposito efectivo%'
+                OR concepto LIKE '%ingreso caja%'
+            )
+            AND importe_eur > 0
+            AND id NOT IN (
+                SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
+            )
+            AND (
+                substr(fecha_operacion, -4) = ?
+                OR strftime('%Y', fecha_operacion) = ?
+            )
+            ORDER BY 
+                CASE 
+                    WHEN fecha_operacion LIKE '__/__/____' THEN 
+                        substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)
+                    ELSE fecha_operacion 
+                END DESC
+        ''', (str(ano_actual), str(ano_actual)))
+        
+        ingresos_raw = cursor.fetchall()
+        
+        # Agrupar por fecha
+        ingresos_agrupados = {}
+        
+        for ing in ingresos_raw:
+            fecha = ing['fecha_operacion']
+            
+            if fecha not in ingresos_agrupados:
+                ingresos_agrupados[fecha] = {
+                    'ids': [],
+                    'total': 0,
+                    'count': 0
+                }
+            
+            ingresos_agrupados[fecha]['ids'].append(str(ing['id']))
+            ingresos_agrupados[fecha]['total'] += ing['importe_eur']
+            ingresos_agrupados[fecha]['count'] += 1
+        
+        resultado = []
+        
+        for fecha_str, datos in ingresos_agrupados.items():
+            # Convertir fecha a formato YYYY-MM-DD para buscar documentos
+            try:
+                if '/' in fecha_str:
+                    fecha_obj = datetime.strptime(fecha_str, '%d/%m/%Y')
+                else:
+                    fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d')
+                fecha_busqueda = fecha_obj.strftime('%Y-%m-%d')
+                
+                # Buscar en rango de ±30 días (el efectivo se deposita después)
+                fecha_inicio = (fecha_obj - timedelta(days=30)).strftime('%Y-%m-%d')
+                fecha_fin = fecha_obj.strftime('%Y-%m-%d')
+            except:
+                continue
+            
+            # Buscar facturas con efectivo en el rango
+            cursor.execute('''
+                SELECT 
+                    COUNT(*) as num_facturas,
+                    SUM(total) as total_facturas
+                FROM factura
+                WHERE fecha BETWEEN ? AND ?
+                AND formaPago = 'E'
+                AND estado = 'C'
+            ''', (fecha_inicio, fecha_fin))
+            
+            facturas_info = cursor.fetchone()
+            total_facturas = facturas_info['total_facturas'] or 0
+            num_facturas = facturas_info['num_facturas'] or 0
+            
+            # Buscar tickets con efectivo en el rango
+            cursor.execute('''
+                SELECT 
+                    COUNT(*) as num_tickets,
+                    SUM(total) as total_tickets
+                FROM tickets
+                WHERE fecha BETWEEN ? AND ?
+                AND formaPago = 'E'
+                AND estado = 'C'
+            ''', (fecha_inicio, fecha_fin))
+            
+            tickets_info = cursor.fetchone()
+            total_tickets = tickets_info['total_tickets'] or 0
+            num_tickets = tickets_info['num_tickets'] or 0
+            
+            # Sumar facturas y tickets
+            total_documentos = total_facturas + total_tickets
+            num_documentos = num_facturas + num_tickets
+            
+            # Calcular diferencia
+            total_ing = datos['total']
+            diferencia = abs(total_ing - total_documentos)
+            porcentaje_diferencia = (diferencia / abs(total_ing) * 100) if total_ing != 0 else 0
+            
+            # Determinar estado
+            if diferencia <= 1.0:
+                estado = 'exacto'
+            elif porcentaje_diferencia <= 5:
+                estado = 'aceptable'
+            else:
+                estado = 'revisar'
+            
+            # Conciliar automáticamente si diferencia <= 1€
+            if diferencia <= 1.0 and num_documentos > 0:
+                try:
+                    for gasto_id in datos['ids']:
+                        cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
+                        gasto_row = cursor.fetchone()
+                        if gasto_row:
+                            importe_gasto = gasto_row['importe_eur']
+                            cursor.execute('''
+                                INSERT OR IGNORE INTO conciliacion_gastos 
+                                (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
+                                 importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
+                                VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
+                            ''', (int(gasto_id), 'ingreso_efectivo', 0, 
+                                  importe_gasto, total_documentos, diferencia,
+                                  f'Ingreso efectivo {fecha_str} - {num_documentos} documentos - Conciliado automáticamente (dif: {round(diferencia, 2)}€)'))
+                    conn.commit()
+                    continue
+                except Exception as e:
+                    print(f"Error conciliando automáticamente ingreso {fecha_str}: {e}")
+            
+            resultado.append({
+                'fecha': fecha_str,
+                'num_ingresos': datos['count'],
+                'total_ingresos': round(total_ing, 2),
+                'num_facturas': num_facturas,
+                'num_tickets': num_tickets,
+                'total_facturas': round(total_facturas, 2),
+                'total_tickets': round(total_tickets, 2),
+                'total_documentos': round(total_documentos, 2),
+                'diferencia': round(diferencia, 2),
+                'porcentaje_diferencia': round(porcentaje_diferencia, 2),
+                'estado': estado,
+                'ids_gastos': ','.join(datos['ids']),
+                'fecha_inicio': fecha_inicio,
+                'fecha_fin': fecha_fin
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'ingresos': resultado
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/conciliar-ingreso-efectivo', methods=['POST'])
+def conciliar_ingreso_efectivo():
+    """Conciliar un ingreso en efectivo con sus facturas/tickets"""
+    try:
+        data = request.json
+        ids_gastos = data.get('ids_gastos', '').split(',')
+        fecha = data.get('fecha')
+        fecha_inicio = data.get('fecha_inicio')
+        fecha_fin = data.get('fecha_fin')
+        
+        if not ids_gastos or not fecha:
+            return jsonify({'success': False, 'error': 'Faltan parámetros'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener facturas y tickets con efectivo en el rango
+        cursor.execute('''
+            SELECT 'factura' as tipo, id, numero, total
+            FROM factura
+            WHERE fecha BETWEEN ? AND ? AND formaPago = 'E' AND estado = 'C'
+        ''', (fecha_inicio, fecha_fin))
+        facturas = cursor.fetchall()
+        
+        cursor.execute('''
+            SELECT 'ticket' as tipo, id, numero, total
+            FROM tickets
+            WHERE fecha BETWEEN ? AND ? AND formaPago = 'E' AND estado = 'C'
+        ''', (fecha_inicio, fecha_fin))
+        tickets = cursor.fetchall()
+        
+        documentos = list(facturas) + list(tickets)
+        
+        if not documentos:
+            conn.close()
+            return jsonify({'success': False, 'error': 'No hay documentos para conciliar'}), 400
+        
+        conciliados = 0
+        total_documentos = sum(doc['total'] for doc in documentos)
+        
+        # Marcar cada ingreso como conciliado
+        for gasto_id in ids_gastos:
+            if not gasto_id.strip():
+                continue
+            
+            cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
+            gasto_row = cursor.fetchone()
+            if not gasto_row:
+                continue
+            
+            importe_gasto = gasto_row['importe_eur']
+            diferencia = abs(importe_gasto - total_documentos)
+            
+            try:
+                cursor.execute('''
+                    INSERT OR IGNORE INTO conciliacion_gastos 
+                    (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
+                     importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
+                    VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'manual', 0, ?)
+                ''', (int(gasto_id), 'ingreso_efectivo', 0, 
+                      importe_gasto, total_documentos, diferencia,
+                      f'Ingreso efectivo {fecha} - {len(documentos)} documentos ({len(facturas)} facturas, {len(tickets)} tickets)'))
+                
+                if cursor.rowcount > 0:
+                    conciliados += 1
+            except Exception as e:
+                print(f"Error conciliando ingreso {gasto_id}: {e}")
+                continue
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'conciliados': conciliados,
+            'mensaje': f'Ingreso conciliado: {conciliados} registros'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @conciliacion_bp.route('/api/conciliacion/conciliar-liquidacion', methods=['POST'])
 def conciliar_liquidacion():
     """Conciliar una liquidación TPV con sus tickets/facturas"""
