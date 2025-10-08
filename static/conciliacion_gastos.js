@@ -24,6 +24,10 @@ let conciliadosCompletos = [];
 let paginaActualConciliados = 1;
 let itemsPorPaginaConciliados = 10;
 
+let ingresosCompletos = [];
+let paginaActualIngresos = 1;
+let itemsPorPaginaIngresos = 10;
+
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
@@ -64,6 +68,7 @@ window.cargarDatos = async function() {
         cargarGastosPendientes(),
         cargarTransferencias(),
         cargarLiquidacionesTPV(),
+        cargarIngresosEfectivo(),
         cargarConciliados(),
         cargarEstadisticas()
     ]);
@@ -917,3 +922,135 @@ window.confirmarConciliacionLiquidacion = async function(liq) {
         mostrarNotificacion(`Error al conciliar: ${error.message}`, 'error');
     }
 }
+
+// ============================================================================
+// INGRESOS EFECTIVO
+// ============================================================================
+
+async function cargarIngresosEfectivo() {
+    const loading = document.getElementById('loading-ingresos');
+    const empty = document.getElementById('empty-ingresos');
+    const tabla = document.getElementById('tabla-ingresos');
+    const pagination = document.getElementById('pagination-ingresos');
+    
+    loading.style.display = 'block';
+    empty.style.display = 'none';
+    tabla.style.display = 'none';
+    pagination.style.display = 'none';
+    
+    try {
+        const response = await fetch(`${API_URL}/conciliacion/ingresos-efectivo`);
+        const data = await response.json();
+        
+        loading.style.display = 'none';
+        
+        if (data.success && data.ingresos.length > 0) {
+            ingresosCompletos = data.ingresos;
+            paginaActualIngresos = 1;
+            await renderizarPaginaIngresos();
+            tabla.style.display = 'table';
+            pagination.style.display = 'flex';
+        } else {
+            empty.style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error al cargar ingresos efectivo:', error);
+        loading.style.display = 'none';
+        empty.style.display = 'block';
+    }
+}
+
+async function renderizarPaginaIngresos() {
+    const tbody = document.getElementById('tbody-ingresos');
+    tbody.innerHTML = '';
+    
+    const inicio = (paginaActualIngresos - 1) * itemsPorPaginaIngresos;
+    const fin = inicio + itemsPorPaginaIngresos;
+    const ingresosPagina = ingresosCompletos.slice(inicio, fin);
+    
+    for (const ing of ingresosPagina) {
+        const tr = document.createElement('tr');
+        
+        let estadoClass = '';
+        let estadoTexto = '';
+        let accion = '';
+        
+        if (ing.estado === 'exacto') {
+            estadoClass = 'estado-exacto';
+            estadoTexto = 'Exacto';
+        } else if (ing.estado === 'aceptable') {
+            estadoClass = 'estado-aceptable';
+            estadoTexto = 'Aceptable';
+            accion = `<i class="fas fa-check-circle" onclick='confirmarConciliacionIngreso(${JSON.stringify(ing)})' style="cursor:pointer;color:#28a745;font-size:20px;" title="Conciliar"></i>`;
+        } else {
+            estadoClass = 'estado-revisar';
+            estadoTexto = 'Revisar';
+        }
+        
+        tr.innerHTML = `
+            <td>${formatearFecha(ing.fecha)}</td>
+            <td class="text-center">${ing.num_ingresos}</td>
+            <td class="text-right">${formatearImporte(Math.abs(ing.total_ingresos))}</td>
+            <td class="text-center">${ing.num_facturas}</td>
+            <td class="text-center">${ing.num_tickets}</td>
+            <td class="text-right">${formatearImporte(ing.total_documentos)}</td>
+            <td class="text-right">${formatearImporte(ing.diferencia)}</td>
+            <td class="text-center"><span class="${estadoClass}">${estadoTexto}</span></td>
+            ${accion ? `<td class="text-center">${accion}</td>` : '<td></td>'}
+        `;
+        
+        tbody.appendChild(tr);
+    }
+    
+    actualizarControlesPaginacionIngresos();
+}
+
+function actualizarControlesPaginacionIngresos() {
+    const totalPaginas = Math.ceil(ingresosCompletos.length / itemsPorPaginaIngresos);
+    document.getElementById('pageInfoIngresos').textContent = `Página ${paginaActualIngresos} de ${totalPaginas}`;
+    document.getElementById('prevPageIngresos').disabled = paginaActualIngresos === 1;
+    document.getElementById('nextPageIngresos').disabled = paginaActualIngresos === totalPaginas;
+}
+
+window.cambiarPaginaIngresos = function(accion) {
+    const totalPaginas = Math.ceil(ingresosCompletos.length / itemsPorPaginaIngresos);
+    if (accion === 'anterior' && paginaActualIngresos > 1) paginaActualIngresos--;
+    if (accion === 'siguiente' && paginaActualIngresos < totalPaginas) paginaActualIngresos++;
+    renderizarPaginaIngresos();
+};
+
+window.cambiarItemsPorPaginaIngresos = function() {
+    itemsPorPaginaIngresos = parseInt(document.getElementById('items-por-pagina-ingresos').value);
+    paginaActualIngresos = 1;
+    renderizarPaginaIngresos();
+};
+
+window.confirmarConciliacionIngreso = async function(ing) {
+    const mensaje = `¿Conciliar ingreso del ${ing.fecha}?\nDiferencia: ${ing.diferencia}€ (${ing.porcentaje_diferencia}%)\nRango: 30 días previos`;
+    
+    if (!confirm(mensaje)) return;
+    
+    try {
+        const response = await fetch(`${API_URL}/conciliacion/conciliar-ingreso-efectivo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ids_gastos: ing.ids_gastos,
+                fecha: ing.fecha,
+                fecha_inicio: ing.fecha_inicio,
+                fecha_fin: ing.fecha_fin
+            })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            mostrarNotificacion(`Ingreso conciliado: ${result.conciliados} registros`, 'success');
+            cargarIngresosEfectivo();
+            cargarConciliados();
+        } else {
+            mostrarNotificacion(`Error: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        mostrarNotificacion(`Error al conciliar: ${error.message}`, 'error');
+    }
+};

@@ -482,6 +482,9 @@
             <button class="tab" data-tab="liquidaciones">
                 <i class="fas fa-credit-card"></i> Liquidaciones TPV
             </button>
+            <button class="tab" data-tab="ingresos-efectivo">
+                <i class="fas fa-money-bill-wave"></i> Ingresos Efectivo
+            </button>
             <button class="tab" data-tab="conciliados">
                 <i class="fas fa-check-circle"></i> Conciliados
             </button>
@@ -610,6 +613,52 @@
                     </tr>
                 </thead>
                 <tbody id="tbody-liquidaciones"></tbody>
+            </table>
+        </div>
+
+        <!-- Contenido: Ingresos Efectivo -->
+        <div class="tab-content" id="tab-ingresos-efectivo">
+            <!-- Paginación Ingresos Efectivo (arriba) -->
+            <div class="pagination" id="pagination-ingresos" style="display:none;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button id="prevPageIngresos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaIngresos('anterior')">⟨</button>
+                    <span id="pageInfoIngresos">Página 1 de 1</span>
+                    <button id="nextPageIngresos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaIngresos('siguiente')">⟩</button>
+                </div>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+                    <label>Por página:
+                        <select id="items-por-pagina-ingresos" style="padding:2px 6px;font-size:12px;" onchange="cambiarItemsPorPaginaIngresos()">
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            
+            <div id="loading-ingresos" class="loading" style="display:none;">
+                <i class="fas fa-spinner fa-spin"></i> Cargando...
+            </div>
+            <div id="empty-ingresos" class="empty-state" style="display:none;">
+                <i class="fas fa-check-circle"></i>
+                <p>No hay ingresos en efectivo pendientes de revisar</p>
+            </div>
+            <table class="gastos-table" id="tabla-ingresos" style="display:none;">
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">Fecha</th>
+                        <th style="width: 80px;" class="text-center">Ingresos</th>
+                        <th style="width: 120px;" class="text-right">Total Ingreso</th>
+                        <th style="width: 80px;" class="text-center">Facturas</th>
+                        <th style="width: 80px;" class="text-center">Tickets</th>
+                        <th style="width: 120px;" class="text-right">Total Docs</th>
+                        <th style="width: 100px;" class="text-right">Diferencia</th>
+                        <th style="width: 80px;" class="text-center">Estado</th>
+                        <th style="width: 50px;" class="text-center"></th>
+                    </tr>
+                </thead>
+                <tbody id="tbody-ingresos"></tbody>
             </table>
         </div>
 
