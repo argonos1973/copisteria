@@ -179,25 +179,64 @@ def tickets_paginado():
         
         # Solo calcular totales si hay un estado específico en el filtro
         if estado:
-            totales_sql = f'''
-                SELECT 
-                    SUM(t.importe_bruto) as total_base,
-                    SUM(t.importe_impuestos) as total_iva,
-                    SUM(t.importe_cobrado) as total_cobrado,
-                    SUM(t.total) as total_total
-                FROM tickets t{where_sql}
-            '''
-            cursor.execute(totales_sql, params)
-            totales_row = cursor.fetchone()
-            
-            if totales_row:
-                totales_dict = dict(totales_row)
-                totales_globales = {
-                    'total_base': format_currency_es_two(totales_dict.get('total_base', 0)),
-                    'total_iva': format_currency_es_two(totales_dict.get('total_iva', 0)),
-                    'total_cobrado': format_currency_es_two(totales_dict.get('total_cobrado', 0)),
-                    'total_total': format_currency_es_two(totales_dict.get('total_total', 0))
-                }
+            # Si hay filtro de concepto, sumar solo las líneas que coinciden
+            if concepto:
+                totales_sql = f'''
+                    SELECT 
+                        SUM(d.total) as total_total
+                    FROM detalle_tickets d
+                    JOIN tickets t ON d.id_ticket = t.id
+                    WHERE t.estado = ?
+                    AND (lower(d.concepto) LIKE ? OR lower(d.descripcion) LIKE ?)
+                '''
+                totales_params = [estado, like_val, like_val]
+                
+                # Añadir filtros de fecha si existen
+                if fecha_inicio:
+                    totales_sql += ' AND t.fecha >= ?'
+                    totales_params.append(fecha_inicio)
+                if fecha_fin:
+                    totales_sql += ' AND t.fecha <= ?'
+                    totales_params.append(fecha_fin)
+                if numero:
+                    totales_sql += ' AND t.numero LIKE ?'
+                    totales_params.append(f"%{numero}%")
+                if forma_pago:
+                    totales_sql += ' AND t.formaPago = ?'
+                    totales_params.append(forma_pago)
+                
+                cursor.execute(totales_sql, totales_params)
+                totales_row = cursor.fetchone()
+                
+                if totales_row:
+                    total_lineas = totales_row['total_total'] or 0
+                    totales_globales = {
+                        'total_base': '0,00',  # No calculamos base/iva por línea
+                        'total_iva': '0,00',
+                        'total_cobrado': '0,00',
+                        'total_total': format_currency_es_two(total_lineas)
+                    }
+            else:
+                # Sin filtro de concepto, usar totales del ticket completo
+                totales_sql = f'''
+                    SELECT 
+                        SUM(t.importe_bruto) as total_base,
+                        SUM(t.importe_impuestos) as total_iva,
+                        SUM(t.importe_cobrado) as total_cobrado,
+                        SUM(t.total) as total_total
+                    FROM tickets t{where_sql}
+                '''
+                cursor.execute(totales_sql, params)
+                totales_row = cursor.fetchone()
+                
+                if totales_row:
+                    totales_dict = dict(totales_row)
+                    totales_globales = {
+                        'total_base': format_currency_es_two(totales_dict.get('total_base', 0)),
+                        'total_iva': format_currency_es_two(totales_dict.get('total_iva', 0)),
+                        'total_cobrado': format_currency_es_two(totales_dict.get('total_cobrado', 0)),
+                        'total_total': format_currency_es_two(totales_dict.get('total_total', 0))
+                    }
 
         total_pages = (total_rows + page_size - 1) // page_size if page_size else 1
 
