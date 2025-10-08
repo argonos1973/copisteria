@@ -451,9 +451,8 @@ def gastos_pendientes():
         fecha_inicio = request.args.get('fecha_inicio')
         fecha_fin = request.args.get('fecha_fin')
         
-        # Filtrar solo año actual
+        # Filtrar solo año actual (formato fecha DD/MM/YYYY)
         ano_actual = datetime.now().year
-        fecha_inicio_ano = f"{ano_actual}-01-01"
         
         if tabla_existe:
             query = '''
@@ -464,7 +463,10 @@ def gastos_pendientes():
                 )
                 AND g.importe_eur > 0
                 AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
-                AND strftime('%Y', g.fecha_operacion) = ?
+                AND (
+                    substr(g.fecha_operacion, -4) = ?
+                    OR strftime('%Y', g.fecha_operacion) = ?
+                )
             '''
         else:
             # Si no existe la tabla, todos los gastos son pendientes (excepto liquidaciones)
@@ -473,10 +475,13 @@ def gastos_pendientes():
                 FROM gastos g
                 WHERE g.importe_eur > 0
                 AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
-                AND strftime('%Y', g.fecha_operacion) = ?
+                AND (
+                    substr(g.fecha_operacion, -4) = ?
+                    OR strftime('%Y', g.fecha_operacion) = ?
+                )
             '''
         
-        params = [str(ano_actual)]
+        params = [str(ano_actual), str(ano_actual)]
         if fecha_inicio:
             query += ' AND g.fecha_operacion >= ?'
             params.append(fecha_inicio)
@@ -523,7 +528,7 @@ def conciliados():
                 'total': 0
             })
         
-        # Filtrar solo año actual y ordenar por fecha descendente
+        # Filtrar solo año actual y ordenar por fecha descendente (formato DD/MM/YYYY)
         ano_actual = datetime.now().year
         
         # Obtener conciliaciones normales (no liquidaciones TPV)
@@ -542,9 +547,12 @@ def conciliados():
             LEFT JOIN tickets t ON c.tipo_documento = 'ticket' AND c.documento_id = t.id
             WHERE c.estado = 'conciliado'
             AND c.tipo_documento != 'liquidacion_tpv'
-            AND strftime('%Y', g.fecha_operacion) = ?
+            AND (
+                substr(g.fecha_operacion, -4) = ?
+                OR strftime('%Y', g.fecha_operacion) = ?
+            )
             ORDER BY c.fecha_conciliacion DESC
-        ''', (str(ano_actual),))
+        ''', (str(ano_actual), str(ano_actual)))
         
         conciliaciones_normales = [dict(row) for row in cursor.fetchall()]
         
@@ -944,7 +952,7 @@ def obtener_liquidaciones_tpv():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Filtrar solo año actual
+        # Filtrar solo año actual (formato DD/MM/YYYY)
         ano_actual = datetime.now().year
         
         # Obtener todas las liquidaciones
@@ -960,9 +968,12 @@ def obtener_liquidaciones_tpv():
             AND id NOT IN (
                 SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
             )
-            AND strftime('%Y', fecha_operacion) = ?
+            AND (
+                substr(fecha_operacion, -4) = ?
+                OR strftime('%Y', fecha_operacion) = ?
+            )
             ORDER BY fecha_operacion DESC
-        ''', (str(ano_actual),))
+        ''', (str(ano_actual), str(ano_actual)))
         
         liquidaciones_raw = cursor.fetchall()
         
