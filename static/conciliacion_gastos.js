@@ -1089,18 +1089,18 @@ function renderizarDocumentosDisponibles() {
         const isSelected = documentosSeleccionados.some(d => d.tipo === doc.tipo && d.id === doc.id);
         
         tr.innerHTML = `
-            <td class="text-center">
+            <td class="text-center" style="min-width: 60px; max-width: 60px; width: 60px;">
                 <input type="checkbox" 
                        id="doc-${indexGlobal}" 
                        ${isSelected ? 'checked' : ''}
                        onchange="toggleDocumento(${indexGlobal})"
                        style="cursor:pointer;width:18px;height:18px;">
             </td>
-            <td><span class="badge ${doc.tipo === 'factura' ? 'badge-info' : 'badge-secondary'}">${doc.tipo.toUpperCase()}</span></td>
-            <td>${doc.numero}</td>
-            <td>${formatearFecha(doc.fecha)}</td>
-            <td>${doc.cliente || '-'}</td>
-            <td class="text-right">${formatearImporte(doc.total)}</td>
+            <td style="min-width: 150px; max-width: 150px; width: 150px;"><span class="badge ${doc.tipo === 'factura' ? 'badge-info' : 'badge-secondary'}">${doc.tipo.toUpperCase()}</span></td>
+            <td style="min-width: 180px; max-width: 180px; width: 180px;">${doc.numero}</td>
+            <td style="min-width: 150px; max-width: 150px; width: 150px;">${formatearFecha(doc.fecha)}</td>
+            <td style="min-width: 200px;">${doc.cliente || '-'}</td>
+            <td class="text-right" style="min-width: 150px; max-width: 150px; width: 150px;">${formatearImporte(doc.total)}</td>
         `;
         
         tbody.appendChild(tr);
