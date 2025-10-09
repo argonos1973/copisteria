@@ -1354,7 +1354,6 @@ def obtener_documentos_efectivo():
                 SELECT 1 FROM conciliacion_gastos cg
                 WHERE cg.tipo_documento = 'factura' 
                 AND cg.documento_id = f.id
-                AND cg.estado = 'conciliado'
             )
             ORDER BY f.fecha DESC, f.numero DESC
         ''', (fecha_inicio, fecha_fin))
@@ -1378,7 +1377,6 @@ def obtener_documentos_efectivo():
                 SELECT 1 FROM conciliacion_gastos cg
                 WHERE cg.tipo_documento = 'ticket' 
                 AND cg.documento_id = id
-                AND cg.estado = 'conciliado'
             )
             ORDER BY fecha DESC, numero DESC
         ''', (fecha_inicio, fecha_fin))
