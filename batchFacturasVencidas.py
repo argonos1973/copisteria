@@ -324,16 +324,26 @@ def actualizar_facturas_vencidas():
                         # Buscar PDF de la factura
                         factura_pdf_path = f"/var/www/html/facturas_pdf/factura_{factura_numero}.pdf"
                         
-                        # Preparar email (no envía todavía) - siempre se prepara aunque no exista el PDF
+                        # Si no existe el PDF, generarlo
+                        if not os.path.exists(factura_pdf_path):
+                            logger.info(f"Generando PDF de la factura {factura_numero}...")
+                            try:
+                                from generar_pdf import generar_factura_pdf
+                                pdf_generado = generar_factura_pdf(factura_id)
+                                if pdf_generado:
+                                    logger.info(f"PDF de factura {factura_numero} generado correctamente")
+                                else:
+                                    logger.warning(f"No se pudo generar el PDF de la factura {factura_numero}")
+                            except Exception as e:
+                                logger.error(f"Error al generar PDF de factura {factura_numero}: {e}")
+                        
+                        # Preparar email (no envía todavía)
                         enviar_email_reclamacion(
                             cliente['email'],
                             factura_numero,
                             carta_pdf,
                             factura_pdf_path if os.path.exists(factura_pdf_path) else None
                         )
-                        
-                        if not os.path.exists(factura_pdf_path):
-                            logger.warning(f"No se encontró el PDF de la factura {factura_numero} en {factura_pdf_path}")
                     else:
                         logger.warning(f"Cliente sin email para factura {factura_numero}")
                 
