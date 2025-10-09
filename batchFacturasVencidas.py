@@ -252,8 +252,8 @@ def actualizar_facturas_vencidas():
             logger.error("No se pudo establecer conexión con la base de datos")
             return
         
-        # Calcular la fecha límite (hoy - 30 días)
-        fecha_limite = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        # Calcular la fecha límite (hoy - 1 día) - MODO PRUEBAS
+        fecha_limite = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         logger.info(f"Buscando facturas anteriores a {fecha_limite}")
         
         # Obtener facturas pendientes con fecha anterior a fecha_limite
