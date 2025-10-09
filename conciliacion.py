@@ -1327,7 +1327,7 @@ def obtener_documentos_efectivo():
         except:
             return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
         
-        # Obtener facturas en efectivo con nombre del cliente
+        # Obtener facturas en efectivo con nombre del cliente (excluir ya conciliadas)
         cursor.execute('''
             SELECT 
                 'factura' as tipo,
@@ -1341,12 +1341,18 @@ def obtener_documentos_efectivo():
             WHERE f.fecha BETWEEN ? AND ?
             AND f.formaPago = 'E'
             AND f.estado = 'C'
+            AND NOT EXISTS (
+                SELECT 1 FROM conciliacion_gastos cg
+                WHERE cg.tipo_documento = 'factura' 
+                AND cg.documento_id = f.id
+                AND cg.estado = 'conciliado'
+            )
             ORDER BY f.fecha DESC, f.numero DESC
         ''', (fecha_inicio, fecha_fin))
         
         facturas = [dict(row) for row in cursor.fetchall()]
         
-        # Obtener tickets en efectivo
+        # Obtener tickets en efectivo (excluir ya conciliados)
         cursor.execute('''
             SELECT 
                 'ticket' as tipo,
@@ -1359,6 +1365,12 @@ def obtener_documentos_efectivo():
             WHERE fecha BETWEEN ? AND ?
             AND formaPago = 'E'
             AND estado = 'C'
+            AND NOT EXISTS (
+                SELECT 1 FROM conciliacion_gastos cg
+                WHERE cg.tipo_documento = 'ticket' 
+                AND cg.documento_id = id
+                AND cg.estado = 'conciliado'
+            )
             ORDER BY fecha DESC, numero DESC
         ''', (fecha_inicio, fecha_fin))
         
