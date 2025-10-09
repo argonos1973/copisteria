@@ -164,6 +164,80 @@ window.cambiarItemsPorPaginaTransferencias = function() {
     renderizarPaginaTransferencias();
 };
 
+/**
+ * Busca documentos en efectivo y aplica algoritmo de conciliación automática
+ * para un ingreso en efectivo pendiente
+ */
+async function buscarYConciliarIngresoEfectivo(gasto) {
+    try {
+        mostrarNotificacion('Buscando documentos en efectivo...', 'info');
+        
+        // Buscar documentos en efectivo cercanos a la fecha del gasto
+        const response = await fetch(`${API_URL}/conciliacion/documentos-efectivo?fecha=${encodeURIComponent(gasto.fecha_operacion)}`);
+        const data = await response.json();
+        
+        if (!data.success || !data.documentos || data.documentos.length === 0) {
+            mostrarNotificacion('No se encontraron documentos en efectivo disponibles', 'warning');
+            return;
+        }
+        
+        const objetivo = Math.abs(parseFloat(gasto.importe_eur));
+        const documentos = data.documentos.map(d => ({
+            ...d,
+            importe: parseFloat(d.total)
+        }));
+        
+        // Usar algoritmo de varita mágica para encontrar mejor combinación
+        const mejorCombinacion = encontrarMejorCombinacion(documentos, objetivo);
+        
+        if (mejorCombinacion.length === 0) {
+            mostrarNotificacion('No se encontró ninguna combinación válida de documentos', 'warning');
+            return;
+        }
+        
+        const totalCombinacion = mejorCombinacion.reduce((sum, d) => sum + parseFloat(d.total), 0);
+        const diferencia = Math.abs(objetivo - totalCombinacion);
+        
+        // Preparar datos para conciliación
+        const documentosSeleccionados = mejorCombinacion.map(doc => ({
+            tipo: doc.tipo,
+            id: doc.id,
+            numero: doc.numero,
+            total: doc.total
+        }));
+        
+        // Mostrar notificación con resultado
+        if (diferencia < 0.01) {
+            mostrarNotificacion(`✓ Combinación exacta encontrada: ${mejorCombinacion.length} documentos. Conciliando...`, 'success');
+        } else {
+            mostrarNotificacion(`Mejor combinación: ${mejorCombinacion.length} documentos (diferencia: ${formatearImporte(diferencia)}). Conciliando...`, 'info');
+        }
+        
+        // Conciliar
+        const conciliarResponse = await fetch(`${API_URL}/conciliacion/conciliar-ingreso-efectivo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ids_gastos: gasto.id.toString(),
+                fecha: gasto.fecha_operacion,
+                documentos_seleccionados: documentosSeleccionados
+            })
+        });
+        
+        const result = await conciliarResponse.json();
+        
+        if (result.success) {
+            mostrarNotificacion(`✓ Ingreso conciliado con ${mejorCombinacion.length} documentos`, 'success');
+            await cargarDatos();
+        } else {
+            mostrarNotificacion(`Error: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('Error al conciliar ingreso efectivo:', error);
+        mostrarNotificacion(`Error: ${error.message}`, 'error');
+    }
+}
+
 async function cargarGastosPendientes() {
     const loading = document.getElementById('loading-pendientes');
     const empty = document.getElementById('empty-pendientes');
@@ -228,7 +302,12 @@ function renderizarPaginaPendientes() {
         
         // Hacer toda la fila clickeable
         tr.addEventListener('click', () => {
-            window.buscarCoincidencias(gasto.id);
+            // Si es un ingreso en efectivo (importe positivo), usar algoritmo automático
+            if (gasto.importe_eur > 0) {
+                buscarYConciliarIngresoEfectivo(gasto);
+            } else {
+                window.buscarCoincidencias(gasto.id);
+            }
         });
         
         tbody.appendChild(tr);
