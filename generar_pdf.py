@@ -432,6 +432,11 @@ def generar_factura_pdf(id_factura):
                 # Eliminar marcadores y no mostrar información VeriFactu
                 html_modificado = html_modificado.replace(hash_placeholder, '')
                 html_modificado = html_modificado.replace(qr_placeholder, '')
+                # Eliminar el badge VERI*FACTU del título
+                html_modificado = html_modificado.replace('<span style="color: #0056b3; font-size: 0.7em; background-color: #f0f8ff; border: 1px solid #0056b3; padding: 2px 6px; border-radius: 4px;">VERI*FACTU</span>', '')
+                # Eliminar toda la sección de información VERI*FACTU
+                import re
+                html_modificado = re.sub(r'<div style="margin-top: 30px;[^>]*>.*?<p><strong>Información VERI\*FACTU</strong></p>.*?</div>\s*</div>', '', html_modificado, flags=re.DOTALL)
             else:
                 if hash_placeholder in html_modificado:
                     html_modificado = html_modificado.replace(hash_placeholder, hash_replacement)
