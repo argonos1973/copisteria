@@ -785,6 +785,25 @@
                 <i class="fas fa-spinner fa-spin"></i> Cargando documentos...
             </div>
             
+            <!-- Paginación Modal (arriba) -->
+            <div class="pagination" id="pagination-modal-docs" style="display:none; margin-bottom: 10px;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button id="prevPageModalDocs" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaModalDocs('anterior')">⟨</button>
+                    <span id="pageInfoModalDocs">Página 1 de 1</span>
+                    <button id="nextPageModalDocs" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaModalDocs('siguiente')">⟩</button>
+                </div>
+                <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+                    <label>Por página:
+                        <select id="items-por-pagina-modal-docs" style="padding:2px 6px;font-size:12px;" onchange="cambiarItemsPorPaginaModalDocs()">
+                            <option value="10" selected>10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
+            
             <div id="lista-documentos" style="display: none; max-height: 400px; overflow-y: auto;">
                 <table class="gastos-table" style="font-size: 13px;">
                     <thead>
@@ -801,11 +820,14 @@
                 </table>
             </div>
             
-            <div style="margin-top: 20px; text-align: right; border-top: 2px solid #ddd; padding-top: 15px;">
-                <button class="btn btn-secondary" onclick="cerrarModalSeleccion()" style="margin-right: 10px;">Cancelar</button>
-                <button class="btn btn-primary" id="btn-conciliar-seleccionados" onclick="conciliarDocumentosSeleccionados()" disabled>
-                    <i class="fas fa-check"></i> Conciliar Seleccionados
-                </button>
+            <div style="margin-top: 20px; text-align: right; border-top: 2px solid #ddd; padding-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                <span id="total-documentos-disponibles" style="color: #666; font-size: 13px;"></span>
+                <div>
+                    <button class="btn btn-secondary" onclick="cerrarModalSeleccion()" style="margin-right: 10px;">Cancelar</button>
+                    <button class="btn btn-primary" id="btn-conciliar-seleccionados" onclick="conciliarDocumentosSeleccionados()" disabled>
+                        <i class="fas fa-check"></i> Conciliar Seleccionados
+                    </button>
+                </div>
             </div>
         </div>
     </div>

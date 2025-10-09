@@ -1030,6 +1030,8 @@ window.cambiarItemsPorPaginaIngresos = function() {
 let ingresoActual = null;
 let documentosDisponibles = [];
 let documentosSeleccionados = [];
+let paginaActualModalDocs = 1;
+let itemsPorPaginaModalDocs = 10;
 
 window.abrirSeleccionDocumentos = async function(ing) {
     ingresoActual = ing;
@@ -1055,9 +1057,12 @@ window.abrirSeleccionDocumentos = async function(ing) {
         
         if (data.success) {
             documentosDisponibles = data.documentos;
+            paginaActualModalDocs = 1;
             renderizarDocumentosDisponibles();
             loading.style.display = 'none';
             lista.style.display = 'block';
+            document.getElementById('pagination-modal-docs').style.display = 'flex';
+            document.getElementById('total-documentos-disponibles').textContent = `${data.documentos.length} documentos disponibles`;
         } else {
             mostrarNotificacion('Error al cargar documentos', 'error');
             cerrarModalSeleccion();
@@ -1073,16 +1078,21 @@ function renderizarDocumentosDisponibles() {
     const tbody = document.getElementById('tbody-documentos-seleccion');
     tbody.innerHTML = '';
     
-    documentosDisponibles.forEach((doc, index) => {
+    const inicio = (paginaActualModalDocs - 1) * itemsPorPaginaModalDocs;
+    const fin = inicio + itemsPorPaginaModalDocs;
+    const documentosPagina = documentosDisponibles.slice(inicio, fin);
+    
+    documentosPagina.forEach((doc, indexPagina) => {
+        const indexGlobal = inicio + indexPagina;
         const tr = document.createElement('tr');
         const isSelected = documentosSeleccionados.some(d => d.tipo === doc.tipo && d.id === doc.id);
         
         tr.innerHTML = `
             <td class="text-center">
                 <input type="checkbox" 
-                       id="doc-${index}" 
+                       id="doc-${indexGlobal}" 
                        ${isSelected ? 'checked' : ''}
-                       onchange="toggleDocumento(${index})"
+                       onchange="toggleDocumento(${indexGlobal})"
                        style="cursor:pointer;width:18px;height:18px;">
             </td>
             <td><span class="badge ${doc.tipo === 'factura' ? 'badge-info' : 'badge-secondary'}">${doc.tipo.toUpperCase()}</span></td>
@@ -1095,6 +1105,7 @@ function renderizarDocumentosDisponibles() {
         tbody.appendChild(tr);
     });
     
+    actualizarControlesPaginacionModalDocs();
     actualizarTotalesSeleccion();
 }
 
@@ -1135,11 +1146,34 @@ function actualizarTotalesSeleccion() {
     document.getElementById('btn-conciliar-seleccionados').disabled = documentosSeleccionados.length === 0;
 }
 
+function actualizarControlesPaginacionModalDocs() {
+    const totalPaginas = Math.ceil(documentosDisponibles.length / itemsPorPaginaModalDocs);
+    document.getElementById('pageInfoModalDocs').textContent = `Página ${paginaActualModalDocs} de ${totalPaginas}`;
+    document.getElementById('prevPageModalDocs').disabled = paginaActualModalDocs === 1;
+    document.getElementById('nextPageModalDocs').disabled = paginaActualModalDocs === totalPaginas;
+}
+
+window.cambiarPaginaModalDocs = function(accion) {
+    const totalPaginas = Math.ceil(documentosDisponibles.length / itemsPorPaginaModalDocs);
+    if (accion === 'anterior' && paginaActualModalDocs > 1) paginaActualModalDocs--;
+    if (accion === 'siguiente' && paginaActualModalDocs < totalPaginas) paginaActualModalDocs++;
+    renderizarDocumentosDisponibles();
+};
+
+window.cambiarItemsPorPaginaModalDocs = function() {
+    itemsPorPaginaModalDocs = parseInt(document.getElementById('items-por-pagina-modal-docs').value);
+    paginaActualModalDocs = 1;
+    renderizarDocumentosDisponibles();
+};
+
 window.cerrarModalSeleccion = function() {
     document.getElementById('modal-seleccion-documentos').classList.remove('active');
+    document.getElementById('pagination-modal-docs').style.display = 'none';
     ingresoActual = null;
     documentosDisponibles = [];
     documentosSeleccionados = [];
+    paginaActualModalDocs = 1;
+    itemsPorPaginaModalDocs = 10;
 };
 
 window.conciliarDocumentosSeleccionados = async function() {
