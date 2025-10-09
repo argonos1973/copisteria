@@ -1538,6 +1538,7 @@ window.conciliarDocumentosSeleccionados = async function() {
 /**
  * Conciliación automática: selecciona documentos que sumen exactamente
  * o se acerquen lo máximo posible al total del ingreso y ejecuta la conciliación
+ * Solo concilia si la diferencia es < 1€
  */
 window.conciliacionAutomatica = async function() {
     if (!ingresoActual || !documentosDisponibles || documentosDisponibles.length === 0) {
@@ -1573,6 +1574,12 @@ window.conciliacionAutomatica = async function() {
     
     const totalSeleccionado = documentosSeleccionados.reduce((sum, d) => sum + parseFloat(d.total), 0);
     const diferencia = Math.abs(objetivo - totalSeleccionado);
+    
+    // Verificar si la diferencia es aceptable (< 1€)
+    if (diferencia >= 1.0) {
+        mostrarNotificacion(`⚠ Diferencia muy alta: ${formatearImporte(diferencia)}. No se puede conciliar automáticamente. Selecciona manualmente los documentos correctos.`, 'warning');
+        return;
+    }
     
     // Mostrar notificación de lo que se va a conciliar
     if (diferencia < 0.01) {
