@@ -954,6 +954,67 @@ window.confirmarConciliacionLiquidacion = async function(liq) {
 // INGRESOS EFECTIVO
 // ============================================================================
 
+/**
+ * Concilia automáticamente un ingreso en efectivo cuando la diferencia es 0
+ */
+async function conciliarIngresoAutomatico(ing) {
+    try {
+        // Cargar documentos disponibles para esa fecha
+        const response = await fetch(`${API_URL}/conciliacion/documentos-efectivo?fecha=${encodeURIComponent(ing.fecha)}`);
+        const data = await response.json();
+        
+        if (!data.success || !data.documentos || data.documentos.length === 0) {
+            return;
+        }
+        
+        const objetivo = Math.abs(parseFloat(ing.total_ingresos));
+        const documentos = data.documentos.map(d => ({
+            ...d,
+            importe: parseFloat(d.total)
+        }));
+        
+        // Usar algoritmo de varita mágica para encontrar combinación exacta
+        const mejorCombinacion = encontrarMejorCombinacion(documentos, objetivo);
+        
+        if (mejorCombinacion.length === 0) {
+            return;
+        }
+        
+        const totalCombinacion = mejorCombinacion.reduce((sum, d) => sum + parseFloat(d.total), 0);
+        const diferencia = Math.abs(objetivo - totalCombinacion);
+        
+        // Solo conciliar si es exacto (diferencia < 0.01€)
+        if (diferencia < 0.01) {
+            // Preparar datos para conciliación
+            const documentosSeleccionados = mejorCombinacion.map(doc => ({
+                tipo: doc.tipo,
+                id: doc.id,
+                numero: doc.numero,
+                total: doc.total
+            }));
+            
+            // Conciliar
+            const conciliarResponse = await fetch(`${API_URL}/conciliacion/conciliar-ingreso-efectivo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ids_gastos: ing.ids_gastos,
+                    fecha: ing.fecha,
+                    documentos_seleccionados: documentosSeleccionados
+                })
+            });
+            
+            const result = await conciliarResponse.json();
+            
+            if (result.success) {
+                console.log(`✓ Ingreso ${ing.fecha} conciliado automáticamente con ${mejorCombinacion.length} documentos`);
+            }
+        }
+    } catch (error) {
+        console.error('Error en conciliación automática de ingreso:', error);
+    }
+}
+
 async function cargarIngresosEfectivo() {
     const loading = document.getElementById('loading-ingresos');
     const empty = document.getElementById('empty-ingresos');
@@ -1005,6 +1066,12 @@ async function renderizarPaginaIngresos() {
         if (ing.estado === 'exacto') {
             estadoClass = 'estado-exacto';
             estadoTexto = 'Exacto';
+            // Si es exacto, intentar conciliación automática
+            if (Math.abs(ing.diferencia) < 0.01) {
+                // Conciliar automáticamente en segundo plano
+                conciliarIngresoAutomatico(ing);
+                continue; // Saltar este ingreso, se conciliará automáticamente
+            }
         } else {
             estadoClass = ing.estado === 'aceptable' ? 'estado-aceptable' : 'estado-revisar';
             estadoTexto = ing.estado === 'aceptable' ? 'Aceptable' : 'Revisar';
