@@ -710,38 +710,16 @@
                 <span class="close-modal" onclick="cerrarModal()">&times;</span>
             </div>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <!-- Columna izquierda: Información y coincidencias -->
-                <div>
-                    <div id="gasto-info" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <!-- Info del gasto se cargará aquí -->
-                    </div>
-
-                    <div id="loading-coincidencias" class="loading" style="display:none;">
-                        <i class="fas fa-spinner fa-spin"></i> Buscando coincidencias...
-                    </div>
-
-                    <div id="coincidencias-container"></div>
+            <div>
+                <div id="gasto-info" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <!-- Info del gasto se cargará aquí -->
                 </div>
-                
-                <!-- Columna derecha: Visor de PDF -->
-                <div>
-                    <div id="pdf-viewer" style="display:none; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-                        <div style="background: #2c3e50; color: white; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
-                            <span id="pdf-title">Vista Previa</span>
-                            <a id="pdf-download" href="#" target="_blank" style="color: white;">
-                                <i class="fas fa-external-link-alt"></i> Abrir
-                            </a>
-                        </div>
-                        <iframe id="pdf-frame" style="width: 100%; height: 600px; border: none;"></iframe>
-                    </div>
-                    <div id="pdf-placeholder" style="background: #f8f9fa; padding: 40px; text-align: center; color: #999; border: 2px dashed #ddd; border-radius: 8px; height: 600px; display: flex; align-items: center; justify-content: center;">
-                        <div>
-                            <i class="fas fa-file-pdf" style="font-size: 48px; margin-bottom: 15px;"></i>
-                            <p>Selecciona una coincidencia para ver el documento</p>
-                        </div>
-                    </div>
+
+                <div id="loading-coincidencias" class="loading" style="display:none;">
+                    <i class="fas fa-spinner fa-spin"></i> Buscando coincidencias...
                 </div>
+
+                <div id="coincidencias-container"></div>
             </div>
 
             <div style="margin-top: 20px; text-align: right;">
