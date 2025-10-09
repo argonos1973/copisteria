@@ -80,7 +80,8 @@ window.cargarDatos = async function() {
 
 /**
  * Procesamiento automático silencioso al cargar la página
- * Concilia todo lo que tenga diferencia < 1€
+ * - Ingresos en efectivo: diferencia < 1€
+ * - Transferencias: coincidencia exacta (< 0.01€) o combinación < 1€
  */
 async function procesarAutomaticoAlCargar() {
     try {
@@ -117,6 +118,60 @@ async function procesarAutomaticoAlCargar() {
                 if (diferencia < 1.0) {
                     const resultado = await conciliarIngresoAutomaticoSilencioso(ing);
                     if (resultado) totalConciliados++;
+                }
+            }
+        }
+        
+        // 3. Procesar Transferencias (buscar coincidencias y conciliar si diferencia < 1€)
+        if (dataPendientes.success && dataPendientes.gastos.length > 0) {
+            const transferencias = dataPendientes.gastos.filter(g => 
+                g.concepto && (
+                    g.concepto.toLowerCase().includes('transferencia') ||
+                    g.concepto.toLowerCase().includes('transf.')
+                )
+            );
+            
+            for (const transf of transferencias) {
+                try {
+                    const respCoincidencias = await fetch(`${API_URL}/conciliacion/buscar/${transf.id}`);
+                    const dataCoincidencias = await respCoincidencias.json();
+                    
+                    if (dataCoincidencias.success && dataCoincidencias.coincidencias.length > 0) {
+                        const objetivo = Math.abs(parseFloat(transf.importe_eur));
+                        
+                        // Buscar coincidencia exacta
+                        const coincidenciaExacta = dataCoincidencias.coincidencias.find(c => Math.abs(c.diferencia) < 0.01);
+                        
+                        if (coincidenciaExacta) {
+                            await conciliarAutomaticamente(transf.id, coincidenciaExacta.tipo, coincidenciaExacta.id);
+                            totalConciliados++;
+                            console.log(`✓ Transferencia ${transf.concepto} conciliada [EXACTA]`);
+                        } else {
+                            // Si no hay exacta, buscar combinación con algoritmo de varita mágica
+                            const documentos = dataCoincidencias.coincidencias.map(c => ({
+                                ...c,
+                                importe: parseFloat(c.importe)
+                            }));
+                            
+                            const mejorCombinacion = encontrarMejorCombinacion(documentos, objetivo);
+                            
+                            if (mejorCombinacion.length > 0) {
+                                const totalCombinacion = mejorCombinacion.reduce((sum, d) => sum + d.importe, 0);
+                                const diferencia = Math.abs(objetivo - totalCombinacion);
+                                
+                                if (diferencia < 1.0) {
+                                    // Conciliar con cada documento de la combinación
+                                    for (const doc of mejorCombinacion) {
+                                        await conciliarAutomaticamente(transf.id, doc.tipo, doc.id);
+                                    }
+                                    totalConciliados++;
+                                    console.log(`✓ Transferencia ${transf.concepto} conciliada [COMBINACIÓN] con ${mejorCombinacion.length} documentos (dif: ${diferencia.toFixed(2)}€)`);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error procesando transferencia ${transf.id}:`, error);
                 }
             }
         }
