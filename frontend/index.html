@@ -247,14 +247,32 @@
         }
 
         .notif-item {
+            display: grid;
+            grid-template-columns: 30px 1fr;
+            gap: 10px;
             padding: 12px 15px;
             border-bottom: 1px solid #eee;
-            cursor: pointer;
+            align-items: start;
             transition: background 0.2s;
         }
 
         .notif-item:hover {
             background: #f8f9fa;
+        }
+
+        .notif-checkbox {
+            margin-top: 3px;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        .notif-content {
+            flex: 1;
+        }
+
+        .notif-content.clickable {
+            cursor: pointer;
         }
 
         .notif-item:last-child {
@@ -425,7 +443,13 @@
     <!-- Panel de notificaciones -->
     <div id="notificaciones-panel">
         <div class="notif-header">
-            <h3><i class="fas fa-bell"></i> Conciliaciones Automáticas</h3>
+            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                <label id="select-all-container" style="display: none; align-items: center; gap: 5px; cursor: pointer; font-size: 14px;">
+                    <input type="checkbox" id="select-all-notif" onchange="toggleSeleccionarTodas()" style="cursor: pointer; width: 16px; height: 16px;">
+                    <span>Todas</span>
+                </label>
+                <h3 style="margin: 0;"><i class="fas fa-bell"></i> Notificaciones</h3>
+            </div>
             <span class="notif-close" onclick="cerrarNotificaciones()">&times;</span>
         </div>
         <div class="notif-body" id="notificaciones-lista">
@@ -434,8 +458,8 @@
                 <p>No hay notificaciones nuevas</p>
             </div>
         </div>
-        <div class="notif-footer">
-            <button onclick="marcarTodasLeidas()">Marcar todas como leídas</button>
+        <div class="notif-footer" id="notif-footer" style="display: none;">
+            <button onclick="marcarSeleccionadasLeidas()" id="btn-marcar-leidas">Marcar seleccionadas como leídas</button>
         </div>
     </div>
 
@@ -576,10 +600,16 @@
         function abrirNotificaciones() {
             const panel = document.getElementById('notificaciones-panel');
             const lista = document.getElementById('notificaciones-lista');
+            const selectAllContainer = document.getElementById('select-all-container');
+            const footer = document.getElementById('notif-footer');
             
             panel.classList.add('active');
             
             if (notificacionesActuales.length > 0) {
+                // Mostrar checkbox "Todas" y footer
+                selectAllContainer.style.display = 'flex';
+                footer.style.display = 'block';
+                
                 lista.innerHTML = '';
                 
                 notificacionesActuales.forEach(notif => {
@@ -587,38 +617,99 @@
                     item.className = 'notif-item';
                     item.dataset.id = notif.id;
                     
-                    const fecha = new Date(notif.fecha_operacion + 'T00:00:00');
-                    const fechaStr = fecha.toLocaleDateString('es-ES');
-                    
-                    const importe = new Intl.NumberFormat('es-ES', {
-                        style: 'currency',
-                        currency: 'EUR'
-                    }).format(notif.importe_gasto);
-                    
-                    item.innerHTML = `
-                        <div class="notif-title">
-                            <i class="fas fa-check-circle" style="color: #27ae60;"></i>
-                            Conciliación automática
-                        </div>
-                        <div class="notif-desc">
-                            ${notif.concepto_gasto || 'Gasto bancario'} (${importe}) 
-                            → ${notif.tipo_documento.toUpperCase()} ${notif.numero_documento}
-                        </div>
-                        <div class="notif-time">
-                            <i class="fas fa-calendar"></i> ${fechaStr}
-                            ${notif.metodo === 'automatico' ? '<span style="color: #27ae60;"> • Auto</span>' : ''}
-                        </div>
-                    `;
-                    
-                    item.addEventListener('click', () => {
-                        // Navegar a la página de conciliación
-                        document.getElementById('content-frame').src = 'CONCILIACION_GASTOS.html';
-                        cerrarNotificaciones();
-                    });
+                    // Determinar si es notificación general o de conciliación
+                    if (notif.origen === 'general') {
+                        // Notificación general (facturas vencidas, cartas, etc.)
+                        const fecha = new Date(notif.fecha_conciliacion);
+                        const fechaStr = fecha.toLocaleDateString('es-ES');
+                        
+                        const iconos = {
+                            'warning': 'fa-exclamation-triangle',
+                            'info': 'fa-info-circle',
+                            'success': 'fa-check-circle',
+                            'error': 'fa-times-circle'
+                        };
+                        
+                        const colores = {
+                            'warning': '#f39c12',
+                            'info': '#3498db',
+                            'success': '#27ae60',
+                            'error': '#e74c3c'
+                        };
+                        
+                        const icono = iconos[notif.tipo] || 'fa-bell';
+                        const color = colores[notif.tipo] || '#95a5a6';
+                        
+                        item.innerHTML = `
+                            <input type="checkbox" class="notif-checkbox" data-notif-id="${notif.id}" data-origen="${notif.origen}">
+                            <div class="notif-content">
+                                <div class="notif-title">
+                                    <i class="fas ${icono}" style="color: ${color};"></i>
+                                    ${notif.tipo === 'warning' ? 'Aviso' : 'Notificación'}
+                                </div>
+                                <div class="notif-desc">
+                                    ${notif.mensaje}
+                                </div>
+                                <div class="notif-time">
+                                    <i class="fas fa-calendar"></i> ${fechaStr}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Notificación de conciliación
+                        // Convertir fecha DD/MM/YYYY a formato válido
+                        let fechaStr = 'Fecha no disponible';
+                        if (notif.fecha_operacion) {
+                            if (notif.fecha_operacion.includes('/')) {
+                                // Formato DD/MM/YYYY
+                                fechaStr = notif.fecha_operacion;
+                            } else {
+                                // Formato YYYY-MM-DD
+                                const fecha = new Date(notif.fecha_operacion + 'T00:00:00');
+                                fechaStr = fecha.toLocaleDateString('es-ES');
+                            }
+                        }
+                        
+                        const importe = new Intl.NumberFormat('es-ES', {
+                            style: 'currency',
+                            currency: 'EUR'
+                        }).format(notif.importe_gasto);
+                        
+                        const tipoNotif = notif.metodo === 'manual' ? 'manual' : 'automática';
+                        const metodoLabel = notif.metodo === 'manual' ? 'Manual' : 'Auto';
+                        
+                        item.innerHTML = `
+                            <input type="checkbox" class="notif-checkbox" data-notif-id="${notif.id}" data-origen="${notif.origen}">
+                            <div class="notif-content clickable">
+                                <div class="notif-title">
+                                    <i class="fas fa-check-circle" style="color: #27ae60;"></i>
+                                    Conciliación ${tipoNotif}
+                                </div>
+                                <div class="notif-desc">
+                                    ${notif.concepto_gasto || 'Gasto bancario'} (${importe}) 
+                                    → ${notif.tipo_documento ? notif.tipo_documento.toUpperCase() : ''} ${notif.numero_documento || ''}
+                                </div>
+                                <div class="notif-time">
+                                    <i class="fas fa-calendar"></i> ${fechaStr}
+                                    <span style="color: ${notif.metodo === 'manual' ? '#f39c12' : '#27ae60'};"> • ${metodoLabel}</span>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Solo el contenido navega, no el checkbox
+                        item.querySelector('.notif-content').addEventListener('click', () => {
+                            document.getElementById('content-frame').src = 'CONCILIACION_GASTOS.html';
+                            cerrarNotificaciones();
+                        });
+                    }
                     
                     lista.appendChild(item);
                 });
             } else {
+                // Ocultar checkbox "Todas" y footer
+                selectAllContainer.style.display = 'none';
+                footer.style.display = 'none';
+                
                 lista.innerHTML = `
                     <div class="notif-empty">
                         <i class="fas fa-check-circle" style="font-size: 32px; color: #ddd;"></i>
@@ -630,6 +721,91 @@
         
         window.cerrarNotificaciones = function() {
             document.getElementById('notificaciones-panel').classList.remove('active');
+        };
+        
+        window.toggleSeleccionarTodas = function() {
+            const selectAll = document.getElementById('select-all-notif');
+            const checkboxes = document.querySelectorAll('.notif-checkbox');
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        };
+        
+        window.marcarSeleccionadasLeidas = async function() {
+            const checkboxes = document.querySelectorAll('.notif-checkbox:checked');
+            
+            console.log('Checkboxes seleccionados:', checkboxes.length);
+            
+            if (checkboxes.length === 0) {
+                alert('Selecciona al menos una notificación para marcar como leída');
+                return;
+            }
+            
+            try {
+                // Separar notificaciones generales de conciliación
+                const notifGenerales = [];
+                const notifConciliacion = [];
+                
+                checkboxes.forEach(cb => {
+                    const id = parseInt(cb.dataset.notifId);
+                    const origen = cb.dataset.origen;
+                    
+                    console.log('Procesando:', id, origen);
+                    
+                    if (origen === 'general') {
+                        notifGenerales.push(id);
+                    } else {
+                        notifConciliacion.push(id);
+                    }
+                });
+                
+                console.log('Notif generales:', notifGenerales);
+                console.log('Notif conciliación:', notifConciliacion);
+                
+                // Eliminar notificaciones generales
+                if (notifGenerales.length > 0) {
+                    console.log('Eliminando notificaciones generales...');
+                    const response = await fetch(`${API_URL}/notificaciones/eliminar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: notifGenerales })
+                    });
+                    
+                    const data = await response.json();
+                    console.log('Respuesta eliminar:', data);
+                    
+                    if (!response.ok) throw new Error('Error al eliminar notificaciones generales');
+                }
+                
+                // Marcar conciliaciones como notificadas
+                if (notifConciliacion.length > 0) {
+                    console.log('Marcando conciliaciones...');
+                    const response = await fetch(`${API_URL}/conciliacion/marcar-notificadas`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: notifConciliacion })
+                    });
+                    
+                    const data = await response.json();
+                    console.log('Respuesta marcar:', data);
+                    
+                    if (!response.ok) throw new Error('Error al marcar conciliaciones');
+                }
+                
+                console.log('Recargando notificaciones...');
+                // Recargar notificaciones
+                await cargarNotificaciones();
+                
+                // Si el panel está abierto, actualizar su contenido
+                const panel = document.getElementById('notificaciones-panel');
+                if (panel.classList.contains('active')) {
+                    abrirNotificaciones();
+                }
+                
+                document.getElementById('select-all-notif').checked = false;
+                
+            } catch (error) {
+                console.error('Error completo:', error);
+                alert('Error al marcar notificaciones como leídas: ' + error.message);
+            }
         };
         
         window.marcarTodasLeidas = async function() {
