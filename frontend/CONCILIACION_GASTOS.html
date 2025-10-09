@@ -798,30 +798,30 @@
                 </div>
             </div>
             
-            <!-- Header fijo de la tabla - v2025010921 -->
-            <div id="header-documentos" style="display: none; background: #2c3e50; color: white; padding-right: 17px; border-radius: 8px 8px 0 0; overflow: hidden; position: sticky; top: 0; z-index: 100;">
-                <table class="gastos-table" style="font-size: 13px; width: 100%; margin: 0; border: none;">
-                    <thead>
-                        <tr>
-                            <th style="text-align: center; min-width: 60px; max-width: 60px; width: 60px; height: 45px; padding: 10px 8px; border: none;">
-                                <input type="checkbox" 
-                                       id="select-all-docs" 
-                                       onchange="seleccionarTodosPagina()"
-                                       style="cursor:pointer;width:18px;height:18px;"
-                                       title="Seleccionar todos de esta página">
-                            </th>
-                            <th style="min-width: 150px; max-width: 150px; width: 150px; height: 45px; padding: 10px 8px; border: none;">Tipo</th>
-                            <th style="min-width: 180px; max-width: 180px; width: 180px; height: 45px; padding: 10px 8px; border: none;">Número</th>
-                            <th style="min-width: 150px; max-width: 150px; width: 150px; height: 45px; padding: 10px 8px; border: none;">Fecha</th>
-                            <th style="min-width: 200px; height: 45px; padding: 10px 8px; border: none;">Cliente</th>
-                            <th style="text-align: right; min-width: 150px; max-width: 150px; width: 150px; height: 45px; padding: 10px 8px; border: none;">Importe</th>
-                        </tr>
-                    </thead>
-                </table>
-            </div>
-            
-            <!-- Contenido scrollable -->
+            <!-- Contenido scrollable con header sticky -->
             <div id="lista-documentos" style="display: none; flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0;">
+                <!-- Header sticky dentro del scroll -->
+                <div id="header-documentos" style="display: none; background: #2c3e50; color: white; padding-right: 17px; border-radius: 8px 8px 0 0; overflow: hidden; position: sticky; top: 0; z-index: 100;">
+                    <table class="gastos-table" style="font-size: 13px; width: 100%; margin: 0; border: none;">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center; min-width: 60px; max-width: 60px; width: 60px; height: 45px; padding: 10px 8px; border: none;">
+                                    <input type="checkbox" 
+                                           id="select-all-docs" 
+                                           onchange="seleccionarTodosPagina()"
+                                           style="cursor:pointer;width:18px;height:18px;"
+                                           title="Seleccionar todos de esta página">
+                                </th>
+                                <th style="min-width: 150px; max-width: 150px; width: 150px; height: 45px; padding: 10px 8px; border: none;">Tipo</th>
+                                <th style="min-width: 180px; max-width: 180px; width: 180px; height: 45px; padding: 10px 8px; border: none;">Número</th>
+                                <th style="min-width: 150px; max-width: 150px; width: 150px; height: 45px; padding: 10px 8px; border: none;">Fecha</th>
+                                <th style="min-width: 200px; height: 45px; padding: 10px 8px; border: none;">Cliente</th>
+                                <th style="text-align: right; min-width: 150px; max-width: 150px; width: 150px; height: 45px; padding: 10px 8px; border: none;">Importe</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                
                 <table class="gastos-table" style="font-size: 13px; width: 100%; margin: 0;">
                     <tbody id="tbody-documentos-seleccion"></tbody>
                 </table>
