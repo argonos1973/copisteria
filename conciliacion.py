@@ -977,8 +977,8 @@ def obtener_liquidaciones_tpv():
         # Filtrar solo año actual (formato DD/MM/YYYY)
         ano_actual = datetime.now().year
         
-        # Obtener todas las liquidaciones
-        # Filtro específico: "Liquidacion Efectuada" para evitar capturar otros conceptos
+        # Obtener todas las liquidaciones TPV
+        # Filtro específico: "Liquidacion Efectuada" pero NO "Bonificacion"
         cursor.execute('''
             SELECT 
                 id,
@@ -987,6 +987,8 @@ def obtener_liquidaciones_tpv():
                 importe_eur
             FROM gastos
             WHERE concepto LIKE '%Liquidacion Efectuada%'
+            AND concepto NOT LIKE '%Bonificacio%'
+            AND concepto NOT LIKE '%Bonificación%'
             AND id NOT IN (
                 SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
             )
