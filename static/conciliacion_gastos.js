@@ -885,48 +885,101 @@ async function ejecutarConciliacionInicial() {
 }
 
 window.procesarAutomatico = async function() {
-    mostrarNotificacion('Procesando conciliaciones automáticas...', 'info');
+    mostrarNotificacion('Procesando conciliaciones automáticas en todas las pestañas...', 'info');
+    
+    let totalConciliados = 0;
+    let totalProcesados = 0;
     
     try {
-        const response = await fetch(`${API_URL}/conciliacion/procesar-automatico`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                umbral_score: 85,
-                auto_conciliar: true
-            })
-        });
+        console.log('=== INICIANDO CONCILIACIÓN AUTOMÁTICA GLOBAL ===');
         
-        const data = await response.json();
+        // 1. Procesar Gastos Pendientes (ingresos en efectivo)
+        console.log('\n1. Procesando Gastos Pendientes...');
+        const responsePendientes = await fetch(`${API_URL}/conciliacion/gastos-pendientes`);
+        const dataPendientes = await responsePendientes.json();
         
-        if (data.success) {
-            const res = data.resultados;
+        if (dataPendientes.success && dataPendientes.gastos.length > 0) {
+            const ingresosEfectivo = dataPendientes.gastos.filter(g => 
+                g.importe_eur > 0 && 
+                (!g.concepto || (
+                    !g.concepto.toLowerCase().includes('transferencia') &&
+                    !g.concepto.toLowerCase().includes('transf.')
+                ))
+            );
             
-            let mensaje = `Procesados: ${res.procesados} | Conciliados: ${res.conciliados}`;
-            if (res.sugerencias > 0) {
-                mensaje += ` | Sugerencias: ${res.sugerencias}`;
+            totalProcesados += ingresosEfectivo.length;
+            
+            for (const ingreso of ingresosEfectivo) {
+                const resultado = await buscarYConciliarIngresoEfectivoSilencioso(ingreso);
+                if (resultado) totalConciliados++;
             }
-            mensaje += ` | Pendientes: ${res.pendientes}`;
-            
-            mostrarNotificacion(mensaje, 'success');
-            cargarDatos();
-            
-            // Mostrar detalles en consola
-            if (res.detalles && res.detalles.length > 0) {
-                console.log('Detalles de conciliación:');
-                res.detalles.forEach(d => {
-                    if (d.estado === 'conciliado') {
-                        console.log(`  ✓ ${d.fecha} - ${d.concepto} (${d.importe}€) → ${d.documento} [Score: ${d.score}%]`);
-                    } else if (d.estado === 'sugerencia') {
-                        console.log(`  ? ${d.fecha} - ${d.concepto} (${d.importe}€) → ${d.documento} [Score: ${d.score}%] (revisar manualmente)`);
-                    }
-                });
-            }
-        } else {
-            mostrarNotificacion(data.error || 'Error al procesar', 'error');
         }
+        
+        // 2. Procesar Ingresos Efectivo Agrupados
+        console.log('\n2. Procesando Ingresos Efectivo Agrupados...');
+        const responseIngresos = await fetch(`${API_URL}/conciliacion/ingresos-efectivo`);
+        const dataIngresos = await responseIngresos.json();
+        
+        if (dataIngresos.success && dataIngresos.ingresos.length > 0) {
+            totalProcesados += dataIngresos.ingresos.length;
+            
+            for (const ing of dataIngresos.ingresos) {
+                const diferencia = Math.abs(ing.diferencia);
+                if (diferencia < 1.0) {
+                    const resultado = await conciliarIngresoAutomaticoSilencioso(ing);
+                    if (resultado) totalConciliados++;
+                }
+            }
+        }
+        
+        // 3. Procesar Transferencias con algoritmo de varita mágica
+        console.log('\n3. Procesando Transferencias...');
+        const responseTransferencias = await fetch(`${API_URL}/conciliacion/gastos-pendientes`);
+        const dataTransferencias = await responseTransferencias.json();
+        
+        if (dataTransferencias.success && dataTransferencias.gastos.length > 0) {
+            const transferencias = dataTransferencias.gastos.filter(g => 
+                g.concepto && (
+                    g.concepto.toLowerCase().includes('transferencia') ||
+                    g.concepto.toLowerCase().includes('transf.')
+                )
+            );
+            
+            totalProcesados += transferencias.length;
+            
+            for (const transf of transferencias) {
+                // Buscar coincidencias para transferencias
+                try {
+                    const respCoincidencias = await fetch(`${API_URL}/conciliacion/buscar/${transf.id}`);
+                    const dataCoincidencias = await respCoincidencias.json();
+                    
+                    if (dataCoincidencias.success && dataCoincidencias.coincidencias.length > 0) {
+                        const coincidenciaExacta = dataCoincidencias.coincidencias.find(c => Math.abs(c.diferencia) < 0.01);
+                        
+                        if (coincidenciaExacta) {
+                            await conciliarAutomaticamente(transf.id, coincidenciaExacta.tipo, coincidenciaExacta.id);
+                            totalConciliados++;
+                            console.log(`✓ Transferencia ${transf.concepto} conciliada automáticamente`);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error procesando transferencia ${transf.id}:`, error);
+                }
+            }
+        }
+        
+        console.log('\n=== CONCILIACIÓN AUTOMÁTICA COMPLETADA ===');
+        console.log(`Total procesados: ${totalProcesados}`);
+        console.log(`Total conciliados: ${totalConciliados}`);
+        console.log(`Pendientes de revisión: ${totalProcesados - totalConciliados}`);
+        
+        mostrarNotificacion(`✓ Procesados: ${totalProcesados} | Conciliados: ${totalConciliados} | Pendientes: ${totalProcesados - totalConciliados}`, 'success');
+        
+        // Recargar todas las pestañas
+        await cargarDatos();
+        
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error en procesamiento automático:', error);
         mostrarNotificacion('Error al procesar automático', 'error');
     }
 };
