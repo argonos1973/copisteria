@@ -1335,9 +1335,9 @@ def obtener_documentos_efectivo():
                 f.numero,
                 f.fecha,
                 f.total,
-                COALESCE(c.nombre, c.razonSocial, '') as cliente
+                COALESCE(c.razonsocial, '') as cliente
             FROM factura f
-            LEFT JOIN contactos c ON f.idContacto = c.id
+            LEFT JOIN contactos c ON f.idContacto = c.idContacto
             WHERE f.fecha BETWEEN ? AND ?
             AND f.formaPago = 'E'
             AND f.estado = 'C'
