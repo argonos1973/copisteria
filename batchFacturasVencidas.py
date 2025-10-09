@@ -282,7 +282,8 @@ def actualizar_facturas_vencidas():
                     
                     # Obtener datos del cliente para notificación y verificar facturación automática
                     cursor.execute('SELECT razonsocial, mail as email, facturacion_automatica FROM contactos WHERE idContacto = ?', (factura['idContacto'],))
-                    cliente = cursor.fetchone()
+                    cliente_row = cursor.fetchone()
+                    cliente = dict(cliente_row) if cliente_row else None
                     cliente_nombre = cliente['razonsocial'] if cliente else 'Cliente desconocido'
                     
                     # Hacer commit antes de crear notificación para evitar bloqueo
