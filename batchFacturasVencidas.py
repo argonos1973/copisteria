@@ -11,6 +11,7 @@ from weasyprint import HTML
 from constantes import *
 from db_utils import get_db_connection
 from notificaciones_utils import guardar_notificacion
+from email_utils import enviar_factura_por_email
 
 # Configurar logging
 logging.basicConfig(
@@ -158,7 +159,7 @@ def generar_carta_reclamacion(factura_data, dias_vencidos):
 
 def enviar_email_reclamacion(cliente_email, factura_numero, carta_pdf_path, factura_pdf_path):
     """
-    Prepara el envío de email con la carta de reclamación y la factura adjunta
+    Envía email con la carta de reclamación y la factura adjunta
     
     Args:
         cliente_email: Email del cliente
@@ -167,83 +168,71 @@ def enviar_email_reclamacion(cliente_email, factura_numero, carta_pdf_path, fact
         factura_pdf_path: Ruta del PDF de la factura
     
     Returns:
-        bool: True si se prepara correctamente (de momento no envía)
+        bool: True si se envía correctamente
     """
     try:
         # MODO PRUEBAS: Solo enviar a elssons@gmail.com
         email_destino = 'elssons@gmail.com'
         
-        # TODO: Implementar envío de email cuando se active
-        # Por ahora solo registramos que está preparado para enviar
-        
-        logger.info(f"Email preparado para enviar a {email_destino} (original: {cliente_email})")
+        logger.info(f"Enviando email a {email_destino} (original: {cliente_email})")
         logger.info(f"  - Asunto: Recordatorio de pago - Factura {factura_numero}")
         logger.info(f"  - Adjunto 1: {carta_pdf_path}")
         logger.info(f"  - Adjunto 2: {factura_pdf_path}")
-        logger.info(f"  - NOTA: Envío desactivado (preparado para activar)")
         
-        # Generar notificación de email enviado (aunque de momento no se envíe realmente)
-        notif_mensaje = f"📧 Email enviado: Recordatorio factura {factura_numero} → {email_destino} (original: {cliente_email})"
-        guardar_notificacion(
-            notif_mensaje,
-            tipo='info',
-            db_path=DB_NAME
+        # Preparar el cuerpo del email
+        asunto = f"Recordatorio de pago - Factura {factura_numero}"
+        cuerpo = f"""Estimado/a cliente,
+
+Adjuntamos carta de reclamación de pago correspondiente a la factura {factura_numero}.
+
+Le rogamos proceda al pago a la mayor brevedad posible.
+
+Atentamente,
+COPISTERIA ALEPH 70
+SAMUEL RODRIGUEZ MIQUEL
+"""
+        
+        # Enviar la carta de reclamación usando la función de email_utils
+        exito, mensaje = enviar_factura_por_email(
+            email_destino,
+            asunto,
+            cuerpo,
+            carta_pdf_path,
+            factura_numero
         )
-        logger.info(f"Notificación de email generada para {factura_numero}")
         
-        # Aquí iría el código de envío de email:
-        # import smtplib
-        # from email.mime.multipart import MIMEMultipart
-        # from email.mime.text import MIMEText
-        # from email.mime.application import MIMEApplication
-        # 
-        # msg = MIMEMultipart()
-        # msg['From'] = 'facturacion@aleph70.com'
-        # msg['To'] = cliente_email
-        # msg['Subject'] = f'Reclamación de pago - Factura {factura_numero}'
-        # 
-        # # Cuerpo del email
-        # body = f'''
-        # Estimado/a cliente,
-        # 
-        # Adjuntamos carta de reclamación de pago correspondiente a la factura {factura_numero}.
-        # 
-        # Atentamente,
-        # COPISTERIA ALEPH 70
-        # '''
-        # msg.attach(MIMEText(body, 'plain'))
-        # 
-        # # Adjuntar carta de reclamación
-        # with open(carta_pdf_path, 'rb') as f:
-        #     attach = MIMEApplication(f.read(), _subtype='pdf')
-        #     attach.add_header('Content-Disposition', 'attachment', 
-        #                      filename=os.path.basename(carta_pdf_path))
-        #     msg.attach(attach)
-        # 
-        # # Adjuntar factura
-        # with open(factura_pdf_path, 'rb') as f:
-        #     attach = MIMEApplication(f.read(), _subtype='pdf')
-        #     attach.add_header('Content-Disposition', 'attachment', 
-        #                      filename=os.path.basename(factura_pdf_path))
-        #     msg.attach(attach)
-        # 
-        # # Enviar
-        # server = smtplib.SMTP('smtp.gmail.com', 587)
-        # server.starttls()
-        # server.login('usuario@gmail.com', 'password')
-        # server.send_message(msg)
-        # server.quit()
-        
-        return True
+        if exito:
+            logger.info(f"Email enviado exitosamente a {email_destino}")
+            # Generar notificación de email enviado
+            notif_mensaje = f"📧 Email enviado: Recordatorio factura {factura_numero} → {email_destino} (original: {cliente_email})"
+            guardar_notificacion(
+                notif_mensaje,
+                tipo='success',
+                db_path=DB_NAME
+            )
+            logger.info(f"Notificación de email generada para {factura_numero}")
+            return True
+        else:
+            logger.error(f"Error al enviar email: {mensaje}")
+            guardar_notificacion(
+                f"❌ Error al enviar email de factura {factura_numero}: {mensaje}",
+                tipo='error',
+                db_path=DB_NAME
+            )
+            return False
         
     except Exception as e:
-        logger.error(f"Error al preparar email de reclamación: {e}")
+        logger.error(f"Error al enviar email de reclamación: {e}")
+        guardar_notificacion(
+            f"❌ Error al enviar email de factura {factura_numero}: {str(e)}",
+            tipo='error',
+            db_path=DB_NAME
+        )
         return False
 
 def actualizar_facturas_vencidas():
     """
     Busca facturas con fecha superior a 30 días y actualiza su estado a 'V' (Vencida)
-    si su estado actual es 'P' (Pendiente)
     """
     conn = None
     try:
