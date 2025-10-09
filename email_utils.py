@@ -125,3 +125,74 @@ def enviar_presupuesto_por_email(destinatario, asunto, cuerpo, archivo_adjunto, 
             except:
                 pass
         return False, f"Error al enviar el presupuesto por correo: {str(e)}"
+
+def enviar_email_con_adjuntos(destinatario, asunto, cuerpo, archivos_adjuntos, nombres_adjuntos):
+    """
+    Envía un email con múltiples archivos adjuntos
+    
+    Args:
+        destinatario: Email del destinatario
+        asunto: Asunto del email
+        cuerpo: Cuerpo del mensaje
+        archivos_adjuntos: Lista de rutas de archivos a adjuntar
+        nombres_adjuntos: Lista de nombres para los archivos adjuntos
+    
+    Returns:
+        tuple: (bool éxito, str mensaje)
+    """
+    server = None
+    try:
+        # Configurar el servidor SMTP
+        smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
+        smtp_port = int(os.getenv('SMTP_PORT', '465'))
+        smtp_username = os.getenv('SMTP_USERNAME', 'info@aleph70.com')
+        smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
+        smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
+
+        print(f"Configurando servidor SMTP: {smtp_server}:{smtp_port}")
+        
+        # Crear el mensaje
+        msg = MIMEMultipart()
+        msg['From'] = smtp_from
+        msg['To'] = destinatario
+        msg['Subject'] = str(Header(asunto, 'utf-8'))
+
+        # Añadir el cuerpo del mensaje en UTF-8
+        msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
+
+        # Adjuntar todos los archivos
+        for archivo, nombre in zip(archivos_adjuntos, nombres_adjuntos):
+            if archivo and os.path.exists(archivo):
+                with open(archivo, 'rb') as f:
+                    pdf = MIMEApplication(f.read(), _subtype='pdf')
+                    pdf.add_header('Content-Disposition', 'attachment', filename=nombre)
+                    msg.attach(pdf)
+
+        # Conectar al servidor SMTP con SSL
+        print("Creando conexión SMTP con SSL")
+        context = ssl.create_default_context()
+        server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
+
+        print("Iniciando sesión en el servidor SMTP")
+        server.login(smtp_username, smtp_password)
+
+        print(f"Enviando correo a {destinatario}")
+        # Añadir copia oculta a info@aleph70.com
+        destinatarios = [destinatario, 'info@aleph70.com']
+        
+        from email import policy
+        msg_bytes = msg.as_bytes(policy=policy.SMTP)
+        server.sendmail(smtp_from, destinatarios, msg_bytes)
+        
+        print("Cerrando conexión SMTP")
+        server.quit()
+
+        return True, "Correo enviado correctamente"
+    except Exception as e:
+        print(f"Error al enviar correo: {str(e)}")
+        if server:
+            try:
+                server.quit()
+            except:
+                pass
+        return False, f"Error al enviar el correo: {str(e)}"

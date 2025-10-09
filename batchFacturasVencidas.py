@@ -180,8 +180,13 @@ def enviar_email_reclamacion(factura_id, cliente_email, factura_numero, carta_pd
         # Usar la función de factura.py para enviar el email con el PDF de la factura
         from factura import enviar_factura_email
         
-        # Enviar factura al email de pruebas (return_dict=True para evitar jsonify)
-        resultado = enviar_factura_email(factura_id, email_destino_override=email_destino, return_dict=True)
+        # Enviar factura al email de pruebas con carta de reclamación adjunta
+        resultado = enviar_factura_email(
+            factura_id, 
+            email_destino_override=email_destino, 
+            return_dict=True,
+            adjunto_adicional=carta_pdf_path
+        )
         
         # Verificar si fue exitoso
         if resultado and resultado.get('success', False):

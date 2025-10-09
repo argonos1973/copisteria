@@ -1365,7 +1365,7 @@ def obtener_factura_para_imprimir(factura_id):
         if conn:
             conn.close()
 
-def enviar_factura_email(id_factura, email_destino_override=None, return_dict=False):
+def enviar_factura_email(id_factura, email_destino_override=None, return_dict=False, adjunto_adicional=None):
     try:
         print(f"Iniciando envío de factura {id_factura}")
         conn = get_db_connection()
@@ -1801,14 +1801,25 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             )
 
             print(f"Enviando correo a {email_destino}")
-            # Enviar el correo
-            exito, mensaje = enviar_factura_por_email(
-                email_destino,
-                asunto,
-                cuerpo,
-                tmp.name,
-                factura_dict['numero']
-            )
+            # Enviar el correo (con adjunto adicional si se proporciona)
+            if adjunto_adicional:
+                # Importar función modificada para múltiples adjuntos
+                from email_utils import enviar_email_con_adjuntos
+                exito, mensaje = enviar_email_con_adjuntos(
+                    email_destino,
+                    asunto,
+                    cuerpo,
+                    [tmp.name, adjunto_adicional],
+                    [f'Factura_{factura_dict["numero"]}.pdf', os.path.basename(adjunto_adicional)]
+                )
+            else:
+                exito, mensaje = enviar_factura_por_email(
+                    email_destino,
+                    asunto,
+                    cuerpo,
+                    tmp.name,
+                    factura_dict['numero']
+                )
 
             # Eliminar el archivo temporal
             os.unlink(tmp.name)
