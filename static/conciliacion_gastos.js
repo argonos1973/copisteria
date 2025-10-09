@@ -238,6 +238,7 @@ async function buscarYConciliarIngresoEfectivoSilencioso(gasto) {
 /**
  * Busca documentos en efectivo y aplica algoritmo de conciliación automática
  * para un ingreso en efectivo pendiente (versión con notificaciones para clic manual)
+ * Solo concilia si la diferencia es < 1€
  */
 async function buscarYConciliarIngresoEfectivo(gasto) {
     try {
@@ -268,6 +269,12 @@ async function buscarYConciliarIngresoEfectivo(gasto) {
         
         const totalCombinacion = mejorCombinacion.reduce((sum, d) => sum + parseFloat(d.total), 0);
         const diferencia = Math.abs(objetivo - totalCombinacion);
+        
+        // Verificar si la diferencia es aceptable (< 1€)
+        if (diferencia >= 1.0) {
+            mostrarNotificacion(`⚠ Diferencia muy alta: ${formatearImporte(diferencia)}. No se puede conciliar automáticamente. Requiere revisión manual.`, 'warning');
+            return;
+        }
         
         // Preparar datos para conciliación
         const documentosSeleccionados = mejorCombinacion.map(doc => ({
