@@ -363,13 +363,17 @@ def actualizar_facturas_vencidas():
                             logger.info(f"Generando PDF de la factura {factura_numero}...")
                             try:
                                 from generar_pdf import generar_factura_pdf
-                                pdf_generado = generar_factura_pdf(factura_id)
-                                if pdf_generado:
-                                    logger.info(f"PDF de factura {factura_numero} generado correctamente")
+                                pdf_generado_path = generar_factura_pdf(factura_id)
+                                if pdf_generado_path and os.path.exists(pdf_generado_path):
+                                    # Actualizar la ruta del PDF si se generó en otra ubicación
+                                    factura_pdf_path = pdf_generado_path
+                                    logger.info(f"PDF de factura {factura_numero} generado correctamente en {pdf_generado_path}")
                                 else:
                                     logger.warning(f"No se pudo generar el PDF de la factura {factura_numero}")
+                                    factura_pdf_path = None
                             except Exception as e:
                                 logger.error(f"Error al generar PDF de factura {factura_numero}: {e}")
+                                factura_pdf_path = None
                         
                         # Preparar email (no envía todavía)
                         enviar_email_reclamacion(
