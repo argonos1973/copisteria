@@ -805,22 +805,30 @@
             </div>
             
             <!-- Header fijo de la tabla -->
-            <div id="header-documentos" style="display: none; background: #2c3e50; color: white;">
-                <table class="gastos-table" style="font-size: 13px; width: 100%; margin: 0;">
+            <div id="header-documentos" style="display: none; background: #2c3e50; color: white; overflow-y: scroll;">
+                <table class="gastos-table" style="font-size: 13px; width: 100%; margin: 0; table-layout: fixed;">
+                    <colgroup>
+                        <col style="width: 40px;">
+                        <col style="width: 80px;">
+                        <col style="width: 100px;">
+                        <col style="width: 90px;">
+                        <col>
+                        <col style="width: 100px;">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th style="width: 40px; text-align: center;">
+                            <th style="text-align: center;">
                                 <input type="checkbox" 
                                        id="select-all-docs" 
                                        onchange="seleccionarTodosPagina()"
                                        style="cursor:pointer;width:18px;height:18px;"
                                        title="Seleccionar todos de esta página">
                             </th>
-                            <th style="width: 80px;">Tipo</th>
-                            <th style="width: 100px;">Número</th>
-                            <th style="width: 90px;">Fecha</th>
+                            <th>Tipo</th>
+                            <th>Número</th>
+                            <th>Fecha</th>
                             <th>Cliente</th>
-                            <th style="width: 100px; text-align: right;">Importe</th>
+                            <th style="text-align: right;">Importe</th>
                         </tr>
                     </thead>
                 </table>
@@ -828,7 +836,15 @@
             
             <!-- Contenido scrollable -->
             <div id="lista-documentos" style="display: none; flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0;">
-                <table class="gastos-table" style="font-size: 13px; width: 100%; margin: 0;">
+                <table class="gastos-table" style="font-size: 13px; width: 100%; margin: 0; table-layout: fixed;">
+                    <colgroup>
+                        <col style="width: 40px;">
+                        <col style="width: 80px;">
+                        <col style="width: 100px;">
+                        <col style="width: 90px;">
+                        <col>
+                        <col style="width: 100px;">
+                    </colgroup>
                     <tbody id="tbody-documentos-seleccion"></tbody>
                 </table>
             </div>
