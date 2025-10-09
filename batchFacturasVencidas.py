@@ -180,11 +180,11 @@ def enviar_email_reclamacion(factura_id, cliente_email, factura_numero, carta_pd
         # Usar la función de factura.py para enviar el email con el PDF de la factura
         from factura import enviar_factura_email
         
-        # Enviar factura al email de pruebas
-        resultado = enviar_factura_email(factura_id, email_destino_override=email_destino)
+        # Enviar factura al email de pruebas (return_dict=True para evitar jsonify)
+        resultado = enviar_factura_email(factura_id, email_destino_override=email_destino, return_dict=True)
         
-        # Verificar si fue exitoso (puede devolver jsonify o tuple)
-        if resultado and (not isinstance(resultado, tuple) or resultado[1] == 200):
+        # Verificar si fue exitoso
+        if resultado and resultado.get('success', False):
             logger.info(f"Email de factura enviado exitosamente a {email_destino}")
             
             # Generar notificación

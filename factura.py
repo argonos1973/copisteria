@@ -1365,7 +1365,7 @@ def obtener_factura_para_imprimir(factura_id):
         if conn:
             conn.close()
 
-def enviar_factura_email(id_factura, email_destino_override=None):
+def enviar_factura_email(id_factura, email_destino_override=None, return_dict=False):
     try:
         print(f"Iniciando envío de factura {id_factura}")
         conn = get_db_connection()
@@ -1393,6 +1393,8 @@ def enviar_factura_email(id_factura, email_destino_override=None):
 
         if not factura:
             print(f"Factura {id_factura} no encontrada")
+            if return_dict:
+                return {'success': False, 'error': 'Factura no encontrada'}
             return jsonify({'error': 'Factura no encontrada'}), 404
 
         # Convertir la tupla de la factura en un diccionario con nombres de columnas
@@ -1407,6 +1409,8 @@ def enviar_factura_email(id_factura, email_destino_override=None):
         
         if not email_destino:
             print(f"Factura {id_factura} no tiene email registrado")
+            if return_dict:
+                return {'success': False, 'error': 'El contacto no tiene email registrado'}
             return jsonify({'error': 'El contacto no tiene email registrado'}), 400
 
         # Obtener detalles de la factura
@@ -1816,18 +1820,26 @@ def enviar_factura_email(id_factura, email_destino_override=None):
                     cursor.execute("UPDATE factura SET enviado = 1 WHERE id = ?", (id_factura,))
                     conn.commit()
                     print(f"Campo 'enviado' actualizado a 1 para la factura {id_factura}")
+                    if return_dict:
+                        return {'success': True, 'mensaje': 'Factura enviada correctamente', 'id': id_factura}
                     return jsonify({'mensaje': 'Factura enviada correctamente', 'id': id_factura})
                 except Exception as e_update:
                     print(f"Error al actualizar campo 'enviado': {str(e_update)}")
+                    if return_dict:
+                        return {'success': True, 'mensaje': 'Factura enviada correctamente pero no se pudo actualizar el estado de envío', 'id': id_factura}
                     return jsonify({'mensaje': 'Factura enviada correctamente pero no se pudo actualizar el estado de envío', 'id': id_factura})
             else:
                 print(f"Error al enviar correo: {mensaje}")
+                if return_dict:
+                    return {'success': False, 'error': mensaje}
                 return jsonify({'error': mensaje}), 500
 
     except Exception as e:
         import traceback
         print(f"Error en enviar_factura_email: {str(e)}")
         print(traceback.format_exc())
+        if return_dict:
+            return {'success': False, 'error': str(e)}
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:
