@@ -166,7 +166,70 @@ window.cambiarItemsPorPaginaTransferencias = function() {
 
 /**
  * Busca documentos en efectivo y aplica algoritmo de conciliación automática
- * para un ingreso en efectivo pendiente
+ * para un ingreso en efectivo pendiente (versión silenciosa para procesamiento masivo)
+ */
+async function buscarYConciliarIngresoEfectivoSilencioso(gasto) {
+    try {
+        // Buscar documentos en efectivo cercanos a la fecha del gasto
+        const response = await fetch(`${API_URL}/conciliacion/documentos-efectivo?fecha=${encodeURIComponent(gasto.fecha_operacion)}`);
+        const data = await response.json();
+        
+        if (!data.success || !data.documentos || data.documentos.length === 0) {
+            return false;
+        }
+        
+        const objetivo = Math.abs(parseFloat(gasto.importe_eur));
+        const documentos = data.documentos.map(d => ({
+            ...d,
+            importe: parseFloat(d.total)
+        }));
+        
+        // Usar algoritmo de varita mágica para encontrar mejor combinación
+        const mejorCombinacion = encontrarMejorCombinacion(documentos, objetivo);
+        
+        if (mejorCombinacion.length === 0) {
+            return false;
+        }
+        
+        const totalCombinacion = mejorCombinacion.reduce((sum, d) => sum + parseFloat(d.total), 0);
+        const diferencia = Math.abs(objetivo - totalCombinacion);
+        
+        // Preparar datos para conciliación
+        const documentosSeleccionados = mejorCombinacion.map(doc => ({
+            tipo: doc.tipo,
+            id: doc.id,
+            numero: doc.numero,
+            total: doc.total
+        }));
+        
+        // Conciliar
+        const conciliarResponse = await fetch(`${API_URL}/conciliacion/conciliar-ingreso-efectivo`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ids_gastos: gasto.id.toString(),
+                fecha: gasto.fecha_operacion,
+                documentos_seleccionados: documentosSeleccionados
+            })
+        });
+        
+        const result = await conciliarResponse.json();
+        
+        if (result.success) {
+            console.log(`✓ Ingreso ${gasto.fecha_operacion} (${formatearImporte(gasto.importe_eur)}) conciliado con ${mejorCombinacion.length} documentos (dif: ${formatearImporte(diferencia)})`);
+            return true;
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Error al conciliar ingreso efectivo:', error);
+        return false;
+    }
+}
+
+/**
+ * Busca documentos en efectivo y aplica algoritmo de conciliación automática
+ * para un ingreso en efectivo pendiente (versión con notificaciones para clic manual)
  */
 async function buscarYConciliarIngresoEfectivo(gasto) {
     try {
@@ -256,12 +319,40 @@ async function cargarGastosPendientes() {
         
         if (data.success && data.gastos.length > 0) {
             // Excluir transferencias de pendientes (tienen su propia pestaña)
-            gastosPendientesCompletos = data.gastos.filter(g => 
+            let gastosFiltrados = data.gastos.filter(g => 
                 !g.concepto || (
                     !g.concepto.toLowerCase().includes('transferencia') &&
                     !g.concepto.toLowerCase().includes('transf.')
                 )
             );
+            
+            // Separar ingresos en efectivo (importe positivo) de otros gastos
+            const ingresosEfectivo = gastosFiltrados.filter(g => g.importe_eur > 0);
+            const otrosGastos = gastosFiltrados.filter(g => g.importe_eur <= 0);
+            
+            // Procesar automáticamente los ingresos en efectivo
+            if (ingresosEfectivo.length > 0) {
+                console.log(`Procesando automáticamente ${ingresosEfectivo.length} ingresos en efectivo...`);
+                
+                for (const ingreso of ingresosEfectivo) {
+                    await buscarYConciliarIngresoEfectivoSilencioso(ingreso);
+                }
+                
+                // Recargar gastos pendientes después de procesar
+                const responseActualizado = await fetch(`${API_URL}/conciliacion/gastos-pendientes`);
+                const dataActualizado = await responseActualizado.json();
+                
+                if (dataActualizado.success) {
+                    gastosFiltrados = dataActualizado.gastos.filter(g => 
+                        !g.concepto || (
+                            !g.concepto.toLowerCase().includes('transferencia') &&
+                            !g.concepto.toLowerCase().includes('transf.')
+                        )
+                    );
+                }
+            }
+            
+            gastosPendientesCompletos = gastosFiltrados;
             
             if (gastosPendientesCompletos.length > 0) {
                 paginaActualPendientes = 1;
