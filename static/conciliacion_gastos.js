@@ -1,6 +1,6 @@
 // conciliacion_gastos.js
 import { IP_SERVER, PORT } from './constantes.js';
-import { mostrarNotificacion } from './notificaciones.js';
+import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 
 const API_URL = `http://${IP_SERVER}:${PORT}/api`;
 
@@ -718,6 +718,9 @@ window.procesarAutomatico = async function() {
 };
 
 window.eliminarConciliacion = async function(conciliacionId) {
+    const confirmado = await mostrarConfirmacion('¿Está seguro de eliminar esta conciliación?');
+    if (!confirmado) return;
+    
     try {
         const response = await fetch(`${API_URL}/conciliacion/eliminar/${conciliacionId}`, {
             method: 'DELETE'
@@ -892,6 +895,10 @@ async function conciliarLiquidacionAutomatica(liq) {
 }
 
 window.confirmarConciliacionLiquidacion = async function(liq) {
+    const mensaje = `¿Conciliar liquidación del ${liq.fecha}? Diferencia: ${liq.diferencia}€ (${liq.porcentaje_diferencia}%)`;
+    const confirmado = await mostrarConfirmacion(mensaje);
+    if (!confirmado) return;
+    
     try {
         const response = await fetch(`${API_URL}/conciliacion/conciliar-liquidacion`, {
             method: 'POST',
@@ -1217,6 +1224,10 @@ window.conciliarDocumentosSeleccionados = async function() {
     
     const totalSeleccionado = documentosSeleccionados.reduce((sum, doc) => sum + doc.total, 0);
     const diferencia = Math.abs(ingresoActual.total_ingresos - totalSeleccionado);
+    
+    const mensaje = `¿Conciliar ingreso?\n\nIngreso: ${formatearImporte(ingresoActual.total_ingresos)}\nDocumentos: ${formatearImporte(totalSeleccionado)}\nDiferencia: ${formatearImporte(diferencia)}\n\n${documentosSeleccionados.length} documentos seleccionados`;
+    const confirmado = await mostrarConfirmacion(mensaje);
+    if (!confirmado) return;
     
     try {
         const response = await fetch(`${API_URL}/conciliacion/conciliar-ingreso-efectivo`, {
