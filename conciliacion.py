@@ -1327,20 +1327,21 @@ def obtener_documentos_efectivo():
         except:
             return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
         
-        # Obtener facturas en efectivo
+        # Obtener facturas en efectivo con nombre del cliente
         cursor.execute('''
             SELECT 
                 'factura' as tipo,
-                id,
-                numero,
-                fecha,
-                total,
-                cliente
-            FROM factura
-            WHERE fecha BETWEEN ? AND ?
-            AND formaPago = 'E'
-            AND estado = 'C'
-            ORDER BY fecha DESC, numero DESC
+                f.id,
+                f.numero,
+                f.fecha,
+                f.total,
+                COALESCE(c.nombre, c.razonSocial, '') as cliente
+            FROM factura f
+            LEFT JOIN contactos c ON f.idContacto = c.id
+            WHERE f.fecha BETWEEN ? AND ?
+            AND f.formaPago = 'E'
+            AND f.estado = 'C'
+            ORDER BY f.fecha DESC, f.numero DESC
         ''', (fecha_inicio, fecha_fin))
         
         facturas = [dict(row) for row in cursor.fetchall()]
