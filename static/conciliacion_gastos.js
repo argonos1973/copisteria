@@ -1060,6 +1060,7 @@ window.abrirSeleccionDocumentos = async function(ing) {
             paginaActualModalDocs = 1;
             renderizarDocumentosDisponibles();
             loading.style.display = 'none';
+            document.getElementById('header-documentos').style.display = 'block';
             lista.style.display = 'block';
             document.getElementById('pagination-modal-docs').style.display = 'flex';
             document.getElementById('total-documentos-disponibles').textContent = `${data.documentos.length} documentos disponibles`;
@@ -1209,6 +1210,7 @@ window.cambiarItemsPorPaginaModalDocs = function() {
 window.cerrarModalSeleccion = function() {
     document.getElementById('modal-seleccion-documentos').classList.remove('active');
     document.getElementById('pagination-modal-docs').style.display = 'none';
+    document.getElementById('header-documentos').style.display = 'none';
     ingresoActual = null;
     documentosDisponibles = [];
     documentosSeleccionados = [];
