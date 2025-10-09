@@ -371,16 +371,7 @@ def crear_factura():
                     ruta_xml_final = generar_facturae_modular(datos_facturae)
                     print(f"[FACTURAE] Facturae 3.2.2 generada y firmada en {ruta_xml_final}")
                     if ruta_xml_final and ruta_xml_final.lower().endswith('.xsig'):
-                        push_notif("XML Facturae generado", tipo='success')
-                        # Notificación adicional para el menú
-                        try:
-                            from notificaciones_utils import guardar_notificacion
-                            guardar_notificacion(
-                                f"📋 XML Facturae generado: Factura {data['numero']}",
-                                tipo='success'
-                            )
-                        except Exception as e:
-                            print(f"Error al guardar notificación XML: {e}")
+                        push_notif("XML Facturae generado")
                     print(f"[FACTURAE] Factura electrónica generada correctamente para factura ID: {factura_id}")
                     conn.commit()
                 except Exception as e:
@@ -1784,16 +1775,6 @@ def enviar_factura_email(id_factura):
                 tmp.name,
                 stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')]
             )
-            
-            # Notificación de PDF generado
-            try:
-                from notificaciones_utils import guardar_notificacion
-                guardar_notificacion(
-                    f"📄 PDF generado: Factura {factura_dict['numero']}",
-                    tipo='success'
-                )
-            except Exception as e:
-                print(f"Error al guardar notificación PDF: {e}")
             
             print("Preparando correo")
             # Preparar el correo (incluir fecha y vencimiento)
