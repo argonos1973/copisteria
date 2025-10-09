@@ -463,18 +463,30 @@ def gastos_pendientes():
                 )
                 AND g.importe_eur > 0
                 AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
+                AND LOWER(g.concepto) NOT LIKE '%prestamo%'
+                AND LOWER(g.concepto) NOT LIKE '%préstamo%'
+                AND LOWER(g.concepto) NOT LIKE '%credito%'
+                AND LOWER(g.concepto) NOT LIKE '%crédito%'
+                AND LOWER(g.concepto) NOT LIKE '%disposicion%'
+                AND LOWER(g.concepto) NOT LIKE '%disposición%'
                 AND (
                     substr(g.fecha_operacion, -4) = ?
                     OR strftime('%Y', g.fecha_operacion) = ?
                 )
             '''
         else:
-            # Si no existe la tabla, todos los gastos son pendientes (excepto liquidaciones)
+            # Si no existe la tabla, todos los gastos son pendientes (excepto liquidaciones y préstamos)
             query = '''
                 SELECT g.*
                 FROM gastos g
                 WHERE g.importe_eur > 0
                 AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
+                AND LOWER(g.concepto) NOT LIKE '%prestamo%'
+                AND LOWER(g.concepto) NOT LIKE '%préstamo%'
+                AND LOWER(g.concepto) NOT LIKE '%credito%'
+                AND LOWER(g.concepto) NOT LIKE '%crédito%'
+                AND LOWER(g.concepto) NOT LIKE '%disposicion%'
+                AND LOWER(g.concepto) NOT LIKE '%disposición%'
                 AND (
                     substr(g.fecha_operacion, -4) = ?
                     OR strftime('%Y', g.fecha_operacion) = ?
@@ -1153,6 +1165,7 @@ def obtener_ingresos_efectivo():
         ano_actual = datetime.now().year
         
         # Obtener ingresos en efectivo del banco (case-insensitive)
+        # Excluir préstamos, transferencias y otros conceptos no relacionados con ventas
         cursor.execute('''
             SELECT 
                 id,
@@ -1167,6 +1180,12 @@ def obtener_ingresos_efectivo():
                 OR LOWER(concepto) LIKE '%ingreso%caja%'
             )
             AND importe_eur > 0
+            AND LOWER(concepto) NOT LIKE '%prestamo%'
+            AND LOWER(concepto) NOT LIKE '%préstamo%'
+            AND LOWER(concepto) NOT LIKE '%credito%'
+            AND LOWER(concepto) NOT LIKE '%crédito%'
+            AND LOWER(concepto) NOT LIKE '%disposicion%'
+            AND LOWER(concepto) NOT LIKE '%disposición%'
             AND id NOT IN (
                 SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
             )
