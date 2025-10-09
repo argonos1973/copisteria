@@ -1140,6 +1140,75 @@ window.confirmarConciliacionLiquidacion = async function(liq) {
 // ============================================================================
 
 /**
+ * Concilia automáticamente un ingreso en efectivo agrupado (versión silenciosa)
+ * Solo concilia si diferencia < 1€
+ */
+async function conciliarIngresoAutomaticoSilencioso(ing) {
+    try {
+        // Cargar documentos disponibles para esa fecha
+        const response = await fetch(`${API_URL}/conciliacion/documentos-efectivo?fecha=${encodeURIComponent(ing.fecha)}`);
+        const data = await response.json();
+        
+        if (!data.success || !data.documentos || data.documentos.length === 0) {
+            return false;
+        }
+        
+        const objetivo = Math.abs(parseFloat(ing.total_ingresos));
+        const documentos = data.documentos.map(d => ({
+            ...d,
+            importe: parseFloat(d.total)
+        }));
+        
+        // Usar algoritmo de varita mágica para encontrar combinación exacta
+        const mejorCombinacion = encontrarMejorCombinacion(documentos, objetivo);
+        
+        if (mejorCombinacion.length === 0) {
+            return false;
+        }
+        
+        const totalCombinacion = mejorCombinacion.reduce((sum, d) => sum + parseFloat(d.total), 0);
+        const diferencia = Math.abs(objetivo - totalCombinacion);
+        
+        // Solo conciliar si es exacto o muy cercano (< 1€)
+        if (diferencia < 1.0) {
+            // Preparar datos para conciliación
+            const documentosSeleccionados = mejorCombinacion.map(doc => ({
+                tipo: doc.tipo,
+                id: doc.id,
+                numero: doc.numero,
+                total: doc.total
+            }));
+            
+            // Conciliar
+            const conciliarResponse = await fetch(`${API_URL}/conciliacion/conciliar-ingreso-efectivo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ids_gastos: ing.ids_gastos,
+                    fecha: ing.fecha,
+                    documentos_seleccionados: documentosSeleccionados
+                })
+            });
+            
+            const result = await conciliarResponse.json();
+            
+            if (result.success) {
+                const tipoMatch = diferencia < 0.01 ? 'EXACTA' : 'CERCANA';
+                console.log(`✓ Ingreso agrupado ${ing.fecha} (${formatearImporte(ing.total_ingresos)}) conciliado [${tipoMatch}] con ${mejorCombinacion.length} documentos (dif: ${formatearImporte(diferencia)})`);
+                return true;
+            }
+        } else {
+            console.log(`⊗ Ingreso agrupado ${ing.fecha} (${formatearImporte(ing.total_ingresos)}) - diferencia muy alta: ${formatearImporte(diferencia)} - requiere revisión manual`);
+        }
+        
+        return false;
+    } catch (error) {
+        console.error('Error en conciliación automática de ingreso agrupado:', error);
+        return false;
+    }
+}
+
+/**
  * Concilia automáticamente un ingreso en efectivo cuando la diferencia es 0
  */
 async function conciliarIngresoAutomatico(ing) {
@@ -1218,11 +1287,29 @@ async function cargarIngresosEfectivo() {
         loading.style.display = 'none';
         
         if (data.success && data.ingresos.length > 0) {
-            ingresosCompletos = data.ingresos;
-            paginaActualIngresos = 1;
-            await renderizarPaginaIngresos();
-            tabla.style.display = 'table';
-            pagination.style.display = 'flex';
+            // Procesar automáticamente ingresos con diferencia < 1€
+            console.log(`Procesando automáticamente ${data.ingresos.length} ingresos en efectivo agrupados...`);
+            
+            for (const ing of data.ingresos) {
+                const diferencia = Math.abs(ing.diferencia);
+                if (diferencia < 1.0) {
+                    await conciliarIngresoAutomaticoSilencioso(ing);
+                }
+            }
+            
+            // Recargar ingresos después de procesar
+            const responseActualizado = await fetch(`${API_URL}/conciliacion/ingresos-efectivo`);
+            const dataActualizado = await responseActualizado.json();
+            
+            if (dataActualizado.success && dataActualizado.ingresos.length > 0) {
+                ingresosCompletos = dataActualizado.ingresos;
+                paginaActualIngresos = 1;
+                await renderizarPaginaIngresos();
+                tabla.style.display = 'table';
+                pagination.style.display = 'flex';
+            } else {
+                empty.style.display = 'block';
+            }
         } else {
             empty.style.display = 'block';
         }
