@@ -167,6 +167,7 @@ window.cambiarItemsPorPaginaTransferencias = function() {
 /**
  * Busca documentos en efectivo y aplica algoritmo de conciliación automática
  * para un ingreso en efectivo pendiente (versión silenciosa para procesamiento masivo)
+ * Solo concilia si la diferencia es < 1€
  */
 async function buscarYConciliarIngresoEfectivoSilencioso(gasto) {
     try {
@@ -194,6 +195,12 @@ async function buscarYConciliarIngresoEfectivoSilencioso(gasto) {
         const totalCombinacion = mejorCombinacion.reduce((sum, d) => sum + parseFloat(d.total), 0);
         const diferencia = Math.abs(objetivo - totalCombinacion);
         
+        // Solo conciliar si la diferencia es menor a 1€
+        if (diferencia >= 1.0) {
+            console.log(`⊗ Ingreso ${gasto.fecha_operacion} (${formatearImporte(gasto.importe_eur)}) - diferencia muy alta: ${formatearImporte(diferencia)} - requiere revisión manual`);
+            return false;
+        }
+        
         // Preparar datos para conciliación
         const documentosSeleccionados = mejorCombinacion.map(doc => ({
             tipo: doc.tipo,
@@ -216,7 +223,8 @@ async function buscarYConciliarIngresoEfectivoSilencioso(gasto) {
         const result = await conciliarResponse.json();
         
         if (result.success) {
-            console.log(`✓ Ingreso ${gasto.fecha_operacion} (${formatearImporte(gasto.importe_eur)}) conciliado con ${mejorCombinacion.length} documentos (dif: ${formatearImporte(diferencia)})`);
+            const tipoMatch = diferencia < 0.01 ? 'EXACTA' : 'CERCANA';
+            console.log(`✓ Ingreso ${gasto.fecha_operacion} (${formatearImporte(gasto.importe_eur)}) conciliado [${tipoMatch}] con ${mejorCombinacion.length} documentos (dif: ${formatearImporte(diferencia)})`);
             return true;
         }
         
