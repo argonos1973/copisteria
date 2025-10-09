@@ -1050,7 +1050,7 @@ window.abrirSeleccionDocumentos = async function(ing) {
     
     try {
         // Cargar documentos disponibles
-        const response = await fetch(`${API_URL}/conciliacion/documentos-efectivo/${encodeURIComponent(ing.fecha)}`);
+        const response = await fetch(`${API_URL}/conciliacion/documentos-efectivo?fecha=${encodeURIComponent(ing.fecha)}`);
         const data = await response.json();
         
         if (data.success) {

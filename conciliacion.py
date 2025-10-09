@@ -1303,10 +1303,15 @@ def obtener_ingresos_efectivo():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@conciliacion_bp.route('/api/conciliacion/documentos-efectivo/<fecha_ingreso>', methods=['GET'])
-def obtener_documentos_efectivo(fecha_ingreso):
+@conciliacion_bp.route('/api/conciliacion/documentos-efectivo', methods=['GET'])
+def obtener_documentos_efectivo():
     """Obtener lista de facturas/tickets en efectivo disponibles para seleccionar"""
     try:
+        fecha_ingreso = request.args.get('fecha')
+        
+        if not fecha_ingreso:
+            return jsonify({'success': False, 'error': 'Falta parámetro fecha'}), 400
+        
         conn = get_db_connection()
         cursor = conn.cursor()
         
