@@ -341,9 +341,9 @@ def crear_contacto(data):
         INSERT INTO contactos (
             razonsocial, identificador, mail, telf1, telf2, direccion,
             localidad, cp, provincia, tipo,
-            dir3_oficina, dir3_organo, dir3_unidad
+            dir3_oficina, dir3_organo, dir3_unidad, facturacion_automatica
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         data.get('razonsocial'),
         data.get('identificador'),
@@ -357,7 +357,8 @@ def crear_contacto(data):
         data.get('tipo'),
         data.get('dir3_oficina'),
         data.get('dir3_organo'),
-        data.get('dir3_unidad')
+        data.get('dir3_unidad'),
+        1 if data.get('facturacion_automatica') else 0
     ))
     conn.commit()
     last_id = cur.lastrowid
@@ -432,7 +433,8 @@ def actualizar_contacto(idContacto, data):
             tipo=?,
             dir3_oficina=?,
             dir3_organo=?,
-            dir3_unidad=?
+            dir3_unidad=?,
+            facturacion_automatica=?
         WHERE idContacto=?
     ''', (
         data.get('razonsocial'),
@@ -448,6 +450,7 @@ def actualizar_contacto(idContacto, data):
         data.get('dir3_oficina'),
         data.get('dir3_organo'),
         data.get('dir3_unidad'),
+        1 if data.get('facturacion_automatica') else 0,
         idContacto
     ))
     conn.commit()
