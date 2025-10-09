@@ -122,26 +122,23 @@
         .gastos-table {
             width: 100%;
             border-collapse: separate;
-            border-spacing: 0;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .gastos-table thead {
-            background: #2c3e50;
-            color: white;
+            border: none;
         }
 
         .gastos-table th,
         .gastos-table td {
-            padding: 10px;
+            padding: 12px;
             text-align: left;
-            border-bottom: 1px solid #ddd;
+            border: none;
         }
 
-        .gastos-table tbody tr:hover {
-            background: #f5f5f5;
+        .gastos-table th {
+            background: #2c3e50;
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .gastos-table tbody tr:last-child td {
@@ -465,9 +462,6 @@
         <div class="actions-bar">
             <button class="btn btn-success" onclick="procesarAutomatico()">
                 <i class="fas fa-magic"></i> Conciliar Automático
-            </button>
-            <button class="btn btn-secondary" onclick="cargarDatos()">
-                <i class="fas fa-sync"></i> Actualizar
             </button>
         </div>
 
