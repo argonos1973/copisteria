@@ -467,31 +467,31 @@
 
         <!-- Pestañas -->
         <div class="tabs">
-            <button class="tab active" data-tab="pendientes">
+            <button class="tab active" data-tab="pendientes" style="border-bottom: 3px solid #e74c3c;">
                 <i class="fas fa-clock"></i> Pendientes
             </button>
-            <button class="tab" data-tab="transferencias">
+            <button class="tab" data-tab="transferencias" style="border-bottom: 3px solid #3498db;">
                 <i class="fas fa-exchange-alt"></i> Transferencias
             </button>
-            <button class="tab" data-tab="liquidaciones">
+            <button class="tab" data-tab="liquidaciones" style="border-bottom: 3px solid #9b59b6;">
                 <i class="fas fa-credit-card"></i> Liquidaciones TPV
             </button>
-            <button class="tab" data-tab="ingresos-efectivo">
+            <button class="tab" data-tab="ingresos-efectivo" style="border-bottom: 3px solid #27ae60;">
                 <i class="fas fa-money-bill-wave"></i> Ingresos Efectivo
             </button>
-            <button class="tab" data-tab="conciliados">
+            <button class="tab" data-tab="conciliados" style="border-bottom: 3px solid #f39c12;">
                 <i class="fas fa-check-circle"></i> Conciliados
             </button>
         </div>
 
-        <!-- Contenido: Gastos Pendientes -->
+        <!-- Contenido: Movimientos Pendientes -->
         <div class="tab-content active" id="tab-pendientes">
             <!-- Paginación Pendientes (arriba) -->
             <div class="pagination" id="pagination-pendientes" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaPendientes('anterior')">⟨</button>
+                    <button id="prevPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:black;" onclick="cambiarPaginaPendientes('anterior')">⟨</button>
                     <span id="pageInfoPendientes">Página 1 de 1</span>
-                    <button id="nextPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaPendientes('siguiente')">⟩</button>
+                    <button id="nextPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:black;" onclick="cambiarPaginaPendientes('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -529,9 +529,9 @@
             <!-- Paginación Transferencias (arriba) -->
             <div class="pagination" id="pagination-transferencias" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPageTransferencias" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaTransferencias('anterior')">⟨</button>
+                    <button id="prevPageTransferencias" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:black;" onclick="cambiarPaginaTransferencias('anterior')">⟨</button>
                     <span id="pageInfoTransferencias">Página 1 de 1</span>
-                    <button id="nextPageTransferencias" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaTransferencias('siguiente')">⟩</button>
+                    <button id="nextPageTransferencias" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:black;" onclick="cambiarPaginaTransferencias('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -569,9 +569,9 @@
             <!-- Paginación Liquidaciones (arriba) -->
             <div class="pagination" id="pagination-liquidaciones" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPageLiquidaciones" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaLiquidaciones('anterior')">⟨</button>
+                    <button id="prevPageLiquidaciones" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:black;" onclick="cambiarPaginaLiquidaciones('anterior')">⟨</button>
                     <span id="pageInfoLiquidaciones">Página 1 de 1</span>
-                    <button id="nextPageLiquidaciones" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaLiquidaciones('siguiente')">⟩</button>
+                    <button id="nextPageLiquidaciones" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:black;" onclick="cambiarPaginaLiquidaciones('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -615,9 +615,9 @@
             <!-- Paginación Ingresos Efectivo (arriba) -->
             <div class="pagination" id="pagination-ingresos" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPageIngresos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaIngresos('anterior')">⟨</button>
+                    <button id="prevPageIngresos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:black;" onclick="cambiarPaginaIngresos('anterior')">⟨</button>
                     <span id="pageInfoIngresos">Página 1 de 1</span>
-                    <button id="nextPageIngresos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaIngresos('siguiente')">⟩</button>
+                    <button id="nextPageIngresos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:black;" onclick="cambiarPaginaIngresos('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -661,9 +661,9 @@
             <!-- Paginación Conciliados (arriba) -->
             <div class="pagination" id="pagination-conciliados" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPageConciliados" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaConciliados('anterior')">⟨</button>
+                    <button id="prevPageConciliados" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:black;" onclick="cambiarPaginaConciliados('anterior')">⟨</button>
                     <span id="pageInfoConciliados">Página 1 de 1</span>
-                    <button id="nextPageConciliados" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" onclick="cambiarPaginaConciliados('siguiente')">⟩</button>
+                    <button id="nextPageConciliados" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:black;" onclick="cambiarPaginaConciliados('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -687,10 +687,10 @@
             <table class="gastos-table" id="tabla-conciliados" style="display:none;">
                 <thead>
                     <tr>
-                        <th>Fecha Gasto</th>
+                        <th>Fecha Movimiento</th>
                         <th>Concepto</th>
                         <th>Documento</th>
-                        <th>Importe Gasto</th>
+                        <th>Importe Movimiento</th>
                         <th>Importe Doc.</th>
                         <th>Diferencia</th>
                         <th>Método</th>
