@@ -368,11 +368,14 @@ def generar_factura_pdf(id_factura):
                 '<script type="module" src="/static/imprimir-factura.js"></script>',
                 ''
             ).replace(
-                'id="numero"></span>',
-                f'id="numero">{factura_dict["numero"]}</span>'
+                'id="numero" style="font-weight:700;"></span>',
+                f'id="numero" style="font-weight:700;">{factura_dict["numero"]}</span>'
             ).replace(
-                'id="fecha"></span>',
-                f'id="fecha">{datetime.strptime(factura_dict["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y")}</span>'
+                'id="fecha" style="font-weight:700;color:#000;"></span>',
+                f'id="fecha" style="font-weight:700;color:#000;">{datetime.strptime(factura_dict["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y")}</span>'
+            ).replace(
+                'id="fecha-vencimiento" style="font-weight:700;color:#000;"></span>',
+                f'id="fecha-vencimiento" style="font-weight:700;color:#000;">{datetime.strptime(factura_dict["fvencimiento"], "%Y-%m-%d").strftime("%d/%m/%Y") if factura_dict.get("fvencimiento") else ""}</span>'
             ).replace(
                 '<p id="emisor-nombre"></p>',
                 '<p>SAMUEL RODRIGUEZ MIQUEL</p>'
