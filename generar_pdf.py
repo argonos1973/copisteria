@@ -311,15 +311,40 @@ def generar_factura_pdf(id_factura):
             # Modificar la ruta del logo para usar ruta absoluta del sistema de archivos
             html_base = html_base.replace('src="/static/img/logo.png"', 'src="file:///var/www/html/static/img/logo.png"')
 
-            # Generar el HTML con los datos ya insertados
+            # Generar el HTML con los datos ya insertados (igual que factura.py)
+            def _fmt_euro(val):
+                try:
+                    s = f"{float(val):.2f}"
+                except Exception:
+                    s = "0.00"
+                s = s.replace(',', 'X').replace('.', ',').replace('X', '.')
+                return s
+            
+            def _fmt_euro_var(val, min_dec=2, max_dec=5):
+                try:
+                    s = f"{float(val):.{max_dec}f}"
+                except Exception:
+                    s = "0.00"
+                s = s.replace(',', 'X').replace('.', ',').replace('X', '.')
+                if ',' in s:
+                    entero, decs = s.split(',', 1)
+                    decs_trim = decs.rstrip('0')
+                    if len(decs_trim) < min_dec:
+                        decs_trim = decs[:min_dec]
+                    s = f"{entero},{decs_trim}"
+                return s
+            
             detalles_html = ""
             for detalle in detalles_list:
                 descripcion_html = f"<span class='detalle-descripcion'>{detalle.get('descripcion', '')}</span>" if detalle.get('descripcion') else ''
-                cantidad_raw = '' if detalle.get('cantidad') is None else str(detalle.get('cantidad'))
-                precio_raw = '' if detalle.get('precio') is None else str(detalle.get('precio'))
-                impuestos_raw = '' if detalle.get('impuestos') is None else str(detalle.get('impuestos'))
-                subtotal_raw = '' if detalle.get('total') is None else str(detalle.get('total'))
-
+                _precio_raw = detalle.get('precio', 0)
+                _cantidad = detalle.get('cantidad', 0)
+                # Calcular subtotal SIN IVA (cantidad × precio)
+                _subtotal_sin_iva = round(_cantidad * _precio_raw, 2)
+                # Precio unitario: mismo comportamiento que impresión (2-5 decimales)
+                _precio_str = _fmt_euro_var(_precio_raw, min_dec=2, max_dec=5)
+                _subtotal_str = _fmt_euro(_subtotal_sin_iva)
+                
                 detalles_html += f"""
                     <tr>
                         <td>
@@ -328,10 +353,9 @@ def generar_factura_pdf(id_factura):
                                 {descripcion_html}
                             </div>
                         </td>
-                        <td class="cantidad">{cantidad_raw}</td>
-                        <td class="precio">{precio_raw}</td>
-                        <td class="precio">{impuestos_raw}</td>
-                        <td class="total">{subtotal_raw}</td>
+                        <td class="cantidad">{_cantidad}</td>
+                        <td class="precio">{_precio_str}€</td>
+                        <td class="total">{_subtotal_str}€</td>
                     </tr>
                 """
 
@@ -432,14 +456,19 @@ def generar_factura_pdf(id_factura):
             
             # Realizar reemplazos
             if not VERIFACTU_HABILITADO:
-                # Eliminar marcadores y no mostrar información VeriFactu
-                html_modificado = html_modificado.replace(hash_placeholder, '')
-                html_modificado = html_modificado.replace(qr_placeholder, '')
-                # Eliminar el badge VERI*FACTU del título
-                html_modificado = html_modificado.replace('<span style="color: #0056b3; font-size: 0.7em; background-color: #f0f8ff; border: 1px solid #0056b3; padding: 2px 6px; border-radius: 4px;">VERI*FACTU</span>', '')
-                # Eliminar toda la sección de información VERI*FACTU
-                import re
-                html_modificado = re.sub(r'<div style="margin-top: 30px;[^>]*>.*?<p><strong>Información VERI\*FACTU</strong></p>.*?</div>\s*</div>', '', html_modificado, flags=re.DOTALL)
+                # Ocultar con CSS en lugar de eliminar del HTML
+                # Añadir CSS para ocultar elementos VERIFACTU
+                verifactu_hide_css = """
+                <style>
+                    #qr-verifactu { display: none !important; }
+                    #hash-factura { display: none !important; }
+                    .header h1 span[style*="VERI*FACTU"] { display: none !important; }
+                    div[style*="Información VERI*FACTU"] { display: none !important; }
+                </style>
+                """
+                html_modificado = html_modificado.replace('</head>', verifactu_hide_css + '</head>')
+                html_modificado = html_modificado.replace(hash_placeholder, '<p id="hash-factura" style="display:none;">Hash: </p>')
+                html_modificado = html_modificado.replace(qr_placeholder, '<div id="qr-verifactu" style="display:none;"></div>')
             else:
                 if hash_placeholder in html_modificado:
                     html_modificado = html_modificado.replace(hash_placeholder, hash_replacement)
