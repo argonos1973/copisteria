@@ -1365,7 +1365,7 @@ def obtener_factura_para_imprimir(factura_id):
         if conn:
             conn.close()
 
-def enviar_factura_email(id_factura):
+def enviar_factura_email(id_factura, email_destino_override=None):
     try:
         print(f"Iniciando envío de factura {id_factura}")
         conn = get_db_connection()
@@ -1402,7 +1402,10 @@ def enviar_factura_email(id_factura):
         print("Columnas de la factura:", nombres_columnas)
         print("Datos de la factura:", factura_dict)
 
-        if not factura_dict.get('mail'):
+        # Si se proporciona email_destino_override, usarlo; si no, usar el del cliente
+        email_destino = email_destino_override if email_destino_override else factura_dict.get('mail')
+        
+        if not email_destino:
             print(f"Factura {id_factura} no tiene email registrado")
             return jsonify({'error': 'El contacto no tiene email registrado'}), 400
 
@@ -1793,10 +1796,10 @@ def enviar_factura_email(id_factura):
                 "SAMUEL RODRIGUEZ MIQUEL\n"
             )
 
-            print(f"Enviando correo a {factura_dict['mail']}")
+            print(f"Enviando correo a {email_destino}")
             # Enviar el correo
             exito, mensaje = enviar_factura_por_email(
-                factura_dict['mail'],
+                email_destino,
                 asunto,
                 cuerpo,
                 tmp.name,

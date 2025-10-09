@@ -11,7 +11,6 @@ from weasyprint import HTML
 from constantes import *
 from db_utils import get_db_connection
 from notificaciones_utils import guardar_notificacion
-from email_utils import enviar_factura_por_email
 
 # Configurar logging
 logging.basicConfig(
@@ -157,15 +156,15 @@ def generar_carta_reclamacion(factura_data, dias_vencidos):
         logger.error(f"Error al generar carta de reclamación para factura {factura_data['numero']}: {e}")
         return None
 
-def enviar_email_reclamacion(cliente_email, factura_numero, carta_pdf_path, factura_pdf_path):
+def enviar_email_reclamacion(factura_id, cliente_email, factura_numero, carta_pdf_path):
     """
-    Envía email con la carta de reclamación y la factura adjunta
+    Envía email con la carta de reclamación y la factura usando enviar_factura_email
     
     Args:
+        factura_id: ID de la factura
         cliente_email: Email del cliente
         factura_numero: Número de factura
         carta_pdf_path: Ruta de la carta de reclamación
-        factura_pdf_path: Ruta del PDF de la factura
     
     Returns:
         bool: True si se envía correctamente
@@ -175,80 +174,20 @@ def enviar_email_reclamacion(cliente_email, factura_numero, carta_pdf_path, fact
         email_destino = 'elssons@gmail.com'
         
         logger.info(f"Enviando email a {email_destino} (original: {cliente_email})")
-        logger.info(f"  - Asunto: Recordatorio de pago - Factura {factura_numero}")
-        logger.info(f"  - Adjunto 1: {carta_pdf_path}")
-        logger.info(f"  - Adjunto 2: {factura_pdf_path}")
+        logger.info(f"  - Factura ID: {factura_id}")
+        logger.info(f"  - Carta de reclamación: {carta_pdf_path}")
         
-        # Preparar el cuerpo del email
-        asunto = f"Recordatorio de pago - Factura {factura_numero}"
-        cuerpo = f"""Estimado/a cliente,
-
-Adjuntamos carta de reclamación de pago correspondiente a la factura {factura_numero}.
-
-Le rogamos proceda al pago a la mayor brevedad posible.
-
-Atentamente,
-COPISTERIA ALEPH 70
-SAMUEL RODRIGUEZ MIQUEL
-"""
+        # Usar la función de factura.py para enviar el email con el PDF de la factura
+        from factura import enviar_factura_email
         
-        # Enviar email con carta de reclamación y PDF de factura
-        # Primero enviar la carta de reclamación
-        import smtplib
-        import ssl
-        from email.mime.multipart import MIMEMultipart
-        from email.mime.text import MIMEText
-        from email.mime.application import MIMEApplication
-        from email.header import Header
-        import os
-        from dotenv import load_dotenv
+        # Enviar factura al email de pruebas
+        resultado = enviar_factura_email(factura_id, email_destino_override=email_destino)
         
-        load_dotenv()
-        
-        smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
-        smtp_port = int(os.getenv('SMTP_PORT', '465'))
-        smtp_username = os.getenv('SMTP_USERNAME', 'info@aleph70.com')
-        smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
-        smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
-        
-        msg = MIMEMultipart()
-        msg['From'] = smtp_from
-        msg['To'] = email_destino
-        msg['Subject'] = str(Header(asunto, 'utf-8'))
-        msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
-        
-        # Adjuntar carta de reclamación
-        with open(carta_pdf_path, 'rb') as f:
-            pdf = MIMEApplication(f.read(), _subtype='pdf')
-            pdf.add_header('Content-Disposition', 'attachment', 
-                         filename=f'Carta_Reclamacion_{factura_numero}.pdf')
-            msg.attach(pdf)
-        
-        # Adjuntar PDF de factura si existe
-        if factura_pdf_path and os.path.exists(factura_pdf_path):
-            with open(factura_pdf_path, 'rb') as f:
-                pdf = MIMEApplication(f.read(), _subtype='pdf')
-                pdf.add_header('Content-Disposition', 'attachment', 
-                             filename=f'Factura_{factura_numero}.pdf')
-                msg.attach(pdf)
-        
-        # Enviar email
-        context = ssl.create_default_context()
-        server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
-        server.login(smtp_username, smtp_password)
-        
-        destinatarios = [email_destino, 'info@aleph70.com']
-        from email import policy
-        msg_bytes = msg.as_bytes(policy=policy.SMTP)
-        server.sendmail(smtp_from, destinatarios, msg_bytes)
-        server.quit()
-        
-        exito = True
-        mensaje = "Email enviado correctamente"
-        
-        if exito:
-            logger.info(f"Email enviado exitosamente a {email_destino}")
-            # Generar notificación de email enviado
+        # Verificar si fue exitoso (puede devolver jsonify o tuple)
+        if resultado and (not isinstance(resultado, tuple) or resultado[1] == 200):
+            logger.info(f"Email de factura enviado exitosamente a {email_destino}")
+            
+            # Generar notificación
             notif_mensaje = f"📧 Email enviado: Recordatorio factura {factura_numero} → {email_destino} (original: {cliente_email})"
             guardar_notificacion(
                 notif_mensaje,
@@ -258,9 +197,9 @@ SAMUEL RODRIGUEZ MIQUEL
             logger.info(f"Notificación de email generada para {factura_numero}")
             return True
         else:
-            logger.error(f"Error al enviar email: {mensaje}")
+            logger.error(f"Error al enviar email de factura {factura_numero}")
             guardar_notificacion(
-                f"❌ Error al enviar email de factura {factura_numero}: {mensaje}",
+                f"❌ Error al enviar email de factura {factura_numero}",
                 tipo='error',
                 db_path=DB_NAME
             )
@@ -355,32 +294,12 @@ def actualizar_facturas_vencidas():
                     logger.info(f"Notificación generada para carta {factura_numero}")
                     
                     if cliente and cliente['email']:
-                        # Buscar PDF de la factura
-                        factura_pdf_path = f"/var/www/html/facturas_pdf/factura_{factura_numero}.pdf"
-                        
-                        # Si no existe el PDF, generarlo
-                        if not os.path.exists(factura_pdf_path):
-                            logger.info(f"Generando PDF de la factura {factura_numero}...")
-                            try:
-                                from generar_pdf import generar_factura_pdf
-                                pdf_generado_path = generar_factura_pdf(factura_id)
-                                if pdf_generado_path and os.path.exists(pdf_generado_path):
-                                    # Actualizar la ruta del PDF si se generó en otra ubicación
-                                    factura_pdf_path = pdf_generado_path
-                                    logger.info(f"PDF de factura {factura_numero} generado correctamente en {pdf_generado_path}")
-                                else:
-                                    logger.warning(f"No se pudo generar el PDF de la factura {factura_numero}")
-                                    factura_pdf_path = None
-                            except Exception as e:
-                                logger.error(f"Error al generar PDF de factura {factura_numero}: {e}")
-                                factura_pdf_path = None
-                        
-                        # Preparar email (no envía todavía)
+                        # Enviar email usando la función de factura.py
                         enviar_email_reclamacion(
+                            factura_id,
                             cliente['email'],
                             factura_numero,
-                            carta_pdf,
-                            factura_pdf_path if os.path.exists(factura_pdf_path) else None
+                            carta_pdf
                         )
                     else:
                         logger.warning(f"Cliente sin email para factura {factura_numero}")
