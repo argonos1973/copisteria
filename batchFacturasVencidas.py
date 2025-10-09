@@ -192,14 +192,59 @@ COPISTERIA ALEPH 70
 SAMUEL RODRIGUEZ MIQUEL
 """
         
-        # Enviar la carta de reclamación usando la función de email_utils
-        exito, mensaje = enviar_factura_por_email(
-            email_destino,
-            asunto,
-            cuerpo,
-            carta_pdf_path,
-            factura_numero
-        )
+        # Enviar email con carta de reclamación y PDF de factura
+        # Primero enviar la carta de reclamación
+        import smtplib
+        import ssl
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
+        from email.mime.application import MIMEApplication
+        from email.header import Header
+        import os
+        from dotenv import load_dotenv
+        
+        load_dotenv()
+        
+        smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
+        smtp_port = int(os.getenv('SMTP_PORT', '465'))
+        smtp_username = os.getenv('SMTP_USERNAME', 'info@aleph70.com')
+        smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
+        smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
+        
+        msg = MIMEMultipart()
+        msg['From'] = smtp_from
+        msg['To'] = email_destino
+        msg['Subject'] = str(Header(asunto, 'utf-8'))
+        msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
+        
+        # Adjuntar carta de reclamación
+        with open(carta_pdf_path, 'rb') as f:
+            pdf = MIMEApplication(f.read(), _subtype='pdf')
+            pdf.add_header('Content-Disposition', 'attachment', 
+                         filename=f'Carta_Reclamacion_{factura_numero}.pdf')
+            msg.attach(pdf)
+        
+        # Adjuntar PDF de factura si existe
+        if factura_pdf_path and os.path.exists(factura_pdf_path):
+            with open(factura_pdf_path, 'rb') as f:
+                pdf = MIMEApplication(f.read(), _subtype='pdf')
+                pdf.add_header('Content-Disposition', 'attachment', 
+                             filename=f'Factura_{factura_numero}.pdf')
+                msg.attach(pdf)
+        
+        # Enviar email
+        context = ssl.create_default_context()
+        server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
+        server.login(smtp_username, smtp_password)
+        
+        destinatarios = [email_destino, 'info@aleph70.com']
+        from email import policy
+        msg_bytes = msg.as_bytes(policy=policy.SMTP)
+        server.sendmail(smtp_from, destinatarios, msg_bytes)
+        server.quit()
+        
+        exito = True
+        mensaje = "Email enviado correctamente"
         
         if exito:
             logger.info(f"Email enviado exitosamente a {email_destino}")
