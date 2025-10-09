@@ -447,6 +447,35 @@ window.buscarCoincidencias = async function(gastoId) {
                     return;
                 }
                 
+                // Si no hay coincidencia exacta, intentar encontrar combinación óptima
+                const objetivo = Math.abs(parseFloat(gasto.importe_eur));
+                const documentos = data.coincidencias.map(c => ({
+                    ...c,
+                    importe: parseFloat(c.importe)
+                }));
+                
+                const mejorCombinacion = encontrarMejorCombinacion(documentos, objetivo);
+                
+                // Si encontramos una combinación exacta o muy cercana (< 1€), conciliar automáticamente
+                if (mejorCombinacion.length > 0) {
+                    const totalCombinacion = mejorCombinacion.reduce((sum, d) => sum + d.importe, 0);
+                    const diferencia = Math.abs(objetivo - totalCombinacion);
+                    
+                    if (diferencia < 1.0) {
+                        // Conciliar automáticamente con la combinación
+                        modal.classList.remove('active');
+                        mostrarNotificacion(`Conciliando automáticamente con ${mejorCombinacion.length} documentos (diferencia: ${formatearImporte(diferencia)})...`, 'info');
+                        
+                        for (const doc of mejorCombinacion) {
+                            await conciliarAutomaticamente(gastoId, doc.tipo, doc.id);
+                        }
+                        
+                        mostrarNotificacion(`✓ Gasto conciliado con ${mejorCombinacion.length} documentos`, 'success');
+                        await cargarDatos();
+                        return;
+                    }
+                }
+                
                 container.innerHTML = '<h3>Coincidencias Encontradas:</h3><div class="coincidencias-list"></div>';
                 const lista = container.querySelector('.coincidencias-list');
                 
@@ -1256,9 +1285,9 @@ window.conciliarDocumentosSeleccionados = async function() {
 
 /**
  * Conciliación automática: selecciona documentos que sumen exactamente
- * o se acerquen lo máximo posible al total del ingreso
+ * o se acerquen lo máximo posible al total del ingreso y ejecuta la conciliación
  */
-window.conciliacionAutomatica = function() {
+window.conciliacionAutomatica = async function() {
     if (!ingresoActual || !documentosDisponibles || documentosDisponibles.length === 0) {
         mostrarNotificacion('No hay documentos disponibles para conciliar', 'warning');
         return;
@@ -1293,11 +1322,18 @@ window.conciliacionAutomatica = function() {
     const totalSeleccionado = documentosSeleccionados.reduce((sum, d) => sum + parseFloat(d.total), 0);
     const diferencia = Math.abs(objetivo - totalSeleccionado);
     
+    // Mostrar notificación de lo que se va a conciliar
     if (diferencia < 0.01) {
-        mostrarNotificacion(`✓ Conciliación exacta: ${documentosSeleccionados.length} documentos seleccionados (${formatearImporte(totalSeleccionado)})`, 'success');
+        mostrarNotificacion(`✓ Conciliación exacta encontrada: ${documentosSeleccionados.length} documentos (${formatearImporte(totalSeleccionado)}). Conciliando...`, 'success');
     } else {
-        mostrarNotificacion(`Mejor aproximación: ${documentosSeleccionados.length} documentos (${formatearImporte(totalSeleccionado)}, diferencia: ${formatearImporte(diferencia)})`, 'info');
+        mostrarNotificacion(`Mejor aproximación: ${documentosSeleccionados.length} documentos (${formatearImporte(totalSeleccionado)}, diferencia: ${formatearImporte(diferencia)}). Conciliando...`, 'info');
     }
+    
+    // Esperar un momento para que se vea la notificación
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Ejecutar la conciliación automáticamente
+    await conciliarDocumentosSeleccionados();
 };
 
 /**
