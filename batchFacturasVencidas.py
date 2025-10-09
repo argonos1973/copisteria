@@ -280,8 +280,8 @@ def actualizar_facturas_vencidas():
                 if carta_pdf:
                     cartas_generadas += 1
                     
-                    # Obtener datos del cliente para notificación
-                    cursor.execute('SELECT razonsocial, mail as email FROM contactos WHERE idContacto = ?', (factura['idContacto'],))
+                    # Obtener datos del cliente para notificación y verificar facturación automática
+                    cursor.execute('SELECT razonsocial, mail as email, facturacion_automatica FROM contactos WHERE idContacto = ?', (factura['idContacto'],))
                     cliente = cursor.fetchone()
                     cliente_nombre = cliente['razonsocial'] if cliente else 'Cliente desconocido'
                     
@@ -298,14 +298,19 @@ def actualizar_facturas_vencidas():
                     )
                     logger.info(f"Notificación generada para carta {factura_numero}")
                     
+                    # Solo enviar email si el cliente tiene email Y facturación automática activada
                     if cliente and cliente['email']:
-                        # Enviar email usando la función de factura.py
-                        enviar_email_reclamacion(
-                            factura_id,
-                            cliente['email'],
-                            factura_numero,
-                            carta_pdf
-                        )
+                        if cliente.get('facturacion_automatica', 0) == 1:
+                            logger.info(f"Cliente con facturación automática activada - Enviando email")
+                            # Enviar email usando la función de factura.py
+                            enviar_email_reclamacion(
+                                factura_id,
+                                cliente['email'],
+                                factura_numero,
+                                carta_pdf
+                            )
+                        else:
+                            logger.info(f"Cliente sin facturación automática - Email NO enviado para factura {factura_numero}")
                     else:
                         logger.warning(f"Cliente sin email para factura {factura_numero}")
                 
