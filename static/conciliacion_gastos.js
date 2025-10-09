@@ -1106,8 +1106,47 @@ function renderizarDocumentosDisponibles() {
     });
     
     actualizarControlesPaginacionModalDocs();
+    actualizarCheckboxSeleccionarTodos();
     actualizarTotalesSeleccion();
 }
+
+function actualizarCheckboxSeleccionarTodos() {
+    const inicio = (paginaActualModalDocs - 1) * itemsPorPaginaModalDocs;
+    const fin = inicio + itemsPorPaginaModalDocs;
+    const documentosPagina = documentosDisponibles.slice(inicio, fin);
+    
+    const todosSeleccionados = documentosPagina.every(doc => 
+        documentosSeleccionados.some(d => d.tipo === doc.tipo && d.id === doc.id)
+    );
+    
+    const checkbox = document.getElementById('select-all-docs');
+    if (checkbox) {
+        checkbox.checked = todosSeleccionados && documentosPagina.length > 0;
+    }
+}
+
+window.seleccionarTodosPagina = function() {
+    const checkbox = document.getElementById('select-all-docs');
+    const seleccionar = checkbox.checked;
+    
+    const inicio = (paginaActualModalDocs - 1) * itemsPorPaginaModalDocs;
+    const fin = inicio + itemsPorPaginaModalDocs;
+    const documentosPagina = documentosDisponibles.slice(inicio, fin);
+    
+    documentosPagina.forEach(doc => {
+        const indexSeleccionado = documentosSeleccionados.findIndex(d => d.tipo === doc.tipo && d.id === doc.id);
+        
+        if (seleccionar && indexSeleccionado < 0) {
+            // Seleccionar
+            documentosSeleccionados.push(doc);
+        } else if (!seleccionar && indexSeleccionado >= 0) {
+            // Deseleccionar
+            documentosSeleccionados.splice(indexSeleccionado, 1);
+        }
+    });
+    
+    renderizarDocumentosDisponibles();
+};
 
 window.toggleDocumento = function(index) {
     const doc = documentosDisponibles[index];
@@ -1121,6 +1160,7 @@ window.toggleDocumento = function(index) {
         documentosSeleccionados.push(doc);
     }
     
+    actualizarCheckboxSeleccionarTodos();
     actualizarTotalesSeleccion();
 };
 
