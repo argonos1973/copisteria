@@ -1790,15 +1790,32 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
                 datetime.strptime(factura_dict["fvencimiento"], "%Y-%m-%d").strftime("%d/%m/%Y")
                 if factura_dict.get("fvencimiento") else ""
             )
-            asunto = f"Factura {factura_dict['numero']} - {fecha_fmt}"
-            cuerpo = (
-                "Estimado cliente,\n\n"
-                f"Adjunto encontrará la factura {factura_dict['numero']}.\n"
-                f"Fecha de la factura: {fecha_fmt}\n"
-                f"Fecha de vencimiento: {fvenc_fmt}\n\n"
-                "Saludos cordiales,\n"
-                "SAMUEL RODRIGUEZ MIQUEL\n"
-            )
+            # Cambiar asunto y cuerpo si hay adjunto adicional (carta de reclamación)
+            if adjunto_adicional:
+                asunto = f"Recordatorio de pago - Factura {factura_dict['numero']} vencida"
+                cuerpo = (
+                    "Estimado/a cliente,\n\n"
+                    f"Le recordamos que la factura {factura_dict['numero']} con fecha de emisión {fecha_fmt} "
+                    f"y vencimiento {fvenc_fmt} se encuentra pendiente de pago.\n\n"
+                    "Adjuntamos:\n"
+                    "- Carta de reclamación\n"
+                    "- Copia de la factura\n\n"
+                    "Le rogamos proceda al pago a la mayor brevedad posible.\n\n"
+                    "Para cualquier consulta, no dude en ponerse en contacto con nosotros.\n\n"
+                    "Atentamente,\n"
+                    "COPISTERIA ALEPH 70\n"
+                    "SAMUEL RODRIGUEZ MIQUEL\n"
+                )
+            else:
+                asunto = f"Factura {factura_dict['numero']} - {fecha_fmt}"
+                cuerpo = (
+                    "Estimado cliente,\n\n"
+                    f"Adjunto encontrará la factura {factura_dict['numero']}.\n"
+                    f"Fecha de la factura: {fecha_fmt}\n"
+                    f"Fecha de vencimiento: {fvenc_fmt}\n\n"
+                    "Saludos cordiales,\n"
+                    "SAMUEL RODRIGUEZ MIQUEL\n"
+                )
 
             print(f"Enviando correo a {email_destino}")
             # Enviar el correo (con adjunto adicional si se proporciona)
