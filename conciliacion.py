@@ -463,18 +463,22 @@ def gastos_pendientes():
                 )
                 AND g.importe_eur > 0
                 AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
+                AND g.concepto NOT LIKE '%Bonificacio%'
+                AND g.concepto NOT LIKE '%Bonificación%'
                 AND (
                     substr(g.fecha_operacion, -4) = ?
                     OR strftime('%Y', g.fecha_operacion) = ?
                 )
             '''
         else:
-            # Si no existe la tabla, todos los gastos son pendientes (excepto liquidaciones)
+            # Si no existe la tabla, todos los gastos son pendientes (excepto liquidaciones y bonificaciones)
             query = '''
                 SELECT g.*
                 FROM gastos g
                 WHERE g.importe_eur > 0
                 AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
+                AND g.concepto NOT LIKE '%Bonificacio%'
+                AND g.concepto NOT LIKE '%Bonificación%'
                 AND (
                     substr(g.fecha_operacion, -4) = ?
                     OR strftime('%Y', g.fecha_operacion) = ?
