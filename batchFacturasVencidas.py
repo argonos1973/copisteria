@@ -110,24 +110,25 @@ def generar_carta_reclamacion(factura_data, dias_vencidos):
             </div>
             
             <div class="contenido">
-                <p><strong>Asunto: Reclamación de pago - Factura {factura_data['numero']}</strong></p>
+                <p><strong>Asunto: Recordatorio de pago - Factura {factura_data['numero']}</strong></p>
                 
-                <p>Estimado/a cliente,</p>
+                <p>Hola,</p>
                 
-                <p>Nos dirigimos a usted en relación con la factura <strong>{factura_data['numero']}</strong> 
-                con fecha de emisión <strong>{datetime.strptime(factura_data['fecha'], '%Y-%m-%d').strftime('%d/%m/%Y')}</strong>, 
+                <p>Te escribimos para recordarte que tenemos pendiente el pago de la factura <strong>{factura_data['numero']}</strong> 
+                del <strong>{datetime.strptime(factura_data['fecha'], '%Y-%m-%d').strftime('%d/%m/%Y')}</strong>, 
                 por un importe de <strong>{factura_data['total']:.2f}€</strong>.</p>
                 
-                <p>Han transcurrido <span class="destacado">{dias_vencidos} días</span> desde la emisión de dicha factura 
-                y, hasta la fecha, no hemos recibido el pago correspondiente.</p>
+                <p>Han pasado ya <span class="destacado">{dias_vencidos} días</span> desde que emitimos la factura 
+                y todavía no hemos recibido el pago.</p>
                 
-                <p>Le rogamos que proceda a regularizar su situación en un plazo máximo de <strong>10 días hábiles</strong> 
-                a partir de la recepción de esta carta. En caso contrario, nos veremos obligados a iniciar las acciones 
-                legales pertinentes para el cobro de la deuda.</p>
+                <p>Si ya has realizado el pago, por favor ignora este mensaje. Si no es así, te agradeceríamos 
+                que pudieras hacerlo lo antes posible para mantener al día tu cuenta.</p>
                 
-                <p>Adjuntamos copia de la factura pendiente de pago para su revisión.</p>
+                <p>Adjuntamos de nuevo la factura para que la tengas a mano.</p>
                 
-                <p>Para cualquier aclaración, puede ponerse en contacto con nosotros.</p>
+                <p>Si tienes cualquier duda o necesitas hablar con nosotros, no dudes en contactarnos.</p>
+                
+                <p>¡Gracias!</p>
             </div>
             
             <div class="firma">
@@ -169,14 +170,26 @@ def enviar_email_reclamacion(cliente_email, factura_numero, carta_pdf_path, fact
         bool: True si se prepara correctamente (de momento no envía)
     """
     try:
+        # MODO PRUEBAS: Solo enviar a elssons@gmail.com
+        email_destino = 'elssons@gmail.com'
+        
         # TODO: Implementar envío de email cuando se active
         # Por ahora solo registramos que está preparado para enviar
         
-        logger.info(f"Email preparado para enviar a {cliente_email}")
-        logger.info(f"  - Asunto: Reclamación de pago - Factura {factura_numero}")
+        logger.info(f"Email preparado para enviar a {email_destino} (original: {cliente_email})")
+        logger.info(f"  - Asunto: Recordatorio de pago - Factura {factura_numero}")
         logger.info(f"  - Adjunto 1: {carta_pdf_path}")
         logger.info(f"  - Adjunto 2: {factura_pdf_path}")
         logger.info(f"  - NOTA: Envío desactivado (preparado para activar)")
+        
+        # Generar notificación de email enviado (aunque de momento no se envíe realmente)
+        notif_mensaje = f"📧 Email enviado: Recordatorio factura {factura_numero} → {email_destino} (original: {cliente_email})"
+        guardar_notificacion(
+            notif_mensaje,
+            tipo='info',
+            db_path=DB_NAME
+        )
+        logger.info(f"Notificación de email generada para {factura_numero}")
         
         # Aquí iría el código de envío de email:
         # import smtplib
@@ -311,15 +324,15 @@ def actualizar_facturas_vencidas():
                         # Buscar PDF de la factura
                         factura_pdf_path = f"/var/www/html/facturas_pdf/factura_{factura_numero}.pdf"
                         
-                        if os.path.exists(factura_pdf_path):
-                            # Preparar email (no envía todavía)
-                            enviar_email_reclamacion(
-                                cliente['email'],
-                                factura_numero,
-                                carta_pdf,
-                                factura_pdf_path
-                            )
-                        else:
+                        # Preparar email (no envía todavía) - siempre se prepara aunque no exista el PDF
+                        enviar_email_reclamacion(
+                            cliente['email'],
+                            factura_numero,
+                            carta_pdf,
+                            factura_pdf_path if os.path.exists(factura_pdf_path) else None
+                        )
+                        
+                        if not os.path.exists(factura_pdf_path):
                             logger.warning(f"No se encontró el PDF de la factura {factura_numero} en {factura_pdf_path}")
                     else:
                         logger.warning(f"Cliente sin email para factura {factura_numero}")
@@ -330,18 +343,6 @@ def actualizar_facturas_vencidas():
         conn.commit()
         logger.info(f"Proceso completado. Facturas actualizadas a vencidas: {facturas_actualizadas}")
         logger.info(f"Cartas de reclamación generadas: {cartas_generadas}")
-        
-        # Generar notificación si hubo actualizaciones
-        if facturas_actualizadas > 0:
-            mensaje = f"{facturas_actualizadas} factura(s) marcada(s) como vencida(s) (>30 días)"
-            if cartas_generadas > 0:
-                mensaje += f" - {cartas_generadas} carta(s) de reclamación generada(s)"
-            
-            guardar_notificacion(
-                mensaje,
-                tipo='warning',
-                db_path=DB_NAME
-            )
         
     except Exception as e:
         logger.error(f"Error en el proceso de actualización de facturas vencidas: {e}")
