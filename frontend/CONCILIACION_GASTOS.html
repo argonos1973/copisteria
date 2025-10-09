@@ -804,22 +804,22 @@
                 </div>
             </div>
             
-            <div id="lista-documentos" style="display: none; flex: 1; overflow-y: auto; min-height: 0;">
-                <table class="gastos-table" style="font-size: 13px; border-collapse: collapse;">
+            <div id="lista-documentos" style="display: none; flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0; position: relative;">
+                <table class="gastos-table" style="font-size: 13px; width: 100%;">
                     <thead>
                         <tr>
-                            <th style="width: 40px; text-align: center; position: sticky; top: 0; z-index: 5; background: #2c3e50;">
+                            <th style="width: 40px; text-align: center; position: sticky; top: 0; z-index: 10; background: #2c3e50; box-shadow: 0 2px 2px rgba(0,0,0,0.1);">
                                 <input type="checkbox" 
                                        id="select-all-docs" 
                                        onchange="seleccionarTodosPagina()"
                                        style="cursor:pointer;width:18px;height:18px;"
                                        title="Seleccionar todos de esta página">
                             </th>
-                            <th style="width: 80px; position: sticky; top: 0; z-index: 5; background: #2c3e50;">Tipo</th>
-                            <th style="width: 100px; position: sticky; top: 0; z-index: 5; background: #2c3e50;">Número</th>
-                            <th style="width: 90px; position: sticky; top: 0; z-index: 5; background: #2c3e50;">Fecha</th>
-                            <th style="position: sticky; top: 0; z-index: 5; background: #2c3e50;">Cliente</th>
-                            <th style="width: 100px; text-align: right; position: sticky; top: 0; z-index: 5; background: #2c3e50;">Importe</th>
+                            <th style="width: 80px; position: sticky; top: 0; z-index: 10; background: #2c3e50; box-shadow: 0 2px 2px rgba(0,0,0,0.1);">Tipo</th>
+                            <th style="width: 100px; position: sticky; top: 0; z-index: 10; background: #2c3e50; box-shadow: 0 2px 2px rgba(0,0,0,0.1);">Número</th>
+                            <th style="width: 90px; position: sticky; top: 0; z-index: 10; background: #2c3e50; box-shadow: 0 2px 2px rgba(0,0,0,0.1);">Fecha</th>
+                            <th style="position: sticky; top: 0; z-index: 10; background: #2c3e50; box-shadow: 0 2px 2px rgba(0,0,0,0.1);">Cliente</th>
+                            <th style="width: 100px; text-align: right; position: sticky; top: 0; z-index: 10; background: #2c3e50; box-shadow: 0 2px 2px rgba(0,0,0,0.1);">Importe</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-documentos-seleccion"></tbody>
