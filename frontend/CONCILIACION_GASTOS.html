@@ -761,7 +761,7 @@
 
     <!-- Modal de Selección de Documentos para Ingresos Efectivo -->
     <div class="modal" id="modal-seleccion-documentos">
-        <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-content" style="max-width: 900px; max-height: 90vh; display: flex; flex-direction: column;">
             <div class="modal-header">
                 <h2>Seleccionar Documentos en Efectivo</h2>
                 <span class="close-modal" onclick="cerrarModalSeleccion()">&times;</span>
@@ -804,9 +804,9 @@
                 </div>
             </div>
             
-            <div id="lista-documentos" style="display: none; max-height: 400px; overflow-y: auto;">
+            <div id="lista-documentos" style="display: none; flex: 1; overflow-y: auto; min-height: 0;">
                 <table class="gastos-table" style="font-size: 13px;">
-                    <thead>
+                    <thead style="position: sticky; top: 0; background: white; z-index: 5;">
                         <tr>
                             <th style="width: 40px; text-align: center;">
                                 <input type="checkbox" 
@@ -826,7 +826,7 @@
                 </table>
             </div>
             
-            <div style="margin-top: 20px; text-align: right; border-top: 2px solid #ddd; padding-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="margin-top: auto; padding-top: 15px; border-top: 2px solid #ddd; display: flex; justify-content: space-between; align-items: center; background: white;">
                 <span id="total-documentos-disponibles" style="color: #666; font-size: 13px;"></span>
                 <div>
                     <button class="btn btn-secondary" onclick="cerrarModalSeleccion()" style="margin-right: 10px;">Cancelar</button>
