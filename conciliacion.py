@@ -597,8 +597,17 @@ def conciliados():
         # Combinar ambas listas
         conciliaciones = conciliaciones_normales + liquidaciones_agrupadas
         
-        # Ordenar por fecha de conciliación
-        conciliaciones.sort(key=lambda x: x['fecha_conciliacion'], reverse=True)
+        # Ordenar por fecha de operación (más recientes primero)
+        def get_fecha_sort(x):
+            fecha = x.get('fecha_operacion', '')
+            # Convertir formato DD/MM/YYYY a YYYY-MM-DD para ordenar correctamente
+            if '/' in fecha:
+                partes = fecha.split('/')
+                if len(partes) == 3:
+                    return f"{partes[2]}-{partes[1]}-{partes[0]}"
+            return fecha
+        
+        conciliaciones.sort(key=get_fecha_sort, reverse=True)
         
         conn.close()
         
