@@ -1253,3 +1253,112 @@ window.conciliarDocumentosSeleccionados = async function() {
         mostrarNotificacion(`Error al conciliar: ${error.message}`, 'error');
     }
 };
+
+/**
+ * Conciliación automática: selecciona documentos que sumen exactamente
+ * o se acerquen lo máximo posible al total del ingreso
+ */
+window.conciliacionAutomatica = function() {
+    if (!ingresoActual || !documentosDisponibles || documentosDisponibles.length === 0) {
+        mostrarNotificacion('No hay documentos disponibles para conciliar', 'warning');
+        return;
+    }
+    
+    const objetivo = parseFloat(ingresoActual.total_ingresos);
+    const documentos = documentosDisponibles.map(d => ({
+        ...d,
+        importe: parseFloat(d.total)
+    }));
+    
+    // Algoritmo de mochila (subset sum problem)
+    // Busca la combinación de documentos que más se acerque al objetivo
+    const mejorCombinacion = encontrarMejorCombinacion(documentos, objetivo);
+    
+    if (mejorCombinacion.length === 0) {
+        mostrarNotificacion('No se encontró ninguna combinación válida', 'warning');
+        return;
+    }
+    
+    // Limpiar selección actual
+    documentosSeleccionados = [];
+    
+    // Seleccionar los documentos de la mejor combinación
+    mejorCombinacion.forEach(doc => {
+        documentosSeleccionados.push(doc);
+    });
+    
+    // Actualizar UI
+    renderizarDocumentosDisponibles();
+    
+    const totalSeleccionado = documentosSeleccionados.reduce((sum, d) => sum + parseFloat(d.total), 0);
+    const diferencia = Math.abs(objetivo - totalSeleccionado);
+    
+    if (diferencia < 0.01) {
+        mostrarNotificacion(`✓ Conciliación exacta: ${documentosSeleccionados.length} documentos seleccionados (${formatearImporte(totalSeleccionado)})`, 'success');
+    } else {
+        mostrarNotificacion(`Mejor aproximación: ${documentosSeleccionados.length} documentos (${formatearImporte(totalSeleccionado)}, diferencia: ${formatearImporte(diferencia)})`, 'info');
+    }
+};
+
+/**
+ * Encuentra la mejor combinación de documentos que sume lo más cercano al objetivo
+ * Usa programación dinámica para resolver el problema de la mochila
+ */
+function encontrarMejorCombinacion(documentos, objetivo) {
+    const n = documentos.length;
+    
+    // Convertir importes a centavos para evitar problemas de precisión
+    const objetivoCentavos = Math.round(objetivo * 100);
+    const importesCentavos = documentos.map(d => Math.round(d.importe * 100));
+    
+    // Limitar el objetivo máximo para optimización (máximo 100000€ = 10000000 centavos)
+    const maxObjetivo = Math.min(objetivoCentavos, 10000000);
+    
+    // dp[i][j] = true si es posible sumar exactamente j usando los primeros i documentos
+    const dp = Array(n + 1).fill(null).map(() => Array(maxObjetivo + 1).fill(false));
+    dp[0][0] = true;
+    
+    // Llenar la tabla dp
+    for (let i = 1; i <= n; i++) {
+        const importe = importesCentavos[i - 1];
+        for (let j = 0; j <= maxObjetivo; j++) {
+            // No incluir el documento i
+            dp[i][j] = dp[i - 1][j];
+            
+            // Incluir el documento i (si cabe)
+            if (j >= importe && dp[i - 1][j - importe]) {
+                dp[i][j] = true;
+            }
+        }
+    }
+    
+    // Encontrar la suma más cercana al objetivo
+    let mejorSuma = 0;
+    let menorDiferencia = objetivoCentavos;
+    
+    for (let j = 0; j <= maxObjetivo; j++) {
+        if (dp[n][j]) {
+            const diferencia = Math.abs(objetivoCentavos - j);
+            if (diferencia < menorDiferencia) {
+                menorDiferencia = diferencia;
+                mejorSuma = j;
+            }
+        }
+    }
+    
+    // Reconstruir la solución (backtracking)
+    const seleccionados = [];
+    let sumaActual = mejorSuma;
+    
+    for (let i = n; i > 0 && sumaActual > 0; i--) {
+        const importe = importesCentavos[i - 1];
+        
+        // Si no usamos este documento, la suma sería la misma
+        if (sumaActual >= importe && dp[i - 1][sumaActual - importe]) {
+            seleccionados.push(documentos[i - 1]);
+            sumaActual -= importe;
+        }
+    }
+    
+    return seleccionados;
+}
