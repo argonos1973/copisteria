@@ -64,6 +64,10 @@ function inicializarPestanas() {
 // ============================================================================
 
 window.cargarDatos = async function() {
+    // Primero ejecutar procesamiento automático
+    await procesarAutomaticoAlCargar();
+    
+    // Luego cargar todas las pestañas con datos actualizados
     await Promise.all([
         cargarGastosPendientes(),
         cargarTransferencias(),
@@ -72,6 +76,60 @@ window.cargarDatos = async function() {
         cargarConciliados(),
         cargarEstadisticas()
     ]);
+}
+
+/**
+ * Procesamiento automático silencioso al cargar la página
+ * Concilia todo lo que tenga diferencia < 1€
+ */
+async function procesarAutomaticoAlCargar() {
+    try {
+        console.log('🔄 Ejecutando procesamiento automático al cargar...');
+        
+        let totalConciliados = 0;
+        
+        // 1. Procesar Gastos Pendientes (ingresos en efectivo)
+        const responsePendientes = await fetch(`${API_URL}/conciliacion/gastos-pendientes`);
+        const dataPendientes = await responsePendientes.json();
+        
+        if (dataPendientes.success && dataPendientes.gastos.length > 0) {
+            const ingresosEfectivo = dataPendientes.gastos.filter(g => 
+                g.importe_eur > 0 && 
+                (!g.concepto || (
+                    !g.concepto.toLowerCase().includes('transferencia') &&
+                    !g.concepto.toLowerCase().includes('transf.')
+                ))
+            );
+            
+            for (const ingreso of ingresosEfectivo) {
+                const resultado = await buscarYConciliarIngresoEfectivoSilencioso(ingreso);
+                if (resultado) totalConciliados++;
+            }
+        }
+        
+        // 2. Procesar Ingresos Efectivo Agrupados
+        const responseIngresos = await fetch(`${API_URL}/conciliacion/ingresos-efectivo`);
+        const dataIngresos = await responseIngresos.json();
+        
+        if (dataIngresos.success && dataIngresos.ingresos.length > 0) {
+            for (const ing of dataIngresos.ingresos) {
+                const diferencia = Math.abs(ing.diferencia);
+                if (diferencia < 1.0) {
+                    const resultado = await conciliarIngresoAutomaticoSilencioso(ing);
+                    if (resultado) totalConciliados++;
+                }
+            }
+        }
+        
+        if (totalConciliados > 0) {
+            console.log(`✅ Procesamiento automático completado: ${totalConciliados} conciliaciones realizadas`);
+        } else {
+            console.log('ℹ️ No hay conciliaciones automáticas pendientes');
+        }
+        
+    } catch (error) {
+        console.error('Error en procesamiento automático al cargar:', error);
+    }
 }
 
 async function cargarTransferencias() {
@@ -334,38 +392,12 @@ async function cargarGastosPendientes() {
         
         if (data.success && data.gastos.length > 0) {
             // Excluir transferencias de pendientes (tienen su propia pestaña)
-            let gastosFiltrados = data.gastos.filter(g => 
+            const gastosFiltrados = data.gastos.filter(g => 
                 !g.concepto || (
                     !g.concepto.toLowerCase().includes('transferencia') &&
                     !g.concepto.toLowerCase().includes('transf.')
                 )
             );
-            
-            // Separar ingresos en efectivo (importe positivo) de otros gastos
-            const ingresosEfectivo = gastosFiltrados.filter(g => g.importe_eur > 0);
-            const otrosGastos = gastosFiltrados.filter(g => g.importe_eur <= 0);
-            
-            // Procesar automáticamente los ingresos en efectivo
-            if (ingresosEfectivo.length > 0) {
-                console.log(`Procesando automáticamente ${ingresosEfectivo.length} ingresos en efectivo...`);
-                
-                for (const ingreso of ingresosEfectivo) {
-                    await buscarYConciliarIngresoEfectivoSilencioso(ingreso);
-                }
-                
-                // Recargar gastos pendientes después de procesar
-                const responseActualizado = await fetch(`${API_URL}/conciliacion/gastos-pendientes`);
-                const dataActualizado = await responseActualizado.json();
-                
-                if (dataActualizado.success) {
-                    gastosFiltrados = dataActualizado.gastos.filter(g => 
-                        !g.concepto || (
-                            !g.concepto.toLowerCase().includes('transferencia') &&
-                            !g.concepto.toLowerCase().includes('transf.')
-                        )
-                    );
-                }
-            }
             
             gastosPendientesCompletos = gastosFiltrados;
             
@@ -1340,29 +1372,11 @@ async function cargarIngresosEfectivo() {
         loading.style.display = 'none';
         
         if (data.success && data.ingresos.length > 0) {
-            // Procesar automáticamente ingresos con diferencia < 1€
-            console.log(`Procesando automáticamente ${data.ingresos.length} ingresos en efectivo agrupados...`);
-            
-            for (const ing of data.ingresos) {
-                const diferencia = Math.abs(ing.diferencia);
-                if (diferencia < 1.0) {
-                    await conciliarIngresoAutomaticoSilencioso(ing);
-                }
-            }
-            
-            // Recargar ingresos después de procesar
-            const responseActualizado = await fetch(`${API_URL}/conciliacion/ingresos-efectivo`);
-            const dataActualizado = await responseActualizado.json();
-            
-            if (dataActualizado.success && dataActualizado.ingresos.length > 0) {
-                ingresosCompletos = dataActualizado.ingresos;
-                paginaActualIngresos = 1;
-                await renderizarPaginaIngresos();
-                tabla.style.display = 'table';
-                pagination.style.display = 'flex';
-            } else {
-                empty.style.display = 'block';
-            }
+            ingresosCompletos = data.ingresos;
+            paginaActualIngresos = 1;
+            await renderizarPaginaIngresos();
+            tabla.style.display = 'table';
+            pagination.style.display = 'flex';
         } else {
             empty.style.display = 'block';
         }
