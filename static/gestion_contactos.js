@@ -288,7 +288,7 @@ async function submitForm() {
     poblacio: fields.poblacio.value.trim().toUpperCase(),
     localidad: fields.poblacio.value.trim().toUpperCase(),
     provincia: fields.provincia.value.trim().toUpperCase(),
-    tipo: fields.facturacion.checked ? 1 : 0,
+    facturacion_automatica: fields.facturacion.checked ? 1 : 0,
     dir3_oficina: fields.dir3Oficina.value.trim() || null,
     dir3_organo: fields.dir3Organo.value.trim() || null,
     dir3_unidad: fields.dir3Unidad.value.trim() || null
@@ -341,7 +341,7 @@ async function loadContacto() {
     
     Object.keys(fields).forEach((k) => {
       if (k === 'facturacion') {
-        fields[k].checked = data.tipo === 1;
+        fields[k].checked = data.facturacion_automatica === 1;
       } else if (k === 'poblacio') {
         fields[k].value = data.localidad ?? '';
       } else if (fields[k]) {
