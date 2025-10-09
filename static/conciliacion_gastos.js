@@ -982,8 +982,8 @@ async function renderizarPaginaIngresos() {
         }
         
         // Siempre mostrar botón para seleccionar documentos
-        accion = `<button class="btn btn-sm btn-primary" onclick='abrirSeleccionDocumentos(${JSON.stringify(ing)})' style="padding:4px 8px;font-size:12px;">
-            <i class="fas fa-list-check"></i> Seleccionar
+        accion = `<button class="btn btn-sm" onclick='abrirSeleccionDocumentos(${JSON.stringify(ing)})' style="padding:6px 10px;font-size:14px;background:white;color:black;border:1px solid #ddd;">
+            <i class="fas fa-search"></i>
         </button>`;
         
         tr.innerHTML = `
