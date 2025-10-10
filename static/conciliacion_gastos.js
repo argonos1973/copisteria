@@ -2021,21 +2021,19 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                             <div><strong>Fecha:</strong> ${fecha}</div>
                             <div><strong>Liquidaciones Banco:</strong> ${formatearImporte(totalLiquidaciones)}</div>
                             <div><strong>Total Tickets TPV:</strong> ${formatearImporte(totalTickets)}</div>
-                            <div><strong>Total Facturas TPV:</strong> ${formatearImporte(totalFacturas)}</div>
-                            <div style="grid-column: 1 / -1;"><strong>Total Documentos:</strong> ${formatearImporte(totalDocumentos)}</div>
-                            <div style="grid-column: 1 / -1;" class="${Math.abs(totalLiquidaciones - totalDocumentos) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
-                                <strong>Diferencia:</strong> ${formatearImporte(totalLiquidaciones - totalDocumentos)}
+                            <div style="grid-column: 1 / -1;" class="${Math.abs(totalLiquidaciones - totalTickets) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
+                                <strong>Diferencia:</strong> ${formatearImporte(totalLiquidaciones - totalTickets)}
                             </div>
                         </div>
                     </div>
                     
                     ${facturas.length > 0 ? `
                         <div style="margin-bottom: 15px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-                            <strong>⚠️ Atención:</strong> Se encontraron ${facturas.length} factura(s) cobrada(s) con TPV en fechas cercanas que podrían explicar la diferencia.
+                            <strong>⚠️ Atención:</strong> Se encontraron ${facturas.length} factura(s) cobrada(s) con TPV en fechas cercanas (±7 días) que podrían explicar la diferencia. Estas facturas NO están incluidas en el total de la liquidación del ${fecha}.
                         </div>
                     ` : ''}
                     
-                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Documentos Cobrados con TPV</h4>
+                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Tickets TPV del ${fecha} (${tickets.length})</h4>
                     <table class="grid" style="width: 100%; margin-bottom: 15px;">
                         <thead>
                             <tr>
@@ -2047,25 +2045,37 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                         </thead>
                         <tbody>
                             ${ticketsHTML}
-                            ${facturasHTML}
                         </tbody>
                         <tfoot>
                             <tr style="font-weight: bold; background: #f8f9fa;">
-                                <td colspan="3" class="text-right">Total Documentos:</td>
-                                <td class="text-right">${formatearImporte(totalDocumentos)}</td>
-                            </tr>
-                            <tr style="font-weight: bold;">
-                                <td colspan="3" class="text-right">Liquidación Banco:</td>
-                                <td class="text-right">${formatearImporte(totalLiquidaciones)}</td>
-                            </tr>
-                            <tr style="font-weight: bold;">
-                                <td colspan="3" class="text-right">Diferencia:</td>
-                                <td class="text-right ${Math.abs(totalLiquidaciones - totalDocumentos) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
-                                    ${formatearImporte(totalLiquidaciones - totalDocumentos)}
-                                </td>
+                                <td colspan="3" class="text-right">Total Tickets:</td>
+                                <td class="text-right">${formatearImporte(totalTickets)}</td>
                             </tr>
                         </tfoot>
                     </table>
+                    
+                    ${facturas.length > 0 ? `
+                        <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Facturas TPV en fechas cercanas (${facturas.length}) - Sugerencias</h4>
+                        <table class="grid" style="width: 100%; margin-bottom: 15px;">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Número</th>
+                                    <th>Fecha</th>
+                                    <th class="text-right">Importe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${facturasHTML}
+                            </tbody>
+                            <tfoot>
+                                <tr style="font-weight: bold; background: #fff3cd;">
+                                    <td colspan="3" class="text-right">Total Facturas (sugerencias):</td>
+                                    <td class="text-right">${formatearImporte(totalFacturas)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    ` : ''}
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cerrar</button>
