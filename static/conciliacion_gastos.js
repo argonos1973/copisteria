@@ -2028,8 +2028,8 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                     </div>
                     
                     ${facturas.length > 0 ? `
-                        <div style="margin-bottom: 15px; padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-                            <strong>⚠️ Atención:</strong> Se encontraron ${facturas.length} factura(s) cobrada(s) con TPV en fechas cercanas (±7 días) que podrían explicar la diferencia. Estas facturas NO están incluidas en el total de la liquidación del ${fecha}.
+                        <div style="margin-bottom: 15px; padding: 10px; background: #d1ecf1; border-left: 4px solid #0c5460; border-radius: 4px;">
+                            <strong>ℹ️ Información:</strong> Se encontraron ${facturas.length} factura(s) cobrada(s) con TPV el ${fecha}.
                         </div>
                     ` : ''}
                     
@@ -2055,7 +2055,7 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                     </table>
                     
                     ${facturas.length > 0 ? `
-                        <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Facturas TPV en fechas cercanas (${facturas.length}) - Sugerencias</h4>
+                        <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Facturas TPV del ${fecha} (${facturas.length})</h4>
                         <table class="grid" style="width: 100%; margin-bottom: 15px;">
                             <thead>
                                 <tr>
@@ -2069,12 +2069,25 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                                 ${facturasHTML}
                             </tbody>
                             <tfoot>
-                                <tr style="font-weight: bold; background: #fff3cd;">
-                                    <td colspan="3" class="text-right">Total Facturas (sugerencias):</td>
+                                <tr style="font-weight: bold; background: #f8f9fa;">
+                                    <td colspan="3" class="text-right">Total Facturas:</td>
                                     <td class="text-right">${formatearImporte(totalFacturas)}</td>
                                 </tr>
                             </tfoot>
                         </table>
+                        
+                        <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Resumen Total</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                                <div><strong>Total Documentos (Tickets + Facturas):</strong></div>
+                                <div class="text-right">${formatearImporte(totalTickets + totalFacturas)}</div>
+                                <div><strong>Liquidaciones Banco:</strong></div>
+                                <div class="text-right">${formatearImporte(totalLiquidaciones)}</div>
+                                <div style="grid-column: 1 / -1;" class="${Math.abs(totalLiquidaciones - (totalTickets + totalFacturas)) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
+                                    <strong>Diferencia Final:</strong> ${formatearImporte(totalLiquidaciones - (totalTickets + totalFacturas))}
+                                </div>
+                            </div>
+                        </div>
                     ` : ''}
                 </div>
                 <div class="modal-footer">

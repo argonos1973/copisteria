@@ -786,30 +786,25 @@ def detalles_liquidacion_tpv():
         total_liquidaciones = liquidacion_info['total_liquidaciones'] or 0
         diferencia = total_liquidaciones - total_tickets
         
-        # Si hay diferencia, buscar facturas cobradas con TPV en fechas cercanas
-        facturas = []
-        if abs(diferencia) > 0.01:  # Si hay diferencia significativa
-            # Buscar facturas con TPV en un rango de ±7 días
-            from datetime import datetime, timedelta
-            fecha_obj = datetime.strptime(fecha_tickets, '%Y-%m-%d')
-            fecha_inicio = (fecha_obj - timedelta(days=7)).strftime('%Y-%m-%d')
-            fecha_fin = (fecha_obj + timedelta(days=7)).strftime('%Y-%m-%d')
-            
-            cursor.execute('''
-                SELECT 
-                    'factura' as tipo,
-                    f.numero as numero,
-                    COALESCE(f.fechaCobro, f.fecha) as fecha,
-                    f.total as importe
-                FROM factura f
-                WHERE COALESCE(f.fechaCobro, f.fecha) BETWEEN ? AND ?
-                AND f.formaPago = 'T'
-                AND f.estado = 'C'
-                ORDER BY ABS(f.total - ?) ASC
-                LIMIT 10
-            ''', (fecha_inicio, fecha_fin, abs(diferencia)))
-            
-            facturas = [dict(row) for row in cursor.fetchall()]
+        # Buscar facturas TPV del mismo día (usar fechaCobro)
+        cursor.execute('''
+            SELECT 
+                'factura' as tipo,
+                f.numero as numero,
+                COALESCE(f.fechaCobro, f.fecha) as fecha,
+                f.total as importe
+            FROM factura f
+            WHERE COALESCE(f.fechaCobro, f.fecha) = ?
+            AND f.formaPago = 'T'
+            AND f.estado = 'C'
+            ORDER BY f.numero
+        ''', (fecha_tickets,))
+        
+        facturas = [dict(row) for row in cursor.fetchall()]
+        total_facturas = sum(f['importe'] for f in facturas)
+        
+        # Recalcular diferencia incluyendo facturas del día
+        diferencia = total_liquidaciones - (total_tickets + total_facturas)
         
         conn.close()
         
@@ -1269,15 +1264,15 @@ def obtener_liquidaciones_tpv():
             total_tickets = tickets_info['total_tickets'] or 0
             num_tickets = tickets_info['num_tickets'] or 0
             
-            # Buscar facturas con tarjeta de esa fecha
+            # Buscar facturas con tarjeta de esa fecha (usar fechaCobro)
             cursor.execute('''
                 SELECT 
                     COUNT(*) as num_facturas,
                     SUM(total) as total_facturas
                 FROM factura
-                WHERE fecha = ?
+                WHERE COALESCE(fechaCobro, fecha) = ?
                 AND formaPago = 'T'
-                AND estado IN ('C', 'P')
+                AND estado = 'C'
             ''', (fecha_busqueda,))
             
             facturas_info = cursor.fetchone()
@@ -1301,34 +1296,39 @@ def obtener_liquidaciones_tpv():
             else:
                 estado = 'revisar'
             
-            # Conciliar automáticamente solo si:
-            # 1. Diferencia <= 1€ O
-            # 2. Existe una factura TPV con importe exacto igual a la diferencia (±0.02€)
+            # Conciliar automáticamente solo si diferencia final <= 1€
             puede_conciliar = False
+            factura_encontrada = None
             
             if diferencia <= 1.0 and num_documentos > 0:
+                # Diferencia ya es <= 1€, puede conciliar
                 puede_conciliar = True
             elif diferencia > 1.0:
-                # Buscar factura TPV con importe igual a la diferencia
+                # Buscar factura TPV del mismo día con importe cercano a la diferencia
                 cursor.execute('''
                     SELECT id, numero, total
                     FROM factura
                     WHERE COALESCE(fechaCobro, fecha) = ?
                     AND formaPago = 'T'
                     AND estado = 'C'
-                    AND ABS(total - ?) <= 0.02
+                    ORDER BY ABS(total - ?) ASC
                     LIMIT 1
                 ''', (fecha_busqueda, diferencia))
                 
                 factura_diferencia = cursor.fetchone()
                 if factura_diferencia:
-                    # Hay una factura que explica exactamente la diferencia
-                    puede_conciliar = True
-                    # Sumar esta factura al total
-                    total_documentos += factura_diferencia['total']
-                    num_facturas += 1
-                    num_documentos += 1
-                    diferencia = abs(total_liq - total_documentos)
+                    # Verificar si al sumar esta factura la diferencia final es <= 1€
+                    total_con_factura = total_documentos + factura_diferencia['total']
+                    diferencia_final = abs(total_liq - total_con_factura)
+                    
+                    if diferencia_final <= 1.0:
+                        # La factura explica la diferencia y queda <= 1€
+                        puede_conciliar = True
+                        factura_encontrada = factura_diferencia
+                        total_documentos = total_con_factura
+                        num_facturas += 1
+                        num_documentos += 1
+                        diferencia = diferencia_final
             
             if puede_conciliar:
                 try:
@@ -1345,14 +1345,19 @@ def obtener_liquidaciones_tpv():
                             # Calcular diferencia individual
                             diferencia_individual = abs(importe_gasto - importe_doc_por_liquidacion)
                             
+                            # Crear nota con información de factura encontrada si aplica
+                            nota = f'Liquidación TPV {fecha_str} - {num_documentos} documentos'
+                            if factura_encontrada:
+                                nota += f' (incluye factura {factura_encontrada["numero"]} de {round(factura_encontrada["total"], 2)}€)'
+                            nota += f' - Conciliado automáticamente (dif: {round(diferencia, 2)}€)'
+                            
                             cursor.execute('''
                                 INSERT OR IGNORE INTO conciliacion_gastos 
                                 (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
                                  importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
                                 VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
                             ''', (int(gasto_id), 'liquidacion_tpv', 0, 
-                                  importe_gasto, importe_doc_por_liquidacion, diferencia_individual,
-                                  f'Liquidación TPV {fecha_str} - {num_documentos} documentos - Conciliado automáticamente (dif total: {round(diferencia, 2)}€)'))
+                                  importe_gasto, importe_doc_por_liquidacion, diferencia_individual, nota))
                     conn.commit()
                     # No añadir a resultado si se concilió automáticamente
                     continue
