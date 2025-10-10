@@ -13,6 +13,86 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def encontrar_mejor_combinacion_documentos(documentos, importe_objetivo, tolerancia=1.0):
+    """
+    Encuentra la mejor combinación de documentos que se aproxime al importe objetivo.
+    Usa programación dinámica para encontrar la combinación óptima.
+    
+    Args:
+        documentos: Lista de dicts con 'id', 'tipo', 'importe'
+        importe_objetivo: Importe a alcanzar
+        tolerancia: Diferencia máxima aceptable
+    
+    Returns:
+        (mejor_combinacion, diferencia) o (None, None) si no encuentra combinación válida
+    """
+    if not documentos:
+        return None, None
+    
+    # Convertir importes a centavos para evitar problemas de punto flotante
+    objetivo_centavos = int(round(importe_objetivo * 100))
+    tolerancia_centavos = int(round(tolerancia * 100))
+    
+    # Preparar documentos con importes en centavos
+    docs_centavos = []
+    for doc in documentos:
+        importe_centavos = int(round(doc['importe'] * 100))
+        if importe_centavos > 0:  # Solo documentos con importe positivo
+            docs_centavos.append({
+                'id': doc['id'],
+                'tipo': doc['tipo'],
+                'importe': doc['importe'],
+                'importe_centavos': importe_centavos
+            })
+    
+    if not docs_centavos:
+        return None, None
+    
+    # Intentar encontrar combinación exacta o muy cercana
+    mejor_combinacion = None
+    mejor_diferencia = float('inf')
+    
+    # Programación dinámica: dp[i] = (suma, lista de índices)
+    # Limitamos a combinaciones de hasta 50 documentos para evitar explosión combinatoria
+    max_docs = min(len(docs_centavos), 50)
+    
+    # Probar con diferentes tamaños de combinación (empezar con pocas para ser más rápido)
+    for max_size in [1, 2, 3, 5, 10, 20, max_docs]:
+        if max_size > len(docs_centavos):
+            continue
+            
+        # Generar combinaciones de forma greedy
+        # Ordenar por cercanía al objetivo
+        docs_ordenados = sorted(docs_centavos, 
+                               key=lambda d: abs(d['importe_centavos'] - objetivo_centavos))
+        
+        # Probar combinación greedy
+        combinacion_actual = []
+        suma_actual = 0
+        
+        for doc in docs_ordenados:
+            if len(combinacion_actual) >= max_size:
+                break
+            if suma_actual + doc['importe_centavos'] <= objetivo_centavos + tolerancia_centavos:
+                combinacion_actual.append(doc)
+                suma_actual += doc['importe_centavos']
+        
+        diferencia_actual = abs(objetivo_centavos - suma_actual)
+        
+        if diferencia_actual < mejor_diferencia:
+            mejor_diferencia = diferencia_actual
+            mejor_combinacion = combinacion_actual[:]
+            
+            # Si encontramos combinación dentro de tolerancia, retornar
+            if diferencia_actual <= tolerancia_centavos:
+                return mejor_combinacion, mejor_diferencia / 100.0
+    
+    # Retornar mejor combinación encontrada si está dentro de tolerancia
+    if mejor_diferencia <= tolerancia_centavos:
+        return mejor_combinacion, mejor_diferencia / 100.0
+    
+    return None, None
+
 def crear_tabla_conciliacion():
     """Crear tabla para almacenar conciliaciones si no existe"""
     conn = get_db_connection()
@@ -694,29 +774,67 @@ def detalles_conciliacion(gasto_id):
         
         gasto = dict(gasto_row)
         
-        # Obtener todos los documentos conciliados con este gasto
+        # Obtener información de la conciliación
         cursor.execute('''
-            SELECT 
-                c.tipo_documento as tipo,
-                c.documento_id,
-                c.importe_documento as importe,
-                CASE 
-                    WHEN c.tipo_documento = 'factura' THEN f.numero
-                    WHEN c.tipo_documento = 'ticket' THEN t.numero
-                    WHEN c.tipo_documento = 'proforma' THEN p.numero
-                END as numero,
-                CASE 
-                    WHEN c.tipo_documento = 'factura' THEN f.fecha
-                    WHEN c.tipo_documento = 'ticket' THEN t.fecha
-                    WHEN c.tipo_documento = 'proforma' THEN p.fecha
-                END as fecha
-            FROM conciliacion_gastos c
-            LEFT JOIN factura f ON c.tipo_documento = 'factura' AND c.documento_id = f.id
-            LEFT JOIN tickets t ON c.tipo_documento = 'ticket' AND c.documento_id = t.id
-            LEFT JOIN proforma p ON c.tipo_documento = 'proforma' AND c.documento_id = p.id
-            WHERE c.gasto_id = ? AND c.estado = 'conciliado'
-            ORDER BY c.fecha_conciliacion
+            SELECT id, tipo_documento
+            FROM conciliacion_gastos
+            WHERE gasto_id = ? AND estado = 'conciliado'
+            LIMIT 1
         ''', (gasto_id,))
+        
+        conciliacion_row = cursor.fetchone()
+        if not conciliacion_row:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Conciliación no encontrada'}), 404
+        
+        conciliacion_id = conciliacion_row['id']
+        tipo_documento = conciliacion_row['tipo_documento']
+        
+        # Si es ingreso_efectivo, obtener documentos de la tabla intermedia
+        if tipo_documento == 'ingreso_efectivo':
+            cursor.execute('''
+                SELECT 
+                    cd.tipo_documento as tipo,
+                    cd.documento_id,
+                    cd.importe,
+                    CASE 
+                        WHEN cd.tipo_documento = 'factura' THEN f.numero
+                        WHEN cd.tipo_documento = 'ticket' THEN t.numero
+                    END as numero,
+                    CASE 
+                        WHEN cd.tipo_documento = 'factura' THEN COALESCE(f.fechaCobro, f.fecha)
+                        WHEN cd.tipo_documento = 'ticket' THEN t.fecha
+                    END as fecha
+                FROM conciliacion_documentos cd
+                LEFT JOIN factura f ON cd.tipo_documento = 'factura' AND cd.documento_id = f.id
+                LEFT JOIN tickets t ON cd.tipo_documento = 'ticket' AND cd.documento_id = t.id
+                WHERE cd.conciliacion_id = ?
+                ORDER BY fecha, numero
+            ''', (conciliacion_id,))
+        else:
+            # Para otros tipos, obtener de la forma tradicional
+            cursor.execute('''
+                SELECT 
+                    c.tipo_documento as tipo,
+                    c.documento_id,
+                    c.importe_documento as importe,
+                    CASE 
+                        WHEN c.tipo_documento = 'factura' THEN f.numero
+                        WHEN c.tipo_documento = 'ticket' THEN t.numero
+                        WHEN c.tipo_documento = 'proforma' THEN p.numero
+                    END as numero,
+                    CASE 
+                        WHEN c.tipo_documento = 'factura' THEN f.fecha
+                        WHEN c.tipo_documento = 'ticket' THEN t.fecha
+                        WHEN c.tipo_documento = 'proforma' THEN p.fecha
+                    END as fecha
+                FROM conciliacion_gastos c
+                LEFT JOIN factura f ON c.tipo_documento = 'factura' AND c.documento_id = f.id
+                LEFT JOIN tickets t ON c.tipo_documento = 'ticket' AND c.documento_id = t.id
+                LEFT JOIN proforma p ON c.tipo_documento = 'proforma' AND c.documento_id = p.id
+                WHERE c.gasto_id = ? AND c.estado = 'conciliado'
+                ORDER BY c.fecha_conciliacion
+            ''', (gasto_id,))
         
         documentos = [dict(row) for row in cursor.fetchall()]
         
@@ -1489,22 +1607,66 @@ def obtener_ingresos_efectivo():
             else:
                 estado = 'revisar'
             
-            # Conciliar automáticamente si diferencia <= 1€
-            if diferencia <= 1.0 and num_documentos > 0:
+            # Intentar encontrar mejor combinación de documentos
+            # Obtener lista detallada de documentos
+            cursor.execute('''
+                SELECT id, numero, total as importe, 'factura' as tipo
+                FROM factura
+                WHERE COALESCE(fechaCobro, fecha) BETWEEN ? AND ?
+                AND formaPago = 'E'
+                AND estado = 'C'
+            ''', (fecha_inicio, fecha_fin))
+            facturas_lista = [dict(row) for row in cursor.fetchall()]
+            
+            cursor.execute('''
+                SELECT id, numero, total as importe, 'ticket' as tipo
+                FROM tickets
+                WHERE fecha BETWEEN ? AND ?
+                AND formaPago = 'E'
+                AND estado = 'C'
+            ''', (fecha_inicio, fecha_fin))
+            tickets_lista = [dict(row) for row in cursor.fetchall()]
+            
+            # Combinar todos los documentos
+            todos_documentos = facturas_lista + tickets_lista
+            
+            # Buscar mejor combinación
+            mejor_combinacion, diferencia_combinacion = encontrar_mejor_combinacion_documentos(
+                todos_documentos, total_ing, tolerancia=1.0
+            )
+            
+            # Conciliar automáticamente si se encontró combinación válida
+            if mejor_combinacion and diferencia_combinacion is not None and diferencia_combinacion <= 1.0:
                 try:
+                    # Calcular total de la combinación
+                    total_combinacion = sum(doc['importe'] for doc in mejor_combinacion)
+                    
                     for gasto_id in datos['ids']:
                         cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
                         gasto_row = cursor.fetchone()
                         if gasto_row:
                             importe_gasto = gasto_row['importe_eur']
+                            
+                            # Insertar conciliación principal
                             cursor.execute('''
                                 INSERT OR IGNORE INTO conciliacion_gastos 
                                 (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
                                  importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
                                 VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
                             ''', (int(gasto_id), 'ingreso_efectivo', 0, 
-                                  importe_gasto, total_documentos, diferencia,
-                                  f'Ingreso efectivo {fecha_str} - {num_documentos} documentos - Conciliado automáticamente (dif: {round(diferencia, 2)}€)'))
+                                  importe_gasto, total_combinacion, diferencia_combinacion,
+                                  f'Ingreso efectivo {fecha_str} - {len(mejor_combinacion)} documentos - Conciliado automáticamente (dif: {round(diferencia_combinacion, 2)}€)'))
+                            
+                            conciliacion_id = cursor.lastrowid
+                            
+                            # Guardar cada documento de la combinación en tabla intermedia
+                            for doc in mejor_combinacion:
+                                cursor.execute('''
+                                    INSERT INTO conciliacion_documentos 
+                                    (conciliacion_id, tipo_documento, documento_id, importe)
+                                    VALUES (?, ?, ?, ?)
+                                ''', (conciliacion_id, doc['tipo'], doc['id'], doc['importe']))
+                    
                     conn.commit()
                     continue
                 except Exception as e:
