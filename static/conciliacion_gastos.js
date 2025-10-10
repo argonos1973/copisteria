@@ -661,8 +661,20 @@ async function cargarConciliados() {
             renderizarPaginaConciliados();
             tabla.style.display = 'table';
             pagination.style.display = 'flex';
+            
+            // Actualizar texto de la pestaña con el número de conciliados
+            const tabConciliados = document.querySelector('[data-tab="conciliados"]');
+            if (tabConciliados) {
+                tabConciliados.textContent = `Conciliados (${data.conciliaciones.length})`;
+            }
         } else {
             empty.style.display = 'block';
+            
+            // Actualizar texto de la pestaña con 0
+            const tabConciliados = document.querySelector('[data-tab="conciliados"]');
+            if (tabConciliados) {
+                tabConciliados.textContent = 'Conciliados (0)';
+            }
         }
     } catch (error) {
         console.error('Error al cargar conciliados:', error);
