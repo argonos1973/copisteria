@@ -1264,29 +1264,13 @@ def obtener_liquidaciones_tpv():
             total_tickets = tickets_info['total_tickets'] or 0
             num_tickets = tickets_info['num_tickets'] or 0
             
-            # Buscar SIEMPRE facturas TPV del mismo día
-            cursor.execute('''
-                SELECT id, numero, total
-                FROM factura
-                WHERE COALESCE(fechaCobro, fecha) = ?
-                AND formaPago = 'T'
-                AND estado = 'C'
-                ORDER BY total DESC
-            ''', (fecha_busqueda,))
-            
-            facturas_disponibles = cursor.fetchall()
-            
-            # Inicialmente: tickets + todas las facturas del día
+            # Inicialmente solo contar tickets
             total_documentos = total_tickets
             num_documentos = num_tickets
-            num_facturas = len(facturas_disponibles)
-            total_facturas = sum(f['total'] for f in facturas_disponibles)
+            num_facturas = 0
+            total_facturas = 0
             
-            # Sumar todas las facturas encontradas
-            total_documentos += total_facturas
-            num_documentos += num_facturas
-            
-            # Calcular diferencia con tickets + facturas
+            # Calcular diferencia inicial (solo con tickets)
             total_liq = datos['total']
             diferencia = abs(total_liq - total_documentos)
             porcentaje_diferencia = (diferencia / abs(total_liq) * 100) if total_liq != 0 else 0
@@ -1299,8 +1283,39 @@ def obtener_liquidaciones_tpv():
             else:
                 estado = 'revisar'
             
-            # Conciliar automáticamente solo si diferencia final <= 1€
-            puede_conciliar = diferencia <= 1.0 and num_documentos > 0
+            # Lógica de conciliación
+            puede_conciliar = False
+            
+            if diferencia <= 1.0 and num_documentos > 0:
+                # Diferencia <= 1€ con solo tickets → conciliar directamente
+                puede_conciliar = True
+            elif diferencia > 1.0:
+                # Diferencia > 1€ → buscar facturas
+                cursor.execute('''
+                    SELECT id, numero, total
+                    FROM factura
+                    WHERE COALESCE(fechaCobro, fecha) = ?
+                    AND formaPago = 'T'
+                    AND estado = 'C'
+                    ORDER BY total DESC
+                ''', (fecha_busqueda,))
+                
+                facturas_disponibles = cursor.fetchall()
+                
+                if facturas_disponibles:
+                    # Sumar todas las facturas encontradas
+                    for factura in facturas_disponibles:
+                        total_documentos += factura['total']
+                        num_facturas += 1
+                        num_documentos += 1
+                        total_facturas += factura['total']
+                    
+                    # Recalcular diferencia con facturas
+                    diferencia = abs(total_liq - total_documentos)
+                    
+                    # Si con facturas la diferencia es <= 1€ → conciliar
+                    if diferencia <= 1.0:
+                        puede_conciliar = True
             
             if puede_conciliar:
                 try:
