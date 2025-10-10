@@ -44,21 +44,31 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('Registrando event listener en tbody-conciliados');
         tbodyConciliados.addEventListener('click', (e) => {
             console.log('Click detectado en tbody, target:', e.target);
-            // Buscar la fila más cercana
-            const fila = e.target.closest('tr.fila-clickeable');
+            
+            // Si es el botón de eliminar, salir
+            if (e.target.classList.contains('delete-x')) {
+                console.log('Es botón eliminar, saliendo');
+                return;
+            }
+            
+            // Buscar la fila más cercana (cualquier tr)
+            const fila = e.target.closest('tr');
             console.log('Fila encontrada:', fila);
             
-            // Si no es una fila clickeable o es el botón de eliminar, salir
-            if (!fila || e.target.classList.contains('delete-x')) {
-                console.log('No es fila clickeable o es botón eliminar');
+            // Verificar si la fila tiene gasto_id
+            if (!fila) {
+                console.log('No se encontró fila');
                 return;
             }
             
             const gastoId = fila.getAttribute('data-gasto-id');
             console.log('gasto_id extraído:', gastoId);
+            
             if (gastoId) {
                 console.log('Llamando a mostrarDetallesConciliacion con:', gastoId);
                 mostrarDetallesConciliacion(parseInt(gastoId));
+            } else {
+                console.log('Fila sin gasto_id (probablemente liquidación TPV agrupada)');
             }
         });
     } else {
