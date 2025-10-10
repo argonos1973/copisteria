@@ -1419,21 +1419,21 @@ def obtener_ingresos_efectivo():
                     fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d')
                 fecha_busqueda = fecha_obj.strftime('%Y-%m-%d')
                 
-                # Buscar en rango de 15 días previos
-                fecha_inicio = (fecha_obj - timedelta(days=15)).strftime('%Y-%m-%d')
+                # Buscar en rango de 7 días previos al ingreso
+                fecha_inicio = (fecha_obj - timedelta(days=7)).strftime('%Y-%m-%d')
                 fecha_fin = fecha_obj.strftime('%Y-%m-%d')
             except:
                 continue
             
-            # Buscar facturas con efectivo en el rango
+            # Buscar facturas cobradas en efectivo en el rango (usar fechaCobro)
             cursor.execute('''
                 SELECT 
                     COUNT(*) as num_facturas,
                     SUM(total) as total_facturas
                 FROM factura
-                WHERE fecha BETWEEN ? AND ?
+                WHERE COALESCE(fechaCobro, fecha) BETWEEN ? AND ?
                 AND formaPago = 'E'
-                AND estado IN ('C', 'P')
+                AND estado = 'C'
             ''', (fecha_inicio, fecha_fin))
             
             facturas_info = cursor.fetchone()
@@ -1539,30 +1539,30 @@ def obtener_documentos_efectivo():
                 fecha_obj = datetime.strptime(fecha_ingreso, '%Y-%m-%d')
             
             fecha_fin = fecha_obj.strftime('%Y-%m-%d')
-            fecha_inicio = (fecha_obj - timedelta(days=15)).strftime('%Y-%m-%d')
+            fecha_inicio = (fecha_obj - timedelta(days=7)).strftime('%Y-%m-%d')
         except:
             return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
         
-        # Obtener facturas en efectivo con nombre del cliente (excluir ya conciliadas)
+        # Obtener facturas cobradas en efectivo con nombre del cliente (usar fechaCobro, excluir ya conciliadas)
         cursor.execute('''
             SELECT 
                 'factura' as tipo,
                 f.id,
                 f.numero,
-                f.fecha,
+                COALESCE(f.fechaCobro, f.fecha) as fecha,
                 f.total,
                 COALESCE(c.razonsocial, '') as cliente
             FROM factura f
             LEFT JOIN contactos c ON f.idContacto = c.idContacto
-            WHERE f.fecha BETWEEN ? AND ?
+            WHERE COALESCE(f.fechaCobro, f.fecha) BETWEEN ? AND ?
             AND f.formaPago = 'E'
-            AND f.estado IN ('C', 'P')
+            AND f.estado = 'C'
             AND NOT EXISTS (
                 SELECT 1 FROM conciliacion_gastos cg
                 WHERE cg.tipo_documento = 'factura' 
                 AND cg.documento_id = f.id
             )
-            ORDER BY f.fecha DESC, f.numero DESC
+            ORDER BY COALESCE(f.fechaCobro, f.fecha) DESC, f.numero DESC
         ''', (fecha_inicio, fecha_fin))
         
         facturas = [dict(row) for row in cursor.fetchall()]
