@@ -1657,6 +1657,11 @@ def obtener_ingresos_efectivo():
                     # Calcular total de la combinación
                     total_combinacion = sum(doc['importe'] for doc in mejor_combinacion)
                     
+                    # Log directo a archivo
+                    with open('/tmp/conciliacion_debug.log', 'a') as f:
+                        f.write(f"🔍 DEBUG: Conciliando ingreso {fecha_str}, {len(mejor_combinacion)} documentos, total: {total_combinacion}€\n")
+                        f.flush()
+                    
                     for gasto_id in datos['ids']:
                         cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
                         gasto_row = cursor.fetchone()
@@ -1675,21 +1680,47 @@ def obtener_ingresos_efectivo():
                             
                             conciliacion_id = cursor.lastrowid
                             
+                            with open('/tmp/conciliacion_debug.log', 'a') as f:
+                                f.write(f"🔍 DEBUG: Conciliación insertada, ID: {conciliacion_id}, gasto_id: {gasto_id}\n")
+                                f.flush()
+                            
                             # Guardar cada documento de la combinación en tabla intermedia
                             if conciliacion_id and conciliacion_id > 0:
-                                for doc in mejor_combinacion:
+                                with open('/tmp/conciliacion_debug.log', 'a') as f:
+                                    f.write(f"🔍 DEBUG: Guardando {len(mejor_combinacion)} documentos...\n")
+                                    f.flush()
+                                
+                                for idx, doc in enumerate(mejor_combinacion):
                                     cursor.execute('''
                                         INSERT INTO conciliacion_documentos 
                                         (conciliacion_id, tipo_documento, documento_id, importe)
                                         VALUES (?, ?, ?, ?)
                                     ''', (conciliacion_id, doc['tipo'], doc['id'], doc['importe']))
+                                    
+                                    if idx < 3:  # Log solo primeros 3
+                                        with open('/tmp/conciliacion_debug.log', 'a') as f:
+                                            f.write(f"  - {doc['tipo']} ID {doc['id']}: {doc['importe']}€\n")
+                                            f.flush()
+                                
+                                with open('/tmp/conciliacion_debug.log', 'a') as f:
+                                    f.write(f"✅ DEBUG: {len(mejor_combinacion)} documentos guardados\n")
+                                    f.flush()
                             else:
-                                print(f"⚠️ Error: conciliacion_id inválido para gasto {gasto_id}")
+                                with open('/tmp/conciliacion_debug.log', 'a') as f:
+                                    f.write(f"⚠️ Error: conciliacion_id inválido ({conciliacion_id}) para gasto {gasto_id}\n")
+                                    f.flush()
                     
                     conn.commit()
+                    with open('/tmp/conciliacion_debug.log', 'a') as f:
+                        f.write(f"✅ DEBUG: Commit realizado para ingreso {fecha_str}\n")
+                        f.flush()
                     continue
                 except Exception as e:
-                    print(f"Error conciliando automáticamente ingreso {fecha_str}: {e}")
+                    with open('/tmp/conciliacion_debug.log', 'a') as f:
+                        f.write(f"❌ Error conciliando automáticamente ingreso {fecha_str}: {e}\n")
+                        import traceback
+                        f.write(traceback.format_exc())
+                        f.flush()
             
             resultado.append({
                 'fecha': fecha_str,
