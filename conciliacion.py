@@ -674,7 +674,7 @@ def detalles_conciliacion(gasto_id):
         
         # Obtener información del gasto
         cursor.execute('''
-            SELECT id, fecha_operacion as fecha, concepto, importe
+            SELECT id, fecha_operacion as fecha, concepto, importe_eur as importe
             FROM gastos
             WHERE id = ?
         ''', (gasto_id,))
