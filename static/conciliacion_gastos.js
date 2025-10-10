@@ -2021,8 +2021,10 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                             <div><strong>Fecha:</strong> ${fecha}</div>
                             <div><strong>Liquidaciones Banco:</strong> ${formatearImporte(totalLiquidaciones)}</div>
                             <div><strong>Total Tickets TPV:</strong> ${formatearImporte(totalTickets)}</div>
-                            <div style="grid-column: 1 / -1;" class="${Math.abs(totalLiquidaciones - totalTickets) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
-                                <strong>Diferencia:</strong> ${formatearImporte(totalLiquidaciones - totalTickets)}
+                            <div><strong>Total Facturas TPV:</strong> ${formatearImporte(totalFacturas)}</div>
+                            <div style="grid-column: 1 / -1;"><strong>Total Documentos:</strong> ${formatearImporte(totalTickets + totalFacturas)}</div>
+                            <div style="grid-column: 1 / -1;" class="${Math.abs(totalLiquidaciones - (totalTickets + totalFacturas)) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
+                                <strong>Diferencia Final:</strong> ${formatearImporte(totalLiquidaciones - (totalTickets + totalFacturas))}
                             </div>
                         </div>
                     </div>
