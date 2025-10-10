@@ -1994,6 +1994,23 @@ def actualizar_factura(id, data):
         importe_impuestos = float(importe_impuestos_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
         total = float(total_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
+        # Determinar fecha de cobro si la factura se está cobrando
+        fecha_cobro = None
+        if estado == 'C' and estado_anterior != 'C':
+            # La factura se está cobrando ahora, establecer fecha de cobro
+            from datetime import date
+            fecha_cobro = date.today().strftime('%Y-%m-%d')
+        elif estado == 'C':
+            # La factura ya estaba cobrada, mantener la fecha de cobro existente si existe
+            cursor.execute('SELECT fechaCobro FROM factura WHERE id = ?', (id,))
+            fecha_cobro_existente = cursor.fetchone()
+            if fecha_cobro_existente and fecha_cobro_existente[0]:
+                fecha_cobro = fecha_cobro_existente[0]
+            else:
+                # Si no tenía fecha de cobro, establecer la actual
+                from datetime import date
+                fecha_cobro = date.today().strftime('%Y-%m-%d')
+        
         # Actualizar la factura
         cursor.execute('''
             UPDATE factura 
@@ -2010,7 +2027,8 @@ def actualizar_factura(id, data):
                 importe_cobrado = ?, 
                 timestamp = ?,
                 tipo = ?,
-                presentar_face = ?
+                presentar_face = ?,
+                fechaCobro = ?
             WHERE id = ?
         ''', (
             data['numero'],
@@ -2027,6 +2045,7 @@ def actualizar_factura(id, data):
             datetime.now().isoformat(),
             data.get('tipo', 'N'),  # N=Normal (con descuentos), A=Sin descuentos
             presentar_face_flag,
+            fecha_cobro,
             id
         ))
 

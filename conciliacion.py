@@ -791,12 +791,12 @@ def detalles_liquidacion_tpv():
                 SELECT 
                     'factura' as tipo,
                     f.numero as numero,
-                    f.fecha as fecha,
+                    COALESCE(f.fechaCobro, f.fecha) as fecha,
                     f.total as importe
                 FROM factura f
-                WHERE f.fecha BETWEEN ? AND ?
+                WHERE COALESCE(f.fechaCobro, f.fecha) BETWEEN ? AND ?
                 AND f.formaPago = 'T'
-                AND f.estado = 'cobrada'
+                AND f.estado = 'C'
                 ORDER BY ABS(f.total - ?) ASC
                 LIMIT 10
             ''', (fecha_inicio, fecha_fin, abs(diferencia)))
