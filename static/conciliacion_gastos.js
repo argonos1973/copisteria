@@ -622,6 +622,16 @@ function renderizarPaginaConciliados() {
                 <span class="delete-x" onclick="eliminarConciliacion(${conc.id})" title="Eliminar conciliación">✕</span>
             </td>
         `;
+        
+        // Hacer la fila clickeable (excepto el botón de eliminar)
+        tr.style.cursor = 'pointer';
+        tr.addEventListener('click', (e) => {
+            // No abrir modal si se hizo click en el botón de eliminar
+            if (!e.target.classList.contains('delete-x')) {
+                mostrarDetallesConciliacion(conc.id_gasto);
+            }
+        });
+        
         tbody.appendChild(tr);
     });
     
@@ -1873,4 +1883,102 @@ function encontrarMejorCombinacion(documentos, objetivo) {
     }
     
     return seleccionados;
+}
+
+// ============================================================================
+// DETALLES DE CONCILIACIÓN
+// ============================================================================
+
+async function mostrarDetallesConciliacion(gastoId) {
+    try {
+        const response = await fetch(`${API_URL}/conciliacion/detalles/${gastoId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            mostrarNotificacion('Error al cargar detalles de conciliación', 'error');
+            return;
+        }
+        
+        const gasto = data.gasto;
+        const documentos = data.documentos;
+        
+        // Crear modal
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.style.zIndex = '10000';
+        
+        let documentosHTML = '';
+        documentos.forEach(doc => {
+            const tipoLabel = doc.tipo === 'liquidacion_tpv' ? 'Liquidación TPV' : 
+                             doc.tipo === 'factura' ? 'Factura' :
+                             doc.tipo === 'ticket' ? 'Ticket' : 'Proforma';
+            
+            documentosHTML += `
+                <tr>
+                    <td><span class="badge badge-info">${tipoLabel}</span></td>
+                    <td>${doc.numero || '-'}</td>
+                    <td>${formatearFecha(doc.fecha)}</td>
+                    <td class="text-right">${formatearImporte(doc.importe)}</td>
+                </tr>
+            `;
+        });
+        
+        const totalDocumentos = documentos.reduce((sum, doc) => sum + doc.importe, 0);
+        const diferencia = gasto.importe - totalDocumentos;
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h3>Detalles de Conciliación</h3>
+                    <button class="btn-close" onclick="this.closest('.modal').remove()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Movimiento Bancario</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div><strong>Fecha:</strong> ${formatearFecha(gasto.fecha)}</div>
+                            <div><strong>Importe:</strong> ${formatearImporte(gasto.importe)}</div>
+                            <div style="grid-column: 1 / -1;"><strong>Concepto:</strong> ${gasto.concepto}</div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Documentos Conciliados (${documentos.length})</h4>
+                    <table class="grid" style="width: 100%; margin-bottom: 15px;">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Número</th>
+                                <th>Fecha</th>
+                                <th class="text-right">Importe</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${documentosHTML}
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight: bold; background: #f8f9fa;">
+                                <td colspan="3" class="text-right">Total Documentos:</td>
+                                <td class="text-right">${formatearImporte(totalDocumentos)}</td>
+                            </tr>
+                            <tr style="font-weight: bold;">
+                                <td colspan="3" class="text-right">Diferencia:</td>
+                                <td class="text-right ${Math.abs(diferencia) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
+                                    ${formatearImporte(diferencia)}
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cerrar</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+    } catch (error) {
+        console.error('Error al mostrar detalles:', error);
+        mostrarNotificacion('Error al cargar detalles de conciliación', 'error');
+    }
 }

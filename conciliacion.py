@@ -665,6 +665,64 @@ def conciliados():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@conciliacion_bp.route('/api/conciliacion/detalles/<int:gasto_id>', methods=['GET'])
+def detalles_conciliacion(gasto_id):
+    """Obtener detalles de los documentos que conciliaron un gasto"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener información del gasto
+        cursor.execute('''
+            SELECT id, fecha_operacion as fecha, concepto, importe
+            FROM gastos
+            WHERE id = ?
+        ''', (gasto_id,))
+        
+        gasto_row = cursor.fetchone()
+        if not gasto_row:
+            conn.close()
+            return jsonify({'success': False, 'error': 'Gasto no encontrado'}), 404
+        
+        gasto = dict(gasto_row)
+        
+        # Obtener todos los documentos conciliados con este gasto
+        cursor.execute('''
+            SELECT 
+                c.tipo_documento as tipo,
+                c.documento_id,
+                c.importe_documento as importe,
+                CASE 
+                    WHEN c.tipo_documento = 'factura' THEN f.numero
+                    WHEN c.tipo_documento = 'ticket' THEN t.numero
+                    WHEN c.tipo_documento = 'proforma' THEN p.numero
+                END as numero,
+                CASE 
+                    WHEN c.tipo_documento = 'factura' THEN f.fecha
+                    WHEN c.tipo_documento = 'ticket' THEN t.fecha
+                    WHEN c.tipo_documento = 'proforma' THEN p.fecha
+                END as fecha
+            FROM conciliacion_gastos c
+            LEFT JOIN factura f ON c.tipo_documento = 'factura' AND c.documento_id = f.id
+            LEFT JOIN tickets t ON c.tipo_documento = 'ticket' AND c.documento_id = t.id
+            LEFT JOIN proforma p ON c.tipo_documento = 'proforma' AND c.documento_id = p.id
+            WHERE c.gasto_id = ? AND c.estado = 'conciliado'
+            ORDER BY c.fecha_conciliacion
+        ''', (gasto_id,))
+        
+        documentos = [dict(row) for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'gasto': gasto,
+            'documentos': documentos
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @conciliacion_bp.route('/api/conciliacion/eliminar/<int:conciliacion_id>', methods=['DELETE'])
 def eliminar_conciliacion(conciliacion_id):
     """Eliminar una conciliación"""
