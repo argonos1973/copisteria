@@ -351,6 +351,9 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
         # 1. Es una factura pendiente (estado = 'P')
         # 2. Diferencia exacta (< 0.01€)
         # 3. Coincidencia por número de factura en el concepto del gasto
+        factura_marcada_cobrada = False
+        numero_factura_cobrada = None
+        
         if tipo_documento == 'factura' and documento.get('estado') == 'P' and abs(diferencia) < 0.01:
             # Verificar si el número de factura está en el concepto del gasto
             numero_factura = documento.get('numero', '')
@@ -369,12 +372,20 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
                 ''', (documento['total'], datetime.now().isoformat(), documento_id))
                 
                 if cursor.rowcount > 0:
+                    factura_marcada_cobrada = True
+                    numero_factura_cobrada = numero_factura
                     print(f"✓ Factura {numero_factura} marcada como COBRADA (estado: P → C) - Coincidencia exacta por número")
             else:
                 print(f"⊗ Factura {numero_factura} NO marcada como cobrada - Sin coincidencia por número en concepto")
         
         conn.commit()
-        return True, 'Conciliación creada exitosamente'
+        
+        # Retornar mensaje con información de factura marcada como cobrada
+        mensaje = 'Conciliación creada exitosamente'
+        if factura_marcada_cobrada:
+            mensaje += f' | Factura {numero_factura_cobrada} marcada como COBRADA'
+        
+        return True, mensaje
         
     except sqlite3.IntegrityError:
         return False, 'Esta conciliación ya existe'
