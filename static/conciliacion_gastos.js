@@ -33,27 +33,36 @@ let itemsPorPaginaIngresos = 10;
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOMContentLoaded ejecutado');
     inicializarPestanas();
     cargarDatos();
     
     // Delegación de eventos para filas clickeables de conciliados
     const tbodyConciliados = document.getElementById('tbody-conciliados');
+    console.log('tbody-conciliados encontrado:', tbodyConciliados);
     if (tbodyConciliados) {
+        console.log('Registrando event listener en tbody-conciliados');
         tbodyConciliados.addEventListener('click', (e) => {
+            console.log('Click detectado en tbody, target:', e.target);
             // Buscar la fila más cercana
             const fila = e.target.closest('tr.fila-clickeable');
+            console.log('Fila encontrada:', fila);
             
             // Si no es una fila clickeable o es el botón de eliminar, salir
             if (!fila || e.target.classList.contains('delete-x')) {
+                console.log('No es fila clickeable o es botón eliminar');
                 return;
             }
             
             const gastoId = fila.getAttribute('data-gasto-id');
+            console.log('gasto_id extraído:', gastoId);
             if (gastoId) {
-                console.log('Click en fila conciliada, gasto_id:', gastoId);
+                console.log('Llamando a mostrarDetallesConciliacion con:', gastoId);
                 mostrarDetallesConciliacion(parseInt(gastoId));
             }
         });
+    } else {
+        console.error('tbody-conciliados NO encontrado');
     }
     
     // Ejecutar conciliación automática al cargar (si hay pendientes)
