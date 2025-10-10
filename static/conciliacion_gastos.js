@@ -150,9 +150,25 @@ window.cargarDatos = debounce(cargarDatosInmediato, 800);
  * - Ingresos en efectivo: diferencia < 1€
  * - Transferencias: coincidencia exacta (< 0.01€) o combinación < 1€
  */
+// Función helper para agregar mensajes al spinner
+function agregarMensajeCarga(mensaje, tipo = 'info') {
+    const messagesDiv = document.getElementById('loading-messages');
+    if (messagesDiv) {
+        const icon = tipo === 'success' ? '✓' : tipo === 'error' ? '✗' : '→';
+        const color = tipo === 'success' ? '#27ae60' : tipo === 'error' ? '#e74c3c' : '#3498db';
+        const msg = document.createElement('div');
+        msg.style.color = color;
+        msg.style.marginBottom = '5px';
+        msg.innerHTML = `<strong>${icon}</strong> ${mensaje}`;
+        messagesDiv.appendChild(msg);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+}
+
 async function procesarAutomaticoAlCargar() {
     try {
         console.log('🔄 Ejecutando procesamiento automático al cargar...');
+        agregarMensajeCarga('Iniciando procesamiento automático...', 'info');
         
         let totalConciliados = 0;
         
@@ -169,9 +185,14 @@ async function procesarAutomaticoAlCargar() {
                 ))
             );
             
+            agregarMensajeCarga(`Procesando ${ingresosEfectivo.length} ingresos en efectivo...`, 'info');
             for (const ingreso of ingresosEfectivo) {
                 const resultado = await buscarYConciliarIngresoEfectivoSilencioso(ingreso);
-                if (resultado) totalConciliados++;
+                if (resultado) {
+                    totalConciliados++;
+                    const concepto = ingreso.concepto.substring(0, 50);
+                    agregarMensajeCarga(`Ingreso conciliado: ${concepto}... (${Math.abs(ingreso.importe_eur).toFixed(2)}€)`, 'success');
+                }
             }
         }
         
@@ -212,6 +233,8 @@ async function procesarAutomaticoAlCargar() {
                         if (coincidenciaExacta) {
                             await conciliarAutomaticamente(transf.id, coincidenciaExacta.tipo, coincidenciaExacta.id);
                             totalConciliados++;
+                            const concepto = transf.concepto.substring(0, 50);
+                            agregarMensajeCarga(`Transferencia conciliada: ${concepto}... (${Math.abs(transf.importe_eur).toFixed(2)}€)`, 'success');
                             console.log(`✓ Transferencia ${transf.concepto} conciliada [EXACTA]`);
                         } else {
                             // Si no hay exacta, buscar combinación con algoritmo de varita mágica
@@ -232,6 +255,8 @@ async function procesarAutomaticoAlCargar() {
                                         await conciliarAutomaticamente(transf.id, doc.tipo, doc.id);
                                     }
                                     totalConciliados++;
+                                    const concepto = transf.concepto.substring(0, 50);
+                                    agregarMensajeCarga(`Transferencia conciliada: ${concepto}... (${Math.abs(transf.importe_eur).toFixed(2)}€) [${mejorCombinacion.length} docs]`, 'success');
                                     console.log(`✓ Transferencia ${transf.concepto} conciliada [COMBINACIÓN] con ${mejorCombinacion.length} documentos (dif: ${diferencia.toFixed(2)}€)`);
                                 }
                             }
@@ -244,8 +269,10 @@ async function procesarAutomaticoAlCargar() {
         }
         
         if (totalConciliados > 0) {
+            agregarMensajeCarga(`✅ Completado: ${totalConciliados} conciliaciones realizadas`, 'success');
             console.log(`✅ Procesamiento automático completado: ${totalConciliados} conciliaciones realizadas`);
         } else {
+            agregarMensajeCarga('No hay conciliaciones automáticas pendientes', 'info');
             console.log('ℹ️ No hay conciliaciones automáticas pendientes');
         }
         
