@@ -597,9 +597,6 @@ function renderizarPaginaConciliados() {
     conciliadosPagina.forEach(conc => {
         const tr = document.createElement('tr');
         
-        // Debug: verificar que gasto_id existe
-        console.log('Conciliación:', conc.id, 'gasto_id:', conc.gasto_id);
-        
         let tipoDocumento = '';
         if (conc.tipo_documento === 'liquidacion_tpv') {
             tipoDocumento = `<span class="badge badge-info">LIQUIDACIÓN TPV (${conc.num_liquidaciones || 0})</span>`;
