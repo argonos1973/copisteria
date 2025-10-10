@@ -64,18 +64,26 @@ function inicializarPestanas() {
 // ============================================================================
 
 window.cargarDatos = async function() {
-    // Primero ejecutar procesamiento automático
-    await procesarAutomaticoAlCargar();
-    
-    // Luego cargar todas las pestañas con datos actualizados
-    await Promise.all([
-        cargarGastosPendientes(),
-        cargarTransferencias(),
-        cargarLiquidacionesTPV(),
-        cargarIngresosEfectivo(),
-        cargarConciliados(),
-        cargarEstadisticas()
-    ]);
+    try {
+        // Primero ejecutar procesamiento automático
+        await procesarAutomaticoAlCargar();
+        
+        // Luego cargar todas las pestañas con datos actualizados
+        await Promise.all([
+            cargarGastosPendientes(),
+            cargarTransferencias(),
+            cargarLiquidacionesTPV(),
+            cargarIngresosEfectivo(),
+            cargarConciliados(),
+            cargarEstadisticas()
+        ]);
+    } finally {
+        // Ocultar spinner cuando termine todo
+        const spinner = document.getElementById('loading-spinner');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+    }
 }
 
 /**
