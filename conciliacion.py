@@ -1665,7 +1665,7 @@ def obtener_ingresos_efectivo():
                             
                             # Insertar conciliación principal
                             cursor.execute('''
-                                INSERT OR IGNORE INTO conciliacion_gastos 
+                                INSERT INTO conciliacion_gastos 
                                 (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
                                  importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
                                 VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
@@ -1676,12 +1676,15 @@ def obtener_ingresos_efectivo():
                             conciliacion_id = cursor.lastrowid
                             
                             # Guardar cada documento de la combinación en tabla intermedia
-                            for doc in mejor_combinacion:
-                                cursor.execute('''
-                                    INSERT INTO conciliacion_documentos 
-                                    (conciliacion_id, tipo_documento, documento_id, importe)
-                                    VALUES (?, ?, ?, ?)
-                                ''', (conciliacion_id, doc['tipo'], doc['id'], doc['importe']))
+                            if conciliacion_id and conciliacion_id > 0:
+                                for doc in mejor_combinacion:
+                                    cursor.execute('''
+                                        INSERT INTO conciliacion_documentos 
+                                        (conciliacion_id, tipo_documento, documento_id, importe)
+                                        VALUES (?, ?, ?, ?)
+                                    ''', (conciliacion_id, doc['tipo'], doc['id'], doc['importe']))
+                            else:
+                                print(f"⚠️ Error: conciliacion_id inválido para gasto {gasto_id}")
                     
                     conn.commit()
                     continue
