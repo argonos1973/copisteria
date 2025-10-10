@@ -1998,9 +1998,8 @@ def actualizar_factura(id, data):
         # Determinar fecha de cobro si la factura se está cobrando
         fecha_cobro = None
         if estado == 'C' and estado_anterior != 'C':
-            # La factura se está cobrando ahora, establecer fecha de cobro
-            from datetime import date
-            fecha_cobro = date.today().strftime('%Y-%m-%d')
+            # La factura se está cobrando ahora, establecer fecha de cobro = fecha actual
+            fecha_cobro = datetime.now().strftime('%Y-%m-%d')
         elif estado == 'C':
             # La factura ya estaba cobrada, mantener la fecha de cobro existente si existe
             cursor.execute('SELECT fechaCobro FROM factura WHERE id = ?', (id,))
@@ -2009,8 +2008,7 @@ def actualizar_factura(id, data):
                 fecha_cobro = fecha_cobro_existente[0]
             else:
                 # Si no tenía fecha de cobro, establecer la actual
-                from datetime import date
-                fecha_cobro = date.today().strftime('%Y-%m-%d')
+                fecha_cobro = datetime.now().strftime('%Y-%m-%d')
         
         # Actualizar la factura
         cursor.execute('''
