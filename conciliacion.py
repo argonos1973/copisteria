@@ -1328,18 +1328,13 @@ def obtener_liquidaciones_tpv():
             
             if puede_conciliar:
                 try:
-                    # Calcular proporción de documentos para cada liquidación
-                    num_liquidaciones = len(datos['ids'])
-                    importe_doc_por_liquidacion = total_documentos / num_liquidaciones if num_liquidaciones > 0 else 0
-                    
                     # Conciliar cada liquidación de esta fecha
+                    # Todas comparten el mismo total de documentos y diferencia
                     for gasto_id in datos['ids']:
                         cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
                         gasto_row = cursor.fetchone()
                         if gasto_row:
                             importe_gasto = gasto_row['importe_eur']
-                            # Calcular diferencia individual
-                            diferencia_individual = abs(importe_gasto - importe_doc_por_liquidacion)
                             
                             cursor.execute('''
                                 INSERT OR IGNORE INTO conciliacion_gastos 
@@ -1347,8 +1342,8 @@ def obtener_liquidaciones_tpv():
                                  importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
                                 VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
                             ''', (int(gasto_id), 'liquidacion_tpv', 0, 
-                                  importe_gasto, importe_doc_por_liquidacion, diferencia_individual,
-                                  f'Liquidación TPV {fecha_str} - {num_documentos} documentos - Conciliado automáticamente (dif: {round(diferencia, 2)}€)'))
+                                  importe_gasto, total_documentos, diferencia,
+                                  f'Liquidación TPV {fecha_str} - {num_documentos} documentos - Conciliado automáticamente (dif total: {round(diferencia, 2)}€)'))
                     conn.commit()
                     # No añadir a resultado si se concilió automáticamente
                     continue
