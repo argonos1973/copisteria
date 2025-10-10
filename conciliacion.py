@@ -73,9 +73,19 @@ def encontrar_mejor_combinacion_documentos(documentos, importe_objetivo, toleran
         for doc in docs_ordenados:
             if len(combinacion_actual) >= max_size:
                 break
-            if suma_actual + doc['importe_centavos'] <= objetivo_centavos + tolerancia_centavos:
+            
+            # Agregar documento si mejora la aproximación o si aún no llegamos al objetivo
+            nueva_suma = suma_actual + doc['importe_centavos']
+            diferencia_con_doc = abs(objetivo_centavos - nueva_suma)
+            diferencia_sin_doc = abs(objetivo_centavos - suma_actual)
+            
+            # Agregar si:
+            # 1. Mejora la diferencia, O
+            # 2. Aún no hemos llegado al objetivo y no nos pasamos demasiado
+            if (diferencia_con_doc < diferencia_sin_doc or 
+                (suma_actual < objetivo_centavos and nueva_suma <= objetivo_centavos + tolerancia_centavos * 2)):
                 combinacion_actual.append(doc)
-                suma_actual += doc['importe_centavos']
+                suma_actual = nueva_suma
         
         diferencia_actual = abs(objetivo_centavos - suma_actual)
         
@@ -1487,6 +1497,14 @@ def obtener_liquidaciones_tpv():
 @conciliacion_bp.route('/api/conciliacion/ingresos-efectivo', methods=['GET'])
 def obtener_ingresos_efectivo():
     """Obtener ingresos en efectivo del banco agrupados por fecha y compararlos con facturas/tickets en efectivo"""
+    # Log al inicio del endpoint
+    try:
+        with open('/var/www/html/conciliacion_debug.log', 'a') as f:
+            f.write(f"🔍 INICIO: Endpoint ingresos-efectivo llamado\n")
+            f.flush()
+    except Exception as e:
+        pass  # Ignorar errores de log
+    
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -1647,9 +1665,20 @@ def obtener_ingresos_efectivo():
             todos_documentos = facturas_lista + tickets_lista
             
             # Buscar mejor combinación
+            with open('/var/www/html/conciliacion_debug.log', 'a') as f:
+                f.write(f"🔍 Buscando combinación para {fecha_str}: {len(todos_documentos)} documentos disponibles, objetivo: {total_ing}€\n")
+                f.flush()
+            
             mejor_combinacion, diferencia_combinacion = encontrar_mejor_combinacion_documentos(
                 todos_documentos, total_ing, tolerancia=1.0
             )
+            
+            with open('/var/www/html/conciliacion_debug.log', 'a') as f:
+                if mejor_combinacion:
+                    f.write(f"✅ Combinación encontrada: {len(mejor_combinacion)} docs, diferencia: {diferencia_combinacion}€\n")
+                else:
+                    f.write(f"❌ NO se encontró combinación válida para {fecha_str}\n")
+                f.flush()
             
             # Conciliar automáticamente si se encontró combinación válida
             if mejor_combinacion and diferencia_combinacion is not None and diferencia_combinacion <= 1.0:
@@ -1658,7 +1687,7 @@ def obtener_ingresos_efectivo():
                     total_combinacion = sum(doc['importe'] for doc in mejor_combinacion)
                     
                     # Log directo a archivo
-                    with open('/tmp/conciliacion_debug.log', 'a') as f:
+                    with open('/var/www/html/conciliacion_debug.log', 'a') as f:
                         f.write(f"🔍 DEBUG: Conciliando ingreso {fecha_str}, {len(mejor_combinacion)} documentos, total: {total_combinacion}€\n")
                         f.flush()
                     
@@ -1680,13 +1709,13 @@ def obtener_ingresos_efectivo():
                             
                             conciliacion_id = cursor.lastrowid
                             
-                            with open('/tmp/conciliacion_debug.log', 'a') as f:
+                            with open('/var/www/html/conciliacion_debug.log', 'a') as f:
                                 f.write(f"🔍 DEBUG: Conciliación insertada, ID: {conciliacion_id}, gasto_id: {gasto_id}\n")
                                 f.flush()
                             
                             # Guardar cada documento de la combinación en tabla intermedia
                             if conciliacion_id and conciliacion_id > 0:
-                                with open('/tmp/conciliacion_debug.log', 'a') as f:
+                                with open('/var/www/html/conciliacion_debug.log', 'a') as f:
                                     f.write(f"🔍 DEBUG: Guardando {len(mejor_combinacion)} documentos...\n")
                                     f.flush()
                                 
@@ -1698,25 +1727,25 @@ def obtener_ingresos_efectivo():
                                     ''', (conciliacion_id, doc['tipo'], doc['id'], doc['importe']))
                                     
                                     if idx < 3:  # Log solo primeros 3
-                                        with open('/tmp/conciliacion_debug.log', 'a') as f:
+                                        with open('/var/www/html/conciliacion_debug.log', 'a') as f:
                                             f.write(f"  - {doc['tipo']} ID {doc['id']}: {doc['importe']}€\n")
                                             f.flush()
                                 
-                                with open('/tmp/conciliacion_debug.log', 'a') as f:
+                                with open('/var/www/html/conciliacion_debug.log', 'a') as f:
                                     f.write(f"✅ DEBUG: {len(mejor_combinacion)} documentos guardados\n")
                                     f.flush()
                             else:
-                                with open('/tmp/conciliacion_debug.log', 'a') as f:
+                                with open('/var/www/html/conciliacion_debug.log', 'a') as f:
                                     f.write(f"⚠️ Error: conciliacion_id inválido ({conciliacion_id}) para gasto {gasto_id}\n")
                                     f.flush()
                     
                     conn.commit()
-                    with open('/tmp/conciliacion_debug.log', 'a') as f:
+                    with open('/var/www/html/conciliacion_debug.log', 'a') as f:
                         f.write(f"✅ DEBUG: Commit realizado para ingreso {fecha_str}\n")
                         f.flush()
                     continue
                 except Exception as e:
-                    with open('/tmp/conciliacion_debug.log', 'a') as f:
+                    with open('/var/www/html/conciliacion_debug.log', 'a') as f:
                         f.write(f"❌ Error conciliando automáticamente ingreso {fecha_str}: {e}\n")
                         import traceback
                         f.write(traceback.format_exc())
@@ -1877,7 +1906,7 @@ def conciliar_ingreso_efectivo():
                 nums_docs = ', '.join([f"{doc['tipo'][0].upper()}{doc['numero']}" for doc in documentos_seleccionados])
                 
                 cursor.execute('''
-                    INSERT OR IGNORE INTO conciliacion_gastos 
+                    INSERT INTO conciliacion_gastos 
                     (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
                      importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
                     VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'manual', 0, ?)
@@ -1885,7 +1914,16 @@ def conciliar_ingreso_efectivo():
                       importe_gasto, total_documentos, diferencia,
                       f'Ingreso efectivo {fecha} - {len(documentos_seleccionados)} docs ({num_facturas}F, {num_tickets}T): {nums_docs}'))
                 
-                if cursor.rowcount > 0:
+                conciliacion_id = cursor.lastrowid
+                
+                # Guardar cada documento en la tabla intermedia
+                if conciliacion_id and conciliacion_id > 0:
+                    for doc in documentos_seleccionados:
+                        cursor.execute('''
+                            INSERT INTO conciliacion_documentos 
+                            (conciliacion_id, tipo_documento, documento_id, importe)
+                            VALUES (?, ?, ?, ?)
+                        ''', (conciliacion_id, doc['tipo'], doc['id'], doc['total']))
                     conciliados += 1
             except Exception as e:
                 print(f"Error conciliando ingreso {gasto_id}: {e}")
