@@ -1345,19 +1345,14 @@ def obtener_liquidaciones_tpv():
                             # Calcular diferencia individual
                             diferencia_individual = abs(importe_gasto - importe_doc_por_liquidacion)
                             
-                            # Crear nota con información de factura encontrada si aplica
-                            nota = f'Liquidación TPV {fecha_str} - {num_documentos} documentos'
-                            if factura_encontrada:
-                                nota += f' (incluye factura {factura_encontrada["numero"]} de {round(factura_encontrada["total"], 2)}€)'
-                            nota += f' - Conciliado automáticamente (dif: {round(diferencia, 2)}€)'
-                            
                             cursor.execute('''
                                 INSERT OR IGNORE INTO conciliacion_gastos 
                                 (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
                                  importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
                                 VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
                             ''', (int(gasto_id), 'liquidacion_tpv', 0, 
-                                  importe_gasto, importe_doc_por_liquidacion, diferencia_individual, nota))
+                                  importe_gasto, importe_doc_por_liquidacion, diferencia_individual,
+                                  f'Liquidación TPV {fecha_str} - {num_documentos} documentos - Conciliado automáticamente (dif: {round(diferencia, 2)}€)'))
                     conn.commit()
                     # No añadir a resultado si se concilió automáticamente
                     continue
