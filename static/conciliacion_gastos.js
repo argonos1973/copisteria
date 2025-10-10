@@ -2108,7 +2108,9 @@ async function mostrarDetallesConciliacion(gastoId) {
         documentos.forEach(doc => {
             const tipoLabel = doc.tipo === 'liquidacion_tpv' ? 'Liquidación TPV' : 
                              doc.tipo === 'factura' ? 'Factura' :
-                             doc.tipo === 'ticket' ? 'Ticket' : 'Proforma';
+                             doc.tipo === 'ticket' ? 'Ticket' :
+                             doc.tipo === 'ingreso_efectivo' ? 'Múltiples documentos' :
+                             doc.tipo === 'proforma' ? 'Proforma' : doc.tipo;
             
             documentosHTML += `
                 <tr>
