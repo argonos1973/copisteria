@@ -9,8 +9,12 @@
     <link rel="stylesheet" href="../static/styles.css">
     <link rel="stylesheet" href="../static/notificaciones.css">
     <style>
+        body {
+            margin: 0;
+        }
+        
         .container {
-            padding: 0 20px 20px 20px;
+            padding: 0;
             width: 100%;
             margin: 0;
         }
@@ -20,6 +24,7 @@
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
             margin-bottom: 20px;
+            padding: 0 15px;
         }
 
         .stat-card {
@@ -47,6 +52,7 @@
             gap: 10px;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            padding: 0 15px;
         }
 
         .btn {
@@ -120,7 +126,8 @@
         }
 
         .ingresos-table {
-            width: 100%;
+            width: calc(100% - 30px);
+            margin: 0 15px;
             border-collapse: separate;
             border: none;
         }
