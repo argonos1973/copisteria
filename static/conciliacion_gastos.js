@@ -626,14 +626,16 @@ function renderizarPaginaConciliados() {
             </td>
         `;
         
-        // Hacer la fila clickeable (excepto el botón de eliminar)
-        tr.style.cursor = 'pointer';
-        tr.addEventListener('click', (e) => {
-            // No abrir modal si se hizo click en el botón de eliminar
-            if (!e.target.classList.contains('delete-x')) {
-                mostrarDetallesConciliacion(conc.gasto_id);
-            }
-        });
+        // Hacer la fila clickeable solo si tiene gasto_id válido (no liquidaciones TPV agrupadas)
+        if (conc.gasto_id) {
+            tr.style.cursor = 'pointer';
+            tr.addEventListener('click', (e) => {
+                // No abrir modal si se hizo click en el botón de eliminar
+                if (!e.target.classList.contains('delete-x')) {
+                    mostrarDetallesConciliacion(conc.gasto_id);
+                }
+            });
+        }
         
         tbody.appendChild(tr);
     });
