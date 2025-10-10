@@ -85,7 +85,7 @@ def buscar_coincidencias_automaticas(gasto):
                     estado,
                     importe_cobrado
                 FROM factura
-                WHERE estado = 'C'
+                WHERE estado IN ('C', 'P')
                 AND numero = ?
                 AND ABS(total - ?) <= ?
                 AND id NOT IN (
@@ -139,7 +139,7 @@ def buscar_coincidencias_automaticas(gasto):
         fecha_inicio = (fecha_gasto - timedelta(days=15)).strftime('%Y-%m-%d')
         fecha_fin = (fecha_gasto + timedelta(days=15)).strftime('%Y-%m-%d')
         
-        # Buscar en facturas cobradas
+        # Buscar en facturas (cobradas y pendientes)
         cursor.execute('''
             SELECT 
                 'factura' as tipo,
@@ -150,7 +150,7 @@ def buscar_coincidencias_automaticas(gasto):
                 estado,
                 importe_cobrado
             FROM factura
-            WHERE estado = 'C'
+            WHERE estado IN ('C', 'P')
             AND fecha BETWEEN ? AND ?
             AND ABS(total - ?) <= ?
             AND id NOT IN (
@@ -1089,7 +1089,7 @@ def obtener_liquidaciones_tpv():
                 FROM factura
                 WHERE fecha = ?
                 AND formaPago = 'T'
-                AND estado = 'C'
+                AND estado IN ('C', 'P')
             ''', (fecha_busqueda,))
             
             facturas_info = cursor.fetchone()
@@ -1245,7 +1245,7 @@ def obtener_ingresos_efectivo():
                 FROM factura
                 WHERE fecha BETWEEN ? AND ?
                 AND formaPago = 'E'
-                AND estado = 'C'
+                AND estado IN ('C', 'P')
             ''', (fecha_inicio, fecha_fin))
             
             facturas_info = cursor.fetchone()
@@ -1368,7 +1368,7 @@ def obtener_documentos_efectivo():
             LEFT JOIN contactos c ON f.idContacto = c.idContacto
             WHERE f.fecha BETWEEN ? AND ?
             AND f.formaPago = 'E'
-            AND f.estado = 'C'
+            AND f.estado IN ('C', 'P')
             AND NOT EXISTS (
                 SELECT 1 FROM conciliacion_gastos cg
                 WHERE cg.tipo_documento = 'factura' 
@@ -1520,7 +1520,7 @@ def conciliar_liquidacion():
         cursor.execute('''
             SELECT 'factura' as tipo, id, numero, total
             FROM factura
-            WHERE fecha = ? AND formaPago = 'T' AND estado = 'C'
+            WHERE fecha = ? AND formaPago = 'T' AND estado IN ('C', 'P')
         ''', (fecha_busqueda,))
         facturas = cursor.fetchall()
         
