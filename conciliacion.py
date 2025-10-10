@@ -1560,30 +1560,38 @@ def obtener_ingresos_efectivo():
             except:
                 continue
             
-            # Buscar facturas cobradas en efectivo en el rango (usar fechaCobro)
+            # Buscar facturas cobradas en efectivo NO CONCILIADAS en el rango (usar fechaCobro)
             cursor.execute('''
                 SELECT 
                     COUNT(*) as num_facturas,
-                    SUM(total) as total_facturas
-                FROM factura
-                WHERE COALESCE(fechaCobro, fecha) BETWEEN ? AND ?
-                AND formaPago = 'E'
-                AND estado = 'C'
+                    SUM(f.total) as total_facturas
+                FROM factura f
+                WHERE COALESCE(f.fechaCobro, f.fecha) BETWEEN ? AND ?
+                AND f.formaPago = 'E'
+                AND f.estado = 'C'
+                AND NOT EXISTS (
+                    SELECT 1 FROM conciliacion_documentos cd
+                    WHERE cd.tipo_documento = 'factura' AND cd.documento_id = f.id
+                )
             ''', (fecha_inicio, fecha_fin))
             
             facturas_info = cursor.fetchone()
             total_facturas = facturas_info['total_facturas'] or 0
             num_facturas = facturas_info['num_facturas'] or 0
             
-            # Buscar tickets con efectivo en el rango
+            # Buscar tickets con efectivo NO CONCILIADOS en el rango
             cursor.execute('''
                 SELECT 
                     COUNT(*) as num_tickets,
-                    SUM(total) as total_tickets
-                FROM tickets
-                WHERE fecha BETWEEN ? AND ?
-                AND formaPago = 'E'
-                AND estado = 'C'
+                    SUM(t.total) as total_tickets
+                FROM tickets t
+                WHERE t.fecha BETWEEN ? AND ?
+                AND t.formaPago = 'E'
+                AND t.estado = 'C'
+                AND NOT EXISTS (
+                    SELECT 1 FROM conciliacion_documentos cd
+                    WHERE cd.tipo_documento = 'ticket' AND cd.documento_id = t.id
+                )
             ''', (fecha_inicio, fecha_fin))
             
             tickets_info = cursor.fetchone()
@@ -1608,22 +1616,30 @@ def obtener_ingresos_efectivo():
                 estado = 'revisar'
             
             # Intentar encontrar mejor combinación de documentos
-            # Obtener lista detallada de documentos
+            # Obtener lista detallada de documentos NO CONCILIADOS
             cursor.execute('''
-                SELECT id, numero, total as importe, 'factura' as tipo
-                FROM factura
-                WHERE COALESCE(fechaCobro, fecha) BETWEEN ? AND ?
-                AND formaPago = 'E'
-                AND estado = 'C'
+                SELECT f.id, f.numero, f.total as importe, 'factura' as tipo
+                FROM factura f
+                WHERE COALESCE(f.fechaCobro, f.fecha) BETWEEN ? AND ?
+                AND f.formaPago = 'E'
+                AND f.estado = 'C'
+                AND NOT EXISTS (
+                    SELECT 1 FROM conciliacion_documentos cd
+                    WHERE cd.tipo_documento = 'factura' AND cd.documento_id = f.id
+                )
             ''', (fecha_inicio, fecha_fin))
             facturas_lista = [dict(row) for row in cursor.fetchall()]
             
             cursor.execute('''
-                SELECT id, numero, total as importe, 'ticket' as tipo
-                FROM tickets
-                WHERE fecha BETWEEN ? AND ?
-                AND formaPago = 'E'
-                AND estado = 'C'
+                SELECT t.id, t.numero, t.total as importe, 'ticket' as tipo
+                FROM tickets t
+                WHERE t.fecha BETWEEN ? AND ?
+                AND t.formaPago = 'E'
+                AND t.estado = 'C'
+                AND NOT EXISTS (
+                    SELECT 1 FROM conciliacion_documentos cd
+                    WHERE cd.tipo_documento = 'ticket' AND cd.documento_id = t.id
+                )
             ''', (fecha_inicio, fecha_fin))
             tickets_lista = [dict(row) for row in cursor.fetchall()]
             
@@ -1737,9 +1753,9 @@ def obtener_documentos_efectivo():
             AND f.formaPago = 'E'
             AND f.estado = 'C'
             AND NOT EXISTS (
-                SELECT 1 FROM conciliacion_gastos cg
-                WHERE cg.tipo_documento = 'factura' 
-                AND cg.documento_id = f.id
+                SELECT 1 FROM conciliacion_documentos cd
+                WHERE cd.tipo_documento = 'factura' 
+                AND cd.documento_id = f.id
             )
             ORDER BY COALESCE(f.fechaCobro, f.fecha) DESC, f.numero DESC
         ''', (fecha_inicio, fecha_fin))
@@ -1760,9 +1776,9 @@ def obtener_documentos_efectivo():
             AND formaPago = 'E'
             AND estado = 'C'
             AND NOT EXISTS (
-                SELECT 1 FROM conciliacion_gastos cg
-                WHERE cg.tipo_documento = 'ticket' 
-                AND cg.documento_id = id
+                SELECT 1 FROM conciliacion_documentos cd
+                WHERE cd.tipo_documento = 'ticket' 
+                AND cd.documento_id = id
             )
             ORDER BY fecha DESC, numero DESC
         ''', (fecha_inicio, fecha_fin))
