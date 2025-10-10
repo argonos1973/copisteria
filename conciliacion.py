@@ -734,34 +734,51 @@ def detalles_liquidacion_tpv():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Obtener todas las liquidaciones TPV de esa fecha
+        # Convertir fecha de DD/MM/YYYY a YYYY-MM-DD para buscar tickets
+        partes_fecha = fecha.split('/')
+        if len(partes_fecha) == 3:
+            fecha_tickets = f"{partes_fecha[2]}-{partes_fecha[1]}-{partes_fecha[0]}"
+        else:
+            fecha_tickets = fecha
+        
+        # Obtener todos los tickets TPV de esa fecha
         cursor.execute('''
             SELECT 
-                c.id,
-                c.gasto_id,
-                c.documento_id,
-                c.importe_gasto,
-                c.importe_documento,
                 t.numero as numero_ticket,
                 t.fecha as fecha_ticket,
-                t.total as importe_ticket,
-                g.concepto
+                t.total as importe_ticket
+            FROM tickets t
+            WHERE t.fecha = ?
+            AND t.formaPago = 'T'
+            ORDER BY t.numero
+        ''', (fecha_tickets,))
+        
+        tickets = [dict(row) for row in cursor.fetchall()]
+        
+        # Obtener el total de las liquidaciones bancarias de esa fecha
+        cursor.execute('''
+            SELECT 
+                SUM(c.importe_gasto) as total_liquidaciones,
+                COUNT(c.id) as num_liquidaciones
             FROM conciliacion_gastos c
             LEFT JOIN gastos g ON c.gasto_id = g.id
-            LEFT JOIN tickets t ON c.documento_id = t.id
             WHERE c.estado = 'conciliado'
             AND c.tipo_documento = 'liquidacion_tpv'
             AND g.fecha_operacion = ?
-            ORDER BY t.fecha, t.numero
         ''', (fecha,))
         
-        liquidaciones = [dict(row) for row in cursor.fetchall()]
+        liquidacion_info = cursor.fetchone()
+        if liquidacion_info:
+            liquidacion_info = dict(liquidacion_info)
+        else:
+            liquidacion_info = {'total_liquidaciones': 0, 'num_liquidaciones': 0}
         
         conn.close()
         
         return jsonify({
             'success': True,
-            'liquidaciones': liquidaciones,
+            'tickets': tickets,
+            'liquidacion_info': liquidacion_info,
             'fecha': fecha
         })
         

@@ -1950,28 +1950,28 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
             return;
         }
         
-        const liquidaciones = data.liquidaciones;
+        const tickets = data.tickets;
+        const liquidacionInfo = data.liquidacion_info;
         
         // Crear modal
         const modal = document.createElement('div');
         modal.className = 'modal active';
         modal.style.zIndex = '10000';
         
-        let liquidacionesHTML = '';
+        let ticketsHTML = '';
         let totalTickets = 0;
-        liquidaciones.forEach(liq => {
-            liquidacionesHTML += `
+        tickets.forEach(ticket => {
+            ticketsHTML += `
                 <tr>
-                    <td>${liq.numero_ticket || '-'}</td>
-                    <td>${formatearFecha(liq.fecha_ticket)}</td>
-                    <td class="text-right">${formatearImporte(liq.importe_ticket)}</td>
-                    <td class="text-right">${formatearImporte(liq.importe_gasto)}</td>
+                    <td>${ticket.numero_ticket || '-'}</td>
+                    <td>${formatearFecha(ticket.fecha_ticket)}</td>
+                    <td class="text-right">${formatearImporte(ticket.importe_ticket)}</td>
                 </tr>
             `;
-            totalTickets += liq.importe_ticket;
+            totalTickets += ticket.importe_ticket;
         });
         
-        const totalGastos = liquidaciones.reduce((sum, liq) => sum + liq.importe_gasto, 0);
+        const totalLiquidaciones = liquidacionInfo.total_liquidaciones || 0;
         
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
@@ -1980,24 +1980,32 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                     <button class="btn-close" onclick="this.closest('.modal').remove()">✕</button>
                 </div>
                 <div class="modal-body">
-                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Tickets Conciliados (${liquidaciones.length})</h4>
+                    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Resumen Liquidación</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div><strong>Fecha:</strong> ${fecha}</div>
+                            <div><strong>Liquidaciones Banco:</strong> ${liquidacionInfo.num_liquidaciones || 0}</div>
+                            <div><strong>Total Tickets:</strong> ${formatearImporte(totalTickets)}</div>
+                            <div><strong>Total Liquidaciones:</strong> ${formatearImporte(totalLiquidaciones)}</div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Tickets TPV (${tickets.length})</h4>
                     <table class="grid" style="width: 100%; margin-bottom: 15px;">
                         <thead>
                             <tr>
                                 <th>Número Ticket</th>
                                 <th>Fecha</th>
-                                <th class="text-right">Importe Ticket</th>
-                                <th class="text-right">Liquidación Banco</th>
+                                <th class="text-right">Importe</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${liquidacionesHTML}
+                            ${ticketsHTML}
                         </tbody>
                         <tfoot>
                             <tr style="font-weight: bold; background: #f8f9fa;">
-                                <td colspan="2" class="text-right">Total Tickets:</td>
+                                <td colspan="2" class="text-right">Total:</td>
                                 <td class="text-right">${formatearImporte(totalTickets)}</td>
-                                <td class="text-right">${formatearImporte(totalGastos)}</td>
                             </tr>
                         </tfoot>
                     </table>
