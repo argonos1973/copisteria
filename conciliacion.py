@@ -1301,8 +1301,36 @@ def obtener_liquidaciones_tpv():
             else:
                 estado = 'revisar'
             
-            # Conciliar automáticamente si diferencia <= 1€
+            # Conciliar automáticamente solo si:
+            # 1. Diferencia <= 1€ O
+            # 2. Existe una factura TPV con importe exacto igual a la diferencia (±0.02€)
+            puede_conciliar = False
+            
             if diferencia <= 1.0 and num_documentos > 0:
+                puede_conciliar = True
+            elif diferencia > 1.0:
+                # Buscar factura TPV con importe igual a la diferencia
+                cursor.execute('''
+                    SELECT id, numero, total
+                    FROM factura
+                    WHERE COALESCE(fechaCobro, fecha) = ?
+                    AND formaPago = 'T'
+                    AND estado = 'C'
+                    AND ABS(total - ?) <= 0.02
+                    LIMIT 1
+                ''', (fecha_busqueda, diferencia))
+                
+                factura_diferencia = cursor.fetchone()
+                if factura_diferencia:
+                    # Hay una factura que explica exactamente la diferencia
+                    puede_conciliar = True
+                    # Sumar esta factura al total
+                    total_documentos += factura_diferencia['total']
+                    num_facturas += 1
+                    num_documentos += 1
+                    diferencia = abs(total_liq - total_documentos)
+            
+            if puede_conciliar:
                 try:
                     # Calcular proporción de documentos para cada liquidación
                     num_liquidaciones = len(datos['ids'])
