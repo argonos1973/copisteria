@@ -628,7 +628,7 @@ function renderizarPaginaConciliados() {
         tr.addEventListener('click', (e) => {
             // No abrir modal si se hizo click en el botón de eliminar
             if (!e.target.classList.contains('delete-x')) {
-                mostrarDetallesConciliacion(conc.id_gasto);
+                mostrarDetallesConciliacion(conc.gasto_id);
             }
         });
         
