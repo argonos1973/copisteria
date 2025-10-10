@@ -36,6 +36,26 @@ document.addEventListener('DOMContentLoaded', () => {
     inicializarPestanas();
     cargarDatos();
     
+    // Delegación de eventos para filas clickeables de conciliados
+    const tbodyConciliados = document.getElementById('tbody-conciliados');
+    if (tbodyConciliados) {
+        tbodyConciliados.addEventListener('click', (e) => {
+            // Buscar la fila más cercana
+            const fila = e.target.closest('tr.fila-clickeable');
+            
+            // Si no es una fila clickeable o es el botón de eliminar, salir
+            if (!fila || e.target.classList.contains('delete-x')) {
+                return;
+            }
+            
+            const gastoId = fila.getAttribute('data-gasto-id');
+            if (gastoId) {
+                console.log('Click en fila conciliada, gasto_id:', gastoId);
+                mostrarDetallesConciliacion(parseInt(gastoId));
+            }
+        });
+    }
+    
     // Ejecutar conciliación automática al cargar (si hay pendientes)
     setTimeout(() => {
         ejecutarConciliacionInicial();
@@ -597,6 +617,13 @@ function renderizarPaginaConciliados() {
     conciliadosPagina.forEach(conc => {
         const tr = document.createElement('tr');
         
+        // Añadir data-gasto-id si existe
+        if (conc.gasto_id) {
+            tr.setAttribute('data-gasto-id', conc.gasto_id);
+            tr.style.cursor = 'pointer';
+            tr.classList.add('fila-clickeable');
+        }
+        
         let tipoDocumento = '';
         if (conc.tipo_documento === 'liquidacion_tpv') {
             tipoDocumento = `<span class="badge badge-info">LIQUIDACIÓN TPV (${conc.num_liquidaciones || 0})</span>`;
@@ -604,20 +631,16 @@ function renderizarPaginaConciliados() {
             tipoDocumento = `<span class="badge badge-info">${conc.tipo_documento.toUpperCase()} ${conc.numero_documento || ''}</span>`;
         }
         
-        // Añadir atributo data y estilo si tiene gasto_id válido
-        const clickHandler = conc.gasto_id ? `onclick="window.verDetallesConciliacion(${conc.gasto_id}, event)"` : '';
-        const cursorStyle = conc.gasto_id ? 'cursor: pointer;' : '';
-        
         tr.innerHTML = `
-            <td ${clickHandler} style="${cursorStyle}">${formatearFecha(conc.fecha_operacion)}</td>
-            <td ${clickHandler} style="${cursorStyle}">${conc.concepto_gasto || '-'}</td>
-            <td ${clickHandler} style="${cursorStyle}">${tipoDocumento}</td>
-            <td ${clickHandler} style="${cursorStyle}">${formatearImporte(conc.importe_gasto)}</td>
-            <td ${clickHandler} style="${cursorStyle}">${formatearImporte(conc.importe_documento)}</td>
-            <td ${clickHandler} style="${cursorStyle}" class="${Math.abs(conc.diferencia) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
+            <td>${formatearFecha(conc.fecha_operacion)}</td>
+            <td>${conc.concepto_gasto || '-'}</td>
+            <td>${tipoDocumento}</td>
+            <td>${formatearImporte(conc.importe_gasto)}</td>
+            <td>${formatearImporte(conc.importe_documento)}</td>
+            <td class="${Math.abs(conc.diferencia) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
                 ${formatearImporte(conc.diferencia)}
             </td>
-            <td ${clickHandler} style="${cursorStyle}">
+            <td>
                 <span class="badge ${conc.metodo === 'automatico' ? 'badge-success' : 'badge-warning'}">
                     ${conc.metodo === 'automatico' ? 'Auto' : 'Manual'}
                 </span>
@@ -1883,16 +1906,6 @@ function encontrarMejorCombinacion(documentos, objetivo) {
 // ============================================================================
 // DETALLES DE CONCILIACIÓN
 // ============================================================================
-
-// Función global para ser llamada desde onclick
-window.verDetallesConciliacion = function(gastoId, event) {
-    // Evitar que se propague al botón de eliminar
-    if (event && event.target.classList.contains('delete-x')) {
-        return;
-    }
-    console.log('verDetallesConciliacion llamada con gastoId:', gastoId);
-    mostrarDetallesConciliacion(gastoId);
-};
 
 async function mostrarDetallesConciliacion(gastoId) {
     console.log('mostrarDetallesConciliacion llamada con gastoId:', gastoId);
