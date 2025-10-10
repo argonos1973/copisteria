@@ -343,17 +343,18 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
             metodo
         ))
         
-        # Si es una factura y la diferencia es exacta (< 0.01€), marcarla como pagada
+        # Si es una factura y la diferencia es exacta (< 0.01€), marcarla como cobrada
         if tipo_documento == 'factura' and abs(diferencia) < 0.01:
             cursor.execute('''
                 UPDATE factura 
-                SET estado_pago = 'pagada',
-                    fecha_pago = ?
-                WHERE id = ? AND estado_pago = 'pendiente'
-            ''', (datetime.now().strftime('%Y-%m-%d'), documento_id))
+                SET estado = 'C',
+                    importe_cobrado = ?,
+                    timestamp = ?
+                WHERE id = ? AND estado = 'P'
+            ''', (documento['total'], datetime.now().isoformat(), documento_id))
             
             if cursor.rowcount > 0:
-                print(f"✓ Factura {documento.get('numero', documento_id)} marcada como pagada")
+                print(f"✓ Factura {documento.get('numero', documento_id)} marcada como COBRADA (estado: P → C)")
         
         conn.commit()
         return True, 'Conciliación creada exitosamente'
