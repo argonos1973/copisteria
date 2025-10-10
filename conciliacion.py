@@ -1512,7 +1512,7 @@ def obtener_ingresos_efectivo():
         # Filtrar solo año actual (formato DD/MM/YYYY)
         ano_actual = datetime.now().year
         
-        # Obtener ingresos en efectivo del banco (case-insensitive)
+        # Obtener ingresos en efectivo del banco (case-insensitive, excluir Bizum)
         cursor.execute('''
             SELECT 
                 id,
@@ -1526,6 +1526,7 @@ def obtener_ingresos_efectivo():
                 OR LOWER(concepto) LIKE '%deposito%efectivo%'
                 OR LOWER(concepto) LIKE '%ingreso%caja%'
             )
+            AND LOWER(concepto) NOT LIKE '%bizum%'
             AND importe_eur > 0
             AND id NOT IN (
                 SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
