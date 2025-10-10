@@ -119,20 +119,20 @@
             display: block;
         }
 
-        .gastos-table {
+        .ingresos-table {
             width: 100%;
             border-collapse: separate;
             border: none;
         }
 
-        .gastos-table th,
-        .gastos-table td {
+        .ingresos-table th,
+        .ingresos-table td {
             padding: 12px;
             text-align: left;
             border: none;
         }
 
-        .gastos-table th {
+        .ingresos-table th {
             background: #2c3e50;
             color: white;
             font-weight: 600;
@@ -141,7 +141,7 @@
             z-index: 10;
         }
 
-        .gastos-table tbody tr:last-child td {
+        .ingresos-table tbody tr:last-child td {
             border-bottom: none;
         }
 
@@ -441,7 +441,7 @@
         <!-- Estadísticas -->
         <div class="stats-cards">
             <div class="stat-card">
-                <h3>Gastos Pendientes</h3>
+                <h3>Ingresos Pendientes</h3>
                 <div class="value" id="stat-pendientes">-</div>
             </div>
             <div class="stat-card">
@@ -510,9 +510,9 @@
             </div>
             <div id="empty-pendientes" class="empty-state" style="display:none;">
                 <i class="fas fa-check-circle"></i>
-                <p>No hay gastos pendientes de conciliar</p>
+                <p>No hay ingresos pendientes de conciliar</p>
             </div>
-            <table class="gastos-table" id="tabla-pendientes" style="display:none;">
+            <table class="ingresos-table" id="tabla-pendientes" style="display:none;">
                 <thead>
                     <tr>
                         <th style="width: 100px;">Fecha</th>
@@ -552,7 +552,7 @@
                 <i class="fas fa-check-circle"></i>
                 <p>No hay transferencias pendientes de conciliar</p>
             </div>
-            <table class="gastos-table" id="tabla-transferencias" style="display:none;">
+            <table class="ingresos-table" id="tabla-transferencias" style="display:none;">
                 <thead>
                     <tr>
                         <th style="width: 100px;">Fecha</th>
@@ -592,7 +592,7 @@
                 <i class="fas fa-check-circle"></i>
                 <p>No hay liquidaciones TPV pendientes de revisar</p>
             </div>
-            <table class="gastos-table" id="tabla-liquidaciones" style="display:none;">
+            <table class="ingresos-table" id="tabla-liquidaciones" style="display:none;">
                 <thead>
                     <tr>
                         <th style="width: 90px;">Fecha</th>
@@ -638,7 +638,7 @@
                 <i class="fas fa-check-circle"></i>
                 <p>No hay ingresos en efectivo pendientes de revisar</p>
             </div>
-            <table class="gastos-table" id="tabla-ingresos" style="display:none;">
+            <table class="ingresos-table" id="tabla-ingresos" style="display:none;">
                 <thead>
                     <tr>
                         <th style="width: 100px;">Fecha</th>
@@ -684,7 +684,7 @@
                 <i class="fas fa-info-circle"></i>
                 <p>No hay conciliaciones realizadas</p>
             </div>
-            <table class="gastos-table" id="tabla-conciliados" style="display:none;">
+            <table class="ingresos-table" id="tabla-conciliados" style="display:none;">
                 <thead>
                     <tr>
                         <th>Fecha Movimiento</th>
@@ -780,7 +780,7 @@
             <div id="lista-documentos" style="display: none; flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0;">
                 <!-- Header sticky dentro del scroll -->
                 <div id="header-documentos" style="display: none; background: #2c3e50; color: white; padding-right: 17px; border-radius: 8px 8px 0 0; overflow: hidden; position: sticky; top: 0; z-index: 100;">
-                    <table class="gastos-table" style="font-size: 13px; width: 100%; margin: 0; border: none;">
+                    <table class="ingresos-table" style="font-size: 13px; width: 100%; margin: 0; border: none;">
                         <thead>
                             <tr>
                                 <th style="text-align: center; min-width: 60px; max-width: 60px; width: 60px; height: 45px; padding: 10px 8px; border: none;">
@@ -800,7 +800,7 @@
                     </table>
                 </div>
                 
-                <table class="gastos-table" style="font-size: 13px; width: 100%; margin: 0;">
+                <table class="ingresos-table" style="font-size: 13px; width: 100%; margin: 0;">
                     <tbody id="tbody-documentos-seleccion"></tbody>
                 </table>
             </div>
