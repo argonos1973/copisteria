@@ -230,17 +230,31 @@ def actualizar_facturas_vencidas():
             logger.error("No se pudo establecer conexión con la base de datos")
             return
         
+        cursor = conn.cursor()
+        
+        # Añadir campo fecha_ultima_carta si no existe
+        try:
+            cursor.execute("ALTER TABLE factura ADD COLUMN fecha_ultima_carta TEXT")
+            conn.commit()
+            logger.info("Campo fecha_ultima_carta añadido a la tabla factura")
+        except sqlite3.OperationalError:
+            # El campo ya existe
+            pass
+        
         # Calcular la fecha límite (hoy - 30 días)
         fecha_limite = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        fecha_limite_carta = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
         logger.info(f"Buscando facturas anteriores a {fecha_limite}")
         
         # Obtener facturas pendientes con fecha anterior a fecha_limite
-        cursor = conn.cursor()
+        # Y que no se les haya enviado carta en los últimos 30 días
         cursor.execute('''
-            SELECT id, numero, fecha, estado, idContacto, total
+            SELECT id, numero, fecha, estado, idContacto, total, fecha_ultima_carta
             FROM factura
-            WHERE fecha < ? AND estado = 'P'
-        ''', (fecha_limite,))
+            WHERE fecha < ? 
+            AND estado = 'P'
+            AND (fecha_ultima_carta IS NULL OR fecha_ultima_carta < ?)
+        ''', (fecha_limite, fecha_limite_carta))
         
         facturas_vencidas = cursor.fetchall()
         facturas_actualizadas = 0
@@ -310,6 +324,15 @@ def actualizar_facturas_vencidas():
                                 factura_numero,
                                 carta_pdf
                             )
+                            
+                            # Actualizar fecha_ultima_carta para evitar reenvíos en 30 días
+                            cursor.execute('''
+                                UPDATE factura
+                                SET fecha_ultima_carta = ?
+                                WHERE id = ?
+                            ''', (datetime.now().strftime('%Y-%m-%d'), factura_id))
+                            conn.commit()
+                            logger.info(f"Fecha de última carta actualizada para factura {factura_numero}")
                         else:
                             logger.info(f"Cliente sin facturación automática - Email NO enviado para factura {factura_numero}")
                     else:
