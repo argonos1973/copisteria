@@ -347,18 +347,31 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
             metodo
         ))
         
-        # Si es una factura y la diferencia es exacta (< 0.01€), marcarla como cobrada
-        if tipo_documento == 'factura' and abs(diferencia) < 0.01:
-            cursor.execute('''
-                UPDATE factura 
-                SET estado = 'C',
-                    importe_cobrado = ?,
-                    timestamp = ?
-                WHERE id = ? AND estado = 'P'
-            ''', (documento['total'], datetime.now().isoformat(), documento_id))
+        # REGLA: Marcar factura como cobrada solo si:
+        # 1. Es una factura pendiente (estado = 'P')
+        # 2. Diferencia exacta (< 0.01€)
+        # 3. Coincidencia por número de factura en el concepto del gasto
+        if tipo_documento == 'factura' and documento.get('estado') == 'P' and abs(diferencia) < 0.01:
+            # Verificar si el número de factura está en el concepto del gasto
+            numero_factura = documento.get('numero', '')
+            concepto_gasto = gasto.get('concepto', '').upper()
             
-            if cursor.rowcount > 0:
-                print(f"✓ Factura {documento.get('numero', documento_id)} marcada como COBRADA (estado: P → C)")
+            # Buscar el número de factura en el concepto (puede estar como F250046 o similar)
+            tiene_numero_factura = numero_factura and numero_factura.upper() in concepto_gasto
+            
+            if tiene_numero_factura:
+                cursor.execute('''
+                    UPDATE factura 
+                    SET estado = 'C',
+                        importe_cobrado = ?,
+                        timestamp = ?
+                    WHERE id = ? AND estado = 'P'
+                ''', (documento['total'], datetime.now().isoformat(), documento_id))
+                
+                if cursor.rowcount > 0:
+                    print(f"✓ Factura {numero_factura} marcada como COBRADA (estado: P → C) - Coincidencia exacta por número")
+            else:
+                print(f"⊗ Factura {numero_factura} NO marcada como cobrada - Sin coincidencia por número en concepto")
         
         conn.commit()
         return True, 'Conciliación creada exitosamente'
