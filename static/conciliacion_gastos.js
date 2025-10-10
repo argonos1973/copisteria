@@ -629,6 +629,7 @@ function renderizarPaginaConciliados() {
             tr.addEventListener('click', (e) => {
                 // No abrir modal si se hizo click en el botón de eliminar
                 if (!e.target.classList.contains('delete-x')) {
+                    console.log('Click en fila, gasto_id:', conc.gasto_id);
                     mostrarDetallesConciliacion(conc.gasto_id);
                 }
             });
@@ -1892,9 +1893,14 @@ function encontrarMejorCombinacion(documentos, objetivo) {
 // ============================================================================
 
 async function mostrarDetallesConciliacion(gastoId) {
+    console.log('mostrarDetallesConciliacion llamada con gastoId:', gastoId);
     try {
-        const response = await fetch(`${API_URL}/conciliacion/detalles/${gastoId}`);
+        const url = `${API_URL}/conciliacion/detalles/${gastoId}`;
+        console.log('Fetching URL:', url);
+        const response = await fetch(url);
+        console.log('Response status:', response.status);
         const data = await response.json();
+        console.log('Data recibida:', data);
         
         if (!data.success) {
             mostrarNotificacion('Error al cargar detalles de conciliación', 'error');
