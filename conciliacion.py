@@ -599,10 +599,10 @@ def gastos_pendientes():
         
         if tabla_existe:
             query = '''
-                SELECT g.*
+                SELECT DISTINCT g.*
                 FROM gastos g
                 WHERE g.id NOT IN (
-                    SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
+                    SELECT DISTINCT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
                 )
                 AND g.importe_eur > 0
                 AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
