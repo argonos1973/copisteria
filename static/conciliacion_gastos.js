@@ -35,7 +35,7 @@ let itemsPorPaginaIngresos = 10;
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOMContentLoaded ejecutado');
     inicializarPestanas();
-    cargarDatos();
+    cargarDatosInmediato(); // Primera carga inmediata, sin debounce
     
     // Delegación de eventos para filas clickeables de conciliados
     const tbodyConciliados = document.getElementById('tbody-conciliados');
@@ -107,7 +107,19 @@ function inicializarPestanas() {
 // CARGA DE DATOS
 // ============================================================================
 
-window.cargarDatos = async function() {
+// Variable para almacenar el timeout del debounce
+let cargarDatosTimeout = null;
+
+// Función de debounce para evitar múltiples llamadas simultáneas
+function debounce(func, delay) {
+    return function(...args) {
+        clearTimeout(cargarDatosTimeout);
+        cargarDatosTimeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// Función original de carga de datos
+async function cargarDatosInmediato() {
     try {
         // Primero ejecutar procesamiento automático
         await procesarAutomaticoAlCargar();
@@ -129,6 +141,9 @@ window.cargarDatos = async function() {
         }
     }
 }
+
+// Función pública con debounce de 800ms
+window.cargarDatos = debounce(cargarDatosInmediato, 800);
 
 /**
  * Procesamiento automático silencioso al cargar la página
