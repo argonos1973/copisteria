@@ -744,9 +744,10 @@ def detalles_liquidacion_tpv():
         # Obtener todos los tickets TPV de esa fecha
         cursor.execute('''
             SELECT 
-                t.numero as numero_ticket,
-                t.fecha as fecha_ticket,
-                t.total as importe_ticket
+                'ticket' as tipo,
+                t.numero as numero,
+                t.fecha as fecha,
+                t.total as importe
             FROM tickets t
             WHERE t.fecha = ?
             AND t.formaPago = 'T'
@@ -754,6 +755,7 @@ def detalles_liquidacion_tpv():
         ''', (fecha_tickets,))
         
         tickets = [dict(row) for row in cursor.fetchall()]
+        total_tickets = sum(t['importe'] for t in tickets)
         
         # Obtener el total de las liquidaciones bancarias de esa fecha
         cursor.execute('''
@@ -773,12 +775,42 @@ def detalles_liquidacion_tpv():
         else:
             liquidacion_info = {'total_liquidaciones': 0, 'num_liquidaciones': 0}
         
+        total_liquidaciones = liquidacion_info['total_liquidaciones'] or 0
+        diferencia = total_liquidaciones - total_tickets
+        
+        # Si hay diferencia, buscar facturas cobradas con TPV en fechas cercanas
+        facturas = []
+        if abs(diferencia) > 0.01:  # Si hay diferencia significativa
+            # Buscar facturas con TPV en un rango de ±7 días
+            from datetime import datetime, timedelta
+            fecha_obj = datetime.strptime(fecha_tickets, '%Y-%m-%d')
+            fecha_inicio = (fecha_obj - timedelta(days=7)).strftime('%Y-%m-%d')
+            fecha_fin = (fecha_obj + timedelta(days=7)).strftime('%Y-%m-%d')
+            
+            cursor.execute('''
+                SELECT 
+                    'factura' as tipo,
+                    f.numero as numero,
+                    f.fecha as fecha,
+                    f.total as importe
+                FROM factura f
+                WHERE f.fecha BETWEEN ? AND ?
+                AND f.formaPago = 'T'
+                AND f.estado = 'cobrada'
+                ORDER BY ABS(f.total - ?) ASC
+                LIMIT 10
+            ''', (fecha_inicio, fecha_fin, abs(diferencia)))
+            
+            facturas = [dict(row) for row in cursor.fetchall()]
+        
         conn.close()
         
         return jsonify({
             'success': True,
             'tickets': tickets,
+            'facturas': facturas,
             'liquidacion_info': liquidacion_info,
+            'diferencia': diferencia,
             'fecha': fecha
         })
         
