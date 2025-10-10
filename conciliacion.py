@@ -559,7 +559,11 @@ def conciliar():
         metodo = data.get('metodo', 'manual')
         
         if not all([gasto_id, tipo_documento, documento_id]):
-            return jsonify({'success': False, 'error': 'Faltan parámetros'}), 400
+            faltantes = []
+            if not gasto_id: faltantes.append('gasto_id')
+            if not tipo_documento: faltantes.append('tipo_documento')
+            if not documento_id: faltantes.append('documento_id')
+            return jsonify({'success': False, 'error': f'Faltan parámetros: {", ".join(faltantes)}'}), 400
         
         success, message = conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo)
         
