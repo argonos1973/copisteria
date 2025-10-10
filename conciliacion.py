@@ -1577,8 +1577,8 @@ def obtener_ingresos_efectivo():
                     fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d')
                 fecha_busqueda = fecha_obj.strftime('%Y-%m-%d')
                 
-                # Buscar en rango de 7 días previos al ingreso
-                fecha_inicio = (fecha_obj - timedelta(days=7)).strftime('%Y-%m-%d')
+                # Buscar en rango de 15 días previos al ingreso
+                fecha_inicio = (fecha_obj - timedelta(days=15)).strftime('%Y-%m-%d')
                 fecha_fin = fecha_obj.strftime('%Y-%m-%d')
             except:
                 continue
@@ -1802,7 +1802,7 @@ def obtener_documentos_efectivo():
                 fecha_obj = datetime.strptime(fecha_ingreso, '%Y-%m-%d')
             
             fecha_fin = fecha_obj.strftime('%Y-%m-%d')
-            fecha_inicio = (fecha_obj - timedelta(days=7)).strftime('%Y-%m-%d')
+            fecha_inicio = (fecha_obj - timedelta(days=15)).strftime('%Y-%m-%d')
         except:
             return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
         
