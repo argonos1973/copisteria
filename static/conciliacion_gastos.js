@@ -2033,7 +2033,7 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                         </div>
                     ` : ''}
                     
-                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Tickets TPV del ${fecha} (${tickets.length})</h4>
+                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Documentos Cobrados con TPV (${tickets.length + facturas.length})</h4>
                     <table class="grid" style="width: 100%; margin-bottom: 15px;">
                         <thead>
                             <tr>
@@ -2045,50 +2045,25 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                         </thead>
                         <tbody>
                             ${ticketsHTML}
+                            ${facturasHTML}
                         </tbody>
                         <tfoot>
                             <tr style="font-weight: bold; background: #f8f9fa;">
-                                <td colspan="3" class="text-right">Total Tickets:</td>
-                                <td class="text-right">${formatearImporte(totalTickets)}</td>
+                                <td colspan="3" class="text-right">Total Documentos:</td>
+                                <td class="text-right">${formatearImporte(totalTickets + totalFacturas)}</td>
+                            </tr>
+                            <tr style="font-weight: bold;">
+                                <td colspan="3" class="text-right">Liquidación Banco:</td>
+                                <td class="text-right">${formatearImporte(totalLiquidaciones)}</td>
+                            </tr>
+                            <tr style="font-weight: bold;">
+                                <td colspan="3" class="text-right">Diferencia:</td>
+                                <td class="text-right ${Math.abs(totalLiquidaciones - (totalTickets + totalFacturas)) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
+                                    ${formatearImporte(totalLiquidaciones - (totalTickets + totalFacturas))}
+                                </td>
                             </tr>
                         </tfoot>
                     </table>
-                    
-                    ${facturas.length > 0 ? `
-                        <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Facturas TPV del ${fecha} (${facturas.length})</h4>
-                        <table class="grid" style="width: 100%; margin-bottom: 15px;">
-                            <thead>
-                                <tr>
-                                    <th>Tipo</th>
-                                    <th>Número</th>
-                                    <th>Fecha</th>
-                                    <th class="text-right">Importe</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${facturasHTML}
-                            </tbody>
-                            <tfoot>
-                                <tr style="font-weight: bold; background: #f8f9fa;">
-                                    <td colspan="3" class="text-right">Total Facturas:</td>
-                                    <td class="text-right">${formatearImporte(totalFacturas)}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                        
-                        <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                            <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Resumen Total</h4>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                <div><strong>Total Documentos (Tickets + Facturas):</strong></div>
-                                <div class="text-right">${formatearImporte(totalTickets + totalFacturas)}</div>
-                                <div><strong>Liquidaciones Banco:</strong></div>
-                                <div class="text-right">${formatearImporte(totalLiquidaciones)}</div>
-                                <div style="grid-column: 1 / -1;" class="${Math.abs(totalLiquidaciones - (totalTickets + totalFacturas)) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
-                                    <strong>Diferencia Final:</strong> ${formatearImporte(totalLiquidaciones - (totalTickets + totalFacturas))}
-                                </div>
-                            </div>
-                        </div>
-                    ` : ''}
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cerrar</button>
