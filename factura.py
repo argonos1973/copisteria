@@ -145,8 +145,8 @@ def crear_factura():
             # Insertar la factura
             cursor.execute('''
                 INSERT INTO factura (numero, fecha, fvencimiento, estado, idContacto, nif, total, formaPago, 
-                                   importe_bruto, importe_impuestos, importe_cobrado, timestamp, tipo, presentar_face)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                   importe_bruto, importe_impuestos, importe_cobrado, timestamp, tipo, presentar_face, fechaCobro)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data['numero'],
                 data['fecha'],
@@ -163,7 +163,8 @@ def crear_factura():
                 data.get('importe_cobrado', 0),
                 datetime.now().isoformat(),
                 data.get('tipo', 'N'),  # N=Normal (con descuentos), A=Sin descuentos
-                presentar_face_flag
+                presentar_face_flag,
+                datetime.now().strftime('%Y-%m-%d')  # fechaCobro = fecha actual
             ))
             
             factura_id = cursor.lastrowid
