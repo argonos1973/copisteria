@@ -323,6 +323,10 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
         
         documento = dict(cursor.fetchone())
         
+        # REGLA: No permitir conciliación manual de facturas pendientes
+        if metodo == 'manual' and tipo_documento == 'factura' and documento.get('estado') == 'P':
+            return False, 'No se pueden conciliar manualmente facturas pendientes. Solo facturas cobradas.'
+        
         # Calcular diferencia
         diferencia = abs(gasto['importe_eur']) - documento['total']
         
