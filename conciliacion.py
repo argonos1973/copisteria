@@ -83,7 +83,8 @@ def buscar_coincidencias_automaticas(gasto):
                     fecha,
                     total,
                     estado,
-                    importe_cobrado
+                    importe_cobrado,
+                    fechaCobro
                 FROM factura
                 WHERE estado IN ('C', 'P')
                 AND numero = ?
@@ -140,6 +141,7 @@ def buscar_coincidencias_automaticas(gasto):
         fecha_fin = (fecha_gasto + timedelta(days=15)).strftime('%Y-%m-%d')
         
         # Buscar en facturas (cobradas y pendientes)
+        # Para facturas cobradas, usar fechaCobro; para pendientes, usar fecha
         cursor.execute('''
             SELECT 
                 'factura' as tipo,
@@ -148,16 +150,20 @@ def buscar_coincidencias_automaticas(gasto):
                 fecha,
                 total,
                 estado,
-                importe_cobrado
+                importe_cobrado,
+                fechaCobro
             FROM factura
             WHERE estado IN ('C', 'P')
-            AND fecha BETWEEN ? AND ?
+            AND (
+                (estado = 'C' AND COALESCE(fechaCobro, fecha) BETWEEN ? AND ?)
+                OR (estado = 'P' AND fecha BETWEEN ? AND ?)
+            )
             AND ABS(total - ?) <= ?
             AND id NOT IN (
                 SELECT documento_id FROM conciliacion_gastos 
                 WHERE tipo_documento = 'factura' AND estado = 'conciliado'
             )
-        ''', (fecha_inicio, fecha_fin, importe, tolerancia))
+        ''', (fecha_inicio, fecha_fin, fecha_inicio, fecha_fin, importe, tolerancia))
         
         for row in cursor.fetchall():
             coincidencias.append({
@@ -246,7 +252,9 @@ def calcular_score(gasto, documento):
         # Si falla, asumir formato ISO
         fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
     
-    fecha_doc = datetime.strptime(documento['fecha'], '%Y-%m-%d')
+    # Para facturas cobradas, usar fechaCobro si está disponible
+    fecha_documento_str = documento.get('fechaCobro') if documento.get('fechaCobro') else documento['fecha']
+    fecha_doc = datetime.strptime(fecha_documento_str, '%Y-%m-%d')
     diferencia_dias = abs((fecha_gasto - fecha_doc).days)
     
     if diferencia_dias == 0:
