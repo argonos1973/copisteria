@@ -62,13 +62,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             const gastoId = fila.getAttribute('data-gasto-id');
+            const liquidacionFecha = fila.getAttribute('data-liquidacion-fecha');
             console.log('gasto_id extraído:', gastoId);
+            console.log('liquidacion-fecha extraída:', liquidacionFecha);
             
             if (gastoId) {
                 console.log('Llamando a mostrarDetallesConciliacion con:', gastoId);
                 mostrarDetallesConciliacion(parseInt(gastoId));
+            } else if (liquidacionFecha) {
+                console.log('Llamando a mostrarDetallesLiquidacionTPV con fecha:', liquidacionFecha);
+                mostrarDetallesLiquidacionTPV(liquidacionFecha);
             } else {
-                console.log('Fila sin gasto_id (probablemente liquidación TPV agrupada)');
+                console.log('Fila sin identificador');
             }
         });
     } else {
@@ -636,9 +641,13 @@ function renderizarPaginaConciliados() {
     conciliadosPagina.forEach(conc => {
         const tr = document.createElement('tr');
         
-        // Añadir data-gasto-id si existe
+        // Añadir data-gasto-id si existe, o data-liquidacion-fecha para liquidaciones TPV
         if (conc.gasto_id) {
             tr.setAttribute('data-gasto-id', conc.gasto_id);
+            tr.style.cursor = 'pointer';
+            tr.classList.add('fila-clickeable');
+        } else if (conc.tipo_documento === 'liquidacion_tpv' && conc.fecha_operacion) {
+            tr.setAttribute('data-liquidacion-fecha', conc.fecha_operacion);
             tr.style.cursor = 'pointer';
             tr.classList.add('fila-clickeable');
         }
@@ -1925,6 +1934,87 @@ function encontrarMejorCombinacion(documentos, objetivo) {
 // ============================================================================
 // DETALLES DE CONCILIACIÓN
 // ============================================================================
+
+async function mostrarDetallesLiquidacionTPV(fecha) {
+    console.log('mostrarDetallesLiquidacionTPV llamada con fecha:', fecha);
+    try {
+        const url = `${API_URL}/conciliacion/liquidacion-tpv-detalles?fecha=${encodeURIComponent(fecha)}`;
+        console.log('Fetching URL:', url);
+        const response = await fetch(url);
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Data recibida:', data);
+        
+        if (!data.success) {
+            mostrarNotificacion('Error al cargar detalles de liquidación TPV', 'error');
+            return;
+        }
+        
+        const liquidaciones = data.liquidaciones;
+        
+        // Crear modal
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.style.zIndex = '10000';
+        
+        let liquidacionesHTML = '';
+        let totalTickets = 0;
+        liquidaciones.forEach(liq => {
+            liquidacionesHTML += `
+                <tr>
+                    <td>${liq.numero_ticket || '-'}</td>
+                    <td>${formatearFecha(liq.fecha_ticket)}</td>
+                    <td class="text-right">${formatearImporte(liq.importe_ticket)}</td>
+                    <td class="text-right">${formatearImporte(liq.importe_gasto)}</td>
+                </tr>
+            `;
+            totalTickets += liq.importe_ticket;
+        });
+        
+        const totalGastos = liquidaciones.reduce((sum, liq) => sum + liq.importe_gasto, 0);
+        
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3>Detalles Liquidación TPV - ${fecha}</h3>
+                    <button class="btn-close" onclick="this.closest('.modal').remove()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Tickets Conciliados (${liquidaciones.length})</h4>
+                    <table class="grid" style="width: 100%; margin-bottom: 15px;">
+                        <thead>
+                            <tr>
+                                <th>Número Ticket</th>
+                                <th>Fecha</th>
+                                <th class="text-right">Importe Ticket</th>
+                                <th class="text-right">Liquidación Banco</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${liquidacionesHTML}
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight: bold; background: #f8f9fa;">
+                                <td colspan="2" class="text-right">Total Tickets:</td>
+                                <td class="text-right">${formatearImporte(totalTickets)}</td>
+                                <td class="text-right">${formatearImporte(totalGastos)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cerrar</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+    } catch (error) {
+        console.error('Error al mostrar detalles de liquidación TPV:', error);
+        mostrarNotificacion('Error al cargar detalles de liquidación TPV', 'error');
+    }
+}
 
 async function mostrarDetallesConciliacion(gastoId) {
     console.log('mostrarDetallesConciliacion llamada con gastoId:', gastoId);

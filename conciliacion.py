@@ -723,6 +723,51 @@ def detalles_conciliacion(gasto_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@conciliacion_bp.route('/api/conciliacion/liquidacion-tpv-detalles', methods=['GET'])
+def detalles_liquidacion_tpv():
+    """Obtener detalles de una liquidación TPV agrupada por fecha"""
+    try:
+        fecha = request.args.get('fecha')
+        if not fecha:
+            return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener todas las liquidaciones TPV de esa fecha
+        cursor.execute('''
+            SELECT 
+                c.id,
+                c.gasto_id,
+                c.documento_id,
+                c.importe_gasto,
+                c.importe_documento,
+                t.numero as numero_ticket,
+                t.fecha as fecha_ticket,
+                t.total as importe_ticket,
+                g.concepto
+            FROM conciliacion_gastos c
+            LEFT JOIN gastos g ON c.gasto_id = g.id
+            LEFT JOIN tickets t ON c.documento_id = t.id
+            WHERE c.estado = 'conciliado'
+            AND c.tipo_documento = 'liquidacion_tpv'
+            AND g.fecha_operacion = ?
+            ORDER BY t.fecha, t.numero
+        ''', (fecha,))
+        
+        liquidaciones = [dict(row) for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'liquidaciones': liquidaciones,
+            'fecha': fecha
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @conciliacion_bp.route('/api/conciliacion/eliminar/<int:conciliacion_id>', methods=['DELETE'])
 def eliminar_conciliacion(conciliacion_id):
     """Eliminar una conciliación"""
