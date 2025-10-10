@@ -604,16 +604,20 @@ function renderizarPaginaConciliados() {
             tipoDocumento = `<span class="badge badge-info">${conc.tipo_documento.toUpperCase()} ${conc.numero_documento || ''}</span>`;
         }
         
+        // Añadir atributo data y estilo si tiene gasto_id válido
+        const clickHandler = conc.gasto_id ? `onclick="window.verDetallesConciliacion(${conc.gasto_id}, event)"` : '';
+        const cursorStyle = conc.gasto_id ? 'cursor: pointer;' : '';
+        
         tr.innerHTML = `
-            <td>${formatearFecha(conc.fecha_operacion)}</td>
-            <td>${conc.concepto_gasto || '-'}</td>
-            <td>${tipoDocumento}</td>
-            <td>${formatearImporte(conc.importe_gasto)}</td>
-            <td>${formatearImporte(conc.importe_documento)}</td>
-            <td class="${Math.abs(conc.diferencia) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
+            <td ${clickHandler} style="${cursorStyle}">${formatearFecha(conc.fecha_operacion)}</td>
+            <td ${clickHandler} style="${cursorStyle}">${conc.concepto_gasto || '-'}</td>
+            <td ${clickHandler} style="${cursorStyle}">${tipoDocumento}</td>
+            <td ${clickHandler} style="${cursorStyle}">${formatearImporte(conc.importe_gasto)}</td>
+            <td ${clickHandler} style="${cursorStyle}">${formatearImporte(conc.importe_documento)}</td>
+            <td ${clickHandler} style="${cursorStyle}" class="${Math.abs(conc.diferencia) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
                 ${formatearImporte(conc.diferencia)}
             </td>
-            <td>
+            <td ${clickHandler} style="${cursorStyle}">
                 <span class="badge ${conc.metodo === 'automatico' ? 'badge-success' : 'badge-warning'}">
                     ${conc.metodo === 'automatico' ? 'Auto' : 'Manual'}
                 </span>
@@ -622,18 +626,6 @@ function renderizarPaginaConciliados() {
                 <span class="delete-x" onclick="eliminarConciliacion(${conc.id})" title="Eliminar conciliación">✕</span>
             </td>
         `;
-        
-        // Hacer la fila clickeable solo si tiene gasto_id válido (no liquidaciones TPV agrupadas)
-        if (conc.gasto_id) {
-            tr.style.cursor = 'pointer';
-            tr.addEventListener('click', (e) => {
-                // No abrir modal si se hizo click en el botón de eliminar
-                if (!e.target.classList.contains('delete-x')) {
-                    console.log('Click en fila, gasto_id:', conc.gasto_id);
-                    mostrarDetallesConciliacion(conc.gasto_id);
-                }
-            });
-        }
         
         tbody.appendChild(tr);
     });
@@ -1891,6 +1883,16 @@ function encontrarMejorCombinacion(documentos, objetivo) {
 // ============================================================================
 // DETALLES DE CONCILIACIÓN
 // ============================================================================
+
+// Función global para ser llamada desde onclick
+window.verDetallesConciliacion = function(gastoId, event) {
+    // Evitar que se propague al botón de eliminar
+    if (event && event.target.classList.contains('delete-x')) {
+        return;
+    }
+    console.log('verDetallesConciliacion llamada con gastoId:', gastoId);
+    mostrarDetallesConciliacion(gastoId);
+};
 
 async function mostrarDetallesConciliacion(gastoId) {
     console.log('mostrarDetallesConciliacion llamada con gastoId:', gastoId);
