@@ -1404,6 +1404,18 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
         print("Columnas de la factura:", nombres_columnas)
         print("Datos de la factura:", factura_dict)
 
+        # VERIFICAR: Solo enviar correo si el contacto tiene facturación automática activada
+        # Obtener el campo facturacion_automatica del contacto
+        cursor.execute('SELECT facturacion_automatica FROM contactos WHERE idContacto = ?', (factura_dict.get('idcontacto'),))
+        contacto_result = cursor.fetchone()
+        facturacion_automatica = contacto_result[0] if contacto_result else 0
+        
+        if not facturacion_automatica:
+            print(f"Factura {id_factura} - El contacto no tiene facturación automática activada - NO se enviará correo")
+            if return_dict:
+                return {'success': False, 'error': 'El contacto no tiene activada la facturación automática'}
+            return jsonify({'error': 'El contacto no tiene activada la facturación automática'}), 400
+        
         # Si se proporciona email_destino_override, usarlo; si no, usar el del cliente
         email_destino = email_destino_override if email_destino_override else factura_dict.get('mail')
         
