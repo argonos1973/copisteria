@@ -591,7 +591,7 @@ def enviar_registro_aeat(factura_id: int) -> dict:
             data=envelope_xml.encode('utf-8'),
             headers=headers,
             cert=(cert_path, key_path),
-            timeout=60,
+            timeout=10,  # Reducido de 60s a 10s para mejor UX
             verify=True
         )
         logger.info("AEAT raw response object: %s - type=%s - has_status=%s", repr(response)[:300] if response is not None else 'None', type(response).__name__ if response is not None else 'NoneType', hasattr(response, 'status_code'))

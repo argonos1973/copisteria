@@ -168,7 +168,7 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
             data=envelope_xml.encode("utf-8"),
             headers=headers,
             cert=(cert_path, key_path),
-            timeout=60,
+            timeout=10,  # Reducido de 60s a 10s para mejor UX
             verify=True,
         )
     except requests.RequestException as exc:
