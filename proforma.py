@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
+from format_utils import format_currency_es_two, format_total_es_two, format_number_es_max5, format_percentage
 
 from flask import Flask, jsonify, request
 
@@ -10,52 +11,10 @@ from db_utils import (actualizar_numerador, formatear_numero_documento,
 import utilities
 
 app = Flask(__name__)
-
-
-def _split_sign(s: str):
-    neg = s.startswith('-')
-    return ('-', s[1:]) if neg else ('', s)
-
-
-def _to_decimal(val, default='0'):
-    if val is None or val == '':
-        return Decimal(default)
     try:
         return Decimal(str(val).replace(',', '.'))
     except Exception:
         return Decimal(default)
-
-
-def format_number_es_max5(val):
-    if val is None or val == '':
-        return ''
-    s = str(val).replace(',', '.')
-    sign, rest = _split_sign(s)
-    if '.' in rest:
-        entero, dec = rest.split('.', 1)
-    else:
-        entero, dec = rest, ''
-    try:
-        entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
-    except Exception:
-        entero_fmt = entero
-    if dec:
-        dec = dec[:5].rstrip('0')
-    return f"{sign}{entero_fmt}{(',' + dec) if dec else ''}"
-
-
-def format_currency_es_two(val):
-    from decimal import Decimal, ROUND_HALF_UP
-    dec_val = _to_decimal(val)
-    dec_val = dec_val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-    s = format(dec_val, 'f')
-    sign, rest = _split_sign(s)
-    entero, _, dec = rest.partition('.')
-    try:
-        entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
-    except Exception:
-        entero_fmt = entero
-    return f"{sign}{entero_fmt},{dec or '00'}"
 
 
 def _formatear_detalle_proforma(detalle_row):

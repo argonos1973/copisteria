@@ -2,6 +2,7 @@ import csv
 import os
 import sqlite3
 from datetime import datetime
+from format_utils import format_currency_es_two, format_total_es_two, format_number_es_max5, format_percentage
 
 from flask import (Flask, Response, jsonify, request, send_file,
                    stream_with_context)
@@ -2009,54 +2010,10 @@ def obtener_factura_para_imprimir(factura_id):
             resultados_dict.append(resultado)
 
         from decimal import Decimal, ROUND_HALF_UP
-
-        def _split_sign(s: str):
-            neg = s.startswith('-')
-            return ('-', s[1:]) if neg else ('', s)
-
-        def format_number_es_max5(val):
-            if val is None:
-                return ''
-            s = str(val).replace(',', '.')
-            sign, rest = _split_sign(s)
-            if '.' in rest:
-                entero, dec = rest.split('.', 1)
-            else:
-                entero, dec = rest, ''
-            try:
-                entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
-            except Exception:
-                entero_fmt = entero
-            if dec:
-                dec = dec[:5].rstrip('0')
-            return f"{sign}{entero_fmt}{(',' + dec) if dec else ''}"
-
-        def _to_decimal(val, default='0'):
-            if val is None:
-                return Decimal(default)
             try:
                 return Decimal(str(val).replace(',', '.'))
             except Exception:
                 return Decimal(default)
-
-        def format_currency_es_two(val):
-            if val is None or val == '':
-                return ''
-            dec_val = _to_decimal(val)
-            dec_val = dec_val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            s = format(dec_val, 'f')
-            sign, rest = _split_sign(s)
-            entero, _, dec = rest.partition('.')
-            try:
-                entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
-            except Exception:
-                entero_fmt = entero
-            return f"{sign}{entero_fmt},{dec or '00'}"
-
-        def format_percentage(val):
-            if val is None:
-                return ''
-            return f"{format_number_es_max5(val)}%"
         
         # Obtener código QR y hash de la tabla registro_facturacion si existe
         print(f"[DEBUG] Obteniendo QR y hash para factura_id: {factura_id}")

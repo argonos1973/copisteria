@@ -8,6 +8,7 @@ from weasyprint import CSS, HTML
 from db_utils import get_db_connection
 from verifactu_logger import logger  # Ajusta según tu sistema
 from verifactu.config import VERIFACTU_CONSTANTS  # Ruta corregida al módulo
+from format_utils import format_currency_es_two, format_total_es_two, format_number_es_max5, format_percentage
 
 try:
     from config_loader import get as get_config
@@ -217,27 +218,6 @@ def generar_factura_pdf(id_factura):
             return formas_pago.get(forma_pago, 'No especificada')
 
         # Helpers de formato numérico (ES)
-        def _split_sign(s: str):
-            neg = s.startswith('-')
-            return ('-', s[1:]) if neg else ('', s)
-
-        def format_number_es_max5(val):
-            """Formatea con punto de miles y coma decimal, hasta 5 decimales (sin redondear, trunca)."""
-            if val is None:
-                return '0'
-            s = str(val).replace(',', '.')
-            sign, rest = _split_sign(s)
-            if '.' in rest:
-                entero, dec = rest.split('.', 1)
-            else:
-                entero, dec = rest, ''
-            try:
-                entero_fmt = f"{int(entero):,}".replace(',', 'X').replace('.', ',').replace('X', '.')
-            except Exception:
-                entero_fmt = entero
-            if dec:
-                dec = dec[:5].rstrip('0')
-            return f"{sign}{entero_fmt}{(',' + dec) if dec else ''}"
 
         def format_total_es_two(val):
             """Formatea totales con exactamente 2 decimales, coma decimal y punto de miles."""

@@ -899,33 +899,8 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
         cursor.execute(data_sql, params_limit)
         rows = cursor.fetchall()
 
-        def _split_sign(s: str):
-            neg = s.startswith('-')
-            return ('-', s[1:]) if neg else ('', s)
-
-        def format_currency_es_two(val):
-            """Formatea importes con coma decimal y punto de miles, redondeando a 2 decimales."""
-            if val is None or val == '':
-                val = 0
-            s = str(val)
-            try:
-                normalized = s.replace(',', '.')
-                dec_val = Decimal(normalized)
-            except Exception:
-                return '0,00'
-            dec_rounded = dec_val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            s = format(dec_rounded, 'f')
-            sign, rest = _split_sign(s)
-            entero, _, dec = rest.partition('.')
-            try:
-                entero_int = int(entero)
-                entero_fmt = f"{entero_int:,}".replace(',', 'X').replace('.', ',').replace('X', '.')
-            except Exception:
-                entero_fmt = entero
-            return f"{sign}{entero_fmt},{dec or '00'}"
-
-        def format_total_es_two(val):
-            return format_currency_es_two(val)
+        # Importar funciones de formato desde format_utils
+        from format_utils import format_currency_es_two, format_total_es_two
 
         items = []
         if rows:
