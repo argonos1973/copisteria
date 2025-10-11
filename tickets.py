@@ -21,6 +21,9 @@ def D(x):
         return Decimal(str(x if x is not None else '0'))
     except Exception:
         return Decimal('0')
+
+def _to_decimal(val, default='0'):
+    """Convierte un valor a Decimal de forma segura"""
     try:
         return Decimal(str(val).replace(',', '.'))
     except Exception:
