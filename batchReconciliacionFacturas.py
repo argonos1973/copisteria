@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import sqlite3
+from db_utils import get_db_connection
 import sys
 from datetime import datetime
 
@@ -29,12 +30,6 @@ try:
 except NameError:
     DB_PATH = '/var/www/html/aleph70.db'  # valor por defecto si no está en constantes
 
-def get_db_connection():
-    conn = sqlite3.connect(DB_PATH, timeout=30)
-    conn.row_factory = sqlite3.Row
-    conn.execute('PRAGMA encoding="UTF-8"')
-    conn.execute("PRAGMA journal_mode=WAL;")
-    return conn
 
 def extraer_numero_factura(concepto):
     """

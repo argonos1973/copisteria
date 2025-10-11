@@ -83,22 +83,18 @@ def verificar_numero_factura(numero):
 
 def redondear_importe(valor):
     """
-    Redondea un importe a 5 decimales para precios base, 2 decimales para totales.
+    Redondea un importe a 2 decimales usando ROUND_HALF_UP.
     Acepta números, cadenas numéricas, None o cadenas vacías.
-    Si el valor no es convertible a float, devuelve 0.0 en su lugar.
+    Si el valor no es convertible, devuelve 0.0.
 
     Args:
         valor (float | str | None): Valor a redondear.
     Returns:
-        float: Valor redondeado a 5 decimales.
+        float: Valor redondeado a 2 decimales.
     """
-    # Tratar None o cadenas vacías como 0
-    if valor is None or (isinstance(valor, str) and valor.strip() == ""):
-        return 0.0
-    try:
-        return round(float(valor), 5)
-    except (ValueError, TypeError):
-        return 0.0
+    # Importar desde format_utils para mantener consistencia
+    from format_utils import redondear_importe as _redondear
+    return _redondear(valor)
 
 
 

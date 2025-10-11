@@ -7,6 +7,7 @@ Script para validar las facturas XSIG generadas en el día actual (17/06/2025).
 import json
 import os
 import sqlite3
+from db_utils import get_db_connection
 import sys
 from datetime import datetime
 
@@ -18,11 +19,6 @@ from verifactu import (generar_datos_verifactu_para_factura,
                        validar_factura_xml_antes_procesar)
 
 
-def get_db_connection():
-    """Conecta a la base de datos."""
-    conn = sqlite3.connect('/var/www/html/aleph70.db')
-    conn.row_factory = sqlite3.Row
-    return conn
 
 def validar_facturas_xsig_hoy():
     """Valida las facturas XSIG generadas hoy."""

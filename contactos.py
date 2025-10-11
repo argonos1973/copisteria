@@ -1,20 +1,11 @@
 import sqlite3
+from db_utils import get_db_connection
 from functools import lru_cache
 
 from constantes import *
 
 
-def get_db_connection():
-    """Establece una conexión con la base de datos."""
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        conn.row_factory = sqlite3.Row
-        return conn
-    except Exception:
-        raise
 
-
-@lru_cache(maxsize=100)  # Cachear las 100 búsquedas más frecuentes
 def obtener_sugerencias_carrer(query):
     """
     Obtiene sugerencias de dirección (carrer) basadas en una consulta de búsqueda.

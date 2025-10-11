@@ -4,14 +4,9 @@ import sqlite3
 from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
 from constantes import DB_NAME
+from db_utils import get_db_connection
 
 conciliacion_bp = Blueprint('conciliacion', __name__)
-
-def get_db_connection():
-    """Obtener conexión a la base de datos"""
-    conn = sqlite3.connect(DB_NAME, timeout=30)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 def encontrar_mejor_combinacion_documentos(documentos, importe_objetivo, tolerancia=1.0):
     """

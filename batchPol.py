@@ -4,6 +4,7 @@ import os
 import csv
 import logging
 import sqlite3
+from db_utils import get_db_connection
 from datetime import datetime
 from pathlib import Path
 from notificaciones_utils import guardar_notificacion
@@ -34,11 +35,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def get_db_connection():
-    """Establece conexión con la base de datos"""
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 def redondear_importe(valor, decimales=2):
     """Redondea un valor a 2 decimales"""
