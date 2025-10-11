@@ -446,13 +446,13 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
         ))
         
         # REGLA: Marcar factura como cobrada solo si:
-        # 1. Es una factura pendiente (estado = 'P')
+        # 1. Es una factura pendiente (estado = 'P') o vencida (estado = 'V')
         # 2. Diferencia exacta (< 0.01€)
         # 3. Coincidencia por número de factura en el concepto del gasto
         factura_marcada_cobrada = False
         numero_factura_cobrada = None
         
-        if tipo_documento == 'factura' and documento.get('estado') == 'P' and abs(diferencia) < 0.01:
+        if tipo_documento == 'factura' and documento.get('estado') in ['P', 'V'] and abs(diferencia) < 0.01:
             # Verificar si el número de factura está en el concepto del gasto
             numero_factura = documento.get('numero', '')
             concepto_gasto = gasto.get('concepto', '').upper()
@@ -468,13 +468,14 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
                         importe_cobrado = ?,
                         timestamp = ?,
                         fechaCobro = ?
-                    WHERE id = ? AND estado = 'P'
+                    WHERE id = ? AND estado IN ('P', 'V')
                 ''', (documento['total'], fecha_hoy.isoformat(), fecha_hoy.strftime('%Y-%m-%d'), documento_id))
                 
                 if cursor.rowcount > 0:
                     factura_marcada_cobrada = True
                     numero_factura_cobrada = numero_factura
-                    print(f"✓ Factura {numero_factura} marcada como COBRADA (estado: P → C) - Coincidencia exacta por número")
+                    estado_anterior = documento.get('estado', 'P')
+                    print(f"✓ Factura {numero_factura} marcada como COBRADA (estado: {estado_anterior} → C) - Coincidencia exacta por número")
             else:
                 print(f"⊗ Factura {numero_factura} NO marcada como cobrada - Sin coincidencia por número en concepto")
         
