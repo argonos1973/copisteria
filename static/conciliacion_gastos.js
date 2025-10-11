@@ -210,9 +210,10 @@ async function procesarAutomaticoAlCargar() {
             }
         }
         
-        // 3. Procesar Transferencias (buscar coincidencias y conciliar si diferencia < 1€)
+        // 3. Procesar Transferencias con importe POSITIVO (cobros) - buscar coincidencias y conciliar si diferencia < 1€
         if (dataPendientes.success && dataPendientes.gastos.length > 0) {
             const transferencias = dataPendientes.gastos.filter(g => 
+                g.importe_eur > 0 &&
                 g.concepto && (
                     g.concepto.toLowerCase().includes('transferencia') ||
                     g.concepto.toLowerCase().includes('transf.')
