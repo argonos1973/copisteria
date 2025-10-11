@@ -2,6 +2,7 @@ import csv
 import os
 import sqlite3
 from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP
 from format_utils import format_currency_es_two, format_total_es_two, format_number_es_max5, format_percentage
 
 from flask import (Flask, Response, jsonify, request, send_file,
@@ -55,6 +56,13 @@ from factura import obtener_factura_abierta
 from gastos import gastos_bp
 from proforma import obtener_proforma_abierta
 from verifactu.core import generar_datos_verifactu_para_ticket
+
+def _to_decimal(val, default='0'):
+    """Convierte un valor a Decimal de forma segura"""
+    try:
+        return Decimal(str(val).replace(',', '.'))
+    except Exception:
+        return Decimal(default)
 
 application = Flask(__name__, 
                    template_folder='templates',
