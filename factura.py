@@ -780,10 +780,6 @@ def consultar_facturas():
         if 'conn' in locals():
             conn.close()
 
-@app.route('/facturas', methods=['GET'])
-def consultar_facturas_get():
-    return consultar_facturas()
-
 def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', order='DESC'):
     """
     Obtiene facturas con filtros y paginación.
@@ -1026,10 +1022,14 @@ def agregar_detalle_factura(id_factura, detalle):
     finally:
         conn.close()
 
-@app.route('/facturas/<int:id_factura>/detalles', methods=['POST'])
-def agregar_detalle_factura_post(id_factura):
-    detalle = request.get_json()
-    return agregar_detalle_factura(id_factura, detalle)
+@app.route('/facturas/<int:id_factura>/detalles', methods=['GET', 'POST'])
+def manejar_detalles_factura(id_factura):
+    """Maneja GET y POST para detalles de factura"""
+    if request.method == 'POST':
+        detalle = request.get_json()
+        return agregar_detalle_factura(id_factura, detalle)
+    else:  # GET
+        return obtener_detalles_factura(id_factura)
 
 def obtener_detalles_factura(id_factura):
     try:
@@ -1050,10 +1050,6 @@ def obtener_detalles_factura(id_factura):
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
-
-@app.route('/facturas/<int:id_factura>/detalles', methods=['GET'])
-def obtener_detalles_factura_get(id_factura):
-    return obtener_detalles_factura(id_factura)
 
 def obtener_facturas_por_contacto(idContacto):
     try:
@@ -1102,9 +1098,13 @@ def obtener_facturas_por_contacto(idContacto):
     finally:
         conn.close()
 
-@app.route('/contactos/<int:idContacto>/facturas', methods=['GET'])
-def obtener_facturas_por_contacto_get(idContacto):
-    return obtener_facturas_por_contacto(idContacto)
+@app.route('/contactos/<int:idContacto>/facturas', methods=['GET', 'POST'])
+def manejar_facturas_por_contacto(idContacto):
+    """Maneja GET y POST para facturas de un contacto"""
+    if request.method == 'POST':
+        return crear_factura_por_contacto(idContacto)
+    else:  # GET
+        return obtener_facturas_por_contacto(idContacto)
 
 def crear_factura_por_contacto(idContacto):
     conn = None
@@ -1158,10 +1158,6 @@ def crear_factura_por_contacto(idContacto):
     finally:
         if conn:
             conn.close()
-
-@app.route('/contactos/<int:idContacto>/facturas', methods=['POST'])
-def crear_factura_por_contacto_post(idContacto):
-    return crear_factura_por_contacto(idContacto)
 
 def filtrar_facturas():
     try:
