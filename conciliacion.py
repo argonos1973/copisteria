@@ -176,7 +176,7 @@ def buscar_coincidencias_automaticas(gasto):
                     importe_cobrado,
                     fechaCobro
                 FROM factura
-                WHERE estado IN ('C', 'P')
+                WHERE estado IN ('C', 'P', 'V')
                 AND numero = ?
                 AND ABS(total - ?) <= ?
                 AND id NOT IN (
@@ -243,10 +243,10 @@ def buscar_coincidencias_automaticas(gasto):
                 importe_cobrado,
                 fechaCobro
             FROM factura
-            WHERE estado IN ('C', 'P')
+            WHERE estado IN ('C', 'P', 'V')
             AND (
                 (estado = 'C' AND COALESCE(fechaCobro, fecha) BETWEEN ? AND ?)
-                OR (estado = 'P' AND fecha BETWEEN ? AND ?)
+                OR (estado IN ('P', 'V') AND fecha BETWEEN ? AND ?)
             )
             AND ABS(total - ?) <= ?
             AND id NOT IN (
