@@ -231,6 +231,45 @@ def ventas_total_mes():
     })
 
 
+@dashboard_bp.route('/ventas/cantidad_mes', methods=['GET'])
+@dashboard_bp.route('/api/ventas/cantidad_mes', methods=['GET'])
+def ventas_cantidad_mes():
+    """Devuelve cantidades mensuales de tickets, facturas y su global para un año dado."""
+    anio_param = request.args.get('anio')
+    ahora = datetime.now()
+    año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    def obtener_cantidades(tabla):
+        cursor.execute(
+            f"""
+            SELECT strftime('%m', fecha) as mes, COUNT(*) as cantidad
+            FROM {tabla}
+            WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+            GROUP BY mes
+            """,
+            (str(año),)
+        )
+        datos = {row['mes']: int(row['cantidad'] or 0) for row in cursor.fetchall()}
+        # Asegurar 12 meses presentes con 0
+        return {str(m).zfill(2): datos.get(str(m).zfill(2), 0) for m in range(1,13)}
+
+    tickets = obtener_cantidades('tickets')
+    facturas = obtener_cantidades('factura')
+    globales = {mes: tickets[mes] + facturas[mes] for mes in tickets}
+
+    conn.close()
+
+    return jsonify({
+        'anio': año,
+        'tickets': tickets,
+        'facturas': facturas,
+        'global': globales
+    })
+
+
 @dashboard_bp.route('/ventas/media_por_documento', methods=['GET'])
 @dashboard_bp.route('/api/ventas/media_por_documento', methods=['GET'])
 def media_ventas_por_documento():
