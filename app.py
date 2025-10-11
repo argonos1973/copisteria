@@ -1105,19 +1105,52 @@ def actualizar_estado_ticket(id):
         if 'conn' in locals():
             conn.close()
 
-@app.route('/productos/<int:id>', methods=['GET'])
-def buscar_producto_por_id(id):
-    try:
-        producto = productos.obtener_producto(id)
-        if producto:
-            # Asegurar que subtotal mantenga 5 decimales en la respuesta JSON
-            if 'subtotal' in producto:
-                producto['subtotal'] = round(float(producto['subtotal']), 5)
-            return jsonify(producto)
-        else:
-            return jsonify({'error': 'Producto no encontrado'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+@app.route('/productos/<int:id>', methods=['GET', 'PUT', 'DELETE'])
+def manejar_producto_por_id(id):
+    """Maneja GET, PUT y DELETE para un producto específico"""
+    if request.method == 'GET':
+        try:
+            producto = productos.obtener_producto(id)
+            if producto:
+                # Asegurar que subtotal mantenga 5 decimales en la respuesta JSON
+                if 'subtotal' in producto:
+                    producto['subtotal'] = round(float(producto['subtotal']), 5)
+                return jsonify(producto)
+            else:
+                return jsonify({'error': 'Producto no encontrado'}), 404
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    elif request.method == 'PUT':
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No se recibieron datos'}), 400
+                
+            # Validar campos requeridos
+            if not data.get('nombre'):
+                return jsonify({'error': 'El campo nombre es requerido'}), 400
+            
+            import sys
+            print(f"DEBUG app.py - Actualizando producto ID: {id}", file=sys.stderr)
+            print(f"DEBUG app.py - Data recibida: {data}", file=sys.stderr)
+            sys.stderr.flush()
+                
+            resultado = productos.actualizar_producto(id, data)
+            if resultado['success']:
+                return jsonify(resultado)
+            else:
+                return jsonify(resultado), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    else:  # DELETE
+        try:
+            resultado = productos.eliminar_producto(id)
+            status = 200 if resultado.get('success') else 400
+            return jsonify(resultado), status
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
 
 @app.route('/productos/nombre/<string:nombre>', methods=['GET'])
 def buscar_producto_por_nombre(nombre):
@@ -1127,17 +1160,24 @@ def buscar_producto_por_nombre(nombre):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/productos', methods=['GET'])
-def listar_productos():
-    try:
-        return jsonify(productos.obtener_productos())
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# Primera definición de crear_producto eliminada - Ver implementación más abajo
-
-# Primera definición de eliminar_producto eliminada - Ver implementación más abajo
-
+@app.route('/productos', methods=['GET', 'POST'])
+def manejar_productos():
+    """Maneja GET (listar) y POST (crear) productos"""
+    if request.method == 'POST':
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'success': False, 'message': 'No se recibieron datos'}), 400
+            resultado = productos.crear_producto(data)
+            status = 201 if resultado.get('success') else 400
+            return jsonify(resultado), status
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)}), 500
+    else:  # GET
+        try:
+            return jsonify(productos.obtener_productos())
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
 @app.route('/productos/buscar', methods=['GET'])
 def filtrar_productos():
@@ -1208,43 +1248,20 @@ def productos_paginado():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/productos', methods=['POST'])
-def crear_producto():
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'success': False, 'message': 'No se recibieron datos'}), 400
-        resultado = productos.crear_producto(data)
-        status = 201 if resultado.get('success') else 400
-        return jsonify(resultado), status
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/productos/<int:id>', methods=['DELETE'])
-def eliminar_producto_legacy(id):
-    try:
-        resultado = productos.eliminar_producto(id)
-        status = 200 if resultado.get('success') else 400
-        return jsonify(resultado), status
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
-
+# crear_producto() consolidado en manejar_productos()
+# eliminar_producto_legacy() consolidado en manejar_producto_por_id()
 
 # Definición de crear_producto ya implementada anteriormente
 # Esta versión duplicada ha sido eliminada
 
 
 # ===== Alias con prefijo /api para compatibilidad con el frontend =====
-@app.route('/api/clientes/ventas_mes', methods=['GET'])
-def api_ventas_cliente_mes():
-    """Alias para /clientes/ventas_mes con prefijo /api"""
-    from dashboard_routes import ventas_cliente_mes
-    return ventas_cliente_mes()
+# NOTA: /api/clientes/ventas_mes está ahora en dashboard_routes.py (no duplicar)
 
-@app.route('/api/productos', methods=['GET'])
-def api_listar_productos():
-    return listar_productos()
-
+@app.route('/api/productos', methods=['GET', 'POST'])
+def api_manejar_productos():
+    """Maneja GET (listar) y POST (crear) productos - versión API"""
+    return manejar_productos()
 
 @app.route('/api/productos/buscar', methods=['GET'])
 def api_filtrar_productos():
@@ -1256,88 +1273,13 @@ def api_productos_paginado():
     return productos_paginado()
 
 
-@app.route('/api/productos/<int:id>', methods=['GET'])
-def api_buscar_producto_por_id(id):
-    return buscar_producto_por_id(id)
+@app.route('/api/productos/<int:id>', methods=['GET', 'PUT', 'DELETE'])
+def api_manejar_producto_por_id(id):
+    """Maneja GET, PUT y DELETE para un producto - versión API"""
+    return manejar_producto_por_id(id)
 
-
-@app.route('/api/productos/<int:id>', methods=['PUT'])
-def api_actualizar_producto(id):
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No se recibieron datos'}), 400
-            
-        # Validar campos requeridos
-        if not data.get('nombre'):
-            return jsonify({'error': 'El campo nombre es requerido'}), 400
-        
-        import sys
-        print(f"DEBUG api_actualizar_producto - ID: {id}", file=sys.stderr)
-        print(f"DEBUG api_actualizar_producto - Data: {data}", file=sys.stderr)
-        sys.stderr.flush()
-            
-        resultado = productos.actualizar_producto(id, data)
-        if resultado['success']:
-            return jsonify(resultado)
-        else:
-            return jsonify(resultado), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/productos', methods=['POST'])
-def api_crear_producto():
-    return crear_producto()
-
-@app.route('/api/productos/<int:id>', methods=['DELETE'])
-def api_eliminar_producto(id):
-    try:
-        logger.info(f"DELETE /api/productos/{id} desde {request.remote_addr}")
-    except Exception:
-        pass
-    # Validación defensiva del ID
-    if id is None or int(id) <= 0:
-        try:
-            logger.warning(f"Rechazado DELETE productos por ID inválido: {id}")
-        except Exception:
-            pass
-        return jsonify({"success": False, "message": "ID de producto inválido"}), 400
-    resultado = productos.eliminar_producto(id)
-    try:
-        logger.info(f"Resultado eliminación producto {id}: {resultado}")
-    except Exception:
-        pass
-    # El helper eliminar_producto devuelve un dict con success/message; mantener mismo comportamiento HTTP
-    if isinstance(resultado, dict) and not resultado.get('success', True):
-        return jsonify(resultado), 400
-    return jsonify(resultado)
-
-
-@app.route('/productos/<int:id>', methods=['PUT'])
-def actualizar_producto(id):
-    try:
-        data = request.get_json()
-        if not data:
-            return jsonify({'error': 'No se recibieron datos'}), 400
-            
-        # Validar campos requeridos
-        if not data.get('nombre'):
-            return jsonify({'error': 'El campo nombre es requerido'}), 400
-        
-        import sys
-        print(f"DEBUG app.py - Actualizando producto ID: {id}", file=sys.stderr)
-        print(f"DEBUG app.py - Data recibida: {data}", file=sys.stderr)
-        sys.stderr.flush()
-            
-        resultado = productos.actualizar_producto(id, data)
-        if resultado['success']:
-            return jsonify(resultado)
-        else:
-            return jsonify(resultado), 400
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
+# Funciones PUT, POST y DELETE consolidadas en api_manejar_producto_por_id() y api_manejar_productos()
+# actualizar_producto() consolidado en manejar_producto_por_id()
 # Segunda definición de eliminar_producto eliminada - Ver implementación anterior
 
 @app.route('/tickets/detalles/<int:id_ticket>', methods=['GET'])
@@ -2009,12 +1951,6 @@ def obtener_factura_para_imprimir(factura_id):
             resultado = dict(zip(columnas, row))
             resultados_dict.append(resultado)
 
-        from decimal import Decimal, ROUND_HALF_UP
-            try:
-                return Decimal(str(val).replace(',', '.'))
-            except Exception:
-                return Decimal(default)
-        
         # Obtener código QR y hash de la tabla registro_facturacion si existe
         print(f"[DEBUG] Obteniendo QR y hash para factura_id: {factura_id}")
         cursor.execute("""
