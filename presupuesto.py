@@ -12,11 +12,6 @@ from db_utils import (
     obtener_numerador,
     redondear_importe,
 )
-    try:
-        return Decimal(str(val).replace(',', '.'))
-    except Exception:
-        return Decimal(default)
-
 
 def _formatear_detalle_presupuesto(detalle_row):
     det_dict = dict(detalle_row)

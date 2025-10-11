@@ -11,11 +11,6 @@ from db_utils import (actualizar_numerador, formatear_numero_documento,
 import utilities
 
 app = Flask(__name__)
-    try:
-        return Decimal(str(val).replace(',', '.'))
-    except Exception:
-        return Decimal(default)
-
 
 def _formatear_detalle_proforma(detalle_row):
     det_dict = dict(detalle_row)
