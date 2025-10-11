@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Cálculo Ticket</title>
+</head>
+<body>
+    <h1>Test Cálculo Correcto</h1>
+    <div id="resultado"></div>
+    
+    <script type="module">
+        import { calcularTotalLinea } from './static/calculo_totales_unificado.js';
+        
+        // Test con los datos del ticket T256228
+        const precio = 0.70248;
+        const cantidad = 2;
+        const iva = 21;
+        
+        const resultado = calcularTotalLinea(precio, cantidad, iva);
+        
+        document.getElementById('resultado').innerHTML = `
+            <h2>Ticket T256228 - IMPRESSIO A4 COLOR</h2>
+            <p><strong>Precio unitario:</strong> ${precio}€</p>
+            <p><strong>Cantidad:</strong> ${cantidad}</p>
+            <p><strong>IVA:</strong> ${iva}%</p>
+            <hr>
+            <p><strong>Subtotal:</strong> ${resultado.subtotal}€</p>
+            <p><strong>IVA importe:</strong> ${resultado.iva_importe}€</p>
+            <p><strong>Total:</strong> ${resultado.total}€</p>
+            <hr>
+            <p style="color: ${resultado.total === 1.70 ? 'green' : 'red'}; font-size: 20px;">
+                <strong>Resultado: ${resultado.total === 1.70 ? '✓ CORRECTO (1,70€)' : '✗ INCORRECTO (debería ser 1,70€)'}</strong>
+            </p>
+            <hr>
+            <h3>Cálculo paso a paso:</h3>
+            <p>1. Subtotal sin redondear: ${precio} × ${cantidad} = ${precio * cantidad}€</p>
+            <p>2. IVA: ${precio * cantidad}€ × ${iva}% = ${(precio * cantidad * iva / 100).toFixed(4)}€ → redondeado a ${resultado.iva_importe}€</p>
+            <p>3. Total: ${precio * cantidad}€ + ${resultado.iva_importe}€ = ${(precio * cantidad + resultado.iva_importe).toFixed(4)}€ → redondeado a ${resultado.total}€</p>
+        `;
+    </script>
+</body>
+</html>

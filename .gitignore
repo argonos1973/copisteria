@@ -13,6 +13,14 @@ scraping_status.log
 *.xml
 .venv/
 
+# Certificados y archivos de firma
+*.pem
+*.p12
+*.crt
+
+# PDFs generados
+*.pdf
+
 # Cachés/compilados Python
 __pycache__/
 *.pyc
