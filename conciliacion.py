@@ -461,13 +461,15 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
             tiene_numero_factura = numero_factura and numero_factura.upper() in concepto_gasto
             
             if tiene_numero_factura:
+                fecha_hoy = datetime.now()
                 cursor.execute('''
                     UPDATE factura 
                     SET estado = 'C',
                         importe_cobrado = ?,
-                        timestamp = ?
+                        timestamp = ?,
+                        fechaCobro = ?
                     WHERE id = ? AND estado = 'P'
-                ''', (documento['total'], datetime.now().isoformat(), documento_id))
+                ''', (documento['total'], fecha_hoy.isoformat(), fecha_hoy.strftime('%Y-%m-%d'), documento_id))
                 
                 if cursor.rowcount > 0:
                     factura_marcada_cobrada = True
