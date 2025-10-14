@@ -54,6 +54,7 @@ from db_utils import (formatear_numero_documento, get_db_connection,
                       redondear_importe)
 from factura import obtener_factura_abierta
 from gastos import gastos_bp
+from estadisticas_gastos_routes import estadisticas_gastos_bp
 from proforma import obtener_proforma_abierta
 from verifactu.core import generar_datos_verifactu_para_ticket
 
@@ -70,6 +71,7 @@ application = Flask(__name__,
 app = application
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(gastos_bp, url_prefix='')
+app.register_blueprint(estadisticas_gastos_bp, url_prefix='')
 app.register_blueprint(conciliacion.conciliacion_bp, url_prefix='')
 # Configurar CORS
 CORS(app, resources={
@@ -98,12 +100,24 @@ try:
 except Exception as e:
     print(f"[AVISO] No se pudo asegurar la tabla de franjas de descuento: {e}")
 
+# ================== CONFIG.JSON ================== #
+@app.route('/config.json', methods=['GET'])
+def servir_config_json():
+    """Sirve el archivo config.json"""
+    try:
+        ruta = os.path.join(BASE_DIR, 'config.json')
+        if not os.path.exists(ruta):
+            return jsonify({'verifactu_enabled': False}), 200
+        return send_file(ruta, mimetype='application/json')
+    except Exception as e:
+        return jsonify({'verifactu_enabled': False}), 200
+
 # ================== HTML: imprimir ticket ================== #
 @app.route('/api/imprimir-ticket.html', methods=['GET'])
 def servir_imprimir_ticket_html():
-    """Sirve la página de impresión del ticket desde static para la ruta /api/.."""
+    """Sirve la página de impresión del ticket desde frontend para la ruta /api/.."""
     try:
-        ruta = os.path.join(BASE_DIR, 'static', 'imprimir-ticket.html')
+        ruta = os.path.join(BASE_DIR, 'frontend', 'imprimir-ticket.html')
         if not os.path.exists(ruta):
             return Response('imprimir-ticket.html no encontrado', status=404)
         # No alteramos el contenido: la propia página/JS leerá ticketId de la query
@@ -1959,10 +1973,10 @@ def obtener_factura_para_imprimir(factura_id):
             resultado = dict(zip(columnas, row))
             resultados_dict.append(resultado)
 
-        # Obtener código QR y hash de la tabla registro_facturacion si existe
-        print(f"[DEBUG] Obteniendo QR y hash para factura_id: {factura_id}")
+        # Obtener código QR, hash y CSV de la tabla registro_facturacion si existe
+        print(f"[DEBUG] Obteniendo QR, hash y CSV para factura_id: {factura_id}")
         cursor.execute("""
-            SELECT codigo_qr, hash FROM registro_facturacion
+            SELECT codigo_qr, hash, csv FROM registro_facturacion
             WHERE factura_id = ?
         """, (factura_id,))
         registro = cursor.fetchone()
@@ -1972,16 +1986,21 @@ def obtener_factura_para_imprimir(factura_id):
             print(f"[DEBUG] Tipo de datos de registro['codigo_qr']: {type(registro['codigo_qr']) if registro['codigo_qr'] else 'None'}")
             print(f"[DEBUG] Tamaño de datos QR: {len(registro['codigo_qr']) if registro['codigo_qr'] else 0} bytes")
         
-        # Definimos variables para el QR y hash
+        # Definimos variables para el QR, hash y CSV
         qr_code_base64 = None
         hash_value = 'No disponible'
+        csv_value = None
         
-        # Obtener hash y QR desde registro_facturacion si existe
-        if registro and registro['hash']:
-            hash_value = registro['hash']
-            print(f"[DEBUG] Usando hash de registro_facturacion: {hash_value}")
-        # Si no, usar el hash de la tabla factura
-        elif resultados_dict[0]['hash_factura']:
+        # Obtener hash, CSV desde registro_facturacion si existe
+        if registro:
+            if registro['hash']:
+                hash_value = registro['hash']
+                print(f"[DEBUG] Usando hash de registro_facturacion: {hash_value}")
+            if registro['csv']:
+                csv_value = registro['csv']
+                print(f"[DEBUG] CSV encontrado: {csv_value}")
+        # Si no hay hash en registro, usar el hash de la tabla factura
+        if hash_value == 'No disponible' and resultados_dict[0]['hash_factura']:
             hash_value = resultados_dict[0]['hash_factura']
             print(f"[DEBUG] Usando hash de tabla factura: {hash_value}")
         
@@ -2092,6 +2111,7 @@ def obtener_factura_para_imprimir(factura_id):
             'importe_cobrado': format_currency_es_two(resultados_dict[0].get('importe_cobrado')),
             'hash_verifactu': (hash_value if VERIFACTU_HABILITADO else None),
             'qr_verifactu': (qr_code_base64 if VERIFACTU_HABILITADO else None),
+            'codigo_qr': (qr_code_base64 if VERIFACTU_HABILITADO else None),  # Alias para compatibilidad
             'contacto': {
                 'id': resultados_dict[0]['idcontacto'],
                 'razonsocial': resultados_dict[0]['razonsocial'],
@@ -2139,10 +2159,23 @@ def obtener_factura_para_imprimir(factura_id):
         if not factura['total']:
             factura['total'] = format_currency_es_two(base_total_dec + iva_total_dec)
 
+        # Añadir CSV y estado de Verifactu
+        factura['csv'] = csv_value
+        
+        # Cargar configuración de Verifactu
+        try:
+            from config_loader import get as get_config
+            verifactu_enabled = bool(get_config("verifactu_enabled", False))
+        except Exception:
+            verifactu_enabled = False
+        
         print("Datos completos de factura a enviar:", factura)  # Debug
         cursor.close()
         conn.close()
-        return jsonify({'factura': factura})
+        return jsonify({
+            'factura': factura,
+            'verifactu_enabled': verifactu_enabled
+        })
         
     except Exception as e:
         print(f"Error al obtener la factura: {str(e)}")

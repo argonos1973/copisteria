@@ -241,7 +241,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         tbody.innerHTML = '';
 
         if (items.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center">No se encontraron resultados</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="text-center">No se encontraron resultados</td></tr>';
             return;
         }
 
@@ -275,8 +275,37 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 row.classList.add('fila-rectificativa', 'fila-bloqueada');
             }
 
+            // Calcular días hasta vencimiento solo para PENDIENTES y VENCIDAS
+            let tooltipText = '';
+            let vencimientoDisplay = '';
+            let vencimientoStyle = '';
+            
+            if (factura.fvencimiento) {
+                vencimientoDisplay = formatDateToDisplay(factura.fvencimiento);
+                
+                // Solo mostrar tooltip para estados P (Pendiente) y V (Vencida)
+                if (factura.estado === 'P' || factura.estado === 'V') {
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    const fechaVenc = new Date(factura.fvencimiento);
+                    fechaVenc.setHours(0, 0, 0, 0);
+                    const diffTime = fechaVenc - hoy;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays < 0) {
+                        tooltipText = `Vencida hace ${Math.abs(diffDays)} día${Math.abs(diffDays) !== 1 ? 's' : ''}`;
+                    } else if (diffDays === 0) {
+                        tooltipText = 'Vence hoy';
+                    } else {
+                        tooltipText = `Vence en ${diffDays} día${diffDays !== 1 ? 's' : ''}`;
+                    }
+                    vencimientoStyle = 'cursor: help;';
+                }
+            }
+
             row.innerHTML = `
                 <td>${formatDateToDisplay(factura.fecha)}</td>
+                <td title="${tooltipText}" style="${vencimientoStyle}">${vencimientoDisplay}</td>
                 <td>${factura.numero}</td>
                 <td>${factura.razonsocial || ''}</td>
                 <td class="text-right">${baseRaw} €</td>

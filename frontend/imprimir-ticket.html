@@ -189,8 +189,18 @@
         </div>
     </div>
 
+    <!-- Test de carga -->
+    <script>
+        console.log('[HTML] Página cargada - antes de cargar módulo');
+        console.log('[HTML] URL actual:', window.location.href);
+    </script>
+
     <!-- Incluir el script externo -->
     <script type="module" src="/static/imprimir-ticket.js"></script>
+    
+    <script>
+        console.log('[HTML] Después de incluir módulo');
+    </script>
 </body>
 </html>
 

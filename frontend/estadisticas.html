@@ -2,10 +2,123 @@
 <html lang="es">
 <head>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estadísticas</title>
+    
+    <script>
+    // Variable global para el gráfico de gastos del año
+    let graficoGastosAnio = null;
+    
+    // Definir función global ANTES de cargar estadisticas_facturas.js
+    window.cargarGraficoGastosAnio = async function() {
+        try {
+            const selectorFecha = document.getElementById('selector-fecha');
+            let anio;
+            
+            if (selectorFecha && selectorFecha.value) {
+                [anio] = selectorFecha.value.split('-');
+                console.log('[GRAFICO ANIO] Usando año del selector:', anio);
+            } else {
+                anio = new Date().getFullYear();
+                console.log('[GRAFICO ANIO] Usando año actual:', anio);
+            }
+            
+            const response = await fetch(`http://localhost:5001/api/gastos/por-categoria-anio?anio=${anio}`);
+            
+            if (!response.ok) {
+                console.error('[GRAFICO ANIO] Error en respuesta:', response.status);
+                return;
+            }
+            
+            const datos = await response.json();
+            console.log('[GRAFICO ANIO] Datos recibidos:', datos);
+            
+            if (!datos.categorias || datos.categorias.length === 0) {
+                console.log('[GRAFICO ANIO] No hay datos para mostrar');
+                return;
+            }
+            
+            const canvas = document.getElementById('grafico-gastos-anio');
+            if (!canvas) {
+                console.error('[GRAFICO ANIO] Canvas no encontrado');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Destruir gráfico anterior si existe
+            if (graficoGastosAnio) {
+                graficoGastosAnio.destroy();
+            }
+            
+            // Colores para el gráfico de pastel
+            const colores = [
+                '#e74c3c', // Rojo
+                '#3498db', // Azul
+                '#f39c12', // Naranja
+                '#2ecc71', // Verde
+                '#9b59b6', // Morado
+                '#1abc9c'  // Turquesa
+            ];
+            
+            const labels = datos.categorias.map(c => c.categoria);
+            const valores = datos.categorias.map(c => c.total);
+            
+            graficoGastosAnio = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: valores,
+                        backgroundColor: colores.slice(0, labels.length),
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    onClick: (event, elements) => {
+                        if (elements.length > 0) {
+                            const index = elements[0].index;
+                            const categoria = labels[index];
+                            console.log('[GRAFICO ANIO] Click en:', categoria);
+                            abrirModalDetallesGastoAnio(categoria);
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 10,
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value.toFixed(2)} € (${percentage}%) - Click para ver detalles`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            console.log('[GRAFICO ANIO] Gráfico de pastel (año) renderizado');
+            
+        } catch (error) {
+            console.error('[GRAFICO ANIO] Error al cargar gráfico:', error);
+        }
+    };
+    </script>
     
     <script src="../static/estadisticas_facturas.js?v=20250911_1723" type="module"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css?v=20250911_1052">
@@ -18,6 +131,56 @@
             font-family: Arial, sans-serif;
             height: 100%;
             margin: 0;
+        }
+        
+        /* Tabs */
+        .tabs-container {
+            margin-bottom: 1.5rem;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 1rem;
+        }
+        
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: #f5f5f5;
+            border: none;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        
+        .tab:hover {
+            background: #e8e8e8;
+            color: #333;
+        }
+        
+        .tab.active {
+            background: white;
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            font-weight: 600;
+        }
+        
+        .tab-content {
+            display: none !important;
+        }
+        
+        .tab-content.active {
+            display: block !important;
+            height: auto !important;
+            min-height: 500px;
+            padding-top: 0.5rem;
         }
         
         html {
@@ -39,7 +202,7 @@
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 1.5rem;
             margin-bottom: 1.5rem;
-            margin-top: -0.5rem;
+            margin-top: 0;
         }
         
         .stats-card {
@@ -214,28 +377,27 @@
         .top-stats-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 1.5rem;
+            gap: 1rem;
             margin-bottom: 2rem;
-            margin-top: -0.5rem;
+            margin-top: 1rem;
         }
         
         .top-stats-column {
-            flex: 1;
+            width: 450px;
             min-width: 250px;
-            max-width: 450px;
         }
         
-        .top-clientes, .top-productos {
+        .top-clientes, .top-productos, .top-gastos {
             height: 100%;
         }
         
-        .top-clientes .stats-card, .top-productos .stats-card {
+        .top-clientes .stats-card, .top-productos .stats-card, .top-gastos .stats-card {
             height: auto;
             overflow-y: visible;
             padding: 0.7rem;
         }
         
-        .top-clientes h2, .top-productos h2 {
+        .top-clientes h2, .top-productos h2, .top-gastos h2 {
             font-size: 1rem;
             margin-top: 0;
             margin-bottom: 0.3rem;
@@ -295,6 +457,14 @@
             font-weight: 700;
             color: #212529;
         }
+        
+        .importe-negativo {
+            color: #e74c3c !important;
+        }
+        
+        .importe-positivo {
+            color: #27ae60 !important;
+        }
     </style>
 
 <style>
@@ -316,7 +486,7 @@
     <div class="container">
         <div class="stats-header">
             <div class="header-top">
-                <h1 style="color: #ffffff !important; margin: 0;">Estadísticas de Ventas <span id="year-indicator" style="font-size:0.6em;color:#7f8c8d;"></span></h1>
+                <h1 style="color: #ffffff !important; margin: 0;">Estadísticas <span id="year-indicator" style="font-size:0.6em;color:#7f8c8d;"></span></h1>
                 <div class="header-icons">
                     <button id="btn-descargar-csv" class="btn-descargar" title="Descargar CSV"><i class="fas fa-download"></i></button>
                     <button id="btn-graficos" class="btn-descargar" title="Ver Gráficos"><i class="fas fa-chart-bar"></i></button>
@@ -327,8 +497,18 @@
                 <input type="month" id="selector-fecha" style="padding:4px;">
             </div>
         </div>
+        
+<!-- Pestañas -->
+<div class="tabs-container">
+    <div class="tabs">
+        <button class="tab active" data-tab="ventas">Ventas</button>
+        <button class="tab" data-tab="gastos">Gastos</button>
+    </div>
+</div>
 
-        <div class="stats-container">
+<!-- Contenido Ventas -->
+<div class="tab-content active" id="tab-ventas">
+    <div class="stats-container">
             <!-- Estadísticas de Tickets -->
             <div class="stats-card" id="card-tickets">
                 <h3>Tickets <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
@@ -514,23 +694,7 @@
         </div>
     </div>
     <div class="top-stats-column">
-        <div class="top-gastos" style="display:none;">
-            <h2>Top 10 Gastos</h2>
-            <div class="stats-card">
-                <table class="stats-table">
-                    <thead>
-                        <tr>
-                            <th>Concepto</th>
-                            <th>Total</th>
-                            <th>Dif.</th>
-                        </tr>
-                    </thead>
-                    <tbody id="topGastosBody">
-                        <!-- Datos de gastos -->
-                    </tbody>
-                </table>
-            </div>
-        </div><!-- fin top gastos -->
+        <!-- Top gastos movido a pestaña Gastos -->
         <div class="stats-card" id="card-ingresos-gastos-totales" style="margin-top:10px;">
             <h3>Ingresos y Gastos (Año) <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
             <div class="stats-content">
@@ -556,6 +720,137 @@
         </div>
     </div>
 </div>
+</div><!-- fin tab-ventas -->
+        
+        <!-- Contenido Gastos -->
+        <div class="tab-content" id="tab-gastos">
+            <div class="stats-container">
+                <!-- Gastos Mes Actual -->
+                <div class="stats-card" id="card-gastos-mes">
+                    <h3>Gastos Mes Actual <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
+                    <div class="stats-content">
+                        <div class="stats-row">
+                            <div class="stats-label">Total Mes Actual</div>
+                            <div class="stats-value importe-negativo" id="gastos-total-mes">0,00 €</div>
+                            <div class="stats-comparison">
+                                <span class="stats-percentage" id="gastos-pct-mes">0%</span>
+                                <span class="stats-previous" id="gastos-mes-anterior">Mismo mes año anterior: 0,00 €</span>
+                            </div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stats-label">Cantidad Gastos</div>
+                            <div class="stats-value" id="gastos-cantidad-mes">0</div>
+                        </div>
+                        <div class="stats-row" style="margin-top: 1rem;">
+                            <canvas id="grafico-gastos-mes" style="max-height: 250px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Gastos Año Actual -->
+                <div class="stats-card" id="card-gastos-anio">
+                    <h3>Gastos Año Actual <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
+                    <div class="stats-content">
+                        <div class="stats-row">
+                            <div class="stats-label">Total Año Actual</div>
+                            <div class="stats-value importe-negativo" id="gastos-total-anio">0,00 €</div>
+                            <div class="stats-comparison">
+                                <span class="stats-percentage" id="gastos-pct-anio">0%</span>
+                                <span class="stats-previous" id="gastos-anio-anterior">Año anterior: 0,00 €</span>
+                            </div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stats-label">Media Mensual</div>
+                            <div class="stats-value importe-negativo" id="gastos-media-mensual">0,00 €</div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stats-label">Cantidad Total</div>
+                            <div class="stats-value" id="gastos-cantidad-anio">0</div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stats-label">Gasto Previsto Fin Año</div>
+                            <div class="stats-value importe-negativo" id="gastos-prevision">0,00 €</div>
+                            <div class="stats-comparison">
+                                <span class="stats-previous" style="font-size: 0.75rem;">Basado en media mensual</span>
+                            </div>
+                        </div>
+                        <div class="stats-row" style="margin-top: 1rem;">
+                            <canvas id="grafico-gastos-anio" style="max-height: 250px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="top-stats-container">
+                <div class="top-stats-column">
+                    <div class="top-clientes">
+                        <h2>Top 10 Gastos del Año</h2>
+                        <div class="stats-card">
+                            <table class="stats-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 55%; font-size: 0.8rem; padding: 0.3rem 0.5rem;">Concepto</th>
+                                        <th style="text-align:right; width: 30%; font-size: 0.8rem; padding: 0.3rem 0.5rem;">Total</th>
+                                        <th style="text-align:right; width: 15%; font-size: 0.8rem; padding: 0.3rem 0.5rem;">Var. %</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topGastosBody">
+                                    <tr id="loading-row"><td colspan="3" style="text-align:center;padding:1rem;color:#999;">Haz click en la pestaña Gastos para cargar datos...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- fin tab-gastos -->
+
+<!-- Modal Detalles Gasto -->
+<div id="modal-detalles-gasto" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+        <span class="cerrar-modal" onclick="cerrarModalDetallesGasto()">&times;</span>
+        <h2 id="modal-concepto-titulo" style="margin-top: 0;">Detalles del Gasto</h2>
+        
+        <!-- Estadísticas resumen -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; background: #f5f5f5; padding: 1rem; border-radius: 8px;">
+            <div>
+                <div style="font-size: 0.75rem; color: #666;">Total Anual</div>
+                <div id="modal-total" style="font-size: 1.3rem; font-weight: 600; color: #e74c3c;">0,00 €</div>
+            </div>
+            <div>
+                <div style="font-size: 0.75rem; color: #666;">Cantidad</div>
+                <div id="modal-cantidad" style="font-size: 1.3rem; font-weight: 600;">0</div>
+            </div>
+            <div>
+                <div style="font-size: 0.75rem; color: #666;">Promedio</div>
+                <div id="modal-promedio" style="font-size: 1.3rem; font-weight: 600; color: #e74c3c;">0,00 €</div>
+            </div>
+            <div>
+                <div style="font-size: 0.75rem; color: #666;">Mínimo</div>
+                <div id="modal-minimo" style="font-size: 1rem; font-weight: 500;">0,00 €</div>
+            </div>
+            <div>
+                <div style="font-size: 0.75rem; color: #666;">Máximo</div>
+                <div id="modal-maximo" style="font-size: 1rem; font-weight: 500;">0,00 €</div>
+            </div>
+        </div>
+        
+        <!-- Tabla de detalles -->
+        <div style="max-height: 400px; overflow-y: auto;">
+            <table class="stats-table" style="width: 100%;">
+                <thead style="position: sticky; top: 0; background: white; z-index: 1;">
+                    <tr>
+                        <th style="text-align: left; width: 50%;">Concepto</th>
+                        <th style="text-align: center; width: 8%;">Cant.</th>
+                        <th style="text-align: right; width: 15%;">Total</th>
+                        <th style="text-align: right; width: 15%;">Promedio</th>
+                        <th style="text-align: center; width: 12%;">Periodo</th>
+                    </tr>
+                </thead>
+                <tbody id="modal-detalles-body">
+                    <tr><td colspan="5" style="text-align: center; padding: 2rem;">Cargando...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -574,31 +869,794 @@
         <canvas id="chart-estadisticas"></canvas>
     </div>
 </div>
+
+<!-- Modal Gráficos Gastos -->
+<div id="modal-graficos-gastos" class="modal">
+    <div class="modal-content" style="max-width: 1000px;">
+        <span class="cerrar-modal" id="cerrar-modal-gastos">&times;</span>
+        <h2 style="margin-top: 0; color: #2c3e50;">📊 Evolución de Gastos por Mes</h2>
+        <div class="chart-controls" style="margin-bottom: 20px; text-align: center;">
+            <label for="categoria-gastos" style="margin-right: 10px; font-weight: 600;">Categoría:</label>
+            <select id="categoria-gastos" style="padding: 8px 15px; border-radius: 4px; border: 1px solid #ddd; font-size: 14px;">
+                <option value="global">📈 Total Global</option>
+                <option value="Recibos">🧾 Recibos</option>
+                <option value="Liquidaciones TPV">💳 Liquidaciones TPV</option>
+                <option value="Transferencias">💸 Transferencias</option>
+                <option value="Bizum">📱 Bizum</option>
+                <option value="Compras Tarjeta">🛒 Compras Tarjeta</option>
+            </select>
+        </div>
+        <canvas id="chart-gastos-meses" style="max-height: 450px;"></canvas>
+    </div>
+</div>
 </div>
 
 <div id="notificaciones-contenedor"></div>
 
-<!-- Scripts sin tipo module para mejor compatibilidad -->
-<!-- Bloque inline eliminado -->
+<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-<!--
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const btnGraficos = document.getElementById("btn-graficos");
-        if (btnGraficos) {
-            btnGraficos.addEventListener("click", abrirModalGraficos);
+// Script inline simple para gastos
+console.log('[INLINE] Script de gastos cargando...');
+
+// Esperar a que el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[INLINE] DOM listo, configurando pestañas...');
+    
+    // Configurar pestañas
+    const tabVentas = document.querySelector('.tab[data-tab="ventas"]');
+    const tabGastos = document.querySelector('.tab[data-tab="gastos"]');
+    
+    if (tabGastos) {
+        console.log('[INLINE] Pestaña Gastos encontrada, agregando listener...');
+        tabGastos.addEventListener('click', function() {
+            console.log('[INLINE] Click en pestaña Gastos detectado!');
+            
+            // Cambiar pestañas activas
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            
+            tabGastos.classList.add('active');
+            document.getElementById('tab-gastos').classList.add('active');
+            
+            // Cargar datos
+            console.log('[INLINE] Cargando datos de gastos...');
+            window.cargarDatosGastos();
+        });
+    } else {
+        console.error('[INLINE] No se encontró la pestaña Gastos');
+    }
+    
+    if (tabVentas) {
+        tabVentas.addEventListener('click', function() {
+            console.log('[INLINE] Click en pestaña Ventas');
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+            
+            tabVentas.classList.add('active');
+            document.getElementById('tab-ventas').classList.add('active');
+        });
+    }
+});
+
+// Exponer función globalmente para que pueda ser llamada desde estadisticas_facturas.js
+window.cargarDatosGastos = async function() {
+    console.log('[INLINE] ========== INICIO CARGA GASTOS ==========');
+    
+    try {
+        const selectorFecha = document.getElementById('selector-fecha');
+        console.log('[INLINE] Selector fecha:', selectorFecha, 'Valor:', selectorFecha?.value);
+        
+        if (!selectorFecha || !selectorFecha.value) {
+            console.error('[INLINE] ❌ Selector de fecha no encontrado o vacío');
+            alert('ERROR: No se encontró el selector de fecha');
+            return;
         }
         
-        const cerrarModal = document.getElementById("cerrar-modal");
-        if (cerrarModal) {
-            cerrarModal.addEventListener("click", function() {
-                document.getElementById("modal-graficos").style.display = "none";
+        const [anio, mes] = selectorFecha.value.split('-');
+        console.log(`[INLINE] ✅ Año: ${anio}, Mes: ${mes}`);
+        
+        // Cargar estadísticas generales
+        const urlEstadisticas = `http://localhost:5001/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`;
+        console.log('[INLINE] 📡 Haciendo fetch a:', urlEstadisticas);
+        
+        const respuesta = await fetch(urlEstadisticas);
+        console.log('[INLINE] ✅ Respuesta recibida - Status:', respuesta.status, 'OK:', respuesta.ok);
+        
+        if (!respuesta.ok) {
+            throw new Error(`HTTP ${respuesta.status}`);
+        }
+        
+        const datos = await respuesta.json();
+        console.log('[INLINE] ✅ Datos parseados:', JSON.stringify(datos).substring(0, 200));
+        
+        // Actualizar elementos (gastos siempre en positivo)
+        const elementos = [
+            { id: 'gastos-total-mes', valor: formatearImporte(Math.abs(datos.total_gastos_mes)) },
+            { id: 'gastos-pct-mes', valor: formatearPorcentaje(datos.porcentaje_mes) },
+            { id: 'gastos-mes-anterior', valor: `Mismo mes año anterior: ${formatearImporte(Math.abs(datos.total_gastos_mes_anterior))}` },
+            { id: 'gastos-cantidad-mes', valor: datos.cantidad_gastos_mes },
+            { id: 'gastos-total-anio', valor: formatearImporte(Math.abs(datos.total_gastos_anio)) },
+            { id: 'gastos-pct-anio', valor: formatearPorcentaje(datos.porcentaje_anio) },
+            { id: 'gastos-anio-anterior', valor: `Año anterior: ${formatearImporte(Math.abs(datos.total_gastos_anio_anterior))}` },
+            { id: 'gastos-media-mensual', valor: formatearImporte(Math.abs(datos.media_mensual)) },
+            { id: 'gastos-cantidad-anio', valor: datos.cantidad_gastos_anio },
+            { id: 'gastos-prevision', valor: formatearImporte(Math.abs(datos.prevision_gastos_anio)) }
+        ];
+        
+        let actualizados = 0;
+        elementos.forEach(item => {
+            const elem = document.getElementById(item.id);
+            if (elem) {
+                elem.textContent = item.valor;
+                actualizados++;
+            } else {
+                console.warn('[INLINE] Elemento no encontrado:', item.id);
+            }
+        });
+        
+        console.log(`[INLINE] ✅ ${actualizados} elementos actualizados de ${elementos.length}`);
+        
+        // Cargar Top 10
+        console.log('[INLINE] 📊 Iniciando carga de Top 10...');
+        await cargarTop10GastosInline(anio);
+        
+        // Cargar gráfico de pastel del mes
+        console.log('[INLINE] 📊 Cargando gráfico de pastel del mes...');
+        await cargarGraficoGastosMes();
+        
+        // Cargar gráfico de pastel del año
+        console.log('[INLINE] 📊 Cargando gráfico de pastel del año...');
+        if (typeof window.cargarGraficoGastosAnio === 'function') {
+            await window.cargarGraficoGastosAnio();
+        } else {
+            console.error('[INLINE] window.cargarGraficoGastosAnio no está disponible');
+        }
+        
+        console.log('[INLINE] ========== FIN CARGA GASTOS ==========');
+        
+    } catch (error) {
+        console.error('[INLINE] ❌ ERROR FATAL:', error);
+        console.error('[INLINE] Stack:', error.stack);
+        alert('❌ Error al cargar gastos: ' + error.message);
+    }
+}
+
+async function cargarTop10GastosInline(anio) {
+    const tbody = document.getElementById('topGastosBody');
+    
+    try {
+        console.log('[INLINE] Cargando Top 10 para año', anio);
+        
+        if (!tbody) {
+            console.error('[INLINE] ❌ No se encontró topGastosBody');
+            alert('ERROR: No se encontró la tabla topGastosBody');
+            return;
+        }
+        
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;color:#2196F3;">⏳ Cargando Top 10...</td></tr>';
+        
+        const url = `http://localhost:5001/api/gastos/top10?anio=${anio}`;
+        console.log('[INLINE] URL:', url);
+        
+        const respuesta = await fetch(url);
+        console.log('[INLINE] Respuesta recibida - Status:', respuesta.status);
+        
+        if (!respuesta.ok) {
+            throw new Error(`HTTP ${respuesta.status}: ${respuesta.statusText}`);
+        }
+        
+        const datos = await respuesta.json();
+        console.log('[INLINE] Top 10 recibido:', datos);
+        console.log('[INLINE] Cantidad de gastos:', datos.top_gastos ? datos.top_gastos.length : 0);
+        
+        if (!datos.top_gastos || datos.top_gastos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;color:#f44336;">⚠️ No hay datos disponibles</td></tr>';
+            console.log('[INLINE] No hay datos de top gastos');
+            return;
+        }
+        
+        tbody.innerHTML = ''; // Limpiar antes de agregar
+        
+        datos.top_gastos.forEach((gasto, i) => {
+            console.log(`[INLINE] Agregando gasto ${i+1}: ${gasto.concepto} - ${gasto.total}€`);
+            
+            const fila = document.createElement('tr');
+            fila.style.cursor = 'pointer';
+            fila.title = 'Click para ver detalles';
+            
+            // Agregar tooltip explicativo según el concepto
+            const tooltips = {
+                'Recibos': 'Pagos domiciliados regulares (luz, agua, etc.)',
+                'Liquidaciones TPV': 'Comisiones bancarias por cobros con tarjeta (datáfono)',
+                'Transferencias': 'Transferencias bancarias realizadas',
+                'Compras Tarjeta': 'Compras realizadas con tarjeta de empresa',
+                'Bizum': 'Pagos realizados por Bizum'
+            };
+            
+            const tooltip = tooltips[gasto.concepto] || 'Click para ver detalles';
+            
+            // Calcular estilo del porcentaje
+            const pct = gasto.porcentaje_diferencia || 0;
+            let pctDisplay = '-';
+            let pctColor = '#999';
+            
+            if (pct > 0.1) {
+                pctDisplay = '▲ +' + pct.toFixed(1) + '%';
+                pctColor = '#e74c3c';
+            } else if (pct < -0.1) {
+                pctDisplay = '▼ ' + pct.toFixed(1) + '%';
+                pctColor = '#27ae60';
+            }
+            
+            fila.innerHTML = `
+                <td style="padding:0.3rem 0.5rem;font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    <span style="color:#999;font-weight:600;margin-right:0.3rem;">${i + 1}.</span>
+                    <span title="${tooltip}">${gasto.concepto}</span>
+                </td>
+                <td style="text-align:right;padding:0.3rem 0.5rem;font-size:0.8rem;font-weight:600;color:#e74c3c;">
+                    ${formatearImporte(Math.abs(gasto.total))}
+                </td>
+                <td style="text-align:right;padding:0.3rem 0.5rem;font-size:0.75rem;color:${pctColor};font-weight:500;">
+                    ${pctDisplay}
+                </td>
+            `;
+            
+            // Evento click para abrir modal con detalles
+            fila.addEventListener('click', () => {
+                abrirModalDetallesGasto(gasto.concepto, anio);
             });
+            
+            // Hover effect
+            fila.addEventListener('mouseenter', () => {
+                fila.style.backgroundColor = '#f5f5f5';
+            });
+            fila.addEventListener('mouseleave', () => {
+                fila.style.backgroundColor = '';
+            });
+            
+            tbody.appendChild(fila);
+        });
+        
+        console.log(`[INLINE] ✅ Top 10 cargado correctamente: ${datos.top_gastos.length} items`);
+        
+    } catch (error) {
+        console.error('[INLINE] ❌ ERROR en Top 10:', error);
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:1rem;color:red;">❌ Error: ${error.message}</td></tr>`;
+        }
+        alert('Error al cargar Top 10 Gastos: ' + error.message);
+    }
+}
+
+function formatearImporte(valor) {
+    if (valor == null) return '0,00 €';
+    return new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2
+    }).format(valor);
+}
+
+function formatearPorcentaje(valor) {
+    if (valor == null || isNaN(valor)) return '0%';
+    const signo = valor > 0 ? '+' : '';
+    return `${signo}${valor.toFixed(2)}%`;
+}
+
+// ===== MODAL DETALLES GASTO =====
+async function abrirModalDetallesGasto(concepto, anio) {
+    console.log('[MODAL] Abriendo modal para:', concepto, anio);
+    
+    const modal = document.getElementById('modal-detalles-gasto');
+    if (!modal) {
+        console.error('[MODAL] No se encontró el modal');
+        return;
+    }
+    
+    // Mostrar modal
+    modal.style.display = 'block';
+    
+    // Actualizar título
+    document.getElementById('modal-concepto-titulo').textContent = `Detalles: ${concepto}`;
+    
+    // Mostrar mensaje de carga
+    document.getElementById('modal-detalles-body').innerHTML = 
+        '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
+    
+    try {
+        const url = `http://localhost:5001/api/gastos/detalles?concepto=${encodeURIComponent(concepto)}&anio=${anio}`;
+        console.log('[MODAL] Cargando desde:', url);
+        
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) {
+            throw new Error(`HTTP ${respuesta.status}`);
+        }
+        
+        const datos = await respuesta.json();
+        console.log('[MODAL] Datos recibidos:', datos);
+        
+        // Actualizar estadísticas
+        document.getElementById('modal-total').textContent = formatearImporte(datos.estadisticas.total);
+        document.getElementById('modal-cantidad').textContent = datos.estadisticas.cantidad;
+        document.getElementById('modal-promedio').textContent = formatearImporte(datos.estadisticas.promedio);
+        document.getElementById('modal-minimo').textContent = formatearImporte(datos.estadisticas.minimo);
+        document.getElementById('modal-maximo').textContent = formatearImporte(datos.estadisticas.maximo);
+        
+        // Cargar tabla de detalles agrupados
+        const tbody = document.getElementById('modal-detalles-body');
+        tbody.innerHTML = '';
+        
+        if (!datos.gastos_agrupados || datos.gastos_agrupados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;">No hay gastos registrados</td></tr>';
+            return;
+        }
+        
+        datos.gastos_agrupados.forEach((gasto, index) => {
+            const fila = document.createElement('tr');
+            
+            // Calcular periodo
+            let periodo = '';
+            if (gasto.primera_fecha === gasto.ultima_fecha) {
+                periodo = gasto.primera_fecha;
+            } else {
+                periodo = `${gasto.primera_fecha.substring(0, 5)} - ${gasto.ultima_fecha.substring(0, 5)}`;
+            }
+            
+            // Crear tooltip con ejemplos de conceptos originales
+            let tooltip = gasto.concepto;
+            if (gasto.conceptos_originales && gasto.conceptos_originales.length > 0) {
+                tooltip += '\n\nEjemplos:\n' + gasto.conceptos_originales.join('\n');
+            }
+            
+            fila.innerHTML = `
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${tooltip}">
+                    <span style="color:#999;font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
+                    <span style="cursor: help;">${gasto.concepto}</span>
+                    ${gasto.cantidad > 1 ? '<span style="color:#999;font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
+                </td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: center; width: 8%;">${gasto.cantidad}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; color: #e74c3c; width: 15%;">${formatearImporte(gasto.total)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; color: #666; width: 15%;">${formatearImporte(gasto.promedio)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; color: #999; width: 12%;">${periodo}</td>
+            `;
+            tbody.appendChild(fila);
+        });
+        
+        console.log(`[MODAL] ✅ Cargados ${datos.gastos_agrupados.length} gastos agrupados`);
+        
+    } catch (error) {
+        console.error('[MODAL] Error:', error);
+        document.getElementById('modal-detalles-body').innerHTML = 
+            `<tr><td colspan="5" style="text-align:center;padding:2rem;color:red;">❌ Error: ${error.message}</td></tr>`;
+    }
+}
+
+function cerrarModalDetallesGasto() {
+    const modal = document.getElementById('modal-detalles-gasto');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// ===== MODAL DETALLES GASTO POR CATEGORÍA (MES) =====
+async function abrirModalDetallesGastoMes(categoria) {
+    console.log('[MODAL MES] Abriendo modal para categoría:', categoria);
+    
+    const selectorFecha = document.getElementById('selector-fecha');
+    if (!selectorFecha || !selectorFecha.value) {
+        alert('Error: No se pudo obtener la fecha seleccionada');
+        return;
+    }
+    
+    const [anio, mes] = selectorFecha.value.split('-');
+    
+    const modal = document.getElementById('modal-detalles-gasto');
+    if (!modal) {
+        console.error('[MODAL MES] No se encontró el modal');
+        return;
+    }
+    
+    modal.style.display = 'block';
+    document.getElementById('modal-concepto-titulo').textContent = `${categoria} - ${mes}/${anio}`;
+    document.getElementById('modal-detalles-body').innerHTML = 
+        '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
+    
+    try {
+        const url = `http://localhost:5001/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&mes=${parseInt(mes)}`;
+        console.log('[MODAL MES] Cargando desde:', url);
+        
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) {
+            throw new Error(`HTTP ${respuesta.status}`);
+        }
+        
+        const datos = await respuesta.json();
+        console.log('[MODAL MES] Datos recibidos:', datos);
+        
+        document.getElementById('modal-total').textContent = formatearImporte(datos.estadisticas.total);
+        document.getElementById('modal-cantidad').textContent = datos.estadisticas.cantidad;
+        document.getElementById('modal-promedio').textContent = formatearImporte(datos.estadisticas.promedio);
+        document.getElementById('modal-minimo').textContent = '-';
+        document.getElementById('modal-maximo').textContent = '-';
+        
+        const tbody = document.getElementById('modal-detalles-body');
+        tbody.innerHTML = '';
+        
+        if (!datos.gastos || datos.gastos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;">No hay gastos registrados</td></tr>';
+            return;
+        }
+        
+        datos.gastos.forEach((gasto, index) => {
+            const fila = document.createElement('tr');
+            const periodo = gasto.cantidad > 1 ? `${gasto.cantidad}x` : gasto.fecha;
+            fila.innerHTML = `
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem;">
+                    <span style="color:#999;font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
+                    ${gasto.concepto}
+                    ${gasto.cantidad > 1 ? '<span style="color:#999;font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
+                </td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: center;">${gasto.cantidad}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; color: #e74c3c;">${formatearImporte(gasto.importe)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; color: #666;">${formatearImporte(gasto.importe / gasto.cantidad)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; color: #999;">${periodo}</td>
+            `;
+            tbody.appendChild(fila);
+        });
+        
+    } catch (error) {
+        console.error('[MODAL MES] Error:', error);
+        document.getElementById('modal-detalles-body').innerHTML = 
+            `<tr><td colspan="5" style="text-align:center;padding:2rem;color:red;">❌ Error: ${error.message}</td></tr>`;
+    }
+}
+
+// ===== MODAL DETALLES GASTO POR CATEGORÍA (AÑO) =====
+async function abrirModalDetallesGastoAnio(categoria) {
+    console.log('[MODAL ANIO] Abriendo modal para categoría:', categoria);
+    
+    const selectorFecha = document.getElementById('selector-fecha');
+    let anio;
+    
+    if (selectorFecha && selectorFecha.value) {
+        [anio] = selectorFecha.value.split('-');
+        console.log('[MODAL ANIO] Usando año del selector:', anio);
+    } else {
+        anio = new Date().getFullYear();
+        console.log('[MODAL ANIO] Usando año actual:', anio);
+    }
+    
+    const modal = document.getElementById('modal-detalles-gasto');
+    if (!modal) {
+        console.error('[MODAL ANIO] No se encontró el modal');
+        return;
+    }
+    
+    modal.style.display = 'block';
+    document.getElementById('modal-concepto-titulo').textContent = `${categoria} - Año ${anio}`;
+    document.getElementById('modal-detalles-body').innerHTML = 
+        '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
+    
+    try {
+        const url = `http://localhost:5001/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
+        console.log('[MODAL ANIO] Cargando desde:', url);
+        
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) {
+            throw new Error(`HTTP ${respuesta.status}`);
+        }
+        
+        const datos = await respuesta.json();
+        console.log('[MODAL ANIO] Datos recibidos:', datos);
+        
+        document.getElementById('modal-total').textContent = formatearImporte(datos.estadisticas.total);
+        document.getElementById('modal-cantidad').textContent = datos.estadisticas.cantidad;
+        document.getElementById('modal-promedio').textContent = formatearImporte(datos.estadisticas.promedio);
+        document.getElementById('modal-minimo').textContent = '-';
+        document.getElementById('modal-maximo').textContent = '-';
+        
+        const tbody = document.getElementById('modal-detalles-body');
+        tbody.innerHTML = '';
+        
+        if (!datos.gastos || datos.gastos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;">No hay gastos registrados</td></tr>';
+            return;
+        }
+        
+        datos.gastos.forEach((gasto, index) => {
+            const fila = document.createElement('tr');
+            const periodo = gasto.cantidad > 1 ? `${gasto.cantidad}x` : gasto.fecha;
+            fila.innerHTML = `
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem;">
+                    <span style="color:#999;font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
+                    ${gasto.concepto}
+                    ${gasto.cantidad > 1 ? '<span style="color:#999;font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
+                </td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: center;">${gasto.cantidad}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; color: #e74c3c;">${formatearImporte(gasto.importe)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; color: #666;">${formatearImporte(gasto.importe / gasto.cantidad)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; color: #999;">${periodo}</td>
+            `;
+            tbody.appendChild(fila);
+        });
+        
+    } catch (error) {
+        console.error('[MODAL ANIO] Error:', error);
+        document.getElementById('modal-detalles-body').innerHTML = 
+            `<tr><td colspan="5" style="text-align:center;padding:2rem;color:red;">❌ Error: ${error.message}</td></tr>`;
+    }
+}
+
+// Cerrar modal al hacer click fuera
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('modal-detalles-gasto');
+    if (event.target === modal) {
+        cerrarModalDetallesGasto();
+    }
+});
+
+// Variable global para el gráfico de pastel del mes
+let graficoGastosMes = null;
+
+async function cargarGraficoGastosMes() {
+    try {
+        const selectorFecha = document.getElementById('selector-fecha');
+        if (!selectorFecha || !selectorFecha.value) {
+            console.warn('[GRAFICO] Selector de fecha no disponible');
+            return;
+        }
+        
+        const [anio, mes] = selectorFecha.value.split('-');
+        console.log('[GRAFICO] Cargando gráfico para:', mes, '/', anio);
+        
+        const response = await fetch(`http://localhost:5001/api/gastos/por-categoria-mes?anio=${anio}&mes=${parseInt(mes)}`);
+        
+        if (!response.ok) {
+            console.error('[GRAFICO] Error en respuesta:', response.status);
+            return;
+        }
+        
+        const datos = await response.json();
+        console.log('[GRAFICO] Datos recibidos:', datos);
+        
+        if (!datos.categorias || datos.categorias.length === 0) {
+            console.log('[GRAFICO] No hay datos para mostrar');
+            return;
+        }
+        
+        const canvas = document.getElementById('grafico-gastos-mes');
+        if (!canvas) {
+            console.error('[GRAFICO] Canvas no encontrado');
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Destruir gráfico anterior si existe
+        if (graficoGastosMes) {
+            graficoGastosMes.destroy();
+        }
+        
+        // Colores para el gráfico de pastel
+        const colores = [
+            '#e74c3c', // Rojo
+            '#3498db', // Azul
+            '#f39c12', // Naranja
+            '#2ecc71', // Verde
+            '#9b59b6', // Morado
+            '#1abc9c'  // Turquesa
+        ];
+        
+        const labels = datos.categorias.map(c => c.categoria);
+        const valores = datos.categorias.map(c => c.total);
+        
+        graficoGastosMes = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: valores,
+                    backgroundColor: colores.slice(0, labels.length),
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const categoria = labels[index];
+                        console.log('[GRAFICO MES] Click en:', categoria);
+                        abrirModalDetallesGastoMes(categoria);
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 10,
+                            font: {
+                                size: 11
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${label}: ${value.toFixed(2)} € (${percentage}%) - Click para ver detalles`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('[GRAFICO] Gráfico de pastel (mes) renderizado');
+        
+    } catch (error) {
+        console.error('[GRAFICO] Error al cargar gráfico:', error);
+    }
+}
+
+// ===== MODAL GRÁFICOS GASTOS POR MES =====
+let chartGastosMeses = null;
+
+window.abrirModalGraficosGastos = async function() {
+    console.log('[MODAL GRAFICOS GASTOS] Abriendo modal...');
+    
+    const modal = document.getElementById('modal-graficos-gastos');
+    if (!modal) {
+        console.error('[MODAL GRAFICOS GASTOS] Modal no encontrado');
+        return;
+    }
+    
+    modal.style.display = 'block';
+    
+    // Cargar gráfico inicial (global)
+    await cargarGraficoGastosMensual('global');
+};
+
+async function cargarGraficoGastosMensual(categoria) {
+    try {
+        const selectorFecha = document.getElementById('selector-fecha');
+        let anio;
+        
+        if (selectorFecha && selectorFecha.value) {
+            [anio] = selectorFecha.value.split('-');
+        } else {
+            anio = new Date().getFullYear();
+        }
+        
+        console.log('[GRAFICO MENSUAL] Cargando para:', categoria, anio);
+        
+        const response = await fetch(`http://localhost:5001/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`);
+        
+        if (!response.ok) {
+            console.error('[GRAFICO MENSUAL] Error en respuesta:', response.status);
+            return;
+        }
+        
+        const datos = await response.json();
+        console.log('[GRAFICO MENSUAL] Datos recibidos:', datos);
+        
+        const canvas = document.getElementById('chart-gastos-meses');
+        if (!canvas) {
+            console.error('[GRAFICO MENSUAL] Canvas no encontrado');
+            return;
+        }
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Destruir gráfico anterior si existe
+        if (chartGastosMeses) {
+            chartGastosMeses.destroy();
+        }
+        
+        // Preparar datos
+        const labels = datos.meses.map(m => m.nombre);
+        const valores = datos.meses.map(m => m.total);
+        const cantidades = datos.meses.map(m => m.cantidad);
+        
+        // Color según categoría
+        let color = '#3498db'; // Azul por defecto
+        if (categoria === 'Recibos') color = '#e74c3c';
+        else if (categoria === 'Transferencias') color = '#9b59b6';
+        else if (categoria === 'Compras Tarjeta') color = '#f39c12';
+        else if (categoria === 'Bizum') color = '#2ecc71';
+        else if (categoria === 'Liquidaciones TPV') color = '#1abc9c';
+        
+        chartGastosMeses = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: categoria === 'global' ? 'Total Gastos' : categoria,
+                    data: valores,
+                    backgroundColor: color,
+                    borderColor: color,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value.toFixed(0) + ' €';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const index = context.dataIndex;
+                                const cantidad = cantidades[index];
+                                return [
+                                    `Total: ${context.parsed.y.toFixed(2)} €`,
+                                    `Cantidad: ${cantidad} gastos`,
+                                    `Promedio: ${(context.parsed.y / (cantidad || 1)).toFixed(2)} €`
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log('[GRAFICO MENSUAL] Gráfico renderizado');
+        
+    } catch (error) {
+        console.error('[GRAFICO MENSUAL] Error:', error);
+    }
+}
+
+// Event listeners para el modal de gráficos gastos
+document.addEventListener('DOMContentLoaded', function() {
+    // Cerrar modal
+    const cerrarBtn = document.getElementById('cerrar-modal-gastos');
+    if (cerrarBtn) {
+        cerrarBtn.addEventListener('click', function() {
+            const modal = document.getElementById('modal-graficos-gastos');
+            if (modal) modal.style.display = 'none';
+        });
+    }
+    
+    // Cambiar categoría
+    const selectorCategoria = document.getElementById('categoria-gastos');
+    if (selectorCategoria) {
+        selectorCategoria.addEventListener('change', function() {
+            cargarGraficoGastosMensual(this.value);
+        });
+    }
+    
+    // Cerrar al hacer click fuera
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('modal-graficos-gastos');
+        if (event.target === modal) {
+            modal.style.display = 'none';
         }
     });
+});
+
+console.log('[INLINE] Funciones definidas (incluido modal y gráfico del mes)');
 </script>
--->
 
 </body>
 </html>

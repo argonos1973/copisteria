@@ -66,7 +66,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   selectorFecha?.addEventListener('input', recargarEstadisticas);
 
   document.getElementById('btn-descargar-csv')?.addEventListener('click', descargarCSV);
-  document.getElementById('btn-graficos')?.addEventListener('click', abrirModalGraficos);
+  document.getElementById('btn-graficos')?.addEventListener('click', () => {
+    // Detectar qué pestaña está activa
+    const tabGastosContent = document.getElementById('tab-gastos');
+    const tabVentasContent = document.getElementById('tab-ventas');
+    
+    if (tabGastosContent && tabGastosContent.classList.contains('active')) {
+      console.log('[BTN GRAFICOS] Pestaña Gastos activa - Mostrando modal de gráficos mensuales');
+      if (typeof window.abrirModalGraficosGastos === 'function') {
+        window.abrirModalGraficosGastos();
+      } else {
+        console.error('[BTN GRAFICOS] Función abrirModalGraficosGastos no disponible');
+      }
+    } else if (tabVentasContent && tabVentasContent.classList.contains('active')) {
+      console.log('[BTN GRAFICOS] Pestaña Ventas activa - Mostrando modal de ventas');
+      abrirModalGraficos();
+    } else {
+      console.log('[BTN GRAFICOS] Ninguna pestaña activa detectada - Usando ventas por defecto');
+      abrirModalGraficos();
+    }
+  });
   document.getElementById('cerrar-modal')?.addEventListener('click', () => {
     document.getElementById('modal-graficos').style.display = 'none';
   });
@@ -109,6 +128,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         cargarEstadisticas(mes, anio),
         cargarIngresosGastosTotales(mes, anio)
       ]);
+      
+      // Si la pestaña Gastos está activa, recargar sus datos también
+      const tabGastosContent = document.getElementById('tab-gastos');
+      if (tabGastosContent && tabGastosContent.classList.contains('active')) {
+        console.log('[RELOAD] Recargando datos de pestaña Gastos (está activa)...');
+        if (typeof window.cargarDatosGastos === 'function') {
+          await window.cargarDatosGastos();
+        }
+      }
     } catch (e) {
       console.error('[estadisticas] Fallo al cargar alguna sección:', e);
     }

@@ -284,10 +284,23 @@ async function rellenarFactura(datos) {
     }
 
     // Información VERI*FACTU
-    console.log('Información VERI*FACTU completa:', factura);
-    const verifactuDisponible = !!(factura.qr_verifactu && factura.qr_verifactu.length > 50);
-    if (!verifactuDisponible) {
-        console.warn('VERI*FACTU no disponible para esta factura. Ocultando secciones relacionadas.');
+    console.log('[VERIFACTU] Estado recibido del servidor:', datos.verifactu_enabled);
+    console.log('[VERIFACTU] Objeto datos completo:', datos);
+    console.log('[VERIFACTU] Objeto factura completo:', factura);
+    console.log('[VERIFACTU] Datos de factura:', {
+        tiene_codigo_qr: !!factura.codigo_qr,
+        longitud_qr: factura.codigo_qr ? factura.codigo_qr.length : 0,
+        tiene_csv: !!factura.csv,
+        csv: factura.csv,
+        hash: factura.hash_verifactu,
+        codigo_qr_primeros_50: factura.codigo_qr ? factura.codigo_qr.substring(0, 50) : 'null'
+    });
+    
+    const verifactuHabilitado = datos.verifactu_enabled === true;
+    const verifactuDisponible = verifactuHabilitado && !!(factura.codigo_qr && factura.codigo_qr.length > 50);
+    
+    if (!verifactuHabilitado) {
+        console.log('[VERIFACTU] Desactivado - ocultando secciones');
         // 1. Ocultar etiqueta VERI*FACTU del título
         const labelVerifactu = document.querySelector('.header h1 span');
         if (labelVerifactu) labelVerifactu.style.display = 'none';
@@ -300,22 +313,36 @@ async function rellenarFactura(datos) {
         } catch (err) {
             console.error('Error ocultando secciones VERI*FACTU:', err);
         }
+    } else if (!verifactuDisponible) {
+        console.warn('[VERIFACTU] Habilitado pero sin datos - ocultando secciones');
+        // Ocultar si no hay datos disponibles
+        try {
+            const qrContainerOuter = document.getElementById('qr-verifactu')?.parentElement?.parentElement;
+            if (qrContainerOuter) qrContainerOuter.style.display = 'none';
+            const infoBlock = document.getElementById('hash-factura')?.parentElement?.parentElement;
+            if (infoBlock) infoBlock.style.display = 'none';
+        } catch (err) {
+            console.error('Error ocultando secciones VERI*FACTU:', err);
+        }
+    } else {
+        console.log('[VERIFACTU] Mostrando QR y datos');
     }
-    console.log('Datos QR:', {
-        hash: factura.hash_verifactu,
-        qrExists: factura.qr_verifactu !== null && factura.qr_verifactu !== undefined,
-        qrLength: factura.qr_verifactu ? factura.qr_verifactu.length : 0,
-        qrFirstChars: factura.qr_verifactu ? factura.qr_verifactu.substring(0, 50) + '...' : 'No disponible'
-    });
     
-    // Insertar hash en el elemento correspondiente
+    // Insertar Hash de la factura (siempre) y CSV (si está disponible)
     const hashElement = document.getElementById('hash-factura');
     if (hashElement) {
         const hashValue = factura.hash_verifactu || 'No disponible';
-        hashElement.textContent = `Hash: ${hashValue}`;
-        console.log('Hash insertado:', hashValue);
-    } else {
-        console.error('No se encontró el elemento #hash-factura');
+        let textoVerifactu = `Hash: ${hashValue}`;
+        
+        // Si hay CSV (factura ya enviada a AEAT), añadirlo
+        if (factura.csv) {
+            textoVerifactu += `\nCSV: ${factura.csv}`;
+            console.log('[VERIFACTU] Hash y CSV asignados:', hashValue, factura.csv);
+        } else {
+            console.log('[VERIFACTU] Solo Hash asignado (factura no enviada a AEAT):', hashValue);
+        }
+        
+        hashElement.textContent = textoVerifactu;
     }
     
     // Buscar e identificar el elemento QR
@@ -335,14 +362,14 @@ async function rellenarFactura(datos) {
         qrElement.innerHTML = '';
         
         try {
-            // Plan A: Usar la cadena base64 directamente si existe
-            if (factura.qr_verifactu) {
-                console.log('Intentando mostrar QR desde datos base64, longitud:', factura.qr_verifactu.length);
+            // Usar codigo_qr en lugar de qr_verifactu
+            if (factura.codigo_qr) {
+                console.log('[VERIFACTU] Mostrando QR desde datos base64, longitud:', factura.codigo_qr.length);
                 
                 // Crear un elemento de imagen
                 const imgElement = document.createElement('img');
                 // Construir la URL de la imagen
-                imgElement.src = `data:image/png;base64,${factura.qr_verifactu}`;
+                imgElement.src = `data:image/png;base64,${factura.codigo_qr}`;
                 imgElement.alt = 'Código QR VERI*FACTU';
                 imgElement.style.width = '150px';
                 imgElement.style.height = '150px';

@@ -10,12 +10,19 @@ import {
 } from './scripts_utils.js';
 import { mostrarNotificacion } from './notificaciones.js';
 
+console.log('[TICKET] Script imprimir-ticket.js cargado');
+
 window.onload = function() {
+    console.log('[TICKET] window.onload ejecutado');
     const idTicket = obtenerIdTicket(); // Obtener el ID del ticket desde la URL
     obtenerDatosDelTicket(idTicket).then(datos => {
         rellenarFactura(datos).then(() => {
-            // Imprimir cuando el QR esté listo (o tras timeout)
-            window.print();
+            // Esperar 1 segundo adicional antes de imprimir para asegurar que todo se renderice
+            console.log('[TICKET] Esperando 1 segundo antes de imprimir...');
+            setTimeout(() => {
+                console.log('[TICKET] Lanzando impresión');
+                window.print();
+            }, 1000);
         });
     }).catch(error => {
         console.error('Error al obtener los datos del ticket:', error);
@@ -43,8 +50,10 @@ function obtenerIdTicket() {
  */
 function obtenerDatosDelTicket(idTicket) {
     const url = `http://${IP_SERVER}:${PORT}/api/tickets/obtenerTicket/${encodeURIComponent(idTicket)}`;
+    console.log('[TICKET] Obteniendo datos de:', url);
     return fetch(url)
         .then(response => {
+            console.log('[TICKET] Respuesta recibida:', response.status);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -188,56 +197,82 @@ async function rellenarFactura(datos) {
     document.getElementById('iva').textContent = importeIVA ? formatearImporte(importeIVA) : '';
     document.getElementById('total').textContent = totalTicket ? formatearImporte(totalTicket) : '';
 
-    // Verificar si VERIFACTU está habilitado consultando config.json
-    let verifactuHabilitado = false;
-    try {
-        const configResponse = await fetch('/config.json');
-        const config = await configResponse.json();
-        verifactuHabilitado = config.verifactu_enabled === true;
-    } catch (e) {
-        console.log('No se pudo cargar config.json, asumiendo VERIFACTU desactivado');
-        verifactuHabilitado = false;
-    }
+    // Verificar si VERIFACTU está habilitado desde los datos del ticket
+    const verifactuHabilitado = datos.verifactu_enabled === true;
+    console.log('[VERIFACTU] Estado recibido del servidor:', verifactuHabilitado);
+
+    // DEBUG: Mostrar datos recibidos
+    console.log('[VERIFACTU] Datos recibidos:', {
+        verifactuHabilitado,
+        tiene_codigo_qr: !!datos.codigo_qr,
+        longitud_qr: datos.codigo_qr ? datos.codigo_qr.length : 0,
+        tiene_csv: !!datos.csv,
+        csv: datos.csv
+    });
 
     // Mostrar información VERI*FACTU solo si está habilitado
     const bloqueVerifactu = document.getElementById('hash-ticket')?.parentElement?.parentElement;
     
     if (!verifactuHabilitado) {
         // Si VERIFACTU está desactivado, ocultar toda la sección
+        console.log('[VERIFACTU] Desactivado - ocultando bloque');
         if (bloqueVerifactu) {
             bloqueVerifactu.style.display = 'none';
         }
     } else {
         // Si está habilitado, mostrar solo si hay datos
         const verifactuDisponible = datos.codigo_qr && datos.codigo_qr.length > 50;
+        console.log('[VERIFACTU] Disponible:', verifactuDisponible);
+        
         if (!verifactuDisponible && bloqueVerifactu) {
+            console.log('[VERIFACTU] No hay datos - ocultando bloque');
             bloqueVerifactu.style.display = 'none';
         } else {
+            console.log('[VERIFACTU] Mostrando QR y CSV');
             // QR
             if (verifactuDisponible) {
                 const imgQR = document.getElementById('qr-verifactu');
                 imgQR.src = `data:image/png;base64,${datos.codigo_qr}`;
+                console.log('[VERIFACTU] QR asignado a imagen');
             }
 
             // CSV / Hash (se usa CSV como identificador comprobante)
             if (datos.csv) {
                 const csvElem = document.getElementById('hash-ticket');
-                if (csvElem) csvElem.textContent = `CSV: ${datos.csv}`;
+                if (csvElem) {
+                    csvElem.textContent = `CSV: ${datos.csv}`;
+                    console.log('[VERIFACTU] CSV asignado:', datos.csv);
+                }
             }
         }
     }
 
-    // ---- Esperar carga QR ----
+    // ---- Esperar carga QR y datos ----
+    console.log('[VERIFACTU] Esperando carga de QR...');
     await new Promise((res) => {
         const imgQR = document.getElementById('qr-verifactu');
-        if (imgQR && imgQR.complete) {
+        if (imgQR && imgQR.complete && imgQR.naturalWidth > 0) {
+            console.log('[VERIFACTU] QR ya cargado');
             res();
-        } else if (imgQR) {
-            imgQR.onload = () => res();
-            // Seguridad: timeout 1 s
-            setTimeout(res, 1000);
+        } else if (imgQR && imgQR.src) {
+            imgQR.onload = () => {
+                console.log('[VERIFACTU] QR cargado con éxito');
+                res();
+            };
+            imgQR.onerror = () => {
+                console.log('[VERIFACTU] Error al cargar QR');
+                res();
+            };
+            // Seguridad: timeout 3 segundos (aumentado)
+            setTimeout(() => {
+                console.log('[VERIFACTU] Timeout - continuando con impresión');
+                res();
+            }, 3000);
         } else {
+            console.log('[VERIFACTU] No hay QR para cargar');
             res();
         }
     });
+    
+    console.log('[VERIFACTU] Listo para imprimir');
 }

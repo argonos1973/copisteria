@@ -15,6 +15,13 @@ from db_utils import get_db_connection, formatear_numero_documento
 from verifactu.core import generar_datos_verifactu_para_ticket
 from utilities import calcular_importes
 
+# Cargar configuración de Verifactu
+try:
+    from config_loader import get as get_config
+    VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", False))
+except Exception:
+    VERIFACTU_HABILITADO = False
+
 def D(x):
     """Conversión segura a Decimal"""
     try:
@@ -348,11 +355,12 @@ def guardar_ticket():
             # Hacer commit de toda la transacción
             conn.commit()
 
-            # Generar datos VERI*FACTU para el ticket
-            try:
-                generar_datos_verifactu_para_ticket(id_ticket)
-            except Exception as vf_exc:
-                print(f"Error generando datos VERI*FACTU para ticket {id_ticket}: {vf_exc}")
+            # Generar datos VERI*FACTU para el ticket (solo si está habilitado)
+            if VERIFACTU_HABILITADO:
+                try:
+                    generar_datos_verifactu_para_ticket(id_ticket)
+                except Exception as vf_exc:
+                    print(f"Error generando datos VERI*FACTU para ticket {id_ticket}: {vf_exc}")
 
             return jsonify({"mensaje": "Ticket guardado correctamente", "id": id_ticket})
 
@@ -407,7 +415,7 @@ def obtener_ticket_con_detalles(id_ticket):
         ticket_dict['importe_cobrado'] = format_currency_es_two(ticket_dict.get('importe_cobrado'))
 
         # Obtener datos VERI*FACTU (QR y CSV) si existen
-        cursor.execute('SELECT codigo_qr, csv FROM registro_facturacion WHERE ticket_id = ?', (id_ticket,))
+        cursor.execute('SELECT codigo_qr, csv FROM registro_facturacion WHERE factura_id = ?', (id_ticket,))
         reg = cursor.fetchone()
         codigo_qr = reg['codigo_qr'] if reg else None
         csv = reg['csv'] if reg else None
@@ -426,7 +434,8 @@ def obtener_ticket_con_detalles(id_ticket):
             'ticket': ticket_dict,
             'detalles': formatted_detalles,
             'codigo_qr': codigo_qr,
-            'csv': csv
+            'csv': csv,
+            'verifactu_enabled': VERIFACTU_HABILITADO
         }
 
         return jsonify(resultado)

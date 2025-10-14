@@ -174,9 +174,10 @@ def buscar_coincidencias_automaticas(gasto):
                 WHERE estado IN ('C', 'P', 'V')
                 AND numero = ?
                 AND ABS(total - ?) <= ?
-                AND id NOT IN (
-                    SELECT documento_id FROM conciliacion_gastos 
-                    WHERE tipo_documento = 'factura' AND estado = 'conciliado'
+                AND NOT EXISTS (
+                    SELECT 1 FROM conciliacion_documentos cd
+                    WHERE cd.tipo_documento = 'factura' 
+                    AND cd.documento_id = id
                 )
             ''', (numero_buscado, importe, tolerancia))
         else:
@@ -193,9 +194,10 @@ def buscar_coincidencias_automaticas(gasto):
                 WHERE estado = 'C'
                 AND numero = ?
                 AND ABS(total - ?) <= ?
-                AND id NOT IN (
-                    SELECT documento_id FROM conciliacion_gastos 
-                    WHERE tipo_documento = 'ticket' AND estado = 'conciliado'
+                AND NOT EXISTS (
+                    SELECT 1 FROM conciliacion_documentos cd
+                    WHERE cd.tipo_documento = 'ticket'
+                    AND cd.documento_id = id
                 )
             ''', (numero_buscado, importe, tolerancia))
         
@@ -244,9 +246,10 @@ def buscar_coincidencias_automaticas(gasto):
                 OR (estado IN ('P', 'V') AND fecha BETWEEN ? AND ?)
             )
             AND ABS(total - ?) <= ?
-            AND id NOT IN (
-                SELECT documento_id FROM conciliacion_gastos 
-                WHERE tipo_documento = 'factura' AND estado = 'conciliado'
+            AND NOT EXISTS (
+                SELECT 1 FROM conciliacion_documentos cd
+                WHERE cd.tipo_documento = 'factura'
+                AND cd.documento_id = id
             )
         ''', (fecha_inicio, fecha_fin, fecha_inicio, fecha_fin, importe, tolerancia))
         
@@ -275,9 +278,10 @@ def buscar_coincidencias_automaticas(gasto):
             WHERE estado = 'C'
             AND fecha BETWEEN ? AND ?
             AND ABS(total - ?) <= ?
-            AND id NOT IN (
-                SELECT documento_id FROM conciliacion_gastos 
-                WHERE tipo_documento = 'ticket' AND estado = 'conciliado'
+            AND NOT EXISTS (
+                SELECT 1 FROM conciliacion_documentos cd
+                WHERE cd.tipo_documento = 'ticket'
+                AND cd.documento_id = id
             )
         ''', (fecha_inicio, fecha_fin, importe, tolerancia))
         
@@ -606,13 +610,15 @@ def gastos_pendientes():
                 AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
                 AND g.concepto NOT LIKE '%Bonificacio%'
                 AND g.concepto NOT LIKE '%Bonificación%'
+                AND g.concepto NOT LIKE '%Devol%'
+                AND g.concepto NOT LIKE '%Devolución%'
                 AND (
                     substr(g.fecha_operacion, -4) = ?
                     OR strftime('%Y', g.fecha_operacion) = ?
                 )
             '''
         else:
-            # Si no existe la tabla, todos los gastos son pendientes (excepto liquidaciones y bonificaciones)
+            # Si no existe la tabla, todos los gastos son pendientes (excepto liquidaciones, bonificaciones y devoluciones)
             query = '''
                 SELECT g.*
                 FROM gastos g
@@ -620,6 +626,8 @@ def gastos_pendientes():
                 AND g.concepto NOT LIKE '%Liquidacion Efectuada%'
                 AND g.concepto NOT LIKE '%Bonificacio%'
                 AND g.concepto NOT LIKE '%Bonificación%'
+                AND g.concepto NOT LIKE '%Devol%'
+                AND g.concepto NOT LIKE '%Devolución%'
                 AND (
                     substr(g.fecha_operacion, -4) = ?
                     OR strftime('%Y', g.fecha_operacion) = ?
@@ -714,17 +722,17 @@ def conciliados():
         
         conciliaciones_normales = [dict(row) for row in cursor.fetchall()]
         
-        # Obtener liquidaciones TPV agrupadas por fecha
+        # Obtener liquidaciones TPV agrupadas por fecha extraída del concepto
         cursor.execute('''
             SELECT 
                 MIN(c.id) as id,
-                g.fecha_operacion,
-                'Liquidación TPV ' || g.fecha_operacion as concepto_gasto,
+                SUBSTR(g.concepto, INSTR(g.concepto, 'El ') + 3, 10) as fecha_operacion,
+                'Liquidación TPV ' || SUBSTR(g.concepto, INSTR(g.concepto, 'El ') + 3, 10) as concepto_gasto,
                 'liquidacion_tpv' as tipo_documento,
                 COUNT(c.id) as num_liquidaciones,
                 SUM(c.importe_gasto) as importe_gasto,
-                MAX(c.importe_documento) as importe_documento,
-                MAX(c.diferencia) as diferencia,
+                SUM(c.importe_documento) as importe_documento,
+                SUM(c.importe_gasto) - SUM(c.importe_documento) as diferencia,
                 'conciliado' as estado,
                 'automatico' as metodo,
                 MAX(c.fecha_conciliacion) as fecha_conciliacion,
@@ -733,7 +741,7 @@ def conciliados():
             LEFT JOIN gastos g ON c.gasto_id = g.id
             WHERE c.estado = 'conciliado'
             AND c.tipo_documento = 'liquidacion_tpv'
-            GROUP BY g.fecha_operacion
+            GROUP BY SUBSTR(g.concepto, INSTR(g.concepto, 'El ') + 3, 10)
             ORDER BY MAX(c.fecha_conciliacion) DESC
         ''')
         
@@ -879,32 +887,65 @@ def detalles_liquidacion_tpv():
         else:
             fecha_tickets = fecha
         
-        # Obtener todos los tickets TPV de esa fecha
+        # Obtener IDs de conciliaciones para esta fecha
         cursor.execute('''
-            SELECT 
-                'ticket' as tipo,
-                t.numero as numero,
-                t.fecha as fecha,
-                t.total as importe
-            FROM tickets t
-            WHERE t.fecha = ?
-            AND t.formaPago = 'T'
-            ORDER BY t.numero
-        ''', (fecha_tickets,))
-        
-        tickets = [dict(row) for row in cursor.fetchall()]
-        total_tickets = sum(t['importe'] for t in tickets)
-        
-        # Obtener el total de las liquidaciones bancarias de esa fecha
-        cursor.execute('''
-            SELECT 
-                SUM(c.importe_gasto) as total_liquidaciones,
-                COUNT(c.id) as num_liquidaciones
+            SELECT c.id
             FROM conciliacion_gastos c
             LEFT JOIN gastos g ON c.gasto_id = g.id
-            WHERE c.estado = 'conciliado'
-            AND c.tipo_documento = 'liquidacion_tpv'
-            AND g.fecha_operacion = ?
+            WHERE c.tipo_documento = 'liquidacion_tpv'
+            AND g.concepto LIKE '%El ' || ? || '%'
+            AND c.estado = 'conciliado'
+        ''', (fecha,))
+        
+        conciliacion_ids = [row['id'] for row in cursor.fetchall()]
+        
+        if not conciliacion_ids:
+            # Si no hay conciliaciones, mostrar todos los documentos disponibles
+            cursor.execute('''
+                SELECT 
+                    'ticket' as tipo,
+                    t.numero as numero,
+                    t.fecha as fecha,
+                    t.total as importe
+                FROM tickets t
+                WHERE t.fecha = ?
+                AND t.formaPago = 'T'
+                ORDER BY t.numero
+            ''', (fecha_tickets,))
+            
+            tickets = [dict(row) for row in cursor.fetchall()]
+            total_tickets = sum(t['importe'] for t in tickets)
+        else:
+            # Obtener solo los tickets que están en conciliacion_documentos
+            placeholders = ','.join('?' * len(conciliacion_ids))
+            cursor.execute(f'''
+                SELECT DISTINCT
+                    'ticket' as tipo,
+                    t.numero as numero,
+                    t.fecha as fecha,
+                    t.total as importe
+                FROM tickets t
+                INNER JOIN conciliacion_documentos cd ON cd.documento_id = t.id AND cd.tipo_documento = 'ticket'
+                WHERE cd.conciliacion_id IN ({placeholders})
+                ORDER BY t.numero
+            ''', conciliacion_ids)
+            
+            tickets = [dict(row) for row in cursor.fetchall()]
+            total_tickets = sum(t['importe'] for t in tickets)
+        
+        # Obtener el total de las liquidaciones bancarias de esa fecha desde la tabla gastos
+        # Extraer fecha del concepto "Liquidacion Efectuada El DD/MM/YYYY"
+        cursor.execute('''
+            SELECT 
+                SUM(importe_eur) as total_liquidaciones,
+                COUNT(id) as num_liquidaciones
+            FROM gastos
+            WHERE concepto LIKE '%Liquidacion Efectuada%'
+            AND concepto NOT LIKE '%Bonificacio%'
+            AND concepto NOT LIKE '%Bonificación%'
+            AND concepto NOT LIKE '%Devol%'
+            AND concepto NOT LIKE '%Devolución%'
+            AND concepto LIKE '%El ' || ? || '%'
         ''', (fecha,))
         
         liquidacion_info = cursor.fetchone()
@@ -916,22 +957,40 @@ def detalles_liquidacion_tpv():
         total_liquidaciones = liquidacion_info['total_liquidaciones'] or 0
         diferencia = total_liquidaciones - total_tickets
         
-        # Buscar facturas TPV del mismo día (usar fechaCobro)
-        cursor.execute('''
-            SELECT 
-                'factura' as tipo,
-                f.numero as numero,
-                COALESCE(f.fechaCobro, f.fecha) as fecha,
-                f.total as importe
-            FROM factura f
-            WHERE COALESCE(f.fechaCobro, f.fecha) = ?
-            AND f.formaPago = 'T'
-            AND f.estado = 'C'
-            ORDER BY f.numero
-        ''', (fecha_tickets,))
-        
-        facturas = [dict(row) for row in cursor.fetchall()]
-        total_facturas = sum(f['importe'] for f in facturas)
+        # Buscar facturas TPV del mismo día
+        if not conciliacion_ids:
+            # Si no hay conciliaciones, mostrar todas las facturas disponibles
+            cursor.execute('''
+                SELECT 
+                    'factura' as tipo,
+                    f.numero as numero,
+                    COALESCE(f.fechaCobro, f.fecha) as fecha,
+                    f.total as importe
+                FROM factura f
+                WHERE COALESCE(f.fechaCobro, f.fecha) = ?
+                AND f.formaPago = 'T'
+                AND f.estado = 'C'
+                ORDER BY f.numero
+            ''', (fecha_tickets,))
+            
+            facturas = [dict(row) for row in cursor.fetchall()]
+            total_facturas = sum(f['importe'] for f in facturas)
+        else:
+            # Obtener solo las facturas que están en conciliacion_documentos
+            cursor.execute(f'''
+                SELECT DISTINCT
+                    'factura' as tipo,
+                    f.numero as numero,
+                    COALESCE(f.fechaCobro, f.fecha) as fecha,
+                    f.total as importe
+                FROM factura f
+                INNER JOIN conciliacion_documentos cd ON cd.documento_id = f.id AND cd.tipo_documento = 'factura'
+                WHERE cd.conciliacion_id IN ({placeholders})
+                ORDER BY f.numero
+            ''', conciliacion_ids)
+            
+            facturas = [dict(row) for row in cursor.fetchall()]
+            total_facturas = sum(f['importe'] for f in facturas)
         
         # Recalcular diferencia incluyendo facturas del día
         diferencia = total_liquidaciones - (total_tickets + total_facturas)
@@ -1308,7 +1367,7 @@ def obtener_liquidaciones_tpv():
         ano_actual = datetime.now().year
         
         # Obtener todas las liquidaciones TPV
-        # Filtro específico: "Liquidacion Efectuada" pero NO "Bonificacion"
+        # Filtro específico: "Liquidacion Efectuada" pero NO "Bonificacion" ni "Devolucion"
         cursor.execute('''
             SELECT 
                 id,
@@ -1319,6 +1378,8 @@ def obtener_liquidaciones_tpv():
             WHERE concepto LIKE '%Liquidacion Efectuada%'
             AND concepto NOT LIKE '%Bonificacio%'
             AND concepto NOT LIKE '%Bonificación%'
+            AND concepto NOT LIKE '%Devol%'
+            AND concepto NOT LIKE '%Devolución%'
             AND id NOT IN (
                 SELECT gasto_id FROM conciliacion_gastos WHERE estado = 'conciliado'
             )
@@ -1379,7 +1440,7 @@ def obtener_liquidaciones_tpv():
             except:
                 continue
             
-            # Buscar tickets con tarjeta de esa fecha
+            # Buscar tickets con tarjeta de esa fecha (excluir ya conciliados)
             cursor.execute('''
                 SELECT 
                     COUNT(*) as num_tickets,
@@ -1388,6 +1449,11 @@ def obtener_liquidaciones_tpv():
                 WHERE fecha = ?
                 AND formaPago = 'T'
                 AND estado = 'C'
+                AND NOT EXISTS (
+                    SELECT 1 FROM conciliacion_documentos cd
+                    WHERE cd.tipo_documento = 'ticket'
+                    AND cd.documento_id = id
+                )
             ''', (fecha_busqueda,))
             
             tickets_info = cursor.fetchone()
@@ -1402,11 +1468,11 @@ def obtener_liquidaciones_tpv():
             
             # Calcular diferencia inicial (solo con tickets)
             total_liq = datos['total']
-            diferencia = abs(total_liq - total_documentos)
-            porcentaje_diferencia = (diferencia / abs(total_liq) * 100) if total_liq != 0 else 0
+            diferencia = total_liq - total_documentos
+            porcentaje_diferencia = (abs(diferencia) / abs(total_liq) * 100) if total_liq != 0 else 0
             
             # Determinar estado
-            if diferencia <= 0.02:
+            if abs(diferencia) <= 0.02:
                 estado = 'exacto'
             elif porcentaje_diferencia <= 5:
                 estado = 'aceptable'
@@ -1416,17 +1482,22 @@ def obtener_liquidaciones_tpv():
             # Lógica de conciliación
             puede_conciliar = False
             
-            if diferencia <= 1.0 and num_documentos > 0:
+            if abs(diferencia) <= 1.0 and num_documentos > 0:
                 # Diferencia <= 1€ con solo tickets → conciliar directamente
                 puede_conciliar = True
-            elif diferencia > 1.0:
-                # Diferencia > 1€ → buscar facturas
+            elif abs(diferencia) > 1.0:
+                # Diferencia > 1€ → buscar facturas (excluir ya conciliadas)
                 cursor.execute('''
                     SELECT id, numero, total
                     FROM factura
                     WHERE COALESCE(fechaCobro, fecha) = ?
                     AND formaPago = 'T'
                     AND estado = 'C'
+                    AND NOT EXISTS (
+                        SELECT 1 FROM conciliacion_documentos cd
+                        WHERE cd.tipo_documento = 'factura' 
+                        AND cd.documento_id = id
+                    )
                     ORDER BY total DESC
                 ''', (fecha_busqueda,))
                 
@@ -1440,37 +1511,44 @@ def obtener_liquidaciones_tpv():
                         num_documentos += 1
                         total_facturas += factura['total']
                     
-                    # Recalcular diferencia con facturas
-                    diferencia = abs(total_liq - total_documentos)
+                    # Recalcular diferencia con facturas (mantener signo)
+                    diferencia = total_liq - total_documentos
                     
                     # Si con facturas la diferencia es <= 1€ → conciliar
-                    if diferencia <= 1.0:
+                    if abs(diferencia) <= 1.0:
                         puede_conciliar = True
             
-            if puede_conciliar:
-                try:
-                    # Conciliar cada liquidación de esta fecha
-                    # Todas comparten el mismo total de documentos y diferencia
-                    for gasto_id in datos['ids']:
-                        cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
-                        gasto_row = cursor.fetchone()
-                        if gasto_row:
-                            importe_gasto = gasto_row['importe_eur']
-                            
-                            cursor.execute('''
-                                INSERT OR IGNORE INTO conciliacion_gastos 
-                                (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
-                                 importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
-                                VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
-                            ''', (int(gasto_id), 'liquidacion_tpv', 0, 
-                                  importe_gasto, total_documentos, diferencia,
-                                  f'Liquidación TPV {fecha_str} - {num_documentos} documentos - Conciliado automáticamente (dif total: {round(diferencia, 2)}€)'))
-                    conn.commit()
-                    # No añadir a resultado si se concilió automáticamente
-                    continue
-                except Exception as e:
-                    print(f"Error conciliando automáticamente liquidación {fecha_str}: {e}")
-                    # Si falla, continuar y mostrar en la lista
+            # DESHABILITADO: La conciliación automática ahora se hace desde el frontend
+            # para garantizar que use el algoritmo de varita mágica
+            # if puede_conciliar:
+            #     try:
+            #         # Conciliar cada liquidación de esta fecha
+            #         # Todas comparten el mismo total de documentos y diferencia
+            #         for gasto_id in datos['ids']:
+            #             cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
+            #             gasto_row = cursor.fetchone()
+            #             if gasto_row:
+            #                 importe_gasto = gasto_row['importe_eur']
+            #                 
+            #                 cursor.execute('''
+            #                     INSERT OR IGNORE INTO conciliacion_gastos 
+            #                     (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
+            #                      importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
+            #                     VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
+            #                 ''', (int(gasto_id), 'liquidacion_tpv', 0, 
+            #                       importe_gasto, total_documentos, diferencia,
+            #                       f'Liquidación TPV {fecha_str} - {num_documentos} documentos - Conciliado automáticamente (dif total: {round(diferencia, 2)}€)'))
+            #         conn.commit()
+            #         # No añadir a resultado si se concilió automáticamente
+            #         continue
+            #     except Exception as e:
+            #         print(f"Error conciliando automáticamente liquidación {fecha_str}: {e}")
+            #         # Si falla, continuar y mostrar en la lista
+            
+            # Convertir -0.0 a 0.0
+            diferencia_final = round(diferencia, 2)
+            if diferencia_final == 0:
+                diferencia_final = 0.0
             
             resultado.append({
                 'fecha': fecha_str,
@@ -1481,7 +1559,7 @@ def obtener_liquidaciones_tpv():
                 'total_tickets': round(total_tickets, 2),
                 'total_facturas': round(total_facturas, 2),
                 'total_documentos': round(total_documentos, 2),
-                'diferencia': round(diferencia, 2),
+                'diferencia': diferencia_final,
                 'porcentaje_diferencia': round(porcentaje_diferencia, 2),
                 'estado': estado,
                 'ids_gastos': ','.join(datos['ids'])
@@ -1754,6 +1832,11 @@ def obtener_ingresos_efectivo():
                         f.write(traceback.format_exc())
                         f.flush()
             
+            # Convertir -0.0 a 0.0
+            diferencia_final = round(diferencia, 2)
+            if diferencia_final == 0:
+                diferencia_final = 0.0
+            
             resultado.append({
                 'fecha': fecha_str,
                 'num_ingresos': datos['count'],
@@ -1763,7 +1846,7 @@ def obtener_ingresos_efectivo():
                 'total_facturas': round(total_facturas, 2),
                 'total_tickets': round(total_tickets, 2),
                 'total_documentos': round(total_documentos, 2),
-                'diferencia': round(diferencia, 2),
+                'diferencia': diferencia_final,
                 'porcentaje_diferencia': round(porcentaje_diferencia, 2),
                 'estado': estado,
                 'ids_gastos': ','.join(datos['ids']),
@@ -1948,11 +2031,12 @@ def conciliar_liquidacion():
     """Conciliar una liquidación TPV con sus tickets/facturas"""
     try:
         data = request.json
-        ids_gastos = data.get('ids_gastos', '').split(',')
         fecha = data.get('fecha')
+        documentos = data.get('documentos', [])  # Para varita mágica
+        ids_gastos_str = data.get('ids_gastos', '')  # Para conciliación manual
         
-        if not ids_gastos or not fecha:
-            return jsonify({'success': False, 'error': 'Faltan parámetros'}), 400
+        if not fecha:
+            return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
         
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -1967,65 +2051,126 @@ def conciliar_liquidacion():
         except:
             return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
         
-        # Obtener tickets y facturas con tarjeta de esa fecha
-        cursor.execute('''
-            SELECT 'ticket' as tipo, id, numero, total
-            FROM tickets
-            WHERE fecha = ? AND formaPago = 'T' AND estado = 'C'
-        ''', (fecha_busqueda,))
-        tickets = cursor.fetchall()
+        # Obtener IDs de liquidaciones bancarias de esa fecha
+        if ids_gastos_str:
+            ids_gastos = ids_gastos_str.split(',')
+        else:
+            # Buscar liquidaciones por fecha en el concepto
+            cursor.execute('''
+                SELECT id
+                FROM gastos
+                WHERE concepto LIKE '%Liquidacion Efectuada%'
+                AND concepto NOT LIKE '%Bonificacio%'
+                AND concepto NOT LIKE '%Bonificación%'
+                AND concepto NOT LIKE '%Devol%'
+                AND concepto NOT LIKE '%Devolución%'
+                AND concepto LIKE '%El ' || ? || '%'
+            ''', (fecha,))
+            ids_gastos = [str(row['id']) for row in cursor.fetchall()]
         
-        cursor.execute('''
-            SELECT 'factura' as tipo, id, numero, total
-            FROM factura
-            WHERE fecha = ? AND formaPago = 'T' AND estado IN ('C', 'P')
-        ''', (fecha_busqueda,))
-        facturas = cursor.fetchall()
-        
-        documentos = list(tickets) + list(facturas)
+        if not ids_gastos:
+            conn.close()
+            return jsonify({'success': False, 'error': 'No se encontraron liquidaciones para esa fecha'}), 400
         
         if not documentos:
             conn.close()
-            return jsonify({'success': False, 'error': 'No hay documentos para conciliar'}), 400
+            return jsonify({'success': False, 'error': 'No se proporcionaron documentos'}), 400
         
-        # Conciliar liquidaciones TPV: marcar como conciliados
-        # Estrategia: marcar cada gasto y cada documento como conciliado
-        # sin crear relaciones 1:1 (porque son agrupaciones por fecha)
+        # Calcular total de documentos y total de liquidaciones
+        total_documentos = sum(float(doc.get('importe', 0)) for doc in documentos)
+        
+        # Calcular total de todas las liquidaciones
+        total_liquidaciones = 0
+        for gasto_id in ids_gastos:
+            if gasto_id.strip():
+                cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
+                gasto_row = cursor.fetchone()
+                if gasto_row:
+                    total_liquidaciones += gasto_row['importe_eur']
+        
+        diferencia_total = total_liquidaciones - total_documentos
+        
+        # Verificar si alguna ya está conciliada
         conciliados = 0
+        todos_ya_conciliados = True
         
-        # Marcar cada liquidación como conciliada con una referencia genérica
         for gasto_id in ids_gastos:
             if not gasto_id.strip():
                 continue
             
-            # Obtener el importe del gasto
-            cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
-            gasto_row = cursor.fetchone()
-            if not gasto_row:
+            cursor.execute('SELECT id FROM conciliacion_gastos WHERE gasto_id = ? AND estado = "conciliado"', (int(gasto_id),))
+            if cursor.fetchone():
                 continue
             
-            importe_gasto = gasto_row['importe_eur']
-            
-            # Crear UNA SOLA entrada de conciliación por liquidación
-            # usando el primer documento como referencia
-            if documentos:
-                doc = documentos[0]
-                try:
-                    cursor.execute('''
-                        INSERT OR IGNORE INTO conciliacion_gastos 
-                        (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
-                         importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
-                        VALUES (?, ?, ?, datetime('now'), ?, ?, 
-                                0, 'conciliado', 'automatico', 0, ?)
-                    ''', (int(gasto_id), 'liquidacion_tpv', 0, 
-                          importe_gasto, 0,
-                          f'Liquidación TPV {fecha} - {len(documentos)} documentos'))
-                    
-                    if cursor.rowcount > 0:
-                        conciliados += 1
-                except Exception as e:
-                    print(f"Error conciliando liquidación {gasto_id}: {e}")
+            todos_ya_conciliados = False
+            break
+        
+        if todos_ya_conciliados:
+            conn.close()
+            return jsonify({
+                'success': True,
+                'conciliados': 0,
+                'todos_ya_conciliados': True,
+                'mensaje': 'Todas las liquidaciones ya estaban conciliadas'
+            })
+        
+        # Crear UNA SOLA conciliación para todas las liquidaciones de esta fecha
+        # Esto evita duplicar documentos cuando hay múltiples liquidaciones
+        try:
+            # Crear una conciliación por cada liquidación individual
+            for gasto_id in ids_gastos:
+                if not gasto_id.strip():
                     continue
+                
+                # Verificar si ya está conciliado
+                cursor.execute('SELECT id FROM conciliacion_gastos WHERE gasto_id = ? AND estado = "conciliado"', (int(gasto_id),))
+                if cursor.fetchone():
+                    continue
+                
+                # Obtener el importe del gasto individual
+                cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
+                gasto_row = cursor.fetchone()
+                if not gasto_row:
+                    continue
+                
+                importe_gasto = gasto_row['importe_eur']
+                
+                # Crear entrada de conciliación (sin documentos individuales, se comparten)
+                cursor.execute('''
+                    INSERT INTO conciliacion_gastos 
+                    (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
+                     importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
+                    VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
+                ''', (int(gasto_id), 'liquidacion_tpv', 0, 
+                      importe_gasto, 0,  # importe_documento = 0 para cada liquidación individual
+                      0,  # diferencia = 0 para cada liquidación individual
+                      f'Liquidación TPV {fecha} - Parte de grupo con {len(documentos)} documentos'))
+                
+                conciliacion_id = cursor.lastrowid
+                conciliados += 1
+                
+                # Solo la PRIMERA liquidación registra los documentos
+                if conciliados == 1:
+                    # Registrar los documentos una sola vez
+                    for doc in documentos:
+                        cursor.execute('''
+                            INSERT OR IGNORE INTO conciliacion_documentos 
+                            (conciliacion_id, tipo_documento, documento_id, importe)
+                            VALUES (?, ?, ?, ?)
+                        ''', (conciliacion_id, doc['tipo'], int(doc['id']), float(doc.get('importe', 0))))
+                    
+                    # Actualizar la primera conciliación con el total de documentos y diferencia real
+                    cursor.execute('''
+                        UPDATE conciliacion_gastos 
+                        SET importe_documento = ?, diferencia = ?, notas = ?
+                        WHERE id = ?
+                    ''', (total_documentos, diferencia_total, 
+                          f'Liquidación TPV {fecha} - {len(ids_gastos)} liquidaciones, {len(documentos)} documentos',
+                          conciliacion_id))
+        except Exception as e:
+            print(f"Error conciliando liquidaciones: {e}")
+            conn.close()
+            return jsonify({'success': False, 'error': str(e)}), 500
         
         conn.commit()
         conn.close()
@@ -2033,7 +2178,98 @@ def conciliar_liquidacion():
         return jsonify({
             'success': True,
             'conciliados': conciliados,
-            'mensaje': f'Liquidación conciliada: {conciliados} documentos'
+            'todos_ya_conciliados': todos_ya_conciliados,
+            'mensaje': f'Liquidación conciliada: {conciliados} registros'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/documentos_tarjeta', methods=['GET'])
+def obtener_documentos_tarjeta():
+    """Obtener lista de facturas/tickets con tarjeta disponibles para una fecha (rango de 30 días)"""
+    try:
+        fecha_liquidacion = request.args.get('fecha')
+        if not fecha_liquidacion:
+            return jsonify({'success': False, 'error': 'Fecha requerida'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Convertir fecha a formato YYYY-MM-DD
+        try:
+            if '/' in fecha_liquidacion:
+                fecha_obj = datetime.strptime(fecha_liquidacion, '%d/%m/%Y')
+            else:
+                fecha_obj = datetime.strptime(fecha_liquidacion, '%Y-%m-%d')
+            
+            fecha_fin = fecha_obj.strftime('%Y-%m-%d')
+            # Para liquidaciones TPV: buscar SOLO documentos de la fecha exacta
+            # Esto evita que liquidaciones antiguas usen documentos de fechas futuras
+            fecha_inicio = fecha_fin
+        except:
+            return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
+        
+        # Obtener facturas cobradas con tarjeta en el rango (usar fechaCobro, excluir ya conciliadas)
+        # El algoritmo de varita mágica encontrará la combinación exacta
+        cursor.execute('''
+            SELECT
+                'factura' as tipo,
+                f.id,
+                f.numero,
+                COALESCE(f.fechaCobro, f.fecha) as fecha,
+                f.total as importe,
+                COALESCE(c.razonsocial, '') as cliente
+            FROM factura f
+            LEFT JOIN contactos c ON f.idContacto = c.idContacto
+            WHERE COALESCE(f.fechaCobro, f.fecha) BETWEEN ? AND ?
+            AND f.formaPago = 'T'
+            AND f.estado = 'C'
+            AND NOT EXISTS (
+                SELECT 1 FROM conciliacion_documentos cd
+                WHERE cd.tipo_documento = 'factura'
+                AND cd.documento_id = f.id
+            )
+            ORDER BY COALESCE(f.fechaCobro, f.fecha) DESC, f.numero DESC
+        ''', (fecha_inicio, fecha_fin))
+        
+        facturas = [dict(row) for row in cursor.fetchall()]
+        
+        # Obtener tickets con tarjeta en el rango (excluir ya conciliados)
+        cursor.execute('''
+            SELECT
+                'ticket' as tipo,
+                t.id,
+                t.numero,
+                t.fecha,
+                t.total as importe,
+                '' as cliente
+            FROM tickets t
+            WHERE t.fecha BETWEEN ? AND ?
+            AND t.formaPago = 'T'
+            AND t.estado = 'C'
+            AND NOT EXISTS (
+                SELECT 1 FROM conciliacion_documentos cd
+                WHERE cd.tipo_documento = 'ticket'
+                AND cd.documento_id = t.id
+            )
+            ORDER BY t.fecha DESC, t.numero DESC
+        ''', (fecha_inicio, fecha_fin))
+        
+        tickets = [dict(row) for row in cursor.fetchall()]
+        
+        # Combinar ambas listas
+        documentos = facturas + tickets
+        
+        # Ordenar por fecha (más recientes primero)
+        documentos.sort(key=lambda x: x['fecha'], reverse=True)
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'documentos': documentos,
+            'fecha_inicio': fecha_inicio,
+            'fecha_fin': fecha_fin
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500

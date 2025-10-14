@@ -28,6 +28,10 @@ let ingresosCompletos = [];
 let paginaActualIngresos = 1;
 let itemsPorPaginaIngresos = 10;
 
+// Banderas para evitar procesamiento automático duplicado
+let procesamientoAutomaticoEnCurso = false;
+let procesamientoAutomaticoCompletado = false;
+
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
@@ -80,10 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('tbody-conciliados NO encontrado');
     }
     
-    // Ejecutar conciliación automática al cargar (si hay pendientes)
-    setTimeout(() => {
-        ejecutarConciliacionInicial();
-    }, 1000);
+    // NOTA: Ya no ejecutamos ejecutarConciliacionInicial() aquí porque
+    // procesarAutomaticoAlCargar() se ejecuta en cargarDatosInmediato() y hace un trabajo más completo
 });
 
 function inicializarPestanas() {
@@ -166,6 +168,13 @@ function agregarMensajeCarga(mensaje, tipo = 'info') {
 }
 
 async function procesarAutomaticoAlCargar() {
+    // Evitar ejecuciones duplicadas
+    if (procesamientoAutomaticoEnCurso || procesamientoAutomaticoCompletado) {
+        console.log('⚠️ Procesamiento automático ya ejecutado o en curso, omitiendo...');
+        return;
+    }
+    procesamientoAutomaticoEnCurso = true;
+    
     try {
         console.log('🔄 Ejecutando procesamiento automático al cargar...');
         agregarMensajeCarga('Iniciando procesamiento automático...', 'info');
@@ -181,7 +190,9 @@ async function procesarAutomaticoAlCargar() {
                 g.importe_eur > 0 && 
                 (!g.concepto || (
                     !g.concepto.toLowerCase().includes('transferencia') &&
-                    !g.concepto.toLowerCase().includes('transf.')
+                    !g.concepto.toLowerCase().includes('transf.') &&
+                    !g.concepto.toLowerCase().includes('devolucion') &&
+                    !g.concepto.toLowerCase().includes('devolución')
                 ))
             );
             
@@ -217,7 +228,9 @@ async function procesarAutomaticoAlCargar() {
                 g.concepto && (
                     g.concepto.toLowerCase().includes('transferencia') ||
                     g.concepto.toLowerCase().includes('transf.')
-                )
+                ) &&
+                !g.concepto.toLowerCase().includes('devolucion') &&
+                !g.concepto.toLowerCase().includes('devolución')
             );
             
             for (const transf of transferencias) {
@@ -269,6 +282,93 @@ async function procesarAutomaticoAlCargar() {
             }
         }
         
+        // 4. Procesar Liquidaciones TPV con varita mágica
+        const responseLiquidaciones = await fetch(`${API_URL}/conciliacion/liquidaciones-tpv`);
+        const dataLiquidaciones = await responseLiquidaciones.json();
+        
+        if (dataLiquidaciones.success && dataLiquidaciones.liquidaciones.length > 0) {
+            agregarMensajeCarga(`Procesando ${dataLiquidaciones.liquidaciones.length} liquidaciones TPV...`, 'info');
+            
+            // Invertir el orden: procesar primero las más antiguas para evitar que las recientes usen sus documentos
+            const liquidacionesOrdenadas = [...dataLiquidaciones.liquidaciones].reverse();
+            
+            for (const liq of liquidacionesOrdenadas) {
+                try {
+                    // Cargar documentos con tarjeta disponibles para esa fecha
+                    const response = await fetch(`${API_URL}/conciliacion/documentos_tarjeta?fecha=${encodeURIComponent(liq.fecha)}`);
+                    const data = await response.json();
+                    
+                    if (!data.success || !data.documentos || data.documentos.length === 0) {
+                        console.log(`⊗ Liquidación TPV ${liq.fecha} (${Math.abs(liq.total_liquidaciones).toFixed(2)}€) - no hay documentos disponibles`);
+                        continue;
+                    }
+                    
+                    const objetivo = Math.abs(parseFloat(liq.total_liquidaciones));
+                    const documentos = data.documentos.map(d => ({
+                        ...d,
+                        importe: parseFloat(d.importe)
+                    }));
+                    
+                    console.log(`🔍 Liquidación TPV ${liq.fecha}: objetivo ${objetivo.toFixed(2)}€, ${documentos.length} documentos disponibles`);
+                    
+                    // Usar algoritmo de varita mágica para encontrar combinación exacta
+                    const mejorCombinacion = encontrarMejorCombinacion(documentos, objetivo);
+                    
+                    if (mejorCombinacion.length === 0) {
+                        console.log(`⊗ Liquidación TPV ${liq.fecha} - varita mágica no encontró combinación válida`);
+                        continue;
+                    }
+                    
+                    const totalCombinacion = mejorCombinacion.reduce((sum, d) => sum + parseFloat(d.importe), 0);
+                    const diferencia = Math.abs(objetivo - totalCombinacion);
+                    
+                    console.log(`📊 Liquidación TPV ${liq.fecha}: combinación encontrada = ${totalCombinacion.toFixed(2)}€, diferencia = ${diferencia.toFixed(2)}€`);
+                    
+                    // Solo conciliar si diferencia < 1€
+                    if (diferencia < 1.0) {
+                        // Preparar datos para conciliación
+                        const documentosSeleccionados = mejorCombinacion.map(doc => ({
+                            tipo: doc.tipo,
+                            id: doc.id,
+                            importe: doc.importe
+                        }));
+                        
+                        // Conciliar
+                        const conciliarResponse = await fetch(`${API_URL}/conciliacion/conciliar-liquidacion`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                fecha: liq.fecha,
+                                ids_gastos: liq.ids_gastos,  // IDs de todas las liquidaciones de esta fecha
+                                documentos: documentosSeleccionados
+                            })
+                        });
+                        
+                        // Si el servidor rechaza la conciliación (400), omitir silenciosamente
+                        if (!conciliarResponse.ok) {
+                            continue;
+                        }
+                        
+                        const result = await conciliarResponse.json();
+                        
+                        if (result.success) {
+                            // Si todos ya estaban conciliados, omitir silenciosamente
+                            if (result.todos_ya_conciliados) {
+                                continue;
+                            }
+                            
+                            totalConciliados++;
+                            const tipoMatch = diferencia < 0.01 ? 'EXACTA' : 'CERCANA';
+                            agregarMensajeCarga(`Liquidación TPV conciliada: ${liq.fecha} (${Math.abs(liq.total_liquidaciones).toFixed(2)}€) [${tipoMatch}]`, 'success');
+                            console.log(`✓ Liquidación TPV ${liq.fecha} conciliada [${tipoMatch}] con ${mejorCombinacion.length} documentos (dif: ${diferencia.toFixed(2)}€)`);
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error procesando liquidación TPV ${liq.fecha}:`, error);
+                }
+            }
+        }
+        
         if (totalConciliados > 0) {
             agregarMensajeCarga(`✅ Completado: ${totalConciliados} conciliaciones realizadas`, 'success');
             console.log(`✅ Procesamiento automático completado: ${totalConciliados} conciliaciones realizadas`);
@@ -277,8 +377,20 @@ async function procesarAutomaticoAlCargar() {
             console.log('ℹ️ No hay conciliaciones automáticas pendientes');
         }
         
+        // Recargar todas las tablas SIEMPRE para reflejar el estado actualizado
+        console.log('🔄 Recargando tablas con datos actualizados...');
+        await cargarGastosPendientes();
+        await cargarConciliacionesRealizadas();
+        await cargarLiquidacionesTPV();
+        await cargarIngresosEfectivo();
+        await cargarEstadisticas();
+        console.log('✅ Tablas recargadas');
+        
     } catch (error) {
         console.error('Error en procesamiento automático al cargar:', error);
+    } finally {
+        procesamientoAutomaticoEnCurso = false;
+        procesamientoAutomaticoCompletado = true;
     }
 }
 
@@ -1236,6 +1348,10 @@ function formatearFecha(fecha) {
 
 function formatearImporte(importe) {
     if (importe === null || importe === undefined) return '-';
+    // Convertir -0 a 0
+    if (importe === 0 || Object.is(importe, -0)) {
+        importe = 0;
+    }
     return new Intl.NumberFormat('es-ES', {
         style: 'currency',
         currency: 'EUR'
@@ -1293,7 +1409,6 @@ async function renderizarPaginaLiquidaciones() {
         
         let estadoClass = '';
         let estadoTexto = '';
-        let accion = '';
         
         if (liq.estado === 'exacto') {
             estadoClass = 'estado-exacto';
@@ -1303,11 +1418,14 @@ async function renderizarPaginaLiquidaciones() {
         } else if (liq.estado === 'aceptable') {
             estadoClass = 'estado-aceptable';
             estadoTexto = 'Aceptable';
-            accion = `<i class="fas fa-check-circle" onclick='confirmarConciliacionLiquidacion(${JSON.stringify(liq)})' style="cursor:pointer;color:#28a745;font-size:20px;" title="Conciliar"></i>`;
         } else {
             estadoClass = 'estado-revisar';
             estadoTexto = 'Revisar';
         }
+        
+        // Hacer la fila clickeable para abrir modal de detalles
+        tr.style.cursor = 'pointer';
+        tr.onclick = () => mostrarDetallesLiquidacionTPV(liq.fecha);
         
         tr.innerHTML = `
             <td>${formatearFecha(liq.fecha)}</td>
@@ -1318,7 +1436,6 @@ async function renderizarPaginaLiquidaciones() {
             <td class="text-right">${formatearImporte(liq.total_documentos)}</td>
             <td class="text-right">${formatearImporte(liq.diferencia)}</td>
             <td class="text-center"><span class="${estadoClass}">${estadoTexto}</span></td>
-            ${accion ? `<td class="text-center">${accion}</td>` : ''}
         `;
         
         tbody.appendChild(tr);
@@ -1574,7 +1691,6 @@ async function renderizarPaginaIngresos() {
         
         let estadoClass = '';
         let estadoTexto = '';
-        let accion = '';
         
         if (ing.estado === 'exacto') {
             estadoClass = 'estado-exacto';
@@ -1590,10 +1706,9 @@ async function renderizarPaginaIngresos() {
             estadoTexto = ing.estado === 'aceptable' ? 'Aceptable' : 'Revisar';
         }
         
-        // Siempre mostrar botón para seleccionar documentos
-        accion = `<button class="btn btn-sm" onclick='abrirSeleccionDocumentos(${JSON.stringify(ing)})' style="padding:6px 10px;font-size:14px;background:white;color:black;border:1px solid #ddd;">
-            <i class="fas fa-search"></i>
-        </button>`;
+        // Hacer la fila clickeable
+        tr.style.cursor = 'pointer';
+        tr.onclick = () => abrirSeleccionDocumentos(ing);
         
         tr.innerHTML = `
             <td>${formatearFecha(ing.fecha)}</td>
@@ -1604,7 +1719,6 @@ async function renderizarPaginaIngresos() {
             <td class="text-right">${formatearImporte(ing.total_documentos)}</td>
             <td class="text-right">${formatearImporte(ing.diferencia)}</td>
             <td class="text-center"><span class="${estadoClass}">${estadoTexto}</span></td>
-            ${accion ? `<td class="text-center">${accion}</td>` : '<td></td>'}
         `;
         
         tbody.appendChild(tr);

@@ -873,7 +873,8 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
         data_sql = f'''
             SELECT 
                 f.id, 
-                f.fecha, 
+                f.fecha,
+                f.fvencimiento, 
                 f.numero, 
                 f.estado, 
                 f.importe_bruto as base,
