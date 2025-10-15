@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estadísticas</title>
@@ -24,7 +23,8 @@
                 console.log('[GRAFICO ANIO] Usando año actual:', anio);
             }
             
-            const response = await fetch(`http://localhost:5001/api/gastos/por-categoria-anio?anio=${anio}`);
+            const apiHost = window.location.hostname;
+            const response = await fetch(`http://${apiHost}:5001/api/gastos/por-categoria-anio?anio=${anio}`);
             
             if (!response.ok) {
                 console.error('[GRAFICO ANIO] Error en respuesta:', response.status);
@@ -490,6 +490,8 @@
                 <div class="header-icons">
                     <button id="btn-descargar-csv" class="btn-descargar" title="Descargar CSV"><i class="fas fa-download"></i></button>
                     <button id="btn-graficos" class="btn-descargar" title="Ver Gráficos"><i class="fas fa-chart-bar"></i></button>
+                    <button id="btn-informe-situacion" class="btn-descargar" title="Informe de Situación"><i class="fas fa-file-alt"></i></button>
+                    <button id="btn-simulador" class="btn-descargar" title="Simulador Financiero (Solo Desarrollo)" style="display:none;background:#ff9800;"><i class="fas fa-calculator"></i></button>
                 </div>
             </div>
             <div class="header-controls">
@@ -893,6 +895,252 @@
 
 <div id="notificaciones-contenedor"></div>
 
+<!-- Modal Simulador Financiero -->
+<div id="modal-simulador" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width: 900px;">
+        <span class="cerrar-modal" onclick="cerrarModalSimulador()">&times;</span>
+        <h2 style="margin-top: 0; color: #2c3e50; text-align: center;">
+            <i class="fas fa-calculator"></i> Simulador Financiero
+        </h2>
+        <p style="text-align: center; color: #ff9800; font-size: 0.85rem; font-weight: 600; margin-bottom: 1.5rem;">
+            🔧 HERRAMIENTA DE DESARROLLO - Simula escenarios para ver cómo cuadrar los números
+        </p>
+        
+        <!-- Controles de Simulación -->
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+            <h3 style="margin-top: 0; color: #2c3e50; font-size: 1rem;"><i class="fas fa-sliders-h"></i> Ajustes de Simulación</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <!-- Ajuste de Ventas -->
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
+                        📈 Incremento/Reducción Ventas (%)
+                    </label>
+                    <input type="number" id="sim-ventas-pct" value="0" step="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #7f8c8d;">Ej: +10 = 10% más ventas, -5 = 5% menos</small>
+                </div>
+                
+                <!-- Ajuste de Gastos -->
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
+                        📉 Incremento/Reducción Gastos (%)
+                    </label>
+                    <input type="number" id="sim-gastos-pct" value="0" step="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #7f8c8d;">Ej: -10 = 10% menos gastos, +5 = 5% más</small>
+                </div>
+                
+                <!-- Incremento de Precios -->
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
+                        🏷️ Incremento de Precios (%)
+                    </label>
+                    <input type="number" id="sim-precios-pct" value="0" step="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #7f8c8d;">Ej: +10 = subir precios un 10%</small>
+                </div>
+                
+                <!-- Ventas Adicionales por Mes -->
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
+                        💰 Ventas Adicionales por Mes (€)
+                    </label>
+                    <input type="number" id="sim-ventas-mes" value="0" step="100" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #7f8c8d;">Ingresos extra mensuales</small>
+                </div>
+                
+                <!-- Reducción de Gastos por Mes -->
+                <div>
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
+                        💸 Ahorro Mensual en Gastos (€)
+                    </label>
+                    <input type="number" id="sim-gastos-mes" value="0" step="100" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #7f8c8d;">Reducción mensual de gastos</small>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1rem;">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
+                    🎯 Estrategia de Optimización
+                </label>
+                <select id="sim-estrategia" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 0.5rem;">
+                    <option value="manual">Manual - Ajustes personalizados</option>
+                    <option value="precios100">🏷️ 100% Incremento de Precios</option>
+                    <option value="precios_gastos">🏷️ Precios +50% / Gastos -50%</option>
+                    <option value="ventas100">100% Incremento Ventas (Volumen)</option>
+                    <option value="gastos100">100% Reducción Gastos</option>
+                    <option value="equilibrado">50/50 Ventas y Gastos (Equilibrado)</option>
+                    <option value="ventas70">70/30 Ventas y Gastos (Enfoque Ventas)</option>
+                    <option value="gastos70">30/70 Ventas y Gastos (Enfoque Gastos)</option>
+                    <option value="mejor">AUTO - Calcular Mejor Estrategia</option>
+                </select>
+                <small style="color: #7f8c8d;">Selecciona una estrategia o deja en Manual para ajustes personalizados</small>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                <button onclick="ejecutarSimulacion()" style="padding: 0.75rem; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                    <i class="fas fa-play"></i> Ejecutar Simulación
+                </button>
+                <button onclick="aplicarEstrategia()" style="padding: 0.75rem; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                    <i class="fas fa-magic"></i> Aplicar Estrategia
+                </button>
+            </div>
+        </div>
+        
+        <!-- Resultados -->
+        <div id="sim-resultados" style="display: none;">
+            <!-- Comparativa Real vs Simulado -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <!-- Real -->
+                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #e74c3c;">
+                    <h4 style="margin-top: 0; color: #2c3e50; font-size: 0.9rem;">📊 SITUACIÓN ACTUAL</h4>
+                    <div style="font-size: 0.85rem; line-height: 1.8;">
+                        <div><strong>Ventas:</strong> <span id="sim-real-ventas">-</span></div>
+                        <div><strong>Gastos:</strong> <span id="sim-real-gastos">-</span></div>
+                        <div style="border-top: 1px solid #ddd; margin-top: 0.5rem; padding-top: 0.5rem;">
+                            <strong>Balance:</strong> <span id="sim-real-balance" style="font-weight: 700;">-</span>
+                        </div>
+                        <div><strong>Margen:</strong> <span id="sim-real-margen">-</span></div>
+                    </div>
+                </div>
+                
+                <!-- Simulado -->
+                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #4CAF50;">
+                    <h4 style="margin-top: 0; color: #2c3e50; font-size: 0.9rem;">🎯 SIMULACIÓN</h4>
+                    <div style="font-size: 0.85rem; line-height: 1.8;">
+                        <div><strong>Ventas:</strong> <span id="sim-sim-ventas">-</span></div>
+                        <div><strong>Gastos:</strong> <span id="sim-sim-gastos">-</span></div>
+                        <div style="border-top: 1px solid #ddd; margin-top: 0.5rem; padding-top: 0.5rem;">
+                            <strong>Balance:</strong> <span id="sim-sim-balance" style="font-weight: 700;">-</span>
+                        </div>
+                        <div><strong>Margen:</strong> <span id="sim-sim-margen">-</span></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Diferencias -->
+            <div style="background: #fff3cd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #ff9800;">
+                <h4 style="margin-top: 0; color: #2c3e50; font-size: 0.9rem;">📈 MEJORA PROYECTADA</h4>
+                <div style="font-size: 0.85rem;">
+                    <div style="display: flex; justify-content: space-between; padding: 0.3rem 0;">
+                        <span><strong>Diferencia en Balance:</strong></span>
+                        <span id="sim-dif-balance" style="font-weight: 700; font-size: 1.1rem;">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.3rem 0;">
+                        <span><strong>Diferencia en Margen:</strong></span>
+                        <span id="sim-dif-margen" style="font-weight: 700;">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-top: 1px solid #ddd; margin-top: 0.5rem; padding-top: 0.5rem;">
+                        <span><strong>Proyección Fin de Año:</strong></span>
+                        <span id="sim-dif-proyeccion" style="font-weight: 700; font-size: 1.1rem;">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Punto de Equilibrio -->
+            <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; border-left: 4px solid #2196F3;">
+                <h4 style="margin-top: 0; color: #2c3e50; font-size: 0.9rem;">⚖️ PUNTO DE EQUILIBRIO</h4>
+                <div style="font-size: 0.85rem;">
+                    <div>Para alcanzar equilibrio (Balance = 0), necesitas:</div>
+                    <div style="font-weight: 700; font-size: 1.1rem; margin-top: 0.5rem; color: #2196F3;">
+                        <span id="sim-eq-incremento">-</span> más en ventas
+                    </div>
+                    <div style="margin-top: 0.3rem; color: #7f8c8d;">
+                        (Incremento del <span id="sim-eq-pct">-</span>)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Informe de Situación -->
+<div id="modal-informe-situacion" class="modal" style="display:none;">
+    <div class="modal-content" style="max-width: 1000px;">
+        <span class="cerrar-modal" onclick="cerrarModalInformeSituacion()">&times;</span>
+        <h2 style="margin-top: 0; color: #2c3e50; text-align: center;">
+            <i class="fas fa-chart-line"></i> Informe de Situación Financiera
+        </h2>
+        <p id="informe-periodo" style="text-align: center; color: #7f8c8d; font-size: 0.95rem; margin-bottom: 2rem;"></p>
+        
+        <!-- Estado General -->
+        <div id="informe-estado" style="text-align: center; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; font-size: 1.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
+            <i class="fas fa-heartbeat"></i> <span id="estado-clasificacion">-</span>
+        </div>
+        
+        <!-- Métricas Principales -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <!-- Ventas -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;"><i class="fas fa-euro-sign"></i> VENTAS</div>
+                <div id="informe-ventas-total" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">0,00 €</div>
+                <div id="informe-ventas-detalles" style="font-size: 0.75rem; opacity: 0.8;">0 facturas • 0,00 €/mes</div>
+            </div>
+            
+            <!-- Gastos -->
+            <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;"><i class="fas fa-shopping-cart"></i> GASTOS</div>
+                <div id="informe-gastos-total" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">0,00 €</div>
+                <div id="informe-gastos-detalles" style="font-size: 0.75rem; opacity: 0.8;">0 gastos • 0,00 €/mes</div>
+            </div>
+            
+            <!-- Balance -->
+            <div id="informe-balance-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;"><i class="fas fa-balance-scale"></i> BALANCE</div>
+                <div id="informe-balance-total" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">0,00 €</div>
+                <div id="informe-balance-detalles" style="font-size: 0.75rem; opacity: 0.8;">Margen: 0%</div>
+            </div>
+        </div>
+        
+        <!-- Ratios y Proyecciones -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+            <!-- Ratios -->
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #3498db;">
+                <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1rem;"><i class="fas fa-percent"></i> Ratios Financieros</h3>
+                <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;">
+                        <span style="color: #7f8c8d;">Margen Beneficio (Año):</span>
+                        <strong id="informe-margen-anio">0%</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;">
+                        <span style="color: #7f8c8d;">Margen Beneficio (Mes):</span>
+                        <strong id="informe-margen-mes">0%</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                        <span style="color: #7f8c8d;">Ratio Gastos/Ventas:</span>
+                        <strong id="informe-ratio-gastos">0%</strong>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Proyecciones -->
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #e74c3c;">
+                <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1rem;"><i class="fas fa-chart-line"></i> Proyección Fin de Año</h3>
+                <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;">
+                        <span style="color: #7f8c8d;">Ventas Proyectadas:</span>
+                        <strong id="informe-proy-ventas">0,00 €</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;">
+                        <span style="color: #7f8c8d;">Gastos Proyectados:</span>
+                        <strong id="informe-proy-gastos">0,00 €</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
+                        <span style="color: #7f8c8d;">Balance Proyectado:</span>
+                        <strong id="informe-proy-balance">0,00 €</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top Categorías de Gastos -->
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 12px;">
+            <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1rem;"><i class="fas fa-list-ol"></i> Top 5 Categorías de Gastos</h3>
+            <div id="informe-top-categorias" style="display: flex; flex-direction: column; gap: 0.8rem;">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
@@ -957,8 +1205,9 @@ window.cargarDatosGastos = async function() {
         const [anio, mes] = selectorFecha.value.split('-');
         console.log(`[INLINE] ✅ Año: ${anio}, Mes: ${mes}`);
         
-        // Cargar estadísticas generales
-        const urlEstadisticas = `http://localhost:5001/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`;
+        // Cargar estadísticas generales (usar IP dinámica)
+        const apiHost = window.location.hostname;
+        const urlEstadisticas = `http://${apiHost}:5001/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`;
         console.log('[INLINE] 📡 Haciendo fetch a:', urlEstadisticas);
         
         const respuesta = await fetch(urlEstadisticas);
@@ -1037,7 +1286,8 @@ async function cargarTop10GastosInline(anio) {
         
         tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;color:#2196F3;">⏳ Cargando Top 10...</td></tr>';
         
-        const url = `http://localhost:5001/api/gastos/top10?anio=${anio}`;
+        const apiHost = window.location.hostname;
+        const url = `http://${apiHost}:5001/api/gastos/top10?anio=${anio}`;
         console.log('[INLINE] URL:', url);
         
         const respuesta = await fetch(url);
@@ -1166,7 +1416,8 @@ async function abrirModalDetallesGasto(concepto, anio) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
-        const url = `http://localhost:5001/api/gastos/detalles?concepto=${encodeURIComponent(concepto)}&anio=${anio}`;
+        const apiHost = window.location.hostname;
+        const url = `http://${apiHost}:5001/api/gastos/detalles?concepto=${encodeURIComponent(concepto)}&anio=${anio}`;
         console.log('[MODAL] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1264,7 +1515,8 @@ async function abrirModalDetallesGastoMes(categoria) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
-        const url = `http://localhost:5001/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&mes=${parseInt(mes)}`;
+        const apiHost = window.location.hostname;
+        const url = `http://${apiHost}:5001/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&mes=${parseInt(mes)}`;
         console.log('[MODAL MES] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1340,7 +1592,8 @@ async function abrirModalDetallesGastoAnio(categoria) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
-        const url = `http://localhost:5001/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
+        const apiHost = window.location.hostname;
+        const url = `http://${apiHost}:5001/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
         console.log('[MODAL ANIO] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1411,7 +1664,8 @@ async function cargarGraficoGastosMes() {
         const [anio, mes] = selectorFecha.value.split('-');
         console.log('[GRAFICO] Cargando gráfico para:', mes, '/', anio);
         
-        const response = await fetch(`http://localhost:5001/api/gastos/por-categoria-mes?anio=${anio}&mes=${parseInt(mes)}`);
+        const apiHost = window.location.hostname;
+        const response = await fetch(`http://${apiHost}:5001/api/gastos/por-categoria-mes?anio=${anio}&mes=${parseInt(mes)}`);
         
         if (!response.ok) {
             console.error('[GRAFICO] Error en respuesta:', response.status);
@@ -1537,7 +1791,8 @@ async function cargarGraficoGastosMensual(categoria) {
         
         console.log('[GRAFICO MENSUAL] Cargando para:', categoria, anio);
         
-        const response = await fetch(`http://localhost:5001/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`);
+        const apiHost = window.location.hostname;
+        const response = await fetch(`http://${apiHost}:5001/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`);
         
         if (!response.ok) {
             console.error('[GRAFICO MENSUAL] Error en respuesta:', response.status);
@@ -1656,7 +1911,478 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('[INLINE] Funciones definidas (incluido modal y gráfico del mes)');
+
+// ===== INFORME DE SITUACIÓN =====
+async function abrirModalInformeSituacion() {
+    console.log('[INFORME] Abriendo modal de informe de situación');
+    
+    const selectorFecha = document.getElementById('selector-fecha');
+    if (!selectorFecha || !selectorFecha.value) {
+        alert('Por favor selecciona una fecha');
+        return;
+    }
+    
+    const [anio, mes] = selectorFecha.value.split('-');
+    
+    try {
+        const apiHost = window.location.hostname;
+        const response = await fetch(`http://${apiHost}:5001/api/informe-situacion?anio=${anio}&mes=${parseInt(mes)}`);
+        
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('[INFORME] Datos recibidos:', data);
+        
+        // Actualizar modal
+        document.getElementById('informe-periodo').textContent = data.periodo;
+        
+        // Estado general
+        const estadoDiv = document.getElementById('informe-estado');
+        const estadoClasif = document.getElementById('estado-clasificacion');
+        estadoClasif.textContent = data.estado.clasificacion;
+        estadoDiv.style.background = data.estado.color;
+        estadoDiv.style.color = 'white';
+        
+        // Ventas
+        document.getElementById('informe-ventas-total').textContent = formatearImporte(data.ventas.total_anio);
+        document.getElementById('informe-ventas-detalles').textContent = 
+            `${data.ventas.num_facturas} fact. + ${data.ventas.num_tickets} tick. • ${formatearImporte(data.ventas.media_mensual)}/mes`;
+        
+        // Gastos
+        document.getElementById('informe-gastos-total').textContent = formatearImporte(data.gastos.total_anio);
+        document.getElementById('informe-gastos-detalles').textContent = 
+            `${data.gastos.num_gastos} gastos • ${formatearImporte(data.gastos.media_mensual)}/mes`;
+        
+        // Balance
+        const balanceCard = document.getElementById('informe-balance-card');
+        document.getElementById('informe-balance-total').textContent = formatearImporte(data.balance.anio);
+        document.getElementById('informe-balance-detalles').textContent = 
+            `Margen: ${data.ratios.margen_beneficio_anio.toFixed(2)}%`;
+        
+        // Cambiar color del balance según si es positivo o negativo
+        if (data.balance.anio >= 0) {
+            balanceCard.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+        } else {
+            balanceCard.style.background = 'linear-gradient(135deg, #ee0979 0%, #ff6a00 100%)';
+        }
+        
+        // Ratios
+        document.getElementById('informe-margen-anio').textContent = `${data.ratios.margen_beneficio_anio.toFixed(2)}%`;
+        document.getElementById('informe-margen-mes').textContent = `${data.ratios.margen_beneficio_mes.toFixed(2)}%`;
+        document.getElementById('informe-ratio-gastos').textContent = `${data.ratios.ratio_gastos_ventas.toFixed(2)}%`;
+        
+        // Proyecciones
+        document.getElementById('informe-proy-ventas').textContent = formatearImporte(data.proyecciones.ventas);
+        document.getElementById('informe-proy-gastos').textContent = formatearImporte(data.proyecciones.gastos);
+        document.getElementById('informe-proy-balance').textContent = formatearImporte(data.proyecciones.balance);
+        
+        // Top Categorías
+        const topCategoriasDiv = document.getElementById('informe-top-categorias');
+        topCategoriasDiv.innerHTML = '';
+        
+        data.gastos.top_categorias.forEach((cat, index) => {
+            const div = document.createElement('div');
+            div.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.8rem; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+            
+            div.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
+                    <span style="background: #e74c3c; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">${index + 1}</span>
+                    <span style="font-weight: 600; color: #2c3e50;">${cat.categoria}</span>
+                </div>
+                <div style="text-align: right;">
+                    <div style="font-weight: 700; color: #e74c3c; font-size: 1.1rem;">${formatearImporte(cat.total)}</div>
+                    <div style="font-size: 0.75rem; color: #7f8c8d;">${cat.cantidad} gastos • ${cat.porcentaje}%</div>
+                </div>
+            `;
+            
+            topCategoriasDiv.appendChild(div);
+        });
+        
+        // Mostrar modal
+        document.getElementById('modal-informe-situacion').style.display = 'flex';
+        
+    } catch (error) {
+        console.error('[INFORME] Error al cargar informe:', error);
+        alert('Error al generar el informe: ' + error.message);
+    }
+}
+
+function cerrarModalInformeSituacion() {
+    document.getElementById('modal-informe-situacion').style.display = 'none';
+}
+
+function formatearImporte(importe) {
+    if (importe === null || importe === undefined) return '0,00 €';
+    return new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2
+    }).format(importe);
+}
+
+// Event listener para el botón
+document.addEventListener('DOMContentLoaded', function() {
+    const btnInforme = document.getElementById('btn-informe-situacion');
+    if (btnInforme) {
+        btnInforme.addEventListener('click', abrirModalInformeSituacion);
+    }
+    
+    // Cerrar modal al hacer clic fuera
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('modal-informe-situacion');
+        if (event.target === modal) {
+            cerrarModalInformeSituacion();
+        }
+    });
+});
+
+console.log('[INFORME] Sistema de informe de situación cargado');
+
+// ===== SIMULADOR FINANCIERO =====
+// Mostrar botón del simulador en todos los servidores
+const btnSimulador = document.getElementById('btn-simulador');
+if (btnSimulador) {
+    btnSimulador.style.display = 'inline-block';
+    btnSimulador.addEventListener('click', abrirModalSimulador);
+    console.log('[SIMULADOR] Botón habilitado en', window.location.hostname);
+}
+
+function abrirModalSimulador() {
+    document.getElementById('modal-simulador').style.display = 'flex';
+    document.getElementById('sim-resultados').style.display = 'none';
+    // Resetear valores
+    document.getElementById('sim-ventas-pct').value = 0;
+    document.getElementById('sim-gastos-pct').value = 0;
+    document.getElementById('sim-precios-pct').value = 0;
+    document.getElementById('sim-ventas-mes').value = 0;
+    document.getElementById('sim-gastos-mes').value = 0;
+    document.getElementById('sim-estrategia').value = 'manual';
+}
+
+function cerrarModalSimulador() {
+    document.getElementById('modal-simulador').style.display = 'none';
+}
+
+async function ejecutarSimulacion() {
+    const selectorFecha = document.getElementById('selector-fecha');
+    if (!selectorFecha || !selectorFecha.value) {
+        alert('Por favor selecciona una fecha');
+        return;
+    }
+    
+    const [anio, mes] = selectorFecha.value.split('-');
+    
+    const params = {
+        anio: parseInt(anio),
+        mes: parseInt(mes),
+        ajuste_ventas_pct: parseFloat(document.getElementById('sim-ventas-pct').value),
+        ajuste_gastos_pct: parseFloat(document.getElementById('sim-gastos-pct').value),
+        incremento_precios_pct: parseFloat(document.getElementById('sim-precios-pct').value),
+        nuevas_ventas_mes: parseFloat(document.getElementById('sim-ventas-mes').value),
+        reduccion_gastos_mes: parseFloat(document.getElementById('sim-gastos-mes').value)
+    };
+    
+    try {
+        // Usar la misma IP que el navegador para evitar problemas de CORS
+        const apiUrl = `http://${window.location.hostname}:5001/api/simulador-financiero`;
+        console.log('[SIMULADOR] Llamando a:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(params)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('[SIMULADOR] Resultados:', data);
+        
+        // Mostrar resultados
+        document.getElementById('sim-resultados').style.display = 'block';
+        
+        // Situación Actual
+        document.getElementById('sim-real-ventas').textContent = formatearImporte(data.real.ventas);
+        document.getElementById('sim-real-gastos').textContent = formatearImporte(data.real.gastos);
+        document.getElementById('sim-real-balance').textContent = formatearImporte(data.real.balance);
+        document.getElementById('sim-real-balance').style.color = data.real.balance >= 0 ? '#4CAF50' : '#e74c3c';
+        document.getElementById('sim-real-margen').textContent = `${data.real.margen.toFixed(2)}%`;
+        
+        // Simulación
+        document.getElementById('sim-sim-ventas').textContent = formatearImporte(data.simulado.ventas);
+        document.getElementById('sim-sim-gastos').textContent = formatearImporte(data.simulado.gastos);
+        document.getElementById('sim-sim-balance').textContent = formatearImporte(data.simulado.balance);
+        document.getElementById('sim-sim-balance').style.color = data.simulado.balance >= 0 ? '#4CAF50' : '#e74c3c';
+        document.getElementById('sim-sim-margen').textContent = `${data.simulado.margen.toFixed(2)}%`;
+        
+        // Diferencias
+        const difBalance = data.diferencias.balance;
+        const simboloBalance = difBalance >= 0 ? '▲' : '▼';
+        document.getElementById('sim-dif-balance').textContent = `${simboloBalance} ${formatearImporte(Math.abs(difBalance))}`;
+        document.getElementById('sim-dif-balance').style.color = difBalance >= 0 ? '#4CAF50' : '#e74c3c';
+        
+        const difMargen = data.diferencias.margen;
+        const simboloMargen = difMargen >= 0 ? '▲' : '▼';
+        document.getElementById('sim-dif-margen').textContent = `${simboloMargen} ${Math.abs(difMargen).toFixed(2)}%`;
+        document.getElementById('sim-dif-margen').style.color = difMargen >= 0 ? '#4CAF50' : '#e74c3c';
+        
+        const difProyeccion = data.diferencias.proyeccion;
+        const simboloProy = difProyeccion >= 0 ? '▲' : '▼';
+        document.getElementById('sim-dif-proyeccion').textContent = `${simboloProy} ${formatearImporte(Math.abs(difProyeccion))}`;
+        document.getElementById('sim-dif-proyeccion').style.color = difProyeccion >= 0 ? '#4CAF50' : '#e74c3c';
+        
+        // Equilibrio
+        document.getElementById('sim-eq-incremento').textContent = formatearImporte(data.equilibrio.incremento_necesario);
+        document.getElementById('sim-eq-pct').textContent = `${data.equilibrio.pct_incremento.toFixed(2)}%`;
+        
+    } catch (error) {
+        console.error('[SIMULADOR] Error:', error);
+        alert('Error al ejecutar simulación: ' + error.message);
+    }
+}
+
+async function aplicarEstrategia() {
+    const selectorFecha = document.getElementById('selector-fecha');
+    if (!selectorFecha || !selectorFecha.value) {
+        alert('Por favor selecciona una fecha');
+        return;
+    }
+    
+    const estrategiaSeleccionada = document.getElementById('sim-estrategia').value;
+    
+    if (estrategiaSeleccionada === 'manual') {
+        // Si es manual, simplemente ejecutar la simulación con los valores actuales
+        await ejecutarSimulacion();
+        return;
+    }
+    
+    const [anio, mes] = selectorFecha.value.split('-');
+    
+    console.log('[ESTRATEGIA] Aplicando estrategia:', estrategiaSeleccionada);
+    
+    // Obtener datos reales primero
+    const apiUrl = `http://${window.location.hostname}:5001/api/simulador-financiero`;
+    
+    try {
+        // 1. Obtener situación base
+        const responseBase = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                anio: parseInt(anio),
+                mes: parseInt(mes),
+                ajuste_ventas_pct: 0,
+                ajuste_gastos_pct: 0,
+                incremento_precios_pct: 0,
+                nuevas_ventas_mes: 0,
+                reduccion_gastos_mes: 0
+            })
+        });
+        
+        const dataBase = await responseBase.json();
+        const ventasReales = dataBase.real.ventas;
+        const gastosReales = dataBase.real.gastos;
+        const balanceReal = dataBase.real.balance;
+        const deficit = Math.abs(balanceReal);
+        
+        console.log('[ESTRATEGIA] Situación actual:', { ventasReales, gastosReales, balanceReal, deficit });
+        
+        // 2. Definir todas las estrategias
+        const estrategias = {
+            'precios100': {
+                nombre: '100% Incremento de Precios',
+                ajuste_ventas_pct: 0,
+                ajuste_gastos_pct: 0,
+                incremento_precios_pct: (deficit / ventasReales * 100),
+                nuevas_ventas_mes: 0,
+                reduccion_gastos_mes: 0
+            },
+            'precios_gastos': {
+                nombre: 'Precios +50% / Gastos -50%',
+                ajuste_ventas_pct: 0,
+                ajuste_gastos_pct: -((deficit / 2) / gastosReales * 100),
+                incremento_precios_pct: (deficit / 2) / ventasReales * 100,
+                nuevas_ventas_mes: 0,
+                reduccion_gastos_mes: 0
+            },
+            'ventas100': {
+                nombre: '100% Incremento Ventas (Volumen)',
+                ajuste_ventas_pct: (deficit / ventasReales * 100),
+                ajuste_gastos_pct: 0,
+                incremento_precios_pct: 0,
+                nuevas_ventas_mes: 0,
+                reduccion_gastos_mes: 0
+            },
+            'gastos100': {
+                nombre: '100% Reducción Gastos',
+                ajuste_ventas_pct: 0,
+                ajuste_gastos_pct: -(deficit / gastosReales * 100),
+                incremento_precios_pct: 0,
+                nuevas_ventas_mes: 0,
+                reduccion_gastos_mes: 0
+            },
+            'equilibrado': {
+                nombre: '50/50 Ventas y Gastos',
+                ajuste_ventas_pct: (deficit / 2) / ventasReales * 100,
+                ajuste_gastos_pct: -((deficit / 2) / gastosReales * 100),
+                incremento_precios_pct: 0,
+                nuevas_ventas_mes: 0,
+                reduccion_gastos_mes: 0
+            },
+            'ventas70': {
+                nombre: '70/30 Ventas y Gastos',
+                ajuste_ventas_pct: (deficit * 0.7) / ventasReales * 100,
+                ajuste_gastos_pct: -((deficit * 0.3) / gastosReales * 100),
+                incremento_precios_pct: 0,
+                nuevas_ventas_mes: 0,
+                reduccion_gastos_mes: 0
+            },
+            'gastos70': {
+                nombre: '30/70 Ventas y Gastos',
+                ajuste_ventas_pct: (deficit * 0.3) / ventasReales * 100,
+                ajuste_gastos_pct: -((deficit * 0.7) / gastosReales * 100),
+                incremento_precios_pct: 0,
+                nuevas_ventas_mes: 0,
+                reduccion_gastos_mes: 0
+            }
+        };
+        
+        let estrategiaAplicar;
+        
+        // 3. Si es AUTO, calcular la mejor
+        if (estrategiaSeleccionada === 'mejor') {
+            console.log('[ESTRATEGIA] Calculando mejor estrategia...');
+            
+            let mejorEstrategia = null;
+            let mejorBalance = -Infinity;
+            
+            for (const [key, estrategia] of Object.entries(estrategias)) {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        anio: parseInt(anio),
+                        mes: parseInt(mes),
+                        ajuste_ventas_pct: estrategia.ajuste_ventas_pct,
+                        ajuste_gastos_pct: estrategia.ajuste_gastos_pct,
+                        incremento_precios_pct: estrategia.incremento_precios_pct,
+                        nuevas_ventas_mes: estrategia.nuevas_ventas_mes,
+                        reduccion_gastos_mes: estrategia.reduccion_gastos_mes
+                    })
+                });
+                
+                const data = await response.json();
+                
+                console.log(`[ESTRATEGIA] ${estrategia.nombre}: Balance=${data.simulado.balance.toFixed(2)}`);
+                
+                if (data.simulado.balance > mejorBalance) {
+                    mejorBalance = data.simulado.balance;
+                    mejorEstrategia = {
+                        ...estrategia,
+                        resultado: data
+                    };
+                }
+            }
+            
+            console.log('[ESTRATEGIA] Mejor encontrada:', mejorEstrategia.nombre);
+            estrategiaAplicar = mejorEstrategia;
+        } else {
+            // Aplicar la estrategia seleccionada
+            estrategiaAplicar = estrategias[estrategiaSeleccionada];
+            
+            // Simular para obtener resultados
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    anio: parseInt(anio),
+                    mes: parseInt(mes),
+                    ajuste_ventas_pct: estrategiaAplicar.ajuste_ventas_pct,
+                    ajuste_gastos_pct: estrategiaAplicar.ajuste_gastos_pct,
+                    incremento_precios_pct: estrategiaAplicar.incremento_precios_pct,
+                    nuevas_ventas_mes: estrategiaAplicar.nuevas_ventas_mes,
+                    reduccion_gastos_mes: estrategiaAplicar.reduccion_gastos_mes
+                })
+            });
+            
+            estrategiaAplicar.resultado = await response.json();
+        }
+        
+        // 4. Aplicar la estrategia a los controles
+        document.getElementById('sim-ventas-pct').value = estrategiaAplicar.ajuste_ventas_pct.toFixed(2);
+        document.getElementById('sim-gastos-pct').value = estrategiaAplicar.ajuste_gastos_pct.toFixed(2);
+        document.getElementById('sim-precios-pct').value = estrategiaAplicar.incremento_precios_pct.toFixed(2);
+        document.getElementById('sim-ventas-mes').value = estrategiaAplicar.nuevas_ventas_mes;
+        document.getElementById('sim-gastos-mes').value = estrategiaAplicar.reduccion_gastos_mes;
+        
+        // 5. Mostrar resultados
+        const data = estrategiaAplicar.resultado;
+        
+        document.getElementById('sim-resultados').style.display = 'block';
+        
+        // Situación Actual
+        document.getElementById('sim-real-ventas').textContent = formatearImporte(data.real.ventas);
+        document.getElementById('sim-real-gastos').textContent = formatearImporte(data.real.gastos);
+        document.getElementById('sim-real-balance').textContent = formatearImporte(data.real.balance);
+        document.getElementById('sim-real-balance').style.color = data.real.balance >= 0 ? '#4CAF50' : '#e74c3c';
+        document.getElementById('sim-real-margen').textContent = `${data.real.margen.toFixed(2)}%`;
+        
+        // Simulación
+        document.getElementById('sim-sim-ventas').textContent = formatearImporte(data.simulado.ventas);
+        document.getElementById('sim-sim-gastos').textContent = formatearImporte(data.simulado.gastos);
+        document.getElementById('sim-sim-balance').textContent = formatearImporte(data.simulado.balance);
+        document.getElementById('sim-sim-balance').style.color = data.simulado.balance >= 0 ? '#4CAF50' : '#e74c3c';
+        document.getElementById('sim-sim-margen').textContent = `${data.simulado.margen.toFixed(2)}%`;
+        
+        // Diferencias
+        const difBalance = data.diferencias.balance;
+        const simboloBalance = difBalance >= 0 ? '▲' : '▼';
+        document.getElementById('sim-dif-balance').textContent = `${simboloBalance} ${formatearImporte(Math.abs(difBalance))}`;
+        document.getElementById('sim-dif-balance').style.color = difBalance >= 0 ? '#4CAF50' : '#e74c3c';
+        
+        const difMargen = data.diferencias.margen;
+        const simboloMargen = difMargen >= 0 ? '▲' : '▼';
+        document.getElementById('sim-dif-margen').textContent = `${simboloMargen} ${Math.abs(difMargen).toFixed(2)}%`;
+        document.getElementById('sim-dif-margen').style.color = difMargen >= 0 ? '#4CAF50' : '#e74c3c';
+        
+        const difProyeccion = data.diferencias.proyeccion;
+        const simboloProy = difProyeccion >= 0 ? '▲' : '▼';
+        document.getElementById('sim-dif-proyeccion').textContent = `${simboloProy} ${formatearImporte(Math.abs(difProyeccion))}`;
+        document.getElementById('sim-dif-proyeccion').style.color = difProyeccion >= 0 ? '#4CAF50' : '#e74c3c';
+        
+        // Equilibrio
+        document.getElementById('sim-eq-incremento').textContent = formatearImporte(data.equilibrio.incremento_necesario);
+        document.getElementById('sim-eq-pct').textContent = `${data.equilibrio.pct_incremento.toFixed(2)}%`;
+        
+        console.log(`[ESTRATEGIA] ✅ Estrategia aplicada: ${estrategiaAplicar.nombre}`);
+        
+    } catch (error) {
+        console.error('[AUTO-OPT] Error:', error);
+        alert('Error al optimizar: ' + error.message);
+    }
+}
+
+// Cerrar modal simulador al hacer clic fuera
+document.addEventListener('DOMContentLoaded', function() {
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('modal-simulador');
+        if (event.target === modal) {
+            cerrarModalSimulador();
+        }
+    });
+});
+
+console.log('[SIMULADOR] Sistema de simulador financiero cargado');
 </script>
+
+<!-- Módulo de estadísticas de gastos -->
+<script src="../static/estadisticas_gastos.js" type="module"></script>
 
 </body>
 </html>

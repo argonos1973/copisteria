@@ -673,7 +673,6 @@ def consultar_facturas():
         # Comprobar si hay algún filtro adicional informado
         hay_filtros_adicionales = any([
             estado.strip(), 
-            numero.strip(), 
             contacto.strip(), 
             identificador.strip(),
             concepto.strip()
@@ -703,37 +702,35 @@ def consultar_facturas():
         """
         params = []
 
-        # Añadir filtros según los parámetros recibidos
-        # Aplicar filtros de fecha si no hay otros filtros o si el estado es 'cobrada'
-        if fecha_inicio and (not hay_filtros_adicionales or estado == 'C'):
-            query += " AND f.fecha >= ?"
-            params.append(fecha_inicio)
-        if fecha_fin and (not hay_filtros_adicionales or estado == 'C'):
-            query += " AND f.fecha <= ?"
-            params.append(fecha_fin)
-        if estado:
-            if estado == 'PV':  # Caso especial para Pendiente+Vencida
-                query += " AND (f.estado IN ('P', 'V'))"
-                print("Aplicando filtro especial PV: Pendiente o Vencida")
-            else:
-                query += " AND f.estado = ?"
-                params.append(estado)
+        # Si se proporciona un número de factura, ignorar todos los demás filtros
+        if numero and numero.strip():
+            query += " AND f.numero = ?"
+            params.append(numero)
         else:
-            # Si no se filtra por estado explícitamente, excluir anuladas por defecto
-            query += " AND f.estado <> 'A'"
-        if numero:
-            query += " AND f.numero LIKE ?"
-            params.append(f"%{numero}%")
-        if contacto:
-            query += " AND c.razonsocial LIKE ?"
-            params.append(f"%{contacto}%")
-        if identificador:
-            query += " AND c.identificador LIKE ?"
-            params.append(f"%{identificador}%")
-        if concepto:
-            query += " AND EXISTS (SELECT 1 FROM detalle_factura d WHERE d.id_factura = f.id AND (lower(d.concepto) LIKE ? OR lower(d.descripcion) LIKE ?))"
-            like_val = f"%{concepto.lower()}%"
-            params.extend([like_val, like_val])
+            # Aplicar filtros de fecha si no hay otros filtros o si el estado es 'cobrada'
+            if fecha_inicio and (not hay_filtros_adicionales or estado == 'C'):
+                query += " AND f.fecha >= ?"
+                params.append(fecha_inicio)
+            if fecha_fin and (not hay_filtros_adicionales or estado == 'C'):
+                query += " AND f.fecha <= ?"
+                params.append(fecha_fin)
+            if estado:
+                if estado == 'PV':  # Caso especial para Pendiente+Vencida
+                    query += " AND (f.estado IN ('P', 'V'))"
+                    print("Aplicando filtro especial PV: Pendiente o Vencida")
+                else:
+                    query += " AND f.estado = ?"
+                    params.append(estado)
+            if contacto:
+                query += " AND c.razonsocial LIKE ?"
+                params.append(f"%{contacto}%")
+            if identificador:
+                query += " AND c.identificador LIKE ?"
+                params.append(f"%{identificador}%")
+            if concepto:
+                query += " AND EXISTS (SELECT 1 FROM detalle_factura d WHERE d.id_factura = f.id AND (lower(d.concepto) LIKE ? OR lower(d.descripcion) LIKE ?))"
+                like_val = f"%{concepto.lower()}%"
+                params.extend([like_val, like_val])
 
         # Ordenar por fecha descendente y limitar a 100 resultados
         query += " ORDER BY f.fecha DESC LIMIT 100"
@@ -819,43 +816,43 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        where_sql = 'WHERE 1=1'
-        params = []
+        if 'numero' in filtros and filtros['numero'] and filtros['numero'].strip():
+            where_sql = 'WHERE f.numero = ?'
+            params = [filtros["numero"]]
+        else:
+            where_sql = 'WHERE 1=1'
+            params = []
 
-        fecha_inicio = (filtros or {}).get('fecha_inicio', '')
-        fecha_fin = (filtros or {}).get('fecha_fin', '')
-        estado = (filtros or {}).get('estado', '')
-        numero = (filtros or {}).get('numero', '')
-        contacto = (filtros or {}).get('contacto', '')
-        identificador = (filtros or {}).get('identificador', '')
-        concepto = (filtros or {}).get('concepto', '')
+            fecha_inicio = (filtros or {}).get('fecha_inicio', '')
+            fecha_fin = (filtros or {}).get('fecha_fin', '')
+            estado = (filtros or {}).get('estado', '')
+            contacto = (filtros or {}).get('contacto', '')
+            identificador = (filtros or {}).get('identificador', '')
+            concepto = (filtros or {}).get('concepto', '')
 
-        # Filtros (misma lógica que consultar_facturas)
-        if fecha_inicio:
-            where_sql += ' AND f.fecha >= ?'
-            params.append(fecha_inicio)
-        if fecha_fin:
-            where_sql += ' AND f.fecha <= ?'
-            params.append(fecha_fin)
-        if estado:
-            if estado == 'PV':
-                where_sql += " AND (f.estado IN ('P', 'V'))"
-            else:
-                where_sql += ' AND f.estado = ?'
-                params.append(estado)
-        if numero:
-            where_sql += ' AND f.numero LIKE ?'
-            params.append(f"%{numero}%")
-        if contacto:
-            where_sql += ' AND c.razonsocial LIKE ?'
-            params.append(f"%{contacto}%")
-        if identificador:
-            where_sql += ' AND c.identificador LIKE ?'
-            params.append(f"%{identificador}%")
-        if concepto:
-            where_sql += ' AND EXISTS (SELECT 1 FROM detalle_factura d WHERE d.id_factura = f.id AND (lower(d.concepto) LIKE ? OR lower(d.descripcion) LIKE ?))'
-            like_val = f"%{str(concepto).lower()}%"
-            params.extend([like_val, like_val])
+            # Filtros (solo si no se filtró por número)
+            if fecha_inicio:
+                where_sql += ' AND f.fecha >= ?'
+                params.append(fecha_inicio)
+            if fecha_fin:
+                where_sql += ' AND f.fecha <= ?'
+                params.append(fecha_fin)
+            if estado:
+                if estado == 'PV':
+                    where_sql += " AND (f.estado IN ('P', 'V'))"
+                else:
+                    where_sql += ' AND f.estado = ?'
+                    params.append(estado)
+            if contacto:
+                where_sql += ' AND c.razonsocial LIKE ?'
+                params.append(f"%{contacto}%")
+            if identificador:
+                where_sql += ' AND c.identificador LIKE ?'
+                params.append(f"%{identificador}%")
+            if concepto:
+                where_sql += ' AND EXISTS (SELECT 1 FROM detalle_factura d WHERE d.id_factura = f.id AND (lower(d.concepto) LIKE ? OR lower(d.descripcion) LIKE ?))'
+                like_val = f"%{str(concepto).lower()}%"
+                params.extend([like_val, like_val])
 
         # Conteo total
         count_sql = f'''
@@ -885,7 +882,8 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                 f.tipo,
                 c.razonsocial,
                 COALESCE(c.mail, '') as mail,
-                COALESCE(f.enviado, 0) as enviado
+                COALESCE(f.enviado, 0) as enviado,
+                COALESCE(f.carta_enviada, 0) as carta_enviada
             FROM factura f
             LEFT JOIN contactos c ON f.idcontacto = c.idContacto
             {where_sql}
@@ -916,6 +914,8 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                     raw['total'] = format_total_es_two(raw['total'])
                 if 'enviado' in raw:
                     raw['enviado'] = int(raw['enviado']) if raw['enviado'] is not None else 0
+                if 'carta_enviada' in raw:
+                    raw['carta_enviada'] = int(raw['carta_enviada']) if raw['carta_enviada'] is not None else 0
                 items.append(raw)
 
         # Calcular totales globales según el estado del filtro (como numérico) y devolver formateados
@@ -926,8 +926,8 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
             'total_total': '0,00'
         }
         
-        # Solo calcular totales si hay un estado específico en el filtro
-        if estado:
+        # Solo calcular totales si hay un estado específico en el filtro (y no se filtró por número)
+        if estado and not ('numero' in filtros and filtros['numero']):
             totales_sql = f'''
                 SELECT 
                     SUM(f.importe_bruto) as total_base,
@@ -1077,7 +1077,6 @@ def obtener_facturas_por_contacto(idContacto):
             GROUP BY f.id
             ORDER BY f.fecha DESC
         ''', (idContacto,))
-        
         facturas = cursor.fetchall()
         
         # Procesar resultados
@@ -1423,7 +1422,6 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             except Exception:
                 return Decimal('0')
         base_sum = Decimal('0')
-        iva_sum = Decimal('0')
         for det in detalles_list:
             qty = D(det.get('cantidad'))
             price = D(det.get('precio'))
@@ -1431,12 +1429,38 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             sub = qty * price
             iva_line = (sub * tax / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             base_sum += sub
-            iva_sum += iva_line
-        base_imponible = base_sum.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        iva = iva_sum.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        total = (base_imponible + iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        print(f"[PDF] Totales recalculados: base={base_imponible}, iva={iva}, total={total}")
+            base_sum += iva_line
+        
+        # USAR LÓGICA UNIFICADA: Calcular IVA por línea y luego sumar
+        importe_bruto_dec = Decimal('0')
+        importe_impuestos_dec = Decimal('0')
+        total_dec = Decimal('0')
+        
+        for detalle in detalles_list:
+            precio = D(detalle.get('precio'))
+            cantidad = D(detalle.get('cantidad'))
+            iva_pct = D(detalle.get('impuestos', '21'))  # Usar IVA del detalle o 21% por defecto
+            
+            subtotal = precio * cantidad
+            # CRÍTICO: Redondear IVA por línea a 2 decimales (igual que frontend)
+            iva_linea = (subtotal * iva_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            total_linea = (subtotal + iva_linea).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            
+            importe_bruto_dec += subtotal
+            importe_impuestos_dec += iva_linea
+            total_dec += total_linea
+        
+        # Redondear totales finales
+        importe_bruto = float(importe_bruto_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        importe_impuestos = float(importe_impuestos_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        total = float(total_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
+        # Determinar fecha de cobro si la factura se está cobrando
+        fecha_cobro = None
+        if factura_dict['estado'] == 'C':
+            # La factura se está cobrando ahora, establecer fecha de cobro = fecha actual
+            fecha_cobro = datetime.now().strftime('%Y-%m-%d')
+        
         # Función para decodificar forma de pago
         def decodificar_forma_pago(forma_pago):
             formas_pago = {
@@ -1606,10 +1630,10 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
                 detalles_html
             ).replace(
                 'id="base"></span>',
-                f'id="base">{_fmt_euro(base_imponible)}€</span>'
+                f'id="base">{_fmt_euro(importe_bruto)}€</span>'
             ).replace(
                 'id="iva"></span>',
-                f'id="iva">{_fmt_euro(iva)}€</span>'
+                f'id="iva">{_fmt_euro(importe_impuestos)}€</span>'
             ).replace(
                 'id="total"></strong>',
                 f'id="total">{_fmt_euro(total)}€</strong>'
@@ -1650,8 +1674,8 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             html_modificado = set_span(html_modificado, 'numero', factura_dict["numero"])
             html_modificado = set_span(html_modificado, 'fecha', datetime.strptime(factura_dict["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y"))
             html_modificado = set_span(html_modificado, 'fecha-vencimiento', datetime.strptime(factura_dict["fvencimiento"], "%Y-%m-%d").strftime("%d/%m/%Y") if factura_dict.get("fvencimiento") else '')
-            html_modificado = set_span(html_modificado, 'base', f"{_fmt_euro(base_imponible)}€")
-            html_modificado = set_span(html_modificado, 'iva', f"{_fmt_euro(iva)}€")
+            html_modificado = set_span(html_modificado, 'base', f"{_fmt_euro(importe_bruto)}€")
+            html_modificado = set_span(html_modificado, 'iva', f"{_fmt_euro(importe_impuestos)}€")
             html_modificado = re.sub(r'<strong\s+id="total"[^>]*>.*?</strong>', f'<strong id="total">{_fmt_euro(total)}€</strong>', html_modificado, flags=re.DOTALL)
             
             # --- Leyenda para facturas rectificativas ---
@@ -1759,9 +1783,10 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             print("Preparando correo")
             # Preparar el correo (incluir fecha y vencimiento)
             fecha_fmt = datetime.strptime(factura_dict["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y") if factura_dict.get("fecha") else ""
+            # Calcular fecha de vencimiento como fecha_emision + 30 días (no usar fvencimiento de BD)
             fvenc_fmt = (
-                datetime.strptime(factura_dict["fvencimiento"], "%Y-%m-%d").strftime("%d/%m/%Y")
-                if factura_dict.get("fvencimiento") else ""
+                (datetime.strptime(factura_dict["fecha"], "%Y-%m-%d") + timedelta(days=30)).strftime("%d/%m/%Y")
+                if factura_dict.get("fecha") else ""
             )
             # Cambiar asunto y cuerpo si hay adjunto adicional (carta de reclamación)
             if adjunto_adicional:

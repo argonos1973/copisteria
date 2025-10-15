@@ -132,7 +132,7 @@ def generar_carta_reclamacion(factura_data, dias_vencidos):
                 
                 <p>Te escribimos para recordarte que tenemos pendiente el pago de la factura <strong>{factura_data['numero']}</strong> 
                 del <strong>{datetime.strptime(factura_data['fecha'], '%Y-%m-%d').strftime('%d/%m/%Y')}</strong>, 
-                con vencimiento el <strong>{datetime.strptime(factura_data['fvencimiento'], '%Y-%m-%d').strftime('%d/%m/%Y')}</strong>,
+                con vencimiento el <strong>{(datetime.strptime(factura_data['fecha'], '%Y-%m-%d') + timedelta(days=30)).strftime('%d/%m/%Y')}</strong>,
                 por un importe de <strong>{factura_data['total']:.2f}€</strong>.</p>
                 
                 <p>La factura lleva <span class="destacado">{dias_vencidos} {'día' if dias_vencidos == 1 else 'días'}</span> vencida 
@@ -267,12 +267,12 @@ def actualizar_facturas_vencidas():
             # El campo ya existe
             pass
         
-        # Calcular la fecha límite: 30 días antes de hoy
-        fecha_limite_vencimiento = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
-        fecha_limite_carta = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        # Calcular la fecha límite: 5 días antes de hoy (facturas con más de 5 días vencidas)
+        fecha_limite_vencimiento = (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d')
+        fecha_limite_carta = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')  # Enviar recordatorio cada 30 días
         logger.info(f"Buscando facturas con vencimiento anterior a {fecha_limite_vencimiento}")
         
-        # 1. Facturas PENDIENTES cuyo vencimiento fue hace más de 30 días
+        # 1. Facturas PENDIENTES cuyo vencimiento fue hace más de 5 días
         cursor.execute('''
             SELECT id, numero, fecha, fvencimiento, estado, idContacto, total, fecha_ultima_carta, carta_enviada
             FROM factura
@@ -283,16 +283,16 @@ def actualizar_facturas_vencidas():
         
         facturas_pendientes = cursor.fetchall()
         
-        # 2. Facturas VENCIDAS que necesitan recordatorio (30 días desde última carta)
-        # Solo facturas cuyo vencimiento YA pasó (independientemente del estado)
+        # 2. Facturas VENCIDAS que necesitan recordatorio (30 días desde última carta o primera vez)
+        # Solo facturas con más de 5 días vencidas
         cursor.execute('''
             SELECT id, numero, fecha, fvencimiento, estado, idContacto, total, fecha_ultima_carta, carta_enviada
             FROM factura
             WHERE estado = 'V'
-            AND fvencimiento < date('now')
+            AND fvencimiento < ?
             AND (fecha_ultima_carta IS NULL OR fecha_ultima_carta < ?)
             AND total > 0
-        ''', (fecha_limite_carta,))
+        ''', (fecha_limite_vencimiento, fecha_limite_carta))
         
         facturas_vencidas = cursor.fetchall()
         

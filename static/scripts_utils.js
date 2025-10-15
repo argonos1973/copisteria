@@ -1425,3 +1425,29 @@ export function inicializarDeteccionCambios(callbackGuardar = null, verificarCam
     }
   }, true);
 }
+
+// ===== FUNCIONES PARA FORMATEAR =====
+
+/**
+ * Formatea un porcentaje con signo y decimales
+ * @param {number} pct - El porcentaje a formatear
+ * @returns {string} - Porcentaje formateado (ej: "+5.23%", "-2.10%")
+ */
+export function formatearPorcentaje(pct) {
+  if (pct === null || pct === undefined || isNaN(pct)) return '0%';
+  const valor = parseFloat(pct);
+  const signo = valor >= 0 ? '+' : '';
+  return `${signo}${valor.toFixed(2)}%`;
+}
+
+/**
+ * Escapa caracteres HTML para prevenir XSS
+ * @param {string} text - El texto a escapar
+ * @returns {string} - Texto con HTML escapado
+ */
+export function escaparHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}

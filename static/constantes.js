@@ -1,6 +1,6 @@
 // constantes.js
 // Resolución robusta de IP para APIs, sin depender de window.location.hostname
-const DEFAULT_LOCAL_SERVER_IP = '192.168.1.23';
+const DEFAULT_LOCAL_SERVER_IP = '192.168.1.18';
 
 function getOverrideIp() {
   try {

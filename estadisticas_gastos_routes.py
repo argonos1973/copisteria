@@ -5,6 +5,140 @@ import re
 
 estadisticas_gastos_bp = Blueprint('estadisticas_gastos', __name__)
 
+# ===== FUNCIONES AUXILIARES COMPARTIDAS =====
+
+def _obtener_case_categoria_sql():
+    """Devuelve el CASE SQL para categorizar gastos"""
+    return '''
+        CASE 
+            WHEN concepto LIKE 'Recibo%' THEN 'Recibos'
+            WHEN concepto LIKE 'Liquidacion%' THEN 'Liquidaciones TPV'
+            WHEN concepto LIKE '%Transferencia%' THEN 'Transferencias'
+            WHEN concepto LIKE '%Bizum%' THEN 'Bizum'
+            WHEN concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%' THEN 'Compras Tarjeta'
+            ELSE substr(concepto, 1, 30)
+        END
+    '''
+
+def _obtener_filtro_categoria(categoria):
+    """Devuelve el filtro SQL WHERE para una categoría específica"""
+    filtros = {
+        'Recibos': "concepto LIKE 'Recibo%'",
+        'Liquidaciones TPV': "concepto LIKE 'Liquidacion%'",
+        'Transferencias': "concepto LIKE '%Transferencia%'",
+        'Bizum': "concepto LIKE '%Bizum%'",
+        'Compras Tarjeta': "(concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%')",
+        'Otros': """(concepto NOT LIKE 'Recibo%' 
+                    AND concepto NOT LIKE 'Liquidacion%' 
+                    AND concepto NOT LIKE '%Transferencia%' 
+                    AND concepto NOT LIKE '%Bizum%' 
+                    AND concepto NOT LIKE '%Tarjeta%' 
+                    AND concepto NOT LIKE '%Compra%')"""
+    }
+    return filtros.get(categoria, "1=1")
+
+def _normalizar_concepto(concepto_original):
+    """Normaliza un concepto de gasto eliminando referencias, números y código redundante"""
+    # Eliminar números de recibo, referencias, códigos
+    concepto = re.sub(r'N[ºo°]\s*Recibo[:\s]+[\d\s]+', '', concepto_original, flags=re.IGNORECASE)
+    concepto = re.sub(r'Nº\s*[\d\s]+', '', concepto)
+    concepto = re.sub(r'Ref[:\.\s]+.*?Mandato[:\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r'Ref[:\.\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r'Mandato[:\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r'Factura[:\s]+[\d\-\/]+', '', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r'Contracte?\s+(Num\.?|N[ºo°])?\s*[\d\s]*', '', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r'Subministrament\s+D\s+Aigua\s+Contracte\s+Num\.?', 'Subministrament D Aigua', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r'\d{2}\/\d{2}\/\d{4}', '', concepto)  # Fechas
+    concepto = re.sub(r'\d{4}-\d{2}-\d{2}', '', concepto)  # Fechas ISO
+    concepto = re.sub(r'\bBb[a-z]{5}\b', '', concepto, flags=re.IGNORECASE)  # Códigos tipo Bbfztpn
+    
+    # === NORMALIZACIÓN ESPECÍFICA POR TIPO ===
+    
+    # TRANSFERENCIAS: Agrupar por destinatario (eliminar variaciones del concepto)
+    if 'Transferencia' in concepto:
+        # Normalizar "Transferencia Inmediata" → "Transferencia"
+        concepto = re.sub(r'Transferencia\s+Inmediata\s+', 'Transferencia ', concepto, flags=re.IGNORECASE)
+        # TRUYOL: Normalizar "Truyol Digital" → "Truyol"
+        if 'truyol' in concepto.lower():
+            concepto = re.sub(r'Truyol\s+Digital', 'Truyol', concepto, flags=re.IGNORECASE)
+        # Si tiene "A Favor De", mantener solo hasta el nombre (eliminar todo después)
+        match = re.search(r'(Transferencia.*?A\s+Favor\s+De\s+[\w\s,]+?)\s+Concepto', concepto, re.IGNORECASE)
+        if match:
+            concepto = match.group(1).strip()
+    
+    # COMPRAS TARJETA: Eliminar info de tarjeta y localización
+    if 'Compra' in concepto or 'Tarjeta' in concepto:
+        # Normalizar "Compra Internet En" → "Compra En"
+        concepto = re.sub(r'Compra\s+Internet\s+En\s+', 'Compra En ', concepto, flags=re.IGNORECASE)
+        
+        # AMAZON: Normalizar todas las compras de Amazon
+        if 'amazon' in concepto.lower() or 'amzn' in concepto.lower():
+            concepto = 'Compra Amazon Business'
+        
+        # UBER EATS: Normalizar variaciones
+        if 'uber' in concepto.lower() and 'eats' in concepto.lower():
+            concepto = 'Compra Uber Eats'
+        
+        # TAXI: Normalizar taxis (Llic, Lic., etc.)
+        if 'taxi' in concepto.lower() or 'autotaxi' in concepto.lower():
+            concepto = 'Compra Taxi'
+        
+        # Eliminar todo después de la segunda coma (ciudad, tarjeta, comisión)
+        partes = concepto.split(',')
+        if len(partes) > 2:
+            concepto = ','.join(partes[:2])
+        # Eliminar ", [Ciudad]" al final
+        concepto = re.sub(r',\s*[A-Z][\w\s]+$', '', concepto)
+        # Eliminar "Tarjeta , Comision" y variaciones
+        concepto = re.sub(r',?\s*Tarjeta\s*,?\s*Comision\s*', '', concepto, flags=re.IGNORECASE)
+        concepto = re.sub(r',?\s*Tarjeta\s*$', '', concepto, flags=re.IGNORECASE)
+        concepto = re.sub(r',?\s*Tarj\.\s*:?\*?\d*\s*$', '', concepto, flags=re.IGNORECASE)
+    
+    # Eliminar ", De" al final y variaciones
+    concepto = re.sub(r',\s*De\s*$', '', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r',\s*D\s*$', '', concepto)  # Solo ", D" al final
+    
+    # REPSOL: Eliminar texto duplicado y redundante
+    if 'repsol' in concepto.lower():
+        # Eliminar "repsol Comercializadora D"
+        concepto = re.sub(r'repsol\s+Comercializadora\s+D?', 'Repsol', concepto, flags=re.IGNORECASE)
+        # Eliminar "Repsol XXXX" donde XXXX son números (códigos de contrato)
+        concepto = re.sub(r'(Repsol)\s+\d+', r'\1', concepto, flags=re.IGNORECASE)
+        # Si aparece "Repsol" duplicado, dejarlo una vez
+        concepto = re.sub(r'(Repsol)[,\s]+(Repsol)', r'\1', concepto, flags=re.IGNORECASE)
+    
+    # ORANGE: Normalizar todas las variaciones
+    if 'orange' in concepto.lower():
+        # Normalizar TODO a "Recibo Orange"
+        if 'Recibo' in concepto:
+            concepto = 'Recibo Orange Espagne'
+    
+    # Eliminar TODOS los números que quedan (muy agresivo)
+    concepto = re.sub(r'\b\d+\b', '', concepto)  # Números aislados
+    concepto = re.sub(r'\s+[A-Z]?\d+[A-Z]?\s*$', '', concepto)  # Códigos alfanuméricos al final
+    
+    # Eliminar texto redundante común
+    concepto = re.sub(r'Periodo\s+Liquidacion[:\s]*[\/\-]*\s*,?\s*', '', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r',?\s*De\s+(No|Not\s+Provided)\s*$', '', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r'\s*[\/\-]+\s*', ' ', concepto)  # Barras y guiones sueltos
+    concepto = re.sub(r'\s*R\.e\.\s*', ' ', concepto, flags=re.IGNORECASE)  # R.e. (régimen especial)
+    concepto = re.sub(r'\bautonomos\b', 'Autónomos', concepto, flags=re.IGNORECASE)
+    
+    # Normalizar puntuación: S.l.u. → Slu, S.a.u → Sau, etc.
+    concepto = re.sub(r'S\.[lL]\.[uU]\.', 'Slu', concepto)
+    concepto = re.sub(r'S\.[aA]\.[uU]\.', 'Sau', concepto)
+    concepto = re.sub(r'S\.[lL]\.', 'Sl', concepto)
+    concepto = re.sub(r'S\.c\.c\.l\.', 'Sccl', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r'S\.a\.', 'Sa', concepto, flags=re.IGNORECASE)
+    concepto = re.sub(r'C\s+B\b', 'CB', concepto)
+    
+    # Eliminar múltiples espacios y puntuación redundante
+    concepto = re.sub(r'\s+', ' ', concepto).strip()
+    concepto = re.sub(r'[,.\s]+$', '', concepto)
+    concepto = re.sub(r'\s*,\s*,\s*', ', ', concepto)  # Comas duplicadas
+    
+    return concepto
+
 @estadisticas_gastos_bp.route('/api/gastos/estadisticas', methods=['GET'])
 def obtener_estadisticas_gastos():
     """
@@ -120,16 +254,10 @@ def obtener_top10_gastos():
         cursor = conn.cursor()
         
         # Top 10 gastos por concepto (agrupando por primeras palabras)
-        cursor.execute('''
+        case_categoria = _obtener_case_categoria_sql()
+        cursor.execute(f'''
             SELECT 
-                CASE 
-                    WHEN concepto LIKE 'Recibo%' THEN 'Recibos'
-                    WHEN concepto LIKE 'Liquidacion%' THEN 'Liquidaciones TPV'
-                    WHEN concepto LIKE '%Transferencia%' THEN 'Transferencias'
-                    WHEN concepto LIKE '%Bizum%' THEN 'Bizum'
-                    WHEN concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%' THEN 'Compras Tarjeta'
-                    ELSE substr(concepto, 1, 30)
-                END as concepto_resumido,
+                {case_categoria} as concepto_resumido,
                 COALESCE(SUM(ABS(importe_eur)), 0) as total_gasto,
                 COUNT(*) as cantidad
             FROM gastos
@@ -151,21 +279,12 @@ def obtener_top10_gastos():
         # Obtener totales del año anterior para comparación
         anio_anterior = anio - 1
         for gasto in top_gastos:
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_anterior
                 FROM gastos
                 WHERE substr(fecha_operacion, 7, 4) = ?
                 AND importe_eur < 0
-                AND (
-                    CASE 
-                        WHEN concepto LIKE 'Recibo%' THEN 'Recibos'
-                        WHEN concepto LIKE 'Liquidacion%' THEN 'Liquidaciones TPV'
-                        WHEN concepto LIKE '%Transferencia%' THEN 'Transferencias'
-                        WHEN concepto LIKE '%Bizum%' THEN 'Bizum'
-                        WHEN concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%' THEN 'Compras Tarjeta'
-                        ELSE substr(concepto, 1, 30)
-                    END
-                ) = ?
+                AND ({case_categoria}) = ?
             ''', (str(anio_anterior), gasto['concepto']))
             
             total_anterior = float(cursor.fetchone()['total_anterior'] or 0)
@@ -203,121 +322,7 @@ def obtener_detalles_gasto():
         cursor = conn.cursor()
         
         # Construir el WHERE según el concepto
-        where_clause = '''
-            CASE 
-                WHEN concepto LIKE 'Recibo%' THEN 'Recibos'
-                WHEN concepto LIKE 'Liquidacion%' THEN 'Liquidaciones TPV'
-                WHEN concepto LIKE '%Transferencia%' THEN 'Transferencias'
-                WHEN concepto LIKE '%Bizum%' THEN 'Bizum'
-                WHEN concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%' THEN 'Compras Tarjeta'
-                ELSE substr(concepto, 1, 30)
-            END
-        '''
-        
-        # Función para normalizar conceptos (eliminar números de recibo, referencias, etc.)
-        def normalizar_concepto(concepto_original):
-            # Eliminar números de recibo, referencias, códigos
-            concepto = re.sub(r'N[ºo°]\s*Recibo[:\s]+[\d\s]+', '', concepto_original, flags=re.IGNORECASE)
-            concepto = re.sub(r'Nº\s*[\d\s]+', '', concepto)
-            concepto = re.sub(r'Ref[:\.\s]+.*?Mandato[:\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'Ref[:\.\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'Mandato[:\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'Factura[:\s]+[\d\-\/]+', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'Contracte?\s+(Num\.?|N[ºo°])?\s*[\d\s]*', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'Subministrament\s+D\s+Aigua\s+Contracte\s+Num\.?', 'Subministrament D Aigua', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'\d{2}\/\d{2}\/\d{4}', '', concepto)  # Fechas
-            concepto = re.sub(r'\d{4}-\d{2}-\d{2}', '', concepto)  # Fechas ISO
-            concepto = re.sub(r'\bBb[a-z]{5}\b', '', concepto, flags=re.IGNORECASE)  # Códigos tipo Bbfztpn
-            
-            # === NORMALIZACIÓN ESPECÍFICA POR TIPO ===
-            
-            # TRANSFERENCIAS: Normalizar "Concepto:" y variaciones
-            concepto = re.sub(r'Concepto:\s*', 'Concepto: ', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'\bConcepto\b(?!:)', 'Concepto:', concepto, flags=re.IGNORECASE)
-            # Agrupar transferencias por destinatario (eliminar variaciones del concepto)
-            if 'Transferencia' in concepto:
-                # Normalizar "Transferencia Inmediata" → "Transferencia"
-                concepto = re.sub(r'Transferencia\s+Inmediata\s+', 'Transferencia ', concepto, flags=re.IGNORECASE)
-                # TRUYOL: Normalizar "Truyol Digital" → "Truyol"
-                if 'truyol' in concepto.lower():
-                    concepto = re.sub(r'Truyol\s+Digital', 'Truyol', concepto, flags=re.IGNORECASE)
-                # Si tiene "A Favor De", mantener solo hasta el nombre
-                match = re.search(r'(Transferencia.*?A\s+Favor\s+De\s+[\w\s]+?)\s+Concepto', concepto, re.IGNORECASE)
-                if match:
-                    concepto = match.group(1)
-            
-            # COMPRAS TARJETA: Eliminar info de tarjeta y localización
-            if 'Compra' in concepto or 'Tarjeta' in concepto:
-                # Normalizar "Compra Internet En" → "Compra En"
-                concepto = re.sub(r'Compra\s+Internet\s+En\s+', 'Compra En ', concepto, flags=re.IGNORECASE)
-                
-                # AMAZON: Normalizar todas las compras de Amazon
-                if 'amazon' in concepto.lower() or 'amzn' in concepto.lower():
-                    concepto = 'Compra Amazon Business'
-                
-                # UBER EATS: Normalizar variaciones
-                if 'uber' in concepto.lower() and 'eats' in concepto.lower():
-                    concepto = 'Compra Uber Eats'
-                
-                # TAXI: Normalizar taxis (Llic, Lic., etc.)
-                if 'taxi' in concepto.lower() or 'autotaxi' in concepto.lower():
-                    concepto = 'Compra Taxi'
-                
-                # Eliminar todo después de la segunda coma (ciudad, tarjeta, comisión)
-                partes = concepto.split(',')
-                if len(partes) > 2:
-                    concepto = ','.join(partes[:2])
-                # Eliminar ", [Ciudad]" al final
-                concepto = re.sub(r',\s*[A-Z][\w\s]+$', '', concepto)
-                # Eliminar "Tarjeta , Comision" y variaciones
-                concepto = re.sub(r',?\s*Tarjeta\s*,?\s*Comision\s*', '', concepto, flags=re.IGNORECASE)
-                concepto = re.sub(r',?\s*Tarjeta\s*$', '', concepto, flags=re.IGNORECASE)
-                concepto = re.sub(r',?\s*Tarj\.\s*:?\*?\d*\s*$', '', concepto, flags=re.IGNORECASE)
-            
-            # Eliminar ", De" al final y variaciones
-            concepto = re.sub(r',\s*De\s*$', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r',\s*D\s*$', '', concepto)  # Solo ", D" al final
-            
-            # REPSOL: Eliminar texto duplicado y redundante
-            if 'repsol' in concepto.lower():
-                # Eliminar "repsol Comercializadora D"
-                concepto = re.sub(r'repsol\s+Comercializadora\s+D?', 'Repsol', concepto, flags=re.IGNORECASE)
-                # Eliminar "Repsol XXXX" donde XXXX son números (códigos de contrato)
-                concepto = re.sub(r'(Repsol)\s+\d+', r'\1', concepto, flags=re.IGNORECASE)
-                # Si aparece "Repsol" duplicado, dejarlo una vez
-                concepto = re.sub(r'(Repsol)[,\s]+(Repsol)', r'\1', concepto, flags=re.IGNORECASE)
-            
-            # ORANGE: Normalizar todas las variaciones
-            if 'orange' in concepto.lower():
-                # Normalizar TODO a "Recibo Orange"
-                if 'Recibo' in concepto:
-                    concepto = 'Recibo Orange Espagne'
-            
-            # Eliminar TODOS los números que quedan (muy agresivo)
-            concepto = re.sub(r'\b\d+\b', '', concepto)  # Números aislados
-            concepto = re.sub(r'\s+[A-Z]?\d+[A-Z]?\s*$', '', concepto)  # Códigos alfanuméricos al final
-            
-            # Eliminar texto redundante común
-            concepto = re.sub(r'Periodo\s+Liquidacion[:\s]*[\/-]*\s*,?\s*', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r',?\s*De\s+(No|Not\s+Provided)\s*$', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'\s*[\/-]+\s*', ' ', concepto)  # Barras y guiones sueltos
-            concepto = re.sub(r'\s*R\.e\.\s*', ' ', concepto, flags=re.IGNORECASE)  # R.e. (régimen especial)
-            concepto = re.sub(r'\bautonomos\b', 'Autónomos', concepto, flags=re.IGNORECASE)
-            
-            # Normalizar puntuación: S.l.u. → Slu, S.a.u → Sau, etc.
-            concepto = re.sub(r'S\.[lL]\.[uU]\.', 'Slu', concepto)
-            concepto = re.sub(r'S\.[aA]\.[uU]\.', 'Sau', concepto)
-            concepto = re.sub(r'S\.[lL]\.', 'Sl', concepto)
-            concepto = re.sub(r'S\.c\.c\.l\.', 'Sccl', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'S\.a\.', 'Sa', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'C\s+B\b', 'CB', concepto)
-            
-            # Eliminar múltiples espacios y puntuación redundante
-            concepto = re.sub(r'\s+', ' ', concepto).strip()
-            concepto = re.sub(r'[,\.\s]+$', '', concepto)
-            concepto = re.sub(r'\s*,\s*,\s*', ', ', concepto)  # Comas duplicadas
-            
-            return concepto
+        where_clause = _obtener_case_categoria_sql()
         
         # Obtener todos los gastos y normalizarlos
         cursor.execute(f'''
@@ -335,7 +340,7 @@ def obtener_detalles_gasto():
         # Agrupar manualmente por concepto normalizado
         agrupados = {}
         for row in cursor.fetchall():
-            concepto_norm = normalizar_concepto(row['concepto_original'])
+            concepto_norm = _normalizar_concepto(row['concepto_original'])
             
             if concepto_norm not in agrupados:
                 agrupados[concepto_norm] = {
@@ -417,16 +422,10 @@ def obtener_gastos_por_categoria_mes():
         cursor = conn.cursor()
         
         # Obtener gastos del mes actual por categoría
-        cursor.execute('''
+        case_categoria = _obtener_case_categoria_sql().replace('ELSE substr(concepto, 1, 30)', 'ELSE \'Otros\'')
+        cursor.execute(f'''
             SELECT 
-                CASE 
-                    WHEN concepto LIKE 'Recibo%' THEN 'Recibos'
-                    WHEN concepto LIKE 'Liquidacion%' THEN 'Liquidaciones TPV'
-                    WHEN concepto LIKE '%Transferencia%' THEN 'Transferencias'
-                    WHEN concepto LIKE '%Bizum%' THEN 'Bizum'
-                    WHEN concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%' THEN 'Compras Tarjeta'
-                    ELSE 'Otros'
-                END as categoria,
+                {case_categoria} as categoria,
                 COALESCE(SUM(ABS(importe_eur)), 0) as total
             FROM gastos
             WHERE substr(fecha_operacion, 4, 2) = ?
@@ -467,16 +466,10 @@ def obtener_gastos_por_categoria_anio():
         cursor = conn.cursor()
         
         # Obtener gastos del año completo por categoría
-        cursor.execute('''
+        case_categoria = _obtener_case_categoria_sql().replace('ELSE substr(concepto, 1, 30)', 'ELSE \'Otros\'')
+        cursor.execute(f'''
             SELECT 
-                CASE 
-                    WHEN concepto LIKE 'Recibo%' THEN 'Recibos'
-                    WHEN concepto LIKE 'Liquidacion%' THEN 'Liquidaciones TPV'
-                    WHEN concepto LIKE '%Transferencia%' THEN 'Transferencias'
-                    WHEN concepto LIKE '%Bizum%' THEN 'Bizum'
-                    WHEN concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%' THEN 'Compras Tarjeta'
-                    ELSE 'Otros'
-                END as categoria,
+                {case_categoria} as categoria,
                 COALESCE(SUM(ABS(importe_eur)), 0) as total
             FROM gastos
             WHERE substr(fecha_operacion, 7, 4) = ?
@@ -520,123 +513,7 @@ def obtener_detalles_categoria():
         cursor = conn.cursor()
         
         # Determinar el filtro de categoría
-        if categoria == 'Recibos':
-            filtro_categoria = "concepto LIKE 'Recibo%'"
-        elif categoria == 'Liquidaciones TPV':
-            filtro_categoria = "concepto LIKE 'Liquidacion%'"
-        elif categoria == 'Transferencias':
-            filtro_categoria = "concepto LIKE '%Transferencia%'"
-        elif categoria == 'Bizum':
-            filtro_categoria = "concepto LIKE '%Bizum%'"
-        elif categoria == 'Compras Tarjeta':
-            filtro_categoria = "(concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%')"
-        else:
-            filtro_categoria = "1=1"  # Otros
-        
-        # Función para normalizar conceptos (igual que en Top 10)
-        def normalizar_concepto(concepto_original):
-            # Eliminar números de recibo, referencias, códigos
-            concepto = re.sub(r'N[ºo°]\s*Recibo[:\s]+[\d\s]+', '', concepto_original, flags=re.IGNORECASE)
-            concepto = re.sub(r'Nº\s*[\d\s]+', '', concepto)
-            concepto = re.sub(r'Ref[:\.\s]+.*?Mandato[:\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'Ref[:\.\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'Mandato[:\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'Factura[:\s]+[\d\-\/]+', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'Contracte?\s+(Num\.?|N[ºo°])?\s*[\d\s]*', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'Subministrament\s+D\s+Aigua\s+Contracte\s+Num\.?', 'Subministrament D Aigua', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'\d{2}\/\d{2}\/\d{4}', '', concepto)  # Fechas
-            concepto = re.sub(r'\d{4}-\d{2}-\d{2}', '', concepto)  # Fechas ISO
-            concepto = re.sub(r'\bBb[a-z]{5}\b', '', concepto, flags=re.IGNORECASE)  # Códigos tipo Bbfztpn
-            
-            # === NORMALIZACIÓN ESPECÍFICA POR TIPO ===
-            
-            # TRANSFERENCIAS: Normalizar "Concepto:" y variaciones
-            concepto = re.sub(r'Concepto:\s*', 'Concepto: ', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'\bConcepto\b(?!:)', 'Concepto:', concepto, flags=re.IGNORECASE)
-            # Agrupar transferencias por destinatario (eliminar variaciones del concepto)
-            if 'Transferencia' in concepto:
-                # Normalizar "Transferencia Inmediata" → "Transferencia"
-                concepto = re.sub(r'Transferencia\s+Inmediata\s+', 'Transferencia ', concepto, flags=re.IGNORECASE)
-                # TRUYOL: Normalizar "Truyol Digital" → "Truyol"
-                if 'truyol' in concepto.lower():
-                    concepto = re.sub(r'Truyol\s+Digital', 'Truyol', concepto, flags=re.IGNORECASE)
-                # Si tiene "A Favor De", mantener solo hasta el nombre
-                match = re.search(r'(Transferencia.*?A\s+Favor\s+De\s+[\w\s]+?)\s+Concepto', concepto, re.IGNORECASE)
-                if match:
-                    concepto = match.group(1)
-            
-            # COMPRAS TARJETA: Eliminar info de tarjeta y localización
-            if 'Compra' in concepto or 'Tarjeta' in concepto:
-                # Normalizar "Compra Internet En" → "Compra En"
-                concepto = re.sub(r'Compra\s+Internet\s+En\s+', 'Compra En ', concepto, flags=re.IGNORECASE)
-                
-                # AMAZON: Normalizar todas las compras de Amazon
-                if 'amazon' in concepto.lower() or 'amzn' in concepto.lower():
-                    concepto = 'Compra Amazon Business'
-                
-                # UBER EATS: Normalizar variaciones
-                if 'uber' in concepto.lower() and 'eats' in concepto.lower():
-                    concepto = 'Compra Uber Eats'
-                
-                # TAXI: Normalizar taxis (Llic, Lic., etc.)
-                if 'taxi' in concepto.lower() or 'autotaxi' in concepto.lower():
-                    concepto = 'Compra Taxi'
-                
-                # Eliminar todo después de la segunda coma (ciudad, tarjeta, comisión)
-                partes = concepto.split(',')
-                if len(partes) > 2:
-                    concepto = ','.join(partes[:2])
-                # Eliminar ", [Ciudad]" al final
-                concepto = re.sub(r',\s*[A-Z][\w\s]+$', '', concepto)
-                # Eliminar "Tarjeta , Comision" y variaciones
-                concepto = re.sub(r',?\s*Tarjeta\s*,?\s*Comision\s*', '', concepto, flags=re.IGNORECASE)
-                concepto = re.sub(r',?\s*Tarjeta\s*$', '', concepto, flags=re.IGNORECASE)
-                concepto = re.sub(r',?\s*Tarj\.\s*:?\*?\d*\s*$', '', concepto, flags=re.IGNORECASE)
-            
-            # Eliminar ", De" al final y variaciones
-            concepto = re.sub(r',\s*De\s*$', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r',\s*D\s*$', '', concepto)  # Solo ", D" al final
-            
-            # REPSOL: Eliminar texto duplicado y redundante
-            if 'repsol' in concepto.lower():
-                # Eliminar "repsol Comercializadora D"
-                concepto = re.sub(r'repsol\s+Comercializadora\s+D?', 'Repsol', concepto, flags=re.IGNORECASE)
-                # Eliminar "Repsol XXXX" donde XXXX son números (códigos de contrato)
-                concepto = re.sub(r'(Repsol)\s+\d+', r'\1', concepto, flags=re.IGNORECASE)
-                # Si aparece "Repsol" duplicado, dejarlo una vez
-                concepto = re.sub(r'(Repsol)[,\s]+(Repsol)', r'\1', concepto, flags=re.IGNORECASE)
-            
-            # ORANGE: Normalizar todas las variaciones
-            if 'orange' in concepto.lower():
-                # Normalizar TODO a "Recibo Orange"
-                if 'Recibo' in concepto:
-                    concepto = 'Recibo Orange Espagne'
-            
-            # Eliminar TODOS los números que quedan (muy agresivo)
-            concepto = re.sub(r'\b\d+\b', '', concepto)  # Números aislados
-            concepto = re.sub(r'\s+[A-Z]?\d+[A-Z]?\s*$', '', concepto)  # Códigos alfanuméricos al final
-            
-            # Eliminar texto redundante común
-            concepto = re.sub(r'Periodo\s+Liquidacion[:\s]*[\/-]*\s*,?\s*', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r',?\s*De\s+(No|Not\s+Provided)\s*$', '', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'\s*[\/-]+\s*', ' ', concepto)  # Barras y guiones sueltos
-            concepto = re.sub(r'\s*R\.e\.\s*', ' ', concepto, flags=re.IGNORECASE)  # R.e. (régimen especial)
-            concepto = re.sub(r'\bautonomos\b', 'Autónomos', concepto, flags=re.IGNORECASE)
-            
-            # Normalizar puntuación: S.l.u. → Slu, S.a.u → Sau, etc.
-            concepto = re.sub(r'S\.[lL]\.[uU]\.', 'Slu', concepto)
-            concepto = re.sub(r'S\.[aA]\.[uU]\.', 'Sau', concepto)
-            concepto = re.sub(r'S\.[lL]\.', 'Sl', concepto)
-            concepto = re.sub(r'S\.c\.c\.l\.', 'Sccl', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'S\.a\.', 'Sa', concepto, flags=re.IGNORECASE)
-            concepto = re.sub(r'C\s+B\b', 'CB', concepto)
-            
-            # Eliminar múltiples espacios y puntuación redundante
-            concepto = re.sub(r'\s+', ' ', concepto).strip()
-            concepto = re.sub(r'[,\.\s]+$', '', concepto)
-            concepto = re.sub(r'\s*,\s*,\s*', ', ', concepto)  # Comas duplicadas
-            
-            return concepto
+        filtro_categoria = _obtener_filtro_categoria(categoria)
         
         # Obtener gastos sin agrupar para poder normalizarlos
         if mes:
@@ -668,7 +545,7 @@ def obtener_detalles_categoria():
         # Agrupar manualmente por concepto normalizado
         gastos_agrupados = {}
         for row in cursor.fetchall():
-            concepto_norm = normalizar_concepto(row['concepto'])
+            concepto_norm = _normalizar_concepto(row['concepto'])
             if concepto_norm not in gastos_agrupados:
                 gastos_agrupados[concepto_norm] = {
                     'concepto': concepto_norm,
@@ -722,20 +599,7 @@ def obtener_evolucion_mensual():
         cursor = conn.cursor()
         
         # Determinar el filtro de categoría
-        if categoria == 'global':
-            filtro_categoria = "1=1"
-        elif categoria == 'Recibos':
-            filtro_categoria = "concepto LIKE 'Recibo%'"
-        elif categoria == 'Liquidaciones TPV':
-            filtro_categoria = "concepto LIKE 'Liquidacion%'"
-        elif categoria == 'Transferencias':
-            filtro_categoria = "concepto LIKE '%Transferencia%'"
-        elif categoria == 'Bizum':
-            filtro_categoria = "concepto LIKE '%Bizum%'"
-        elif categoria == 'Compras Tarjeta':
-            filtro_categoria = "(concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%')"
-        else:
-            filtro_categoria = "1=1"
+        filtro_categoria = _obtener_filtro_categoria(categoria if categoria != 'global' else 'Otros')
         
         # Query para obtener gastos por mes
         query = f'''
@@ -785,4 +649,346 @@ def obtener_evolucion_mensual():
         
     except Exception as e:
         print(f"Error al obtener evolución mensual: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@estadisticas_gastos_bp.route('/api/informe-situacion', methods=['GET'])
+def generar_informe_situacion():
+    """
+    Genera un informe completo de situación financiera analizando ventas y gastos
+    """
+    try:
+        anio = request.args.get('anio', datetime.now().year, type=int)
+        mes = request.args.get('mes', datetime.now().month, type=int)
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # ===== DATOS DE VENTAS =====
+        # Total ventas del año hasta el mes actual (FACTURAS + TICKETS)
+        mes_str = str(mes).zfill(2)
+        
+        # Facturas del año (solo cobradas)
+        cursor.execute('''
+            SELECT 
+                COALESCE(SUM(importe_cobrado), 0) as total_ventas,
+                COUNT(*) as num_facturas
+            FROM factura
+            WHERE CAST(substr(fecha, 1, 4) AS INTEGER) = ?
+            AND CAST(substr(fecha, 6, 2) AS INTEGER) <= ?
+            AND estado = 'C'
+        ''', (anio, mes))
+        facturas_anio = cursor.fetchone()
+        total_facturas = float(facturas_anio['total_ventas'] or 0)
+        num_facturas = int(facturas_anio['num_facturas'] or 0)
+        
+        # Tickets del año (solo cobrados)
+        cursor.execute('''
+            SELECT 
+                COALESCE(SUM(importe_cobrado), 0) as total_ventas,
+                COUNT(*) as num_tickets
+            FROM tickets
+            WHERE CAST(substr(fecha, 1, 4) AS INTEGER) = ?
+            AND CAST(substr(fecha, 6, 2) AS INTEGER) <= ?
+            AND estado = 'C'
+        ''', (anio, mes))
+        tickets_anio = cursor.fetchone()
+        total_tickets = float(tickets_anio['total_ventas'] or 0)
+        num_tickets = int(tickets_anio['num_tickets'] or 0)
+        
+        # Total ventas (facturas + tickets)
+        total_ventas = total_facturas + total_tickets
+        num_documentos = num_facturas + num_tickets
+        
+        # Ventas del mes actual (facturas cobradas)
+        cursor.execute('''
+            SELECT COALESCE(SUM(importe_cobrado), 0) as total_mes
+            FROM factura
+            WHERE substr(fecha, 1, 4) = ?
+            AND substr(fecha, 6, 2) = ?
+            AND estado = 'C'
+        ''', (str(anio), mes_str))
+        facturas_mes = float(cursor.fetchone()['total_mes'] or 0)
+        
+        # Ventas del mes actual (tickets cobrados)
+        cursor.execute('''
+            SELECT COALESCE(SUM(importe_cobrado), 0) as total_mes
+            FROM tickets
+            WHERE substr(fecha, 1, 4) = ?
+            AND substr(fecha, 6, 2) = ?
+            AND estado = 'C'
+        ''', (str(anio), mes_str))
+        tickets_mes = float(cursor.fetchone()['total_mes'] or 0)
+        
+        # Total mes (facturas + tickets)
+        ventas_mes = facturas_mes + tickets_mes
+        
+        # ===== DATOS DE GASTOS =====
+        # Total gastos del año hasta el mes actual
+        cursor.execute('''
+            SELECT 
+                COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos,
+                COUNT(*) as num_gastos
+            FROM gastos
+            WHERE substr(fecha_operacion, 7, 4) = ?
+            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            AND importe_eur < 0
+        ''', (str(anio), mes))
+        gastos_anio = cursor.fetchone()
+        total_gastos = float(gastos_anio['total_gastos'] or 0)
+        num_gastos = int(gastos_anio['num_gastos'] or 0)
+        
+        # Gastos del mes actual
+        cursor.execute('''
+            SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_mes
+            FROM gastos
+            WHERE substr(fecha_operacion, 7, 4) = ?
+            AND substr(fecha_operacion, 4, 2) = ?
+            AND importe_eur < 0
+        ''', (str(anio), mes_str))
+        gastos_mes = float(cursor.fetchone()['total_mes'] or 0)
+        
+        # ===== ANÁLISIS Y MÉTRICAS =====
+        balance_anio = total_ventas - total_gastos
+        balance_mes = ventas_mes - gastos_mes
+        
+        # Ratios financieros
+        margen_beneficio_anio = (balance_anio / total_ventas * 100) if total_ventas > 0 else 0
+        margen_beneficio_mes = (balance_mes / ventas_mes * 100) if ventas_mes > 0 else 0
+        ratio_gastos_ventas = (total_gastos / total_ventas * 100) if total_ventas > 0 else 0
+        
+        # Medias mensuales
+        media_ventas_mensual = total_ventas / mes if mes > 0 else 0
+        media_gastos_mensual = total_gastos / mes if mes > 0 else 0
+        media_balance_mensual = balance_anio / mes if mes > 0 else 0
+        
+        # Proyecciones para fin de año
+        meses_restantes = 12 - mes
+        proyeccion_ventas = total_ventas + (media_ventas_mensual * meses_restantes)
+        proyeccion_gastos = total_gastos + (media_gastos_mensual * meses_restantes)
+        proyeccion_balance = proyeccion_ventas - proyeccion_gastos
+        
+        # Top 5 categorías de gastos
+        case_categoria = _obtener_case_categoria_sql().replace('ELSE substr(concepto, 1, 30)', 'ELSE \'Otros\'')
+        cursor.execute(f'''
+            SELECT 
+                {case_categoria} as categoria,
+                COALESCE(SUM(ABS(importe_eur)), 0) as total,
+                COUNT(*) as cantidad
+            FROM gastos
+            WHERE substr(fecha_operacion, 7, 4) = ?
+            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            AND importe_eur < 0
+            GROUP BY categoria
+            ORDER BY total DESC
+            LIMIT 5
+        ''', (str(anio), mes))
+        
+        top_categorias_gastos = []
+        for row in cursor.fetchall():
+            top_categorias_gastos.append({
+                'categoria': row['categoria'],
+                'total': round(float(row['total']), 2),
+                'cantidad': int(row['cantidad']),
+                'porcentaje': round((float(row['total']) / total_gastos * 100) if total_gastos > 0 else 0, 1)
+            })
+        
+        # Determinar estado financiero
+        if margen_beneficio_anio >= 20:
+            estado = 'Excelente'
+            color = 'green'
+        elif margen_beneficio_anio >= 10:
+            estado = 'Bueno'
+            color = 'lightgreen'
+        elif margen_beneficio_anio >= 5:
+            estado = 'Aceptable'
+            color = 'orange'
+        elif margen_beneficio_anio > 0:
+            estado = 'Precaución'
+            color = 'darkorange'
+        else:
+            estado = 'Crítico'
+            color = 'red'
+        
+        conn.close()
+        
+        return jsonify({
+            'anio': anio,
+            'mes': mes,
+            'periodo': f'Enero - {["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"][mes-1]} {anio}',
+            'ventas': {
+                'total_anio': round(total_ventas, 2),
+                'total_mes': round(ventas_mes, 2),
+                'num_facturas': num_facturas,
+                'num_tickets': num_tickets,
+                'num_documentos': num_documentos,
+                'total_facturas': round(total_facturas, 2),
+                'total_tickets': round(total_tickets, 2),
+                'media_mensual': round(media_ventas_mensual, 2),
+                'media_por_documento': round(total_ventas / num_documentos, 2) if num_documentos > 0 else 0
+            },
+            'gastos': {
+                'total_anio': round(total_gastos, 2),
+                'total_mes': round(gastos_mes, 2),
+                'num_gastos': num_gastos,
+                'media_mensual': round(media_gastos_mensual, 2),
+                'top_categorias': top_categorias_gastos
+            },
+            'balance': {
+                'anio': round(balance_anio, 2),
+                'mes': round(balance_mes, 2),
+                'media_mensual': round(media_balance_mensual, 2)
+            },
+            'ratios': {
+                'margen_beneficio_anio': round(margen_beneficio_anio, 2),
+                'margen_beneficio_mes': round(margen_beneficio_mes, 2),
+                'ratio_gastos_ventas': round(ratio_gastos_ventas, 2)
+            },
+            'proyecciones': {
+                'ventas': round(proyeccion_ventas, 2),
+                'gastos': round(proyeccion_gastos, 2),
+                'balance': round(proyeccion_balance, 2),
+                'margen_proyectado': round((proyeccion_balance / proyeccion_ventas * 100) if proyeccion_ventas > 0 else 0, 2)
+            },
+            'estado': {
+                'clasificacion': estado,
+                'color': color
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error al generar informe de situación: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@estadisticas_gastos_bp.route('/api/simulador-financiero', methods=['POST'])
+def simular_escenarios():
+    """
+    Simula diferentes escenarios financieros para ver cómo cuadrar los números
+    """
+    try:
+        data = request.json
+        anio = data.get('anio', datetime.now().year)
+        mes = data.get('mes', datetime.now().month)
+        
+        # Parámetros de simulación
+        ajuste_ventas_pct = float(data.get('ajuste_ventas_pct', 0))  # % de incremento/reducción
+        ajuste_gastos_pct = float(data.get('ajuste_gastos_pct', 0))
+        incremento_precios_pct = float(data.get('incremento_precios_pct', 0))  # % de incremento en precios
+        nuevas_ventas_mes = float(data.get('nuevas_ventas_mes', 0))  # Ventas adicionales por mes
+        reduccion_gastos_mes = float(data.get('reduccion_gastos_mes', 0))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener datos reales actuales
+        # Facturas cobradas
+        cursor.execute('''
+            SELECT COALESCE(SUM(importe_cobrado), 0) as total
+            FROM factura
+            WHERE CAST(substr(fecha, 1, 4) AS INTEGER) = ?
+            AND CAST(substr(fecha, 6, 2) AS INTEGER) <= ?
+            AND estado = 'C'
+        ''', (anio, mes))
+        ventas_facturas = float(cursor.fetchone()['total'] or 0)
+        
+        # Tickets cobrados
+        cursor.execute('''
+            SELECT COALESCE(SUM(importe_cobrado), 0) as total
+            FROM tickets
+            WHERE CAST(substr(fecha, 1, 4) AS INTEGER) = ?
+            AND CAST(substr(fecha, 6, 2) AS INTEGER) <= ?
+            AND estado = 'C'
+        ''', (anio, mes))
+        ventas_tickets = float(cursor.fetchone()['total'] or 0)
+        
+        # Gastos
+        cursor.execute('''
+            SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total
+            FROM gastos
+            WHERE substr(fecha_operacion, 7, 4) = ?
+            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            AND importe_eur < 0
+        ''', (str(anio), mes))
+        gastos_totales = float(cursor.fetchone()['total'] or 0)
+        
+        conn.close()
+        
+        # Datos reales
+        ventas_reales = ventas_facturas + ventas_tickets
+        balance_real = ventas_reales - gastos_totales
+        margen_real = (balance_real / ventas_reales * 100) if ventas_reales > 0 else 0
+        
+        # SIMULACIÓN: Aplicar ajustes
+        # Incremento de precios aumenta el valor de las ventas actuales
+        ventas_simuladas = ventas_reales * (1 + incremento_precios_pct / 100)
+        # Incremento de ventas (por volumen)
+        ventas_simuladas = ventas_simuladas * (1 + ajuste_ventas_pct / 100)
+        # Ventas adicionales acumuladas
+        ventas_simuladas += (nuevas_ventas_mes * mes)
+        
+        gastos_simulados = gastos_totales * (1 + ajuste_gastos_pct / 100)
+        gastos_simulados -= (reduccion_gastos_mes * mes)  # Reducción acumulada
+        
+        balance_simulado = ventas_simuladas - gastos_simulados
+        margen_simulado = (balance_simulado / ventas_simuladas * 100) if ventas_simuladas > 0 else 0
+        
+        # Proyección fin de año
+        meses_restantes = 12 - mes
+        
+        # Real
+        media_ventas_real = ventas_reales / mes if mes > 0 else 0
+        media_gastos_real = gastos_totales / mes if mes > 0 else 0
+        proyeccion_ventas_real = ventas_reales + (media_ventas_real * meses_restantes)
+        proyeccion_gastos_real = gastos_totales + (media_gastos_real * meses_restantes)
+        proyeccion_balance_real = proyeccion_ventas_real - proyeccion_gastos_real
+        
+        # Simulado
+        media_ventas_sim = ventas_simuladas / mes if mes > 0 else 0
+        media_gastos_sim = gastos_simulados / mes if mes > 0 else 0
+        proyeccion_ventas_sim = ventas_simuladas + (media_ventas_sim * meses_restantes)
+        proyeccion_gastos_sim = gastos_simulados + (media_gastos_sim * meses_restantes)
+        proyeccion_balance_sim = proyeccion_ventas_sim - proyeccion_gastos_sim
+        
+        # Calcular punto de equilibrio
+        if gastos_simulados > 0:
+            ventas_necesarias_equilibrio = gastos_simulados
+            incremento_necesario = ventas_necesarias_equilibrio - ventas_reales
+            pct_incremento_necesario = (incremento_necesario / ventas_reales * 100) if ventas_reales > 0 else 0
+        else:
+            ventas_necesarias_equilibrio = 0
+            incremento_necesario = 0
+            pct_incremento_necesario = 0
+        
+        return jsonify({
+            'anio': anio,
+            'mes': mes,
+            'real': {
+                'ventas': round(ventas_reales, 2),
+                'gastos': round(gastos_totales, 2),
+                'balance': round(balance_real, 2),
+                'margen': round(margen_real, 2),
+                'proyeccion_balance': round(proyeccion_balance_real, 2)
+            },
+            'simulado': {
+                'ventas': round(ventas_simuladas, 2),
+                'gastos': round(gastos_simulados, 2),
+                'balance': round(balance_simulado, 2),
+                'margen': round(margen_simulado, 2),
+                'proyeccion_balance': round(proyeccion_balance_sim, 2)
+            },
+            'diferencias': {
+                'ventas': round(ventas_simuladas - ventas_reales, 2),
+                'gastos': round(gastos_simulados - gastos_totales, 2),
+                'balance': round(balance_simulado - balance_real, 2),
+                'margen': round(margen_simulado - margen_real, 2),
+                'proyeccion': round(proyeccion_balance_sim - proyeccion_balance_real, 2)
+            },
+            'equilibrio': {
+                'ventas_necesarias': round(ventas_necesarias_equilibrio, 2),
+                'incremento_necesario': round(incremento_necesario, 2),
+                'pct_incremento': round(pct_incremento_necesario, 2)
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error en simulador financiero: {str(e)}")
         return jsonify({'error': str(e)}), 500

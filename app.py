@@ -2411,6 +2411,48 @@ def imprimir_factura_pdf(id_factura):
 def api_imprimir_factura_pdf(id_factura):
     return imprimir_factura_pdf(id_factura)
 
+# Endpoint para descargar carta de reclamación
+@app.route('/api/carta-reclamacion/<string:numero_factura>', methods=['GET'])
+def descargar_carta_reclamacion(numero_factura):
+    """
+    Descarga la carta de reclamación de una factura
+    
+    Args:
+        numero_factura: Número de la factura (ej: F250313)
+    
+    Returns:
+        PDF de la carta de reclamación
+    """
+    import os
+    import glob
+    from flask import send_file
+    
+    try:
+        # Buscar el archivo de carta más reciente para esta factura
+        cartas_dir = '/var/www/html/cartas_reclamacion'
+        patron = f'{cartas_dir}/carta_reclamacion_{numero_factura}_*.pdf'
+        
+        archivos = glob.glob(patron)
+        
+        if not archivos:
+            return jsonify({'error': f'No se encontró carta de reclamación para la factura {numero_factura}'}), 404
+        
+        # Obtener el archivo más reciente
+        archivo_mas_reciente = max(archivos, key=os.path.getctime)
+        
+        # Enviar el archivo
+        return send_file(
+            archivo_mas_reciente,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=f'carta_reclamacion_{numero_factura}.pdf'
+        )
+        
+    except Exception as e:
+        print(f"Error al descargar carta de reclamación: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({'error': f'Error al descargar la carta: {str(e)}'}), 500
+
 # Endpoints para manejar facturas firmadas electrónicamente (XSIG)
 @app.route('/validar-factura-xsig/<int:id_factura>', methods=['GET'])
 def validar_factura_xsig(id_factura):

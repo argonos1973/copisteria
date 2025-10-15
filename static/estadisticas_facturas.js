@@ -123,7 +123,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(mes === ultimoMes && anio === ultimoAnio) return;
     ultimoMes = mes; ultimoAnio = anio;
     safeSet('year-indicator', `(${anio})`);
+    
+    console.log('[RELOAD] Recargando estadísticas para:', mes, '/', anio);
+    
     try {
+      // Siempre recargar estadísticas de Ventas
       await Promise.all([
         cargarEstadisticas(mes, anio),
         cargarIngresosGastosTotales(mes, anio)
@@ -131,11 +135,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       // Si la pestaña Gastos está activa, recargar sus datos también
       const tabGastosContent = document.getElementById('tab-gastos');
-      if (tabGastosContent && tabGastosContent.classList.contains('active')) {
+      const tabGastosBtn = document.querySelector('.tab[data-tab="gastos"]');
+      
+      if (tabGastosBtn && tabGastosBtn.classList.contains('active')) {
         console.log('[RELOAD] Recargando datos de pestaña Gastos (está activa)...');
         if (typeof window.cargarDatosGastos === 'function') {
           await window.cargarDatosGastos();
+        } else {
+          console.warn('[RELOAD] window.cargarDatosGastos no está disponible');
         }
+      } else {
+        console.log('[RELOAD] Pestaña Gastos no está activa, omitiendo recarga');
       }
     } catch (e) {
       console.error('[estadisticas] Fallo al cargar alguna sección:', e);

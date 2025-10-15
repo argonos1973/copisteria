@@ -338,6 +338,15 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                         )
                     }
                 </td>
+                <td class="text-center">
+                    ${(!['A','RE'].includes(factura.estado) && (Number(factura.carta_enviada) === 1 || factura.carta_enviada === '1')) ? 
+                        `<i class="fas fa-file-pdf carta-icon" 
+                            style="cursor: pointer; color: #dc3545;" 
+                            data-numero="${factura.numero}" 
+                            title="Descargar carta de reclamación"
+                        ></i>` : ''
+                    }
+                </td>
             `;
             
             // Añadir evento de clic para editar la factura (excepto en el icono de impresión)
@@ -422,6 +431,19 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 }
             };
             emailIcon.addEventListener('click', handleEmailClick);
+            }
+            
+            // Añadir evento de clic para descargar carta de reclamación
+            const cartaIcon = row.querySelector('.carta-icon');
+            if (cartaIcon) {
+                cartaIcon.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Evitar que se propague al evento de la fila
+                    const numeroFactura = cartaIcon.getAttribute('data-numero');
+                    
+                    // Abrir la carta en una nueva ventana/pestaña
+                    const url = `http://${IP_SERVER}:${PORT}/api/carta-reclamacion/${numeroFactura}`;
+                    window.open(url, '_blank');
+                });
             }
             
             tbody.appendChild(row);

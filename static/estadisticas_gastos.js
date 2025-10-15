@@ -1,4 +1,5 @@
 // ===== ESTADISTICAS GASTOS =====
+import { formatearImporte, formatearPorcentaje, escaparHtml } from './scripts_utils.js';
 
 // Inicialización de pestañas y controles
 function initGastosTabs() {
@@ -73,7 +74,7 @@ async function cargarEstadisticasGastos() {
         const [anio, mes] = selectorFecha.value.split('-');
         console.log(`[GASTOS] Año: ${anio}, Mes: ${mes}`);
         
-        const response = await fetch(`http://localhost:5001/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`);
+        const response = await fetch(`http://192.168.1.18:5001/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -89,16 +90,16 @@ async function cargarEstadisticasGastos() {
         
         // Actualizar tarjetas
         const elementos = {
-            'gastos-total-mes': formatImporte(data.total_gastos_mes),
-            'gastos-pct-mes': formatPorcentaje(data.porcentaje_mes),
-            'gastos-mes-anterior': `Mismo mes año anterior: ${formatImporte(data.total_gastos_mes_anterior)}`,
+            'gastos-total-mes': formatearImporte(data.total_gastos_mes),
+            'gastos-pct-mes': formatearPorcentaje(data.porcentaje_mes),
+            'gastos-mes-anterior': `Mismo mes año anterior: ${formatearImporte(data.total_gastos_mes_anterior)}`,
             'gastos-cantidad-mes': data.cantidad_gastos_mes,
-            'gastos-total-anio': formatImporte(data.total_gastos_anio),
-            'gastos-pct-anio': formatPorcentaje(data.porcentaje_anio),
-            'gastos-anio-anterior': `Año anterior: ${formatImporte(data.total_gastos_anio_anterior)}`,
-            'gastos-media-mensual': formatImporte(data.media_mensual),
+            'gastos-total-anio': formatearImporte(data.total_gastos_anio),
+            'gastos-pct-anio': formatearPorcentaje(data.porcentaje_anio),
+            'gastos-anio-anterior': `Año anterior: ${formatearImporte(data.total_gastos_anio_anterior)}`,
+            'gastos-media-mensual': formatearImporte(data.media_mensual),
             'gastos-cantidad-anio': data.cantidad_gastos_anio,
-            'gastos-prevision': formatImporte(data.prevision_gastos_anio)
+            'gastos-prevision': formatearImporte(data.prevision_gastos_anio)
         };
         
         for (const [id, valor] of Object.entries(elementos)) {
@@ -137,7 +138,7 @@ async function cargarEstadisticasGastos() {
 async function cargarTop10Gastos(anio) {
     try {
         console.log(`[TOP10 GASTOS] Cargando top 10 para año ${anio}`);
-        const response = await fetch(`http://localhost:5001/api/gastos/top10?anio=${anio}`);
+        const response = await fetch(`http://192.168.1.18:5001/api/gastos/top10?anio=${anio}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -167,19 +168,38 @@ async function cargarTop10Gastos(anio) {
             if (gasto.total_anterior && gasto.total_anterior > 0) {
                 const pctClass = gasto.diferencia > 0 ? 'negative' : 'positive';
                 const pctSymbol = gasto.diferencia > 0 ? '▲' : '▼';
-                diferenciaHTML = `<span class="stats-percentage ${pctClass}">${pctSymbol} ${formatPorcentaje(Math.abs(gasto.porcentaje_diferencia))}</span>`;
+                diferenciaHTML = `<span class="stats-percentage ${pctClass}">${pctSymbol} ${formatearPorcentaje(Math.abs(gasto.porcentaje_diferencia))}</span>`;
             }
             
             tr.innerHTML = `
                 <td style="font-size:0.8rem;padding:0.5rem 0.3rem;">
                     <span style="color:#999;font-weight:600;margin-right:0.5rem;">${index + 1}.</span>
-                    ${escapeHtml(gasto.concepto)}
+                    ${escaparHtml(gasto.concepto)}
                 </td>
-                <td style="text-align:right;font-size:0.85rem;font-weight:600;padding:0.5rem 0.3rem;">${formatImporte(gasto.total)}</td>
+                <td style="text-align:right;font-size:0.85rem;font-weight:600;padding:0.5rem 0.3rem;">${formatearImporte(gasto.total)}</td>
                 <td style="text-align:center;font-size:0.75rem;padding:0.5rem 0.3rem;">
                     ${diferenciaHTML}
                 </td>
             `;
+            
+            // Agregar evento click para abrir modal con detalles
+            tr.style.cursor = 'pointer';
+            tr.addEventListener('click', () => {
+                if (typeof window.abrirModalDetallesGasto === 'function') {
+                    window.abrirModalDetallesGasto(gasto.concepto, anio);
+                } else {
+                    console.error('[TOP10 GASTOS] Función abrirModalDetallesGasto no encontrada');
+                }
+            });
+            
+            // Hover effect
+            tr.addEventListener('mouseenter', () => {
+                tr.style.backgroundColor = '#f5f5f5';
+            });
+            tr.addEventListener('mouseleave', () => {
+                tr.style.backgroundColor = '';
+            });
+            
             tbody.appendChild(tr);
         });
         
@@ -195,26 +215,8 @@ async function cargarTop10Gastos(anio) {
 }
 
 // ===== FUNCIONES AUXILIARES =====
-function formatImporte(importe) {
-    if (importe === null || importe === undefined) return '0,00 €';
-    return new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'EUR',
-        minimumFractionDigits: 2
-    }).format(importe);
-}
-
-function formatPorcentaje(pct) {
-    if (pct === null || pct === undefined || isNaN(pct)) return '0%';
-    const sign = pct > 0 ? '+' : '';
-    return `${sign}${pct.toFixed(2)}%`;
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
+// Las funciones formatearImporte, formatearPorcentaje y escaparHtml 
+// ahora se importan desde scripts_utils.js
 
 // ===== INICIALIZACIÓN =====
 if (document.readyState === 'loading') {
