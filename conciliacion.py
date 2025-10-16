@@ -12,6 +12,68 @@ logger = get_logger(__name__)
 
 conciliacion_bp = Blueprint('conciliacion', __name__)
 
+# ============================================================================
+# CONFIGURACIÓN CENTRALIZADA
+# ============================================================================
+
+def inicializar_config_conciliacion():
+    """Crear tabla de configuración si no existe e insertar valores por defecto"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Crear tabla de configuración
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS conciliacion_config (
+            clave TEXT PRIMARY KEY,
+            valor REAL NOT NULL,
+            descripcion TEXT,
+            fecha_modificacion TEXT DEFAULT (datetime('now'))
+        )
+    ''')
+    
+    # Insertar tolerancia por defecto si no existe
+    cursor.execute('''
+        INSERT OR IGNORE INTO conciliacion_config (clave, valor, descripcion)
+        VALUES ('tolerancia_euros', 3.0, 'Tolerancia máxima en euros para conciliación automática')
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+def get_tolerancia_conciliacion():
+    """Obtener tolerancia de conciliación desde la BD"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT valor FROM conciliacion_config WHERE clave = ?', ('tolerancia_euros',))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            return row['valor']
+        else:
+            # Si no existe, crear tabla e insertar valor por defecto
+            inicializar_config_conciliacion()
+            return 3.0
+    except Exception as e:
+        logger.error(f"Error obteniendo tolerancia: {e}", exc_info=True)
+        return 3.0  # Valor por defecto en caso de error
+
+def set_tolerancia_conciliacion(nueva_tolerancia):
+    """Actualizar tolerancia de conciliación en la BD"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        UPDATE conciliacion_config 
+        SET valor = ?, fecha_modificacion = datetime('now')
+        WHERE clave = 'tolerancia_euros'
+    ''', (nueva_tolerancia,))
+    
+    conn.commit()
+    conn.close()
+
 def encontrar_mejor_combinacion_documentos(documentos, importe_objetivo, tolerancia=1.0):
     """
     Encuentra la mejor combinación de documentos que se aproxime al importe objetivo.
@@ -139,7 +201,7 @@ def buscar_coincidencias_automaticas(gasto):
     """
     Buscar coincidencias automáticas para un gasto bancario
     Criterios:
-    1. Importe exacto o muy cercano (±3.0€)
+    1. Importe exacto o muy cercano (tolerancia configurable desde BD)
     2. Fecha cercana (±15 días) - EXCEPTO si hay número de factura/ticket en concepto
     """
     import re
@@ -155,7 +217,8 @@ def buscar_coincidencias_automaticas(gasto):
     patron_numero = re.search(r'[FT](\d{6})', concepto)
     tiene_numero_documento = bool(patron_numero)
     
-    tolerancia = 3.0  # Tolerancia aumentada de 0.02€ a 3.0€ para conciliación más flexible
+    # Obtener tolerancia desde configuración centralizada
+    tolerancia = get_tolerancia_conciliacion()
     coincidencias = []
     
     if tiene_numero_documento:
@@ -1488,11 +1551,12 @@ def obtener_liquidaciones_tpv():
             
             # Lógica de conciliación
             puede_conciliar = False
+            tolerancia_config = get_tolerancia_conciliacion()
             
-            if abs(diferencia) <= 3.0 and num_documentos > 0:
-                # Diferencia <= 3€ con solo tickets → conciliar directamente
+            if abs(diferencia) <= tolerancia_config and num_documentos > 0:
+                # Diferencia <= tolerancia con solo tickets → conciliar directamente
                 puede_conciliar = True
-            elif abs(diferencia) > 3.0:
+            elif abs(diferencia) > tolerancia_config:
                 # Diferencia > 1€ → buscar facturas (excluir ya conciliadas)
                 cursor.execute('''
                     SELECT id, numero, total
@@ -1521,8 +1585,8 @@ def obtener_liquidaciones_tpv():
                     # Recalcular diferencia con facturas (mantener signo)
                     diferencia = total_liq - total_documentos
                     
-                    # Si con facturas la diferencia es <= 3€ → conciliar
-                    if abs(diferencia) <= 3.0:
+                    # Si con facturas la diferencia es <= tolerancia → conciliar
+                    if abs(diferencia) <= tolerancia_config:
                         puede_conciliar = True
             
             # DESHABILITADO: La conciliación automática ahora se hace desde el frontend
@@ -1713,9 +1777,10 @@ def obtener_ingresos_efectivo():
             total_ing = datos['total']
             diferencia = abs(total_ing - total_documentos)
             porcentaje_diferencia = (diferencia / abs(total_ing) * 100) if total_ing != 0 else 0
+            tolerancia_config = get_tolerancia_conciliacion()
             
             # Determinar estado
-            if diferencia <= 3.0:
+            if diferencia <= tolerancia_config:
                 estado = 'exacto'
             elif porcentaje_diferencia <= 5:
                 estado = 'aceptable'
@@ -1770,7 +1835,7 @@ def obtener_ingresos_efectivo():
                 f.flush()
             
             # Conciliar automáticamente si se encontró combinación válida
-            if mejor_combinacion and diferencia_combinacion is not None and diferencia_combinacion <= 3.0:
+            if mejor_combinacion and diferencia_combinacion is not None and diferencia_combinacion <= tolerancia_config:
                 try:
                     # Calcular total de la combinación
                     total_combinacion = sum(doc['importe'] for doc in mejor_combinacion)
@@ -2283,4 +2348,52 @@ def obtener_documentos_tarjeta():
             'fecha_fin': fecha_fin
         })
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ============================================================================
+# CONFIGURACIÓN - ENDPOINTS API
+# ============================================================================
+
+@conciliacion_bp.route('/api/conciliacion/config/tolerancia', methods=['GET'])
+def get_config_tolerancia():
+    """Obtener configuración de tolerancia de conciliación"""
+    try:
+        tolerancia = get_tolerancia_conciliacion()
+        return jsonify({
+            'success': True,
+            'tolerancia': tolerancia
+        })
+    except Exception as e:
+        logger.error(f"Error obteniendo tolerancia: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@conciliacion_bp.route('/api/conciliacion/config/tolerancia', methods=['POST'])
+def update_config_tolerancia():
+    """Actualizar configuración de tolerancia de conciliación"""
+    try:
+        data = request.get_json()
+        nueva_tolerancia = data.get('tolerancia')
+        
+        if nueva_tolerancia is None:
+            return jsonify({'success': False, 'error': 'Falta parámetro tolerancia'}), 400
+        
+        # Validar rango razonable
+        if nueva_tolerancia < 0 or nueva_tolerancia > 100:
+            return jsonify({'success': False, 'error': 'Tolerancia debe estar entre 0 y 100 euros'}), 400
+        
+        # Inicializar tabla si no existe
+        inicializar_config_conciliacion()
+        
+        # Actualizar tolerancia
+        set_tolerancia_conciliacion(nueva_tolerancia)
+        
+        logger.info(f"Tolerancia de conciliación actualizada a {nueva_tolerancia}€")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Tolerancia actualizada a {nueva_tolerancia}€',
+            'tolerancia': nueva_tolerancia
+        })
+    except Exception as e:
+        logger.error(f"Error actualizando tolerancia: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500

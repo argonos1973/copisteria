@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración de Conciliación</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="../static/page_header.css">
+    <link rel="stylesheet" href="../static/styles.css">
+    <style>
+        .config-container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .config-section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .config-section:last-child {
+            border-bottom: none;
+        }
+
+        .config-section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+
+        .config-section p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input[type="number"] {
+            width: 100%;
+            max-width: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        .form-group input[type="number"]:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #45a049;
+        }
+
+        .current-value {
+            display: inline-block;
+            padding: 8px 16px;
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border-radius: 4px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .alert {
+            padding: 12px 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .info-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+
+        .info-box strong {
+            color: #856404;
+        }
+
+        .help-text {
+            font-size: 13px;
+            color: #777;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="header-container"></div>
+
+    <div class="config-container">
+        <h1>⚙️ Configuración de Conciliación</h1>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="config-section">
+            <h2>Tolerancia de Conciliación Automática</h2>
+            <p>Define la diferencia máxima permitida (en euros) para que se considere una coincidencia válida entre un movimiento bancario y un documento (factura/ticket).</p>
+
+            <div class="info-box">
+                <strong>💡 ¿Qué es la tolerancia?</strong><br>
+                La tolerancia permite conciliar automáticamente movimientos que no coinciden exactamente debido a:
+                <ul>
+                    <li>Comisiones bancarias</li>
+                    <li>Redondeos</li>
+                    <li>Diferencias mínimas de cambio</li>
+                </ul>
+            </div>
+
+            <div class="form-group">
+                <label for="tolerancia">
+                    Tolerancia actual: 
+                    <span id="currentTolerancia" class="current-value">Cargando...</span>
+                </label>
+                <input type="number" 
+                       id="tolerancia" 
+                       min="0" 
+                       max="100" 
+                       step="0.1" 
+                       placeholder="Ej: 3.0">
+                <div class="help-text">
+                    Introduce un valor entre 0 y 100 euros. Recomendado: 1.0 - 5.0 €
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="guardarTolerancia()">
+                <i class="fas fa-save"></i> Guardar Cambios
+            </button>
+        </div>
+
+        <div class="config-section">
+            <h2>📋 Ámbito de Aplicación</h2>
+            <p>Esta configuración afecta a:</p>
+            <ul>
+                <li>✅ Búsqueda automática de coincidencias</li>
+                <li>✅ Liquidaciones TPV</li>
+                <li>✅ Ingresos en efectivo</li>
+                <li>✅ Script de conciliación automática (cron)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.protocol + '//' + window.location.hostname + ':5001';
+
+        // Cargar configuración actual
+        async function cargarConfiguracion() {
+            try {
+                const response = await fetch(`${API_BASE}/api/conciliacion/config/tolerancia`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('currentTolerancia').textContent = `${data.tolerancia.toFixed(1)}€`;
+                    document.getElementById('tolerancia').value = data.tolerancia;
+                } else {
+                    mostrarAlerta('Error al cargar configuración: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error de conexión al cargar configuración', 'error');
+            }
+        }
+
+        // Guardar nueva tolerancia
+        async function guardarTolerancia() {
+            const tolerancia = parseFloat(document.getElementById('tolerancia').value);
+            
+            if (isNaN(tolerancia) || tolerancia < 0 || tolerancia > 100) {
+                mostrarAlerta('Por favor, introduce un valor válido entre 0 y 100', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/conciliacion/config/tolerancia`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ tolerancia: tolerancia })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    mostrarAlerta(`✅ ${data.message}`, 'success');
+                    document.getElementById('currentTolerancia').textContent = `${data.tolerancia.toFixed(1)}€`;
+                } else {
+                    mostrarAlerta('❌ Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('❌ Error de conexión al guardar', 'error');
+            }
+        }
+
+        // Mostrar alertas
+        function mostrarAlerta(mensaje, tipo) {
+            const alert = document.getElementById('alert');
+            alert.textContent = mensaje;
+            alert.className = `alert alert-${tipo === 'success' ? 'success' : 'error'}`;
+            alert.style.display = 'block';
+            
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        // Cargar configuración al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarConfiguracion();
+        });
+    </script>
+
+    <!-- Cargar header dinámicamente -->
+    <script src="../static/load_header.js"></script>
+</body>
+</html>

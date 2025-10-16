@@ -13,6 +13,7 @@ from datetime import datetime
 # Añadir directorio padre al path para importar constantes
 sys.path.insert(0, '/var/www/html')
 from constantes import DB_NAME, IP_SERVIDOR
+from conciliacion import get_tolerancia_conciliacion
 
 # Configuración
 API_URL = f"http://{IP_SERVIDOR}:5001"
@@ -77,11 +78,15 @@ def conciliar(gasto_id, tipo_documento, documento_id):
         log(f"❌ Error conciliando gasto {gasto_id}: {e}")
         return False
 
-def encontrar_mejor_combinacion(documentos, objetivo, tolerancia=3.0):
+def encontrar_mejor_combinacion(documentos, objetivo, tolerancia=None):
     """
     Algoritmo de varita mágica para encontrar la mejor combinación de documentos
     que sumen el importe objetivo
     """
+    # Obtener tolerancia desde BD si no se proporciona
+    if tolerancia is None:
+        tolerancia = get_tolerancia_conciliacion()
+    
     if not documentos:
         return []
     
@@ -186,12 +191,13 @@ def procesar_conciliacion_automatica():
                 log(f"    ❌ Error al conciliar con {tipo} {numero}")
         else:
             # Intentar encontrar combinación de documentos
-            mejor_combinacion = encontrar_mejor_combinacion(coincidencias, importe, tolerancia=3.0)
+            tolerancia_config = get_tolerancia_conciliacion()
+            mejor_combinacion = encontrar_mejor_combinacion(coincidencias, importe, tolerancia=tolerancia_config)
             
             if mejor_combinacion:
                 diferencia_total = abs(importe - sum(d['importe'] for d in mejor_combinacion))
                 
-                if diferencia_total < 3.0:
+                if diferencia_total < tolerancia_config:
                     # Conciliar con cada documento de la combinación
                     exito = True
                     for doc in mejor_combinacion:
