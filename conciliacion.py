@@ -1535,32 +1535,31 @@ def obtener_liquidaciones_tpv():
                     if abs(diferencia) <= tolerancia_config:
                         puede_conciliar = True
             
-            # DESHABILITADO: La conciliación automática ahora se hace desde el frontend
-            # para garantizar que use el algoritmo de varita mágica
-            # if puede_conciliar:
-            #     try:
-            #         # Conciliar cada liquidación de esta fecha
-            #         # Todas comparten el mismo total de documentos y diferencia
-            #         for gasto_id in datos['ids']:
-            #             cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
-            #             gasto_row = cursor.fetchone()
-            #             if gasto_row:
-            #                 importe_gasto = gasto_row['importe_eur']
-            #                 
-            #                 cursor.execute('''
-            #                     INSERT OR IGNORE INTO conciliacion_gastos 
-            #                     (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
-            #                      importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
-            #                     VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
-            #                 ''', (int(gasto_id), 'liquidacion_tpv', 0, 
-            #                       importe_gasto, total_documentos, diferencia,
-            #                       f'Liquidación TPV {fecha_str} - {num_documentos} documentos - Conciliado automáticamente (dif total: {round(diferencia, 2)}€)'))
-            #         conn.commit()
-            #         # No añadir a resultado si se concilió automáticamente
-            #         continue
-            #     except Exception as e:
-            #         logger.error(f"Error conciliando automáticamente liquidación {fecha_str}: {e}", exc_info=True)
-            #         # Si falla, continuar y mostrar en la lista
+            # Conciliación automática de liquidaciones TPV si diferencia <= tolerancia
+            if puede_conciliar:
+                try:
+                    # Conciliar cada liquidación de esta fecha
+                    # Todas comparten el mismo total de documentos y diferencia
+                    for gasto_id in datos['ids']:
+                        cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
+                        gasto_row = cursor.fetchone()
+                        if gasto_row:
+                            importe_gasto = gasto_row['importe_eur']
+                            
+                            cursor.execute('''
+                                INSERT OR IGNORE INTO conciliacion_gastos 
+                                (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
+                                 importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
+                                VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico_tpv', 0, ?)
+                            ''', (int(gasto_id), 'liquidacion_tpv', 0, 
+                                  importe_gasto, total_documentos, diferencia,
+                                  f'Liquidación TPV {fecha_str} - {num_documentos} documentos - Dif: {round(diferencia, 2)}€'))
+                    conn.commit()
+                    # No añadir a resultado si se concilió automáticamente
+                    continue
+                except Exception as e:
+                    logger.error(f"Error conciliando automáticamente liquidación {fecha_str}: {e}", exc_info=True)
+                    # Si falla, continuar y mostrar en la lista
             
             # Convertir -0.0 a 0.0
             diferencia_final = round(diferencia, 2)
