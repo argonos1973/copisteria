@@ -886,8 +886,7 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                 f.tipo,
                 c.razonsocial,
                 COALESCE(c.mail, '') as mail,
-                COALESCE(f.enviado, 0) as enviado,
-                COALESCE(f.carta_enviada, 0) as carta_enviada
+                COALESCE(f.enviado, 0) as enviado
             FROM factura f
             LEFT JOIN contactos c ON f.idcontacto = c.idContacto
             {where_sql}
@@ -918,8 +917,6 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                     raw['total'] = format_total_es_two(raw['total'])
                 if 'enviado' in raw:
                     raw['enviado'] = int(raw['enviado']) if raw['enviado'] is not None else 0
-                if 'carta_enviada' in raw:
-                    raw['carta_enviada'] = int(raw['carta_enviada']) if raw['carta_enviada'] is not None else 0
                 items.append(raw)
 
         # Calcular totales globales según el estado del filtro (como numérico) y devolver formateados
