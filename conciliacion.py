@@ -930,6 +930,11 @@ def detalles_liquidacion_tpv():
                 FROM tickets t
                 WHERE t.fecha = ?
                 AND t.formaPago = 'T'
+                AND t.estado = 'C'
+                AND NOT EXISTS (
+                    SELECT 1 FROM conciliacion_gastos cg
+                    WHERE cg.tipo_documento = 'ticket' AND cg.documento_id = t.id
+                )
                 ORDER BY t.numero
             ''', (fecha_tickets,))
             
@@ -990,6 +995,10 @@ def detalles_liquidacion_tpv():
                 WHERE COALESCE(f.fechaCobro, f.fecha) = ?
                 AND f.formaPago = 'T'
                 AND f.estado = 'C'
+                AND NOT EXISTS (
+                    SELECT 1 FROM conciliacion_gastos cg
+                    WHERE cg.tipo_documento = 'factura' AND cg.documento_id = f.id
+                )
                 ORDER BY f.numero
             ''', (fecha_tickets,))
             
@@ -1592,6 +1601,16 @@ def obtener_liquidaciones_tpv():
                             VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico_tpv', 0, ?)
                         ''', (int(gasto_id), 'liquidacion_tpv', 0, 
                               total_liq, total_documentos, diferencia, notas))
+                        
+                        # Guardar documentos individuales en tabla intermedia si hay combinación
+                        conciliacion_id = cursor.lastrowid
+                        if conciliacion_id and mejor_combinacion:
+                            for doc in mejor_combinacion:
+                                cursor.execute('''
+                                    INSERT INTO conciliacion_documentos 
+                                    (conciliacion_id, tipo_documento, documento_id, importe)
+                                    VALUES (?, ?, ?, ?)
+                                ''', (conciliacion_id, doc['tipo'], doc['id'], doc['importe']))
                     
                     conn.commit()
                     logger.info(f"Liquidación TPV {fecha_str} conciliada automáticamente: {len(datos['ids'])} liquidaciones, {notas_docs}, dif={round(diferencia, 2)}€")
