@@ -1,4 +1,4 @@
-.PHONY: help install test coverage lint format clean pre-commit setup-hooks
+.PHONY: help install test coverage lint format clean pre-commit setup-hooks validate deploy
 
 help:
 	@echo "Comandos disponibles para Aleph70:"
@@ -15,6 +15,8 @@ help:
 	@echo "  make clean         - Limpiar archivos temporales"
 	@echo "  make run-dev       - Ejecutar servidor de desarrollo"
 	@echo "  make logs          - Ver logs de la aplicación"
+	@echo "  make validate      - Validar sintaxis antes de deployment"
+	@echo "  make deploy        - Deployment seguro a producción"
 	@echo ""
 
 install:
@@ -101,5 +103,22 @@ ci-local:
 	@make type-check
 	@make test-coverage
 	@echo "✅ CI local completado"
+
+validate:
+	@echo "🛡️ Validando sintaxis antes de deployment..."
+	@./scripts/validate_before_deploy.sh
+	@echo "✅ Validación completada"
+
+deploy:
+	@echo "🚀 Deployment seguro a producción..."
+	@if [ -z "$(FILES)" ]; then \
+		echo "❌ Error: Debes especificar FILES=\"archivo1.py archivo2.py\""; \
+		echo ""; \
+		echo "Ejemplo:"; \
+		echo "  make deploy FILES=\"factura.py tickets.py\""; \
+		echo ""; \
+		exit 1; \
+	fi
+	@./scripts/safe_deploy.sh $(FILES)
 
 .DEFAULT_GOAL := help
