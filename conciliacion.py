@@ -1568,11 +1568,10 @@ def obtener_liquidaciones_tpv():
                         if abs(diferencia) <= tolerancia_config:
                             puede_conciliar = True
             
-            # DESHABILITADO: Conciliación automática tiene bug con múltiples liquidaciones
-            # El sistema usa el mismo total_documentos para cada liquidación individual
-            # lo cual es incorrecto. Necesita refactor completo.
-            # TODO: Implementar lógica que maneje múltiples liquidaciones correctamente
-            if False and puede_conciliar and abs(diferencia) <= tolerancia_config:
+            # Conciliación automática SOLO si hay UNA liquidación (evita bug con múltiples)
+            # Si hay múltiples liquidaciones en la fecha, el usuario debe conciliar manualmente
+            num_liquidaciones = len(datos['ids'])
+            if puede_conciliar and abs(diferencia) <= tolerancia_config and num_liquidaciones == 1:
                 try:
                     # Conciliar cada liquidación de esta fecha con algoritmo de varita mágica
                     for gasto_id in datos['ids']:
