@@ -571,7 +571,7 @@ def conciliar():
         gasto_id = data.get('gasto_id')
         tipo_documento = data.get('tipo_documento')
         documento_id = data.get('documento_id')
-        metodo = data.get('metodo', 'manual')
+        metodo = data.get('metodo', 'automatico')
         
         if not all([gasto_id, tipo_documento, documento_id]):
             faltantes = []
@@ -2054,7 +2054,7 @@ def conciliar_ingreso_efectivo():
                     INSERT INTO conciliacion_gastos 
                     (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
                      importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
-                    VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'manual', 0, ?)
+                    VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico', 0, ?)
                 ''', (int(gasto_id), 'ingreso_efectivo', 0, 
                       importe_gasto, total_documentos, diferencia,
                       f'Ingreso efectivo {fecha} - {len(documentos_seleccionados)} docs ({num_facturas}F, {num_tickets}T): {nums_docs}'))

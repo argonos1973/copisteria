@@ -1092,7 +1092,7 @@ window.confirmarConciliacion = async function() {
                 gasto_id: gastoSeleccionado,
                 tipo_documento: coincidenciaSeleccionada.tipo,
                 documento_id: coincidenciaSeleccionada.id,
-                metodo: 'manual'
+                metodo: 'automatico'
             })
         });
         
