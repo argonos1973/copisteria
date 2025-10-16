@@ -13,6 +13,9 @@ from db_utils import get_db_connection
 from notificaciones_utils import guardar_notificacion
 
 # Configurar logging
+from logger_config import get_logger
+
+logger = get_logger(__name__)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -372,7 +375,8 @@ def actualizar_facturas_vencidas():
                         try:
                             fecha_venc_obj = datetime.strptime(fvencimiento_actual, '%Y-%m-%d')
                             nueva_fvencimiento = (fecha_venc_obj + timedelta(days=30)).strftime('%Y-%m-%d')
-                        except:
+                        except Exception as e:
+                            logger.error(f"Error: {e}", exc_info=True)
                             nueva_fvencimiento = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
                     else:
                         nueva_fvencimiento = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')

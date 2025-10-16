@@ -7,6 +7,10 @@ from playwright.sync_api import sync_playwright
 
 # Configurar logging
 import logging
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def guardar_evidencia_html(page, nombre_base, directorio_evidencias="/home/sami/logs"):
@@ -80,8 +84,8 @@ def main():
             
             if ruta_evidencia:
                 logging.info("Evidencia guardada exitosamente")
-                print(f"\nEvidencia guardada en: {ruta_evidencia}")
-                print("Puedes abrir este archivo en un navegador para verificar el contenido.")
+                logger.info(f"\nEvidencia guardada en: {ruta_evidencia}")
+                logger.info("Puedes abrir este archivo en un navegador para verificar el contenido.")
             else:
                 logging.error("No se pudo guardar la evidencia HTML")
                 
@@ -89,7 +93,7 @@ def main():
             try:
                 title = page.title()
                 logging.info(f"Título de la página: {title}")
-                print(f"\nTítulo de la página: {title}")
+                logger.info(f"\nTítulo de la página: {title}")
             except Exception as e:
                 logging.error(f"Error al obtener el título: {e}")
                 
@@ -101,11 +105,13 @@ def main():
         finally:
             try:
                 context.close()
-            except:
+            except Exception as e:
+                logger.error(f"Error: {e}", exc_info=True)
                 pass
             try:
                 browser.close()
-            except:
+            except Exception as e:
+                logger.error(f"Error: {e}", exc_info=True)
                 pass
             
     logging.info("Script finalizado")

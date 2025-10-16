@@ -34,6 +34,10 @@ from zeep.transports import Transport
 
 from db_utils import get_db_connection
 from facturae import extraer_xml_desde_xsig
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 # Variable global para controlar si la funcionalidad AEAT está disponible
 # Se comprobará en tiempo de ejecución, no durante la importación
@@ -162,7 +166,7 @@ def generar_hash_factura(contenido_factura, hash_anterior=None):
         
         return hasher.hexdigest()
     except Exception as e:
-        print(f"Error generando hash de factura: {str(e)}")
+        logger.error(f"Error generando hash de factura: {str(e)}", exc_info=True)
         return None
 
 def obtener_ultimo_hash():
@@ -182,7 +186,7 @@ def obtener_ultimo_hash():
             return resultado[0]
         return None
     except Exception as e:
-        print(f"Error obteniendo último hash: {str(e)}")
+        logger.error(f"Error obteniendo último hash: {str(e)}", exc_info=True)
         return None
     finally:
         if conn:
@@ -313,7 +317,7 @@ def crear_registro_facturacion(factura_id, nif_emisor, nif_receptor, fecha, tota
         conn.commit()
         return True
     except Exception as e:
-        print(f"Error al crear registro de facturación: {str(e)}")
+        logger.error(f"Error al crear registro de facturación: {str(e)}", exc_info=True)
         return False
     finally:
         if conn:
@@ -338,7 +342,7 @@ def actualizar_factura_con_hash(factura_id, hash_factura):
         conn.commit()
         return True
     except Exception as e:
-        print(f"Error al actualizar factura con hash: {str(e)}")
+        logger.error(f"Error al actualizar factura con hash: {str(e)}", exc_info=True)
         return False
     finally:
         if conn:
@@ -386,7 +390,8 @@ def generar_xml_para_aeat(factura_id):
         try:
             fecha_obj = datetime.strptime(fecha_str, "%Y-%m-%d")
             fecha_formateada = fecha_obj.strftime("%d-%m-%Y")
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             fecha_formateada = fecha_str
         
         # Preparar datos para el XML de envío

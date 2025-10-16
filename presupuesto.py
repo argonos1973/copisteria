@@ -6,6 +6,10 @@ from format_utils import format_currency_es_two, format_total_es_two, format_num
 from flask import Blueprint, Flask, jsonify, request, send_file
 import utilities
 from db_utils import (
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
     actualizar_numerador,
     formatear_numero_documento,
     get_db_connection,
@@ -51,7 +55,7 @@ def _verificar_numero_presupuesto_local(numero):
             return True, (row['id'] if isinstance(row, sqlite3.Row) else row[0])
         return False, None
     except Exception as e:
-        print(f"Error en _verificar_numero_presupuesto_local: {e}")
+        logger.error(f"Error en _verificar_numero_presupuesto_local: {e}", exc_info=True)
         return False, None
     finally:
         try:
@@ -64,7 +68,7 @@ def crear_presupuesto():
     conn = None
     try:
         data = request.get_json() or {}
-        print("[PRESUPUESTO] Datos recibidos en crear_presupuesto:", data)
+        logger.info(f""[PRESUPUESTO] Datos recibidos en crear_presupuesto:" data")
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400
 
@@ -139,7 +143,7 @@ def crear_presupuesto():
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error en crear_presupuesto: {str(e)}")
+        logger.error(f"Error en crear_presupuesto: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:
@@ -160,19 +164,19 @@ def obtener_presupuesto(id):
         resultado['detalles'] = _obtener_detalles_formateados(cursor, id)
         
         # Buscar datos del contacto si existe idcontacto (minúscula)
-        print(f"[DEBUG] idcontacto en presupuesto: {resultado.get('idcontacto')}")
+        logger.info(f"[DEBUG] idcontacto en presupuesto: {resultado.get('idcontacto')}")
         if resultado.get('idcontacto'):
             contacto = cursor.execute(
                 'SELECT * FROM contactos WHERE idContacto = ?', (resultado['idcontacto'],)
             ).fetchone()
-            print(f"[DEBUG] Contacto encontrado: {contacto}")
+            logger.info(f"[DEBUG] Contacto encontrado: {contacto}")
             if contacto:
                 resultado['contacto'] = dict(contacto)
-                print(f"[DEBUG] Contacto añadido al resultado: {dict(contacto)}")
+                logger.info(f"[DEBUG] Contacto añadido al resultado: {dict(contacto)}")
             else:
-                print(f"[DEBUG] No se encontró contacto con idcontacto: {resultado['idcontacto']}")
+                logger.info(f"[DEBUG] No se encontró contacto con idcontacto: {resultado['idcontacto']}")
         else:
-            print("[DEBUG] No hay idcontacto en el presupuesto")
+            logger.info("[DEBUG] No hay idcontacto en el presupuesto")
         
         return jsonify(resultado)
 
@@ -268,7 +272,7 @@ def actualizar_presupuesto(id, data):
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error al actualizar presupuesto {id}: {str(e)}")
+        logger.error(f"Error al actualizar presupuesto {id}: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:
@@ -360,7 +364,7 @@ def consultar_presupuestos():
             pass
 
         try:
-            print(f"[CONSULTA_PRESUPUESTOS][ARGS] fecha_inicio={fecha_inicio}, fecha_fin={fecha_fin}, estado='{estado}', numero='{numero}', contacto='{contacto}', identificador='{identificador}', concepto='{concepto}'")
+            logger.info(f"[CONSULTA_PRESUPUESTOS][ARGS] fecha_inicio={fecha_inicio}, fecha_fin={fecha_fin}, estado='{estado}', numero='{numero}', contacto='{contacto}', identificador='{identificador}', concepto='{concepto}'")
         except Exception:
             pass
 
@@ -419,7 +423,7 @@ def consultar_presupuestos():
         sql = f"{base_sql}{filtros_sql} ORDER BY p.fecha DESC LIMIT 100"
 
         try:
-            print("[CONSULTA_PRESUPUESTOS][SQL]", sql, "PARAMS", params)
+            logger.info(f""[CONSULTA_PRESUPUESTOS][SQL]" sql, "PARAMS", params")
         except Exception:
             pass
 
@@ -491,7 +495,7 @@ def consultar_presupuestos():
         })
 
     except Exception as e:
-        print(f"Error en consultar_presupuestos: {str(e)}")
+        logger.error(f"Error en consultar_presupuestos: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         try:
@@ -591,7 +595,7 @@ def convertir_presupuesto_a_factura(id_presupuesto):
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error al convertir presupuesto a factura: {str(e)}")
+        logger.error(f"Error al convertir presupuesto a factura: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:
@@ -707,7 +711,7 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
         try:
             generar_datos_verifactu_para_ticket(ticket_id)
         except Exception as vf_exc:
-            print(f"[VERIFACTU][WARN] Error generando datos para ticket {ticket_id}: {vf_exc}")
+            logger.info(f"[VERIFACTU][WARN] Error generando datos para ticket {ticket_id}: {vf_exc}")
 
         return jsonify({
             'mensaje': 'Presupuesto convertido a ticket exitosamente',
@@ -719,7 +723,7 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error al convertir presupuesto a ticket: {str(e)}")
+        logger.error(f"Error al convertir presupuesto a ticket: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:
@@ -767,7 +771,8 @@ def generar_pdf_presupuesto(id):
             fecha_obj = datetime.strptime(presupuesto_dict['fecha'], '%Y-%m-%d')
             fecha_formateada = fecha_obj.strftime('%d/%m/%Y')
             fecha_validez = (fecha_obj + timedelta(days=30)).strftime('%d/%m/%Y')
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             fecha_formateada = presupuesto_dict['fecha']
             fecha_validez = 'N/A'
         
@@ -813,7 +818,7 @@ def generar_pdf_presupuesto(id):
             with open('/var/www/html/emisor_config.json', 'r', encoding='utf-8') as f:
                 emisor_config = json.load(f)
         except Exception as e:
-            print(f"Error cargando emisor_config.json: {e}")
+            logger.error(f"Error cargando emisor_config.json: {e}", exc_info=True)
             emisor_config = {
                 'nombre': 'ALEPH 70',
                 'direccion': 'C/ Ejemplo, 123',
@@ -889,7 +894,7 @@ def generar_pdf_presupuesto(id):
         return send_file(temp_pdf_path, as_attachment=True, download_name=pdf_filename, mimetype='application/pdf')
         
     except Exception as e:
-        print(f"Error al generar PDF del presupuesto: {str(e)}")
+        logger.error(f"Error al generar PDF del presupuesto: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:
@@ -942,7 +947,8 @@ def enviar_email_presupuesto(id):
             fecha_obj = datetime.strptime(presupuesto_dict['fecha'], '%Y-%m-%d')
             fecha_formateada = fecha_obj.strftime('%d/%m/%Y')
             fecha_validez = (fecha_obj + timedelta(days=30)).strftime('%d/%m/%Y')
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             fecha_formateada = presupuesto_dict['fecha']
             fecha_validez = 'N/A'
         
@@ -991,7 +997,7 @@ def enviar_email_presupuesto(id):
             with open('/var/www/html/emisor_config.json', 'r', encoding='utf-8') as f:
                 emisor_config = json.load(f)
         except Exception as e:
-            print(f"Error cargando emisor_config.json: {e}")
+            logger.error(f"Error cargando emisor_config.json: {e}", exc_info=True)
             emisor_config = {
                 'nombre': 'ALEPH 70',
                 'direccion': 'C/ Ejemplo, 123',
@@ -1094,7 +1100,7 @@ ALEPH 70"""
             return jsonify({'error': mensaje}), 500
         
     except Exception as e:
-        print(f"Error al enviar email del presupuesto: {str(e)}")
+        logger.error(f"Error al enviar email del presupuesto: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:

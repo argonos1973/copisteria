@@ -7,6 +7,10 @@ from email.mime.text import MIMEText
 from email.header import Header
 
 from dotenv import load_dotenv
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 load_dotenv()
 
@@ -20,7 +24,7 @@ def enviar_factura_por_email(destinatario, asunto, cuerpo, archivo_adjunto, nume
         smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
         smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
 
-        print(f"Configurando servidor SMTP: {smtp_server}:{smtp_port}")
+        logger.info(f"Configurando servidor SMTP: {smtp_server}:{smtp_port}")
         
         # Crear el mensaje
         msg = MIMEMultipart()
@@ -40,36 +44,37 @@ def enviar_factura_por_email(destinatario, asunto, cuerpo, archivo_adjunto, nume
             msg.attach(pdf)
 
         # Conectar al servidor SMTP con SSL
-        print("Creando conexión SMTP con SSL")
+        logger.info("Creando conexión SMTP con SSL")
         context = ssl.create_default_context()
         server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
 
-        print("Iniciando sesión en el servidor SMTP")
+        logger.info("Iniciando sesión en el servidor SMTP")
         server.login(smtp_username, smtp_password)
 
-        print(f"Enviando correo a {destinatario}")
+        logger.info(f"Enviando correo a {destinatario}")
         # Añadir copia oculta a info@aleph70.com
         destinatarios = [destinatario, 'info@aleph70.com']  # Incluir el destinatario original y la copia oculta
         # Depuración: mostrar tipo y tamaño del mensaje
         try:
             from email import policy
             msg_bytes = msg.as_bytes(policy=policy.SMTP)
-            print(f"Tipo de mensaje: {type(msg_bytes)}, tamaño: {len(msg_bytes)} bytes")
+            logger.info(f"Tipo de mensaje: {type(msg_bytes)}, tamaño: {len(msg_bytes)} bytes")
             server.sendmail(smtp_from, destinatarios, msg_bytes)
         except Exception as send_err:
-            print(f"Error en server.sendmail: {send_err}")
+            logger.error(f"Error en server.sendmail: {send_err}", exc_info=True)
             raise
         
-        print("Cerrando conexión SMTP")
+        logger.info("Cerrando conexión SMTP")
         server.quit()
 
         return True, "Correo enviado correctamente"
     except Exception as e:
-        print(f"Error al enviar correo: {str(e)}")
+        logger.error(f"Error al enviar correo: {str(e)}", exc_info=True)
         if server:
             try:
                 server.quit()
-            except:
+            except Exception as e:
+                logger.error(f"Error: {e}", exc_info=True)
                 pass
         return False, f"Error al enviar el correo: {str(e)}"
 
@@ -85,7 +90,7 @@ def enviar_presupuesto_por_email(destinatario, asunto, cuerpo, archivo_adjunto, 
         smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
         smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
 
-        print(f"Configurando servidor SMTP para presupuesto: {smtp_server}:{smtp_port}")
+        logger.info(f"Configurando servidor SMTP para presupuesto: {smtp_server}:{smtp_port}")
         
         # Crear el mensaje
         msg = MIMEMultipart()
@@ -118,11 +123,12 @@ def enviar_presupuesto_por_email(destinatario, asunto, cuerpo, archivo_adjunto, 
 
         return True, "Presupuesto enviado correctamente por correo"
     except Exception as e:
-        print(f"Error al enviar presupuesto por correo: {str(e)}")
+        logger.error(f"Error al enviar presupuesto por correo: {str(e)}", exc_info=True)
         if server:
             try:
                 server.quit()
-            except:
+            except Exception as e:
+                logger.error(f"Error: {e}", exc_info=True)
                 pass
         return False, f"Error al enviar el presupuesto por correo: {str(e)}"
 
@@ -149,7 +155,7 @@ def enviar_email_con_adjuntos(destinatario, asunto, cuerpo, archivos_adjuntos, n
         smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
         smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
 
-        print(f"Configurando servidor SMTP: {smtp_server}:{smtp_port}")
+        logger.info(f"Configurando servidor SMTP: {smtp_server}:{smtp_port}")
         
         # Crear el mensaje
         msg = MIMEMultipart()
@@ -169,14 +175,14 @@ def enviar_email_con_adjuntos(destinatario, asunto, cuerpo, archivos_adjuntos, n
                     msg.attach(pdf)
 
         # Conectar al servidor SMTP con SSL
-        print("Creando conexión SMTP con SSL")
+        logger.info("Creando conexión SMTP con SSL")
         context = ssl.create_default_context()
         server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
 
-        print("Iniciando sesión en el servidor SMTP")
+        logger.info("Iniciando sesión en el servidor SMTP")
         server.login(smtp_username, smtp_password)
 
-        print(f"Enviando correo a {destinatario}")
+        logger.info(f"Enviando correo a {destinatario}")
         # Añadir copia oculta a info@aleph70.com
         destinatarios = [destinatario, 'info@aleph70.com']
         
@@ -184,15 +190,16 @@ def enviar_email_con_adjuntos(destinatario, asunto, cuerpo, archivos_adjuntos, n
         msg_bytes = msg.as_bytes(policy=policy.SMTP)
         server.sendmail(smtp_from, destinatarios, msg_bytes)
         
-        print("Cerrando conexión SMTP")
+        logger.info("Cerrando conexión SMTP")
         server.quit()
 
         return True, "Correo enviado correctamente"
     except Exception as e:
-        print(f"Error al enviar correo: {str(e)}")
+        logger.error(f"Error al enviar correo: {str(e)}", exc_info=True)
         if server:
             try:
                 server.quit()
-            except:
+            except Exception as e:
+                logger.error(f"Error: {e}", exc_info=True)
                 pass
         return False, f"Error al enviar el correo: {str(e)}"

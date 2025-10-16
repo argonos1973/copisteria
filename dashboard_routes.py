@@ -5,6 +5,10 @@ from datetime import datetime
 from flask import Blueprint, jsonify, request
 
 from db_utils import get_db_connection, redondear_importe
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 # Crear Blueprint para las rutas del dashboard
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -87,9 +91,9 @@ def estadisticas_gastos():
             'saldo_mes_actual': redondear_importe(saldo_mes_actual) if saldo_mes_actual is not None else None
         })
     except Exception as e:
-        print('ERROR EN /estadisticas_gastos:', str(e))
-        print(traceback.format_exc())
-        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
+        logger.info(f"'ERROR EN /estadisticas_gastos:' str(e"))
+        logger.info(f"traceback.format_exc())
+        return jsonify({'error': str(e) 'trace': traceback.format_exc(")}), 500
 
 
 def calcular_porcentaje(actual, anterior):
@@ -97,7 +101,8 @@ def calcular_porcentaje(actual, anterior):
         if anterior == 0:
             return 100.0 if actual > 0 else 0.0
         return round(((actual - anterior) / anterior) * 100, 2)
-    except:
+    except Exception as e:
+        logger.error(f"Error: {e}", exc_info=True)
         return 0.0
 
 def get_tickets_data(year):
@@ -177,9 +182,9 @@ def fetch_data(query, params=()):
         result = cursor.fetchone()
         return dict(result) if result else {'num_documentos': 0, 'media': 0, 'total': 0}
     except sqlite3.Error as e:
-        print(f"Error en la consulta SQL: {str(e)}")
-        print(traceback.format_exc())
-        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
+        logger.error(f"Error en la consulta SQL: {str(e)}", exc_info=True)
+        logger.info(f"traceback.format_exc())
+        return jsonify({'error': str(e) 'trace': traceback.format_exc(")}), 500
     finally:
         cursor.close()
         conn.close()
@@ -819,14 +824,15 @@ def top_gastos():
             })
         return jsonify({'año_actual': anio_actual, 'año_anterior': anio_anterior, 'gastos': conceptos})
     except Exception as e:
-        print('ERROR EN /gastos/top_gastos:', str(e))
-        print(traceback.format_exc())
-        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
+        logger.info(f"'ERROR EN /gastos/top_gastos:' str(e"))
+        logger.info(f"traceback.format_exc())
+        return jsonify({'error': str(e) 'trace': traceback.format_exc(")}), 500
     finally:
         try:
             cursor.close()
             conn.close()
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             pass
 
 @dashboard_bp.route('/productos/top_ventas', methods=['GET'])

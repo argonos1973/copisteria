@@ -4,6 +4,10 @@ from functools import lru_cache
 from constantes import *
 from db_utils import get_db_connection, redondear_importe
 from flask import jsonify, request
+from logger_config import get_productos_logger
+
+# Inicializar logger
+logger = get_productos_logger()
 
 
 def obtener_productos():
@@ -29,10 +33,10 @@ def obtener_productos():
         return [dict(producto) for producto in productos]
         
     except sqlite3.Error as e:
-        print(f"Error de base de datos: {str(e)}")
+        logger.error(f"Error de base de datos al obtener productos: {str(e)}", exc_info=True)
         raise Exception("Error al obtener los productos de la base de datos")
     except Exception as e:
-        print(f"Error inesperado: {str(e)}")
+        logger.error(f"Error inesperado al obtener productos: {str(e)}", exc_info=True)
         raise Exception("Error inesperado al obtener los productos")
     finally:
         if 'conn' in locals():
@@ -128,8 +132,8 @@ def _generar_franjas_automaticas(base_subtotal: float, iva_pct: float, franjas_c
     desc_inicial = float(desc_ini_val) if desc_ini_val is not None else 5.0
     incremento = float(inc_val) if inc_val is not None else 5.0
     
-    print(f"[DEBUG] Parámetros recibidos: bandas={bandas_val}, ancho={ancho_val}, desc_inicial={desc_ini_val}, incremento={inc_val}")
-    print(f"[DEBUG] Valores normalizados: num_bandas={num_bandas}, ancho={ancho}, desc_inicial={desc_inicial}, incremento={incremento}")
+    logger.debug(f"Parámetros recibidos: bandas={bandas_val}, ancho={ancho_val}, desc_inicial={desc_ini_val}, incremento={inc_val}")
+    logger.debug(f"Valores normalizados: num_bandas={num_bandas}, ancho={ancho}, desc_inicial={desc_inicial}, incremento={incremento}")
     if 0.0 < desc_inicial <= 1.0:
         desc_inicial *= 100.0
     if 0.0 < incremento <= 1.0:
@@ -319,7 +323,7 @@ def ensure_tabla_productos():
                     break
 
             if not pk_on_id:
-                print('[PRODUCTOS][MIGRACION] Detectada tabla productos sin PRIMARY KEY en id. Iniciando migración...')
+                logger.warning('[MIGRACION] Detectada tabla productos sin PRIMARY KEY en id. Iniciando migración...')
                 # Creamos tabla nueva con el esquema correcto
                 cur.execute(
                     """
@@ -344,7 +348,7 @@ def ensure_tabla_productos():
                 # Reemplazar tabla
                 cur.execute('DROP TABLE productos')
                 cur.execute('ALTER TABLE productos_new RENAME TO productos')
-                print('[PRODUCTOS][MIGRACION] Migración completada. Tabla productos ahora con id AUTOINCREMENT')
+                logger.info('[MIGRACION] Migración completada. Tabla productos ahora con id AUTOINCREMENT')
 
         # 3) Índices útiles
         cur.execute(
@@ -354,7 +358,7 @@ def ensure_tabla_productos():
         )
         conn.commit()
     except Exception as e:
-        print(f"[PRODUCTOS] Error asegurando/migrando tabla productos: {e}")
+        logger.error(f"Error asegurando/migrando tabla productos: {e}", exc_info=True)
     finally:
         try:
             conn.close()
@@ -365,7 +369,7 @@ def ensure_tabla_productos():
 try:
     ensure_tabla_productos()
 except Exception as _e:
-    print(f"[PRODUCTOS] No se pudo asegurar la tabla al importar: {_e}")
+    logger.error(f"No se pudo asegurar la tabla al importar: {_e}", exc_info=True)
 
 def eliminar_todas_franjas_producto(producto_id: int):
     """
@@ -377,7 +381,7 @@ def eliminar_todas_franjas_producto(producto_id: int):
         cur = conn.cursor()
         cur.execute('DELETE FROM descuento_producto_franja WHERE producto_id = ?', (producto_id,))
         conn.commit()
-        print(f"[DESCUENTOS] Eliminadas {cur.rowcount} franjas del producto {producto_id}")
+        logger.info(f"Eliminadas {cur.rowcount} franjas del producto {producto_id}")
         return True
     finally:
         if conn:
@@ -450,12 +454,13 @@ def ensure_tabla_descuentos_bandas():
         )
         conn.commit()
     except Exception as e:
-        print(f"[DESCUENTOS] Error creando tabla de franjas: {e}")
+        logger.error(f"Error creando tabla de franjas: {e}", exc_info=True)
         raise
     finally:
         try:
             conn.close()
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             pass
 
 
@@ -487,7 +492,7 @@ def obtener_franjas_descuento_por_producto(producto_id):
             for row in filas
         ]
     except Exception as e:
-        print(f"[DESCUENTOS] Error consultando franjas de producto {producto_id}: {e}")
+        logger.error(f"Error consultando franjas de producto {producto_id}: {e}", exc_info=True)
         raise
     finally:
         if 'conn' in locals():
@@ -512,7 +517,7 @@ def reemplazar_franjas_descuento_producto(producto_id, franjas):
                 original_desc = fr.get('descuento', 0)
                 desc = float(original_desc)
             except Exception as _e:
-                print(f"[DESCUENTOS] Valor de descuento no numérico para producto {producto_id}, franja {fr}: {_e}. Se usará 0.0")
+                logger.warning(f"Valor de descuento no numérico para producto {producto_id}, franja {fr}: {_e}. Se usará 0.0")
                 desc = 0.0
                 original_desc = original_desc if 'original_desc' in locals() else None
             if min_c <= 0 or max_c <= 0 or max_c < min_c:
@@ -526,20 +531,20 @@ def reemplazar_franjas_descuento_producto(producto_id, franjas):
             # Redondeo a 6 decimales para consistencia de almacenamiento
             clamped_desc = round(float(clamped_desc), 6)
             if clamped_desc != desc:
-                print(f"[DESCUENTOS] Clamp aplicado producto {producto_id}: desc_original={desc} -> desc_clamp={clamped_desc}")
+                logger.debug(f"Clamp aplicado producto {producto_id}: desc_original={desc} -> desc_clamp={clamped_desc}")
             else:
-                print(f"[DESCUENTOS] Descuento dentro de rango producto {producto_id}: desc={desc}")
+                logger.debug(f"Descuento dentro de rango producto {producto_id}: desc={desc}")
             cur.execute(
                 'INSERT INTO descuento_producto_franja (producto_id, min_cantidad, max_cantidad, porcentaje_descuento) VALUES (?,?,?,?)',
                 (producto_id, min_c, max_c, clamped_desc)
             )
-            print(f"[DESCUENTOS] Insertada franja producto {producto_id}: min={min_c}, max={max_c}, desc={clamped_desc}")
+            logger.debug(f"Insertada franja producto {producto_id}: min={min_c}, max={max_c}, desc={clamped_desc}")
         conn.commit()
         return True
     except Exception as e:
         if 'conn' in locals():
             conn.rollback()
-        print(f"[DESCUENTOS] Error reemplazando franjas del producto {producto_id}: {e}")
+        logger.error(f"Error reemplazando franjas del producto {producto_id}: {e}", exc_info=True)
         raise
     finally:
         if 'conn' in locals():
@@ -619,7 +624,7 @@ def obtener_productos_paginados(filtros, page=1, page_size=20, sort='nombre', or
             'total_pages': int(total_pages)
         }
     except sqlite3.Error as e:
-        print(f"Error de base de datos en obtener_productos_paginados: {str(e)}")
+        logger.error(f"Error de base de datos en obtener_productos_paginados: {str(e)}", exc_info=True)
         raise Exception(f"Error al obtener productos paginados: {str(e)}")
     finally:
         if 'conn' in locals():
@@ -704,7 +709,7 @@ def buscar_productos(filtros):
                 sql += ' AND impuestos = ?'
                 params.append(impuestos_valor)
             except (ValueError, TypeError):
-                print(f"Error: impuestos no es un valor numérico: {filtros['impuestos']}")
+                logger.warning(f"Error: impuestos no es un valor numérico: {filtros['impuestos']}")
                 # Si no es convertible, ignoramos este filtro
         
         # Ordenar y limitar
@@ -717,7 +722,7 @@ def buscar_productos(filtros):
         return [dict(producto) for producto in productos]
         
     except sqlite3.Error as e:
-        print(f"Error de base de datos en buscar_productos: {str(e)}")
+        logger.error(f"Error de base de datos en buscar_productos: {str(e)}", exc_info=True)
         raise Exception(f"Error al buscar productos: {str(e)}")
     finally:
         if 'conn' in locals():
@@ -745,9 +750,9 @@ def crear_producto(data):
     try:
         ensure_tabla_productos()
     except Exception as e:
-        print(f"[PRODUCTOS] Error al asegurar tabla antes de crear: {e}")
+        logger.error(f"Error al asegurar tabla antes de crear: {e}", exc_info=True)
 
-    print(f"[PRODUCTOS] crear_producto payload: {data}")
+    logger.debug(f"crear_producto payload: {data}")
     # Validar campos requeridos
     nombre = data.get('nombre')
     if not nombre:
@@ -812,13 +817,13 @@ def crear_producto(data):
         
         conn.commit()
         last_id = cursor.lastrowid
-        print(f"[PRODUCTOS] Producto insertado. lastrowid={last_id}")
+        logger.info(f"Producto insertado. ID={last_id}, nombre='{nombre}'")
         
         # Gestionar franjas según configuración
         try:
             # Si está marcado "no generar franjas", no crear franjas
             if data.get('no_generar_franjas', 0):
-                print(f"[DESCUENTOS] No se generan franjas para producto {last_id} (no_generar_franjas=1)")
+                logger.debug(f"No se generan franjas para producto {last_id} (no_generar_franjas=1)")
             elif data.get('calculo_automatico', 0):
                 # Usar directamente los valores del data enviado por el usuario
                 franjas_cfg = {
@@ -829,7 +834,7 @@ def crear_producto(data):
                     'incremento': data.get('incremento_franja', 5.0)
                 }
                 
-                print(f"[DESCUENTOS] Generando franjas con config del usuario: {franjas_cfg}")
+                logger.debug(f"Generando franjas con config del usuario: {franjas_cfg}")
                 
                 # Generar franjas siempre con los parámetros de configuración
                 base_subtotal = float(data.get('subtotal') or 0)
@@ -837,12 +842,12 @@ def crear_producto(data):
                 franjas = _generar_franjas_automaticas(base_subtotal, iva_pct, franjas_cfg)
                 ensure_tabla_descuentos_bandas()
                 reemplazar_franjas_descuento_producto(last_id, franjas)
-                print(f"[DESCUENTOS] Franjas generadas para producto {last_id} con config: {franjas_cfg}")
+                logger.info(f"Franjas generadas para producto {last_id} con config: {franjas_cfg}")
             else:
-                print(f"[DESCUENTOS] No se generan franjas para producto {last_id} (calculo_automatico=0)")
+                logger.debug(f"No se generan franjas para producto {last_id} (calculo_automatico=0)")
         except Exception as e_fr:
             # No fallar la creación de producto si las franjas fallan, solo registrar
-            print(f"[DESCUENTOS] Advertencia al gestionar franjas automáticas para producto {last_id}: {e_fr}")
+            logger.warning(f"Advertencia al gestionar franjas automáticas para producto {last_id}: {e_fr}")
         
         return {
             "success": True,
@@ -851,10 +856,10 @@ def crear_producto(data):
         }
         
     except sqlite3.Error as e:
-        print(f"Error de base de datos: {str(e)}")
+        logger.error(f"Error de base de datos al crear producto: {str(e)}", exc_info=True)
         return {"success": False, "message": f"Error de base de datos: {str(e)}"}
     except Exception as e:
-        print(f"Error inesperado: {str(e)}")
+        logger.error(f"Error inesperado al crear producto: {str(e)}", exc_info=True)
         return {"success": False, "message": f"Error inesperado: {str(e)}"}
     finally:
         if 'conn' in locals():
@@ -925,17 +930,14 @@ def actualizar_producto(id_producto, data):
         config_franjas = data.get('config_franjas', {})
         no_generar_franjas_val = 1 if config_franjas.get('no_generar_franjas') else 0
         
-        import sys
-        print(f"DEBUG actualizar_producto - ID: {id_producto}", file=sys.stderr)
-        print(f"DEBUG config_franjas recibido: {config_franjas}", file=sys.stderr)
-        print(f"DEBUG Valores a actualizar:", file=sys.stderr)
-        print(f"  - franja_inicial: {config_franjas.get('franja_inicial', 1)}", file=sys.stderr)
-        print(f"  - numero_franjas: {config_franjas.get('numero_franjas', 50)}", file=sys.stderr)
-        print(f"  - ancho_franja: {config_franjas.get('ancho_franja', 10)}", file=sys.stderr)
-        print(f"  - descuento_inicial: {config_franjas.get('descuento_inicial', 5.0)}", file=sys.stderr)
-        print(f"  - incremento_franja: {config_franjas.get('incremento_franja', 5.0)}", file=sys.stderr)
-        print(f"  - no_generar_franjas: {no_generar_franjas_val}", file=sys.stderr)
-        sys.stderr.flush()
+        logger.debug(f"actualizar_producto - ID: {id_producto}")
+        logger.debug(f"config_franjas recibido: {config_franjas}")
+        logger.debug(f"Valores a actualizar: franja_inicial={config_franjas.get('franja_inicial', 1)}, "
+                    f"numero_franjas={config_franjas.get('numero_franjas', 50)}, "
+                    f"ancho_franja={config_franjas.get('ancho_franja', 10)}, "
+                    f"descuento_inicial={config_franjas.get('descuento_inicial', 5.0)}, "
+                    f"incremento_franja={config_franjas.get('incremento_franja', 5.0)}, "
+                    f"no_generar_franjas={no_generar_franjas_val}")
         
         cursor.execute('''
             UPDATE productos
@@ -981,7 +983,7 @@ def actualizar_producto(id_producto, data):
                 # Si está marcado "no generar franjas", eliminar todas las franjas existentes
                 if config_franjas.get('no_generar_franjas', 0):
                     eliminar_todas_franjas_producto(id_producto)
-                    print(f"[DESCUENTOS] Eliminadas todas las franjas del producto {id_producto}")
+                    logger.info(f"Eliminadas todas las franjas del producto {id_producto}")
                 else:
                     # Verificar si el producto ya tiene franjas
                     cursor.execute('SELECT COUNT(*) as total FROM descuento_producto_franja WHERE producto_id = ?', (id_producto,))
@@ -998,12 +1000,12 @@ def actualizar_producto(id_producto, data):
                         }
                         
                         regenerar_franjas_producto(id_producto, franjas_cfg)
-                        print(f"[DESCUENTOS] Franjas generadas para producto {id_producto} (no tenía franjas)")
+                        logger.info(f"Franjas generadas para producto {id_producto} (no tenía franjas)")
                     else:
-                        print(f"[DESCUENTOS] Producto {id_producto} ya tiene franjas o check desactivado - NO se regeneran")
+                        logger.debug(f"Producto {id_producto} ya tiene franjas o check desactivado - NO se regeneran")
         except Exception as e_fr:
             # No fallar la actualización del producto si las franjas fallan, solo registrar
-            print(f"[DESCUENTOS] Advertencia al gestionar franjas automáticas para producto {id_producto}: {e_fr}")
+            logger.warning(f"Advertencia al gestionar franjas automáticas para producto {id_producto}: {e_fr}")
 
         return {
             "success": True,
@@ -1011,10 +1013,10 @@ def actualizar_producto(id_producto, data):
         }
         
     except sqlite3.Error as e:
-        print(f"Error de base de datos: {str(e)}")
+        logger.error(f"Error de base de datos al actualizar producto {id_producto}: {str(e)}", exc_info=True)
         return {"success": False, "message": f"Error de base de datos: {str(e)}"}
     except Exception as e:
-        print(f"Error inesperado: {str(e)}")
+        logger.error(f"Error inesperado al actualizar producto {id_producto}: {str(e)}", exc_info=True)
         return {"success": False, "message": f"Error inesperado: {str(e)}"}
     finally:
         if 'conn' in locals():
@@ -1080,10 +1082,10 @@ def eliminar_producto(id_producto):
         }
         
     except sqlite3.Error as e:
-        print(f"Error de base de datos: {str(e)}")
+        logger.error(f"Error de base de datos al eliminar producto {id_producto}: {str(e)}", exc_info=True)
         return {"success": False, "message": f"Error de base de datos: {str(e)}"}
     except Exception as e:
-        print(f"Error inesperado: {str(e)}")
+        logger.error(f"Error inesperado al eliminar producto {id_producto}: {str(e)}", exc_info=True)
         return {"success": False, "message": f"Error inesperado: {str(e)}"}
     finally:
         if 'conn' in locals():

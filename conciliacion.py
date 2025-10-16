@@ -5,6 +5,10 @@ from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
 from constantes import DB_NAME
 from db_utils import get_db_connection
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 conciliacion_bp = Blueprint('conciliacion', __name__)
 
@@ -221,7 +225,8 @@ def buscar_coincidencias_automaticas(gasto):
                 fecha_gasto = datetime.strptime(fecha_gasto_str, '%d/%m/%Y')
             else:
                 fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
         
         fecha_inicio = (fecha_gasto - timedelta(days=15)).strftime('%Y-%m-%d')
@@ -337,7 +342,8 @@ def calcular_score(gasto, documento):
             fecha_gasto = datetime.strptime(fecha_gasto_str, '%d/%m/%Y')
         else:
             fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
-    except:
+    except Exception as e:
+        logger.error(f"Error: {e}", exc_info=True)
         # Si falla, asumir formato ISO
         fecha_gasto = datetime.strptime(fecha_gasto_str, '%Y-%m-%d')
     
@@ -474,9 +480,9 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
                     factura_marcada_cobrada = True
                     numero_factura_cobrada = numero_factura
                     estado_anterior = documento.get('estado', 'P')
-                    print(f"✓ Factura {numero_factura} marcada como COBRADA (estado: {estado_anterior} → C) - Coincidencia exacta por número")
+                    logger.info(f"✓ Factura {numero_factura} marcada como COBRADA (estado: {estado_anterior} → C) - Coincidencia exacta por número")
             else:
-                print(f"⊗ Factura {numero_factura} NO marcada como cobrada - Sin coincidencia por número en concepto")
+                logger.info(f"⊗ Factura {numero_factura} NO marcada como cobrada - Sin coincidencia por número en concepto")
         
         conn.commit()
         
@@ -1437,7 +1443,8 @@ def obtener_liquidaciones_tpv():
                 else:
                     fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d')
                 fecha_busqueda = fecha_obj.strftime('%Y-%m-%d')
-            except:
+            except Exception as e:
+                logger.error(f"Error: {e}", exc_info=True)
                 continue
             
             # Buscar tickets con tarjeta de esa fecha (excluir ya conciliados)
@@ -1542,7 +1549,7 @@ def obtener_liquidaciones_tpv():
             #         # No añadir a resultado si se concilió automáticamente
             #         continue
             #     except Exception as e:
-            #         print(f"Error conciliando automáticamente liquidación {fecha_str}: {e}")
+            #         logger.error(f"Error conciliando automáticamente liquidación {fecha_str}: {e}", exc_info=True)
             #         # Si falla, continuar y mostrar en la lista
             
             # Convertir -0.0 a 0.0
@@ -1656,7 +1663,8 @@ def obtener_ingresos_efectivo():
                 # Buscar en rango de 15 días previos al ingreso
                 fecha_inicio = (fecha_obj - timedelta(days=15)).strftime('%Y-%m-%d')
                 fecha_fin = fecha_obj.strftime('%Y-%m-%d')
-            except:
+            except Exception as e:
+                logger.error(f"Error: {e}", exc_info=True)
                 continue
             
             # Buscar facturas cobradas en efectivo NO CONCILIADAS en el rango (usar fechaCobro)
@@ -1884,7 +1892,8 @@ def obtener_documentos_efectivo():
             
             fecha_fin = fecha_obj.strftime('%Y-%m-%d')
             fecha_inicio = (fecha_obj - timedelta(days=15)).strftime('%Y-%m-%d')
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
         
         # Obtener facturas cobradas en efectivo con nombre del cliente (usar fechaCobro, excluir ya conciliadas)
@@ -2012,7 +2021,7 @@ def conciliar_ingreso_efectivo():
                         ''', (conciliacion_id, doc['tipo'], doc['id'], doc['total']))
                     conciliados += 1
             except Exception as e:
-                print(f"Error conciliando ingreso {gasto_id}: {e}")
+                logger.error(f"Error conciliando ingreso {gasto_id}: {e}", exc_info=True)
                 continue
         
         conn.commit()
@@ -2048,7 +2057,8 @@ def conciliar_liquidacion():
             else:
                 fecha_obj = datetime.strptime(fecha, '%Y-%m-%d')
             fecha_busqueda = fecha_obj.strftime('%Y-%m-%d')
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
         
         # Obtener IDs de liquidaciones bancarias de esa fecha
@@ -2168,7 +2178,7 @@ def conciliar_liquidacion():
                           f'Liquidación TPV {fecha} - {len(ids_gastos)} liquidaciones, {len(documentos)} documentos',
                           conciliacion_id))
         except Exception as e:
-            print(f"Error conciliando liquidaciones: {e}")
+            logger.error(f"Error conciliando liquidaciones: {e}", exc_info=True)
             conn.close()
             return jsonify({'success': False, 'error': str(e)}), 500
         
@@ -2206,7 +2216,8 @@ def obtener_documentos_tarjeta():
             # Para liquidaciones TPV: buscar SOLO documentos de la fecha exacta
             # Esto evita que liquidaciones antiguas usen documentos de fechas futuras
             fecha_inicio = fecha_fin
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
         
         # Obtener facturas cobradas con tarjeta en el rango (usar fechaCobro, excluir ya conciliadas)

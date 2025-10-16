@@ -8,9 +8,13 @@ import time
 import random
 import subprocess
 from datetime import datetime
+from logger_config import get_scraping_logger
+
+# Inicializar logger
+logger = get_scraping_logger()
 
 # Registrar inicio del script
-print("=== api_scraping.py iniciado ===")
+logger.info("=== api_scraping.py iniciado ===")
 
 # Modo opcional: solo importar Excel y salir, controlado por la variable de entorno ONLY_IMPORT
 def _import_only():
@@ -31,19 +35,19 @@ def _import_only():
         ])
         file_path = next((p for p in posibles if p.exists()), None)
         if not file_path:
-            print("No se encontró el archivo de descarga (use DOWNLOAD_PATH o /var/www/html/descargas/descarga.xlsx)")
+            logger.error("No se encontró el archivo de descarga (use DOWNLOAD_PATH o /var/www/html/descargas/descarga.xlsx)")
             sys.exit(1)
         if file_path.is_file() and file_path.stat().st_size == 0:
-            print(f"El archivo {file_path} está vacío")
+            logger.error(f"El archivo {file_path} está vacío")
             sys.exit(1)
         try:
             import pandas as _pd
             df = _pd.read_excel(str(file_path))
-            print(f"Importación correcta: filas={len(df)}, columnas={len(df.columns)}")
+            logger.info(f"Importación correcta: filas={len(df)}, columnas={len(df.columns)}")
             try:
                 cols = list(map(str, list(df.columns)[:10]))
                 if cols:
-                    print("Columnas:", ", ".join(cols))
+                    logger.info("Columnas: " + ", ".join(cols))
             except Exception:
                 pass
             sys.exit(0)
@@ -55,22 +59,22 @@ def _import_only():
             ws = wb.active
             n_rows = ws.max_row or 0
             n_cols = ws.max_column or 0
-            print(f"Importación correcta (openpyxl): filas~={n_rows}, columnas~={n_cols}")
+            logger.info(f"Importación correcta (openpyxl): filas~={n_rows}, columnas~={n_cols}")
             try:
                 headers = []
                 for c in range(1, min(n_cols, 10) + 1):
                     v = ws.cell(row=1, column=c).value
                     headers.append(str(v) if v is not None else '')
                 if headers:
-                    print("Columnas:", ", ".join(headers))
+                    logger.info("Columnas: " + ", ".join(headers))
             except Exception:
                 pass
             sys.exit(0)
         except Exception as _eox:
-            print(f"No se pudo importar el Excel: {_eox}")
+            logger.error(f"No se pudo importar el Excel: {_eox}", exc_info=True)
             sys.exit(1)
     except Exception as _eimp:
-        print(f"Error en importación: {_eimp}")
+        logger.error(f"Error en importación: {_eimp}", exc_info=True)
         sys.exit(1)
 
 if os.environ.get('ONLY_IMPORT', '').lower() in ('1','true','yes','on'):
@@ -80,17 +84,17 @@ if os.environ.get('ONLY_IMPORT', '').lower() in ('1','true','yes','on'):
 try:
     from playwright.sync_api import sync_playwright
     import os
-    print("✓ Playwright importado correctamente")
+    logger.info("✓ Playwright importado correctamente")
 except ImportError:
-    print("✗ ERROR: Playwright no está instalado. Intentando instalar...")
+    logger.warning("✗ ERROR: Playwright no está instalado. Intentando instalar...")
     try:
         import subprocess
         subprocess.check_call([sys.executable, "-m", "pip", "install", "playwright"])
         subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
         from playwright.sync_api import sync_playwright
-        print("✓ Playwright instalado correctamente")
+        logger.info("✓ Playwright instalado correctamente")
     except Exception as e:
-        print(f"✗ ERROR: No se pudo instalar Playwright: {e}")
+        logger.error(f"✗ ERROR: No se pudo instalar Playwright: {e}", exc_info=True)
         sys.exit(1)
 
 # Deshabilitado: no se generan logs ni evidencias
@@ -146,7 +150,7 @@ with sync_playwright() as p:
         # Permitir forzar modo NO persistente por variable de entorno (workaround para 192.168.1.55)
         force_non_persist = os.environ.get('PW_NO_PERSIST', '').lower() in ('1', 'true', 'yes', 'on')
         if force_non_persist:
-            print("PW_NO_PERSIST=1 -> Usando navegador NO persistente")
+            logger.info("PW_NO_PERSIST=1 -> Usando navegador NO persistente")
             browser = p.chromium.launch(headless=not show_browser, args=browser_args, slow_mo=100 if show_browser else 0)
             context = browser.new_context(
                 viewport={'width': 1400, 'height': 900},
@@ -606,7 +610,7 @@ with sync_playwright() as p:
         sys.exit(1)
         
     if time.time() - login_start > MAX_LOGIN_TIME:
-        print("Demasiado tiempo intentando hacer login. Reiniciando script...")
+        logger.info("Demasiado tiempo intentando hacer login. Reiniciando script...")
         python = sys.executable
         os.execl(python, python, *sys.argv)
 
@@ -619,21 +623,22 @@ with sync_playwright() as p:
             page.click(sel)
             page.type(sel, clave[i])
         if time.time() - login_start > MAX_LOGIN_TIME:
-            print("Demasiado tiempo intentando hacer login. Reiniciando script...")
+            logger.info("Demasiado tiempo intentando hacer login. Reiniciando script...")
             python = sys.executable
             os.execl(python, python, *sys.argv)
 
     # Pulsar botón Entrar
     page.locator("button:has-text('Entrar')").click()
     if time.time() - login_start > MAX_LOGIN_TIME:
-        print("Demasiado tiempo intentando hacer login. Reiniciando script...")
+        logger.info("Demasiado tiempo intentando hacer login. Reiniciando script...")
         python = sys.executable
         os.execl(python, python, *sys.argv)
 
     # Cerrar ventana emergente si aparece
     try:
         page.locator("#mcp-cross-close").click(timeout=5000)
-    except:
+    except Exception as e:
+        logger.error(f"Error: {e}", exc_info=True)
         pass
 
     # Permanecer en la página actual de cuenta; no navegar a otra URL
@@ -645,20 +650,20 @@ with sync_playwright() as p:
         cerrar_btn = page.locator(".c-sanicon__close")
         if cerrar_btn.count() > 0 and cerrar_btn.first.is_visible():
             cerrar_btn.first.click()
-            print("Modal de filtros cerrado")
+            logger.info("Modal de filtros cerrado")
     except Exception as e:
-        print("No se pudo cerrar el modal de filtros (puede que no esté visible):", e)
+        logger.warning(f"No se pudo cerrar el modal de filtros (puede que no esté visible): {e}")
 
     # Seleccionar la cuenta antes de aplicar filtros de fecha
     try:
-        print("Esperando a que se muestren las tarjetas de cuentas ...")
+        logger.info("Esperando a que se muestren las tarjetas de cuentas ...")
         page.wait_for_selector(".san-product-cards__interactive-layer", timeout=15000)
         cuentas = page.locator(".san-product-cards__interactive-layer")
-        print(f"Encontradas {cuentas.count()} cuentas en pantalla")
+        logger.info(f"Encontradas {cuentas.count()} cuentas en pantalla")
         if cuentas.count() > 0:
             cuenta_btn = cuentas.first
             if cuenta_btn.is_visible():
-                print("Clickando en la primera cuenta disponible ...")
+                logger.info("Clickando en la primera cuenta disponible ...")
                 # Esperar la navegación que provoca el click en la tarjeta de cuenta
                 with page.expect_navigation(wait_until="networkidle"):
                     cuenta_btn.click()
@@ -667,19 +672,19 @@ with sync_playwright() as p:
                 try:
                     breadcrumb = page.locator("div.flame-breadcrumbs").first
                     if breadcrumb.is_visible():
-                        print("Clickando breadcrumb de navegación ...")
+                        logger.info("Clickando breadcrumb de navegación ...")
                         breadcrumb.click()
                         page.wait_for_timeout(2000)
                     else:
-                        print("Breadcrumb de navegación no visible")
+                        logger.info("Breadcrumb de navegación no visible")
                 except Exception as e:
-                    print(f"Error al hacer clic en breadcrumb: {e}")
+                    logger.error(f"Error al hacer clic en breadcrumb: {e}", exc_info=True)
             else:
-                print("La cuenta encontrada no está visible para hacer clic")
+                logger.info("La cuenta encontrada no está visible para hacer clic")
         else:
-            print("No se encontraron cuentas para seleccionar")
+            logger.info("No se encontraron cuentas para seleccionar")
     except Exception as e:
-        print(f"No se pudo seleccionar la cuenta: {e}")
+        logger.info(f"No se pudo seleccionar la cuenta: {e}")
 
     # Entrar explícitamente en el detalle de la cuenta 'SAN. ONE EMPRESA' si no estamos ya en detalle
     try:
@@ -695,7 +700,7 @@ with sync_playwright() as p:
             cur_hash = ''
         is_detail = ('/oneweb/nhb/cuentas/detalle' in (cur_url or '')) or ('/cuentas/detalle' in (cur_hash or ''))
         if not is_detail:
-            print("Buscando y accediendo a la cuenta 'SAN. ONE EMPRESA'...")
+            logger.info("Buscando y accediendo a la cuenta 'SAN. ONE EMPRESA'...")
             page.wait_for_load_state("domcontentloaded")
             page.wait_for_timeout(800)
             import re as _re
@@ -757,7 +762,7 @@ with sync_playwright() as p:
             # Reintento final: navegar a lista de cuentas y repetir
             if not clicked:
                 try:
-                    print("Reintentando: navegando a lista de cuentas...")
+                    logger.info("Reintentando: navegando a lista de cuentas...")
                     page.goto("https://particulares.bancosantander.es/oneweb/nhb/cuentas", wait_until="load")
                 except Exception:
                     page.goto("https://particulares.bancosantander.es/oneweb/nhb/cuentas")
@@ -775,7 +780,7 @@ with sync_playwright() as p:
                 page.wait_for_timeout(1500)
                 # --- NUEVO: Pulsar botón "Descargar" (abre modal de opciones) ---
                 try:
-                    print("Buscando botón 'Descargar' (wrap-chip) …")
+                    logger.info("Buscando botón 'Descargar' (wrap-chip) …")
                     modal_abierto = False
                     try:
                         # Intento 1: por rol y nombre accesible
@@ -787,7 +792,7 @@ with sync_playwright() as p:
                             try:
                                 dlg = page.locator(":is([role=dialog], san-modal, .modal, .cdk-overlay-container, .mat-dialog-container)")
                                 if dlg and dlg.count() > 0:
-                                    print("Modal de opciones de descarga abierto (por rol)")
+                                    logger.info("Modal de opciones de descarga abierto (por rol)")
                                     modal_abierto = True
                             except Exception:
                                 pass
@@ -803,14 +808,14 @@ with sync_playwright() as p:
                                 try:
                                     dlg = page.locator(":is([role=dialog], san-modal, .modal, .cdk-overlay-container, .mat-dialog-container)")
                                     if dlg and dlg.count() > 0:
-                                        print("Modal de opciones de descarga abierto (wrap-chip)")
+                                        logger.info("Modal de opciones de descarga abierto (wrap-chip)")
                                         modal_abierto = True
                                 except Exception:
                                     pass
                         except Exception:
                             pass
                     if modal_abierto:
-                        print("Botón 'Descargar' pulsado correctamente. Buscando opción Excel...")
+                        logger.info("Botón 'Descargar' pulsado correctamente. Buscando opción Excel...")
                         page.wait_for_timeout(1000)  # Esperar que cargue el modal completamente
                         descargado = False
                         
@@ -833,10 +838,10 @@ with sync_playwright() as p:
                             try:
                                 excel_option = page.locator(selector).first
                                 if excel_option and excel_option.count() > 0 and excel_option.is_visible():
-                                    print(f"Opción Excel encontrada con selector: {selector}")
+                                    logger.info(f"Opción Excel encontrada con selector: {selector}")
                                     
                                     # Primero hacer clic en el checkbox sin esperar descarga
-                                    print("Marcando checkbox de Excel...")
+                                    logger.info("Marcando checkbox de Excel...")
                                     try:
                                         # Intentar varios métodos para marcar el checkbox
                                         try:
@@ -905,14 +910,14 @@ with sync_playwright() as p:
                                             }
                                             """)
                                         except Exception as e:
-                                            print(f"Error al intentar marcar checkbox con JavaScript puro: {e}")
+                                            logger.error(f"Error al intentar marcar checkbox con JavaScript puro: {e}", exc_info=True)
                                             pass
                                         
                                         # Esperar a que reaccione la interfaz
                                         page.wait_for_timeout(2000)
                                         
                                         # Ahora buscar el botón de aceptar/confirmar/descargar final
-                                        print("Buscando botón de confirmación para iniciar descarga...")
+                                        logger.info("Buscando botón de confirmación para iniciar descarga...")
                                         confirm_selectors = [
                                             # Selector exacto del botón proporcionado
                                             "button.san-ending-button.primary.large[aria-label='Descargar documentos seleccionados']",
@@ -931,12 +936,12 @@ with sync_playwright() as p:
                                             try:
                                                 btn = page.locator(confirm_sel).first
                                                 if btn and btn.count() > 0 and btn.is_visible():
-                                                    print(f"Encontrado botón de confirmación: {confirm_sel}")
+                                                    logger.info(f"Encontrado botón de confirmación: {confirm_sel}")
                                                     
                                                     # Preparar para capturar el evento de descarga
                                                     with page.expect_event("download", timeout=30000) as dl_info:
                                                         # Hacer clic en el botón de confirmación
-                                                        print(f"Haciendo clic en botón: {confirm_sel}")
+                                                        logger.info(f"Haciendo clic en botón: {confirm_sel}")
                                                         btn.click()
                                                         page.wait_for_timeout(2000)
                                                     
@@ -947,13 +952,13 @@ with sync_playwright() as p:
                                                         # Guardar directamente en /tmp
                                                         destino = "/tmp/descarga.xlsx"
                                                         download.save_as(destino)
-                                                        print(f"✓ Descarga Excel guardada como: {destino}")
+                                                        logger.info(f"✓ Descarga Excel guardada como: {destino}")
                                                         # Ejecutar importación y finalizar inmediatamente
                                                         try:
-                                                            print("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
+                                                            logger.info("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
                                                             subprocess.run([sys.executable, "/var/www/html/scrapeo.py", destino], check=False)
                                                         except Exception as _esub:
-                                                            print(f"Error ejecutando scrapeo.py: {_esub}")
+                                                            logger.error(f"Error ejecutando scrapeo.py: {_esub}", exc_info=True)
                                                         try:
                                                             context.close()
                                                         except Exception:
@@ -967,16 +972,16 @@ with sync_playwright() as p:
                                                         confirm_clicked = True
                                                         break
                                                     except Exception as e:
-                                                        print(f"Error al guardar descarga: {e}")
+                                                        logger.error(f"Error al guardar descarga: {e}", exc_info=True)
                                                         try:
                                                             path = download.path()
-                                                            print(f"✓ Descarga completada en ruta temporal: {path}")
+                                                            logger.info(f"✓ Descarga completada en ruta temporal: {path}")
                                                             # Ejecutar importación y finalizar inmediatamente
                                                             try:
-                                                                print("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
+                                                                logger.info("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
                                                                 subprocess.run([sys.executable, "/var/www/html/scrapeo.py", path], check=False)
                                                             except Exception as _esub:
-                                                                print(f"Error ejecutando scrapeo.py: {_esub}")
+                                                                logger.error(f"Error ejecutando scrapeo.py: {_esub}", exc_info=True)
                                                             try:
                                                                 context.close()
                                                             except Exception:
@@ -989,10 +994,10 @@ with sync_playwright() as p:
                                                             descargado = True
                                                             confirm_clicked = True
                                                             break
-                                                        except:
-                                                            print("No se pudo obtener la ruta de la descarga")
+                                                        except Exception as e:
+                                                            logger.info("No se pudo obtener la ruta de la descarga")
                                             except Exception as e:
-                                                print(f"Error con selector {confirm_sel}: {e}")
+                                                logger.error(f"Error con selector {confirm_sel}: {e}", exc_info=True)
                                         
                                         # Si no se encontró/hizo clic en ningún botón, intentar con el checkbox directo
                                         if not confirm_clicked:
@@ -1008,13 +1013,13 @@ with sync_playwright() as p:
                                                 sugerido = download.suggested_filename or download.suggested_filename()
                                                 destino = "/tmp/descarga.xlsx"
                                                 download.save_as(destino)
-                                                print(f"✓ Descarga Excel (alternativa) guardada en: {destino}")
+                                                logger.info(f"✓ Descarga Excel (alternativa) guardada en: {destino}")
                                                 # Ejecutar importación y finalizar inmediatamente
                                                 try:
-                                                    print("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
+                                                    logger.info("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
                                                     subprocess.run([sys.executable, "/var/www/html/scrapeo.py", destino], check=False)
                                                 except Exception as _esub:
-                                                    print(f"Error ejecutando scrapeo.py: {_esub}")
+                                                    logger.error(f"Error ejecutando scrapeo.py: {_esub}", exc_info=True)
                                                 try:
                                                     context.close()
                                                 except Exception:
@@ -1026,14 +1031,14 @@ with sync_playwright() as p:
                                                 sys.exit(0)
                                                 descargado = True
                                             except Exception as e:
-                                                print(f"No se pudo descargar directamente: {e}")
+                                                logger.info(f"No se pudo descargar directamente: {e}")
                                     except Exception as e:
-                                        print(f"Error al procesar modal/confirmación: {e}") 
+                                        logger.error(f"Error al procesar modal/confirmación: {e}", exc_info=True) 
                             except Exception as e:
-                                print(f"Error al intentar opción Excel {selector}: {e}")
+                                logger.error(f"Error al intentar opción Excel {selector}: {e}", exc_info=True)
                         
                         if not descargado:
-                            print("No se pudo seleccionar opción Excel en el modal. Intentando alternativas...")
+                            logger.info("No se pudo seleccionar opción Excel en el modal. Intentando alternativas...")
                             
                             # Intentar con elementos genéricos que puedan contener "Excel"
                             try:
@@ -1043,20 +1048,20 @@ with sync_playwright() as p:
                                     for item in excel_items[:5]:  # Limitar a los primeros 5
                                         try:
                                             with page.expect_event("download", timeout=10000) as dl_info:
-                                                print("Intentando clic en elemento con texto Excel...")
+                                                logger.info("Intentando clic en elemento con texto Excel...")
                                                 item.click(timeout=3000)
                                             
                                             download = dl_info.value
                                             sugerido = download.suggested_filename or download.suggested_filename()
                                             destino = "/tmp/descarga.xlsx"
                                             download.save_as(destino)
-                                            print(f"Descarga Excel (alternativo) guardada en: {destino}")
+                                            logger.info(f"Descarga Excel (alternativo) guardada en: {destino}")
                                             # Ejecutar importación y finalizar inmediatamente
                                             try:
-                                                print("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
+                                                logger.info("Ejecutando scrapeo.py con el Excel descargado y finalizando...")
                                                 subprocess.run([sys.executable, "/var/www/html/scrapeo.py", destino], check=False)
                                             except Exception as _esub:
-                                                print(f"Error ejecutando scrapeo.py: {_esub}")
+                                                logger.error(f"Error ejecutando scrapeo.py: {_esub}", exc_info=True)
                                             try:
                                                 context.close()
                                             except Exception:
@@ -1071,16 +1076,16 @@ with sync_playwright() as p:
                                         except Exception:
                                             continue
                             except Exception as e:
-                                print(f"Error en búsqueda alternativa de Excel: {e}")
+                                logger.error(f"Error en búsqueda alternativa de Excel: {e}", exc_info=True)
                         
                         # Si no se logró con el modal, proceder con otros métodos
                         if not descargado:
-                            print("No se logró descargar Excel desde el modal. Intentando fallback...")
+                            logger.info("No se logró descargar Excel desde el modal. Intentando fallback...")
                     else:
-                        print("No se detectó el modal tras pulsar 'Descargar'. Se intentará descarga directa (fallback)…")
+                        logger.info("No se detectó el modal tras pulsar 'Descargar'. Se intentará descarga directa (fallback)…")
                     
                     # --- Fallback anterior: intentar botón/icono que dispare directamente una descarga ---
-                    print("Buscando botón/icono de descarga para descarga directa…")
+                    logger.info("Buscando botón/icono de descarga para descarga directa…")
                     destinos = [page]
                     try:
                         for fr in page.frames:
@@ -1106,7 +1111,7 @@ with sync_playwright() as p:
                             try:
                                 loc = ctx.locator(sel).first
                                 if loc and loc.count() > 0 and loc.first.is_visible():
-                                    print(f"Intentando clic de descarga con selector: {sel}")
+                                    logger.info(f"Intentando clic de descarga con selector: {sel}")
                                     with page.expect_event("download", timeout=30000) as dl_info:
                                         try:
                                             loc.first.click(timeout=5000)
@@ -1119,10 +1124,10 @@ with sync_playwright() as p:
                                         sugerido = download.suggested_filename or download.suggested_filename()
                                         destino = "/tmp/descarga.xlsx"
                                         download.save_as(destino)
-                                        print(f"Descarga guardada en: {destino}")
+                                        logger.info(f"Descarga guardada en: {destino}")
                                     except Exception:
                                         path = download.path()
-                                        print(f"Descarga completada. Ruta temporal: {path}")
+                                        logger.info(f"Descarga completada. Ruta temporal: {path}")
                                     descargado = True
                                     break
                             except Exception:
@@ -1130,7 +1135,7 @@ with sync_playwright() as p:
                         if descargado:
                             break
                     if not descargado:
-                        print("No se encontró botón de descarga visible. Reintentando con búsqueda heurística…")
+                        logger.info("No se encontró botón de descarga visible. Reintentando con búsqueda heurística…")
                         try:
                             # Heurística: buscar elementos con texto/aria/ttl que contengan 'Descarg'
                             btns = page.locator(":is(button,a,[role=button],[aria-label],[title])").all()
@@ -1143,7 +1148,7 @@ with sync_playwright() as p:
                                 meta = {"t":"","a":"","tt":""}
                             hay = any(s for s in [meta.get('t',''), meta.get('a',''), meta.get('tt','')] if 'descarg' in s.lower())
                             if hay:
-                                print("Intentando clic heurístico de descarga…")
+                                logger.info("Intentando clic heurístico de descarga…")
                                 try:
                                     with page.expect_event("download", timeout=30000) as dl_info:
                                         b.click()
@@ -1151,19 +1156,19 @@ with sync_playwright() as p:
                                     sugerido = d2.suggested_filename or d2.suggested_filename()
                                     dest = "/tmp/descarga.xlsx"
                                     d2.save_as(dest)
-                                    print(f"Descarga guardada en: {dest}")
+                                    logger.info(f"Descarga guardada en: {dest}")
                                     descargado = True
                                     break
                                 except Exception:
                                     continue
                     if not descargado:
-                        print("No fue posible realizar la descarga automáticamente.")
+                        logger.info("No fue posible realizar la descarga automáticamente.")
                 except Exception as e:
-                    print(f"Error al intentar descargar: {e}")
+                    logger.error(f"Error al intentar descargar: {e}", exc_info=True)
             else:
-                print("No se encontró el elemento con texto 'SAN. ONE EMPRESA'.")
+                logger.info("No se encontró el elemento con texto 'SAN. ONE EMPRESA'.")
     except Exception as e:
-        print(f"Error al intentar entrar al detalle de la cuenta SAN. ONE EMPRESA: {e}")
+        logger.error(f"Error al intentar entrar al detalle de la cuenta SAN. ONE EMPRESA: {e}", exc_info=True)
 
     # Estado de navegación actual (solo informativo)
     try:
@@ -1175,9 +1180,9 @@ with sync_playwright() as p:
             cur_hash = page.evaluate("() => location.hash || ''")
         except Exception:
             cur_hash = "(sin hash)"
-        print(f"Estado de navegación actual: url={cur_url} hash={cur_hash}")
+        logger.info(f"Estado de navegación actual: url={cur_url} hash={cur_hash}")
     except Exception as e:
-        print(f"Error en verificación de estado de detalle: {e}")
+        logger.error(f"Error en verificación de estado de detalle: {e}", exc_info=True)
 
     # Preparar ámbitos de búsqueda (página principal y frames), sin depender de textos específicos
     scope = page
@@ -1195,7 +1200,7 @@ with sync_playwright() as p:
     mk = None
     for scope in scopes:
         try:
-            print("Iniciando búsqueda del botón de descarga...")
+            logger.info("Iniciando búsqueda del botón de descarga...")
             res = scope.evaluate(
                 r"""
                 () => {
@@ -1372,10 +1377,10 @@ with sync_playwright() as p:
                 }
                 """
             )
-            print(f"Resultado de la búsqueda: {res}")
+            logger.info(f"Resultado de la búsqueda: {res}")
             if isinstance(res, dict) and res.get('mark'):
                 mk = res.get('mark')
-                print(f"Botón de descarga encontrado y marcado con ID: {mk}")
+                logger.info(f"Botón de descarga encontrado y marcado con ID: {mk}")
                 # Aplicar realce visual persistente (sin hacer clic)
                 try:
                     scope.evaluate(
@@ -1396,53 +1401,53 @@ with sync_playwright() as p:
                     
                     # Resaltar el icono marcado y hacer clic
                     try:
-                        print(f"Buscando elemento con selector: [data-cascade-click='{mk}']")
+                        logger.info(f"Buscando elemento con selector: [data-cascade-click='{mk}']")
                         marked_element = scope.locator(f"[data-cascade-click='{mk}']").first
-                        print(f"Elemento encontrado: {marked_element is not None}")
+                        logger.info(f"Elemento encontrado: {marked_element is not None}")
                         if marked_element and marked_element.count() > 0:
-                            print("Elemento marcado encontrado, verificando visibilidad...")
+                            logger.info("Elemento marcado encontrado, verificando visibilidad...")
                             # Verificar si el elemento es visible
                             try:
                                 is_visible = marked_element.is_visible()
-                                print(f"Elemento es visible: {is_visible}")
+                                logger.info(f"Elemento es visible: {is_visible}")
                             except Exception as visibility_err:
-                                print(f"Error al verificar visibilidad: {visibility_err}")
+                                logger.error(f"Error al verificar visibilidad: {visibility_err}", exc_info=True)
                             
                             # Asegurar que el elemento esté visible
                             try:
                                 marked_element.scroll_into_view_if_needed()
-                                print("Icono de descarga: resaltado exitosamente.")
+                                logger.info("Icono de descarga: resaltado exitosamente.")
                             except Exception as scroll_err:
-                                print(f"Error al hacer scroll al elemento: {scroll_err}")
+                                logger.error(f"Error al hacer scroll al elemento: {scroll_err}", exc_info=True)
                             
                             # Pequeña pausa para observar el resaltado
                             page.wait_for_timeout(2000)
                             
                             # Hacer clic en el botón de descarga
                             try:
-                                print("Intentando hacer clic en el botón de descarga...")
+                                logger.info("Intentando hacer clic en el botón de descarga...")
                                 marked_element.click()
-                                print("Icono de descarga: clic realizado exitosamente.")
+                                logger.info("Icono de descarga: clic realizado exitosamente.")
                                 
                                 # Esperar a que aparezca la modal
-                                print("Esperando a que aparezca la modal...")
+                                logger.info("Esperando a que aparezca la modal...")
                                 page.wait_for_timeout(3000)
-                                print("Tiempo de espera completado. Buscando modal...")
+                                logger.info("Tiempo de espera completado. Buscando modal...")
                                 
                                 # Verificar si hay una modal visible
                                 try:
                                     modal_elements = page.locator(".modal, [role='dialog'], [aria-modal='true']").all()
-                                    print(f"Elementos de modal encontrados: {len(modal_elements)}")
+                                    logger.info(f"Elementos de modal encontrados: {len(modal_elements)}")
                                     for i, modal in enumerate(modal_elements[:3]):
                                         try:
                                             if modal.is_visible():
-                                                print(f"Modal {i+1} es visible")
+                                                logger.info(f"Modal {i+1} es visible")
                                             else:
-                                                print(f"Modal {i+1} no es visible")
+                                                logger.info(f"Modal {i+1} no es visible")
                                         except Exception as modal_check_err:
-                                            print(f"Error al verificar visibilidad del modal {i+1}: {modal_check_err}")
+                                            logger.error(f"Error al verificar visibilidad del modal {i+1}: {modal_check_err}", exc_info=True)
                                 except Exception as modal_check_err:
-                                    print(f"Error al buscar modales: {modal_check_err}")
+                                    logger.error(f"Error al buscar modales: {modal_check_err}", exc_info=True)
                                 
                                 # Buscar y hacer clic en el botón "Descargar Excel" en la modal
                                 try:
@@ -1450,13 +1455,13 @@ with sync_playwright() as p:
                                     page.wait_for_timeout(2000)
                                     
                                     # Imprimir información de depuración sobre los elementos visibles
-                                    print("Buscando botón 'Descargar Excel' en la modal...")
+                                    logger.info("Buscando botón 'Descargar Excel' en la modal...")
                                     
                                     # Selector para el botón "Descargar Excel" en la modal
                                     download_excel_button = page.locator("text=Descargar Excel").first
                                     if download_excel_button and download_excel_button.count() > 0:
                                         download_excel_button.click()
-                                        print("Botón 'Descargar Excel': clic realizado exitosamente.")
+                                        logger.info("Botón 'Descargar Excel': clic realizado exitosamente.")
                                     else:
                                         # Intentar con otros selectores comunes
                                         selectors = [
@@ -1478,18 +1483,18 @@ with sync_playwright() as p:
                                                 button = page.locator(selector).first
                                                 if button and button.count() > 0 and button.is_visible():
                                                     button.click()
-                                                    print(f"Botón 'Descargar Excel' (selector {selector}): clic realizado exitosamente.")
+                                                    logger.info(f"Botón 'Descargar Excel' (selector {selector}): clic realizado exitosamente.")
                                                     found = True
                                                     break
                                                 elif button and button.count() > 0:
-                                                    print(f"Botón encontrado con selector '{selector}' pero no es visible.")
+                                                    logger.info(f"Botón encontrado con selector '{selector}' pero no es visible.")
                                             except Exception as selector_err:
-                                                print(f"Error al buscar con selector '{selector}': {selector_err}")
+                                                logger.error(f"Error al buscar con selector '{selector}': {selector_err}", exc_info=True)
                                                 continue
                                         
                                         if not found:
                                             # Si no se encuentra el botón, intentar con download directo
-                                            print("Advertencia: No se encontró el botón 'Descargar Excel'. Intentando descarga directa...")
+                                            logger.info("Advertencia: No se encontró el botón 'Descargar Excel'. Intentando descarga directa...")
                                             try:
                                                 # Intentar hacer clic en cualquier elemento que contenga "download" o "descarga"
                                                 download_elements = page.locator("[download], [href*='download'], [onclick*='download'], [class*='download']").all()
@@ -1497,29 +1502,30 @@ with sync_playwright() as p:
                                                     try:
                                                         if elem.is_visible():
                                                             elem.click()
-                                                            print("Clic realizado en elemento de descarga alternativo")
+                                                            logger.info("Clic realizado en elemento de descarga alternativo")
                                                             found = True
                                                             break
-                                                    except:
+                                                    except Exception as e:
+                                                        logger.error(f"Error: {e}", exc_info=True)
                                                         continue
                                             except Exception as download_err:
-                                                print(f"Error en descarga alternativa: {download_err}")
+                                                logger.error(f"Error en descarga alternativa: {download_err}", exc_info=True)
                                 except Exception as modal_err:
-                                    print(f"Error al hacer clic en 'Descargar Excel': {modal_err}")
+                                    logger.error(f"Error al hacer clic en 'Descargar Excel': {modal_err}", exc_info=True)
                             except Exception as click_err:
-                                print(f"Icono de descarga: error al hacer clic: {click_err}")
+                                logger.info(f"Icono de descarga: error al hacer clic: {click_err}")
                         else:
-                            print("No se encontró el elemento marcado para el botón de descarga.")
+                            logger.info("No se encontró el elemento marcado para el botón de descarga.")
                     except Exception as highlight_err:
-                        print(f"Icono de descarga: error al resaltar: {highlight_err}")
+                        logger.info(f"Icono de descarga: error al resaltar: {highlight_err}")
                     
                     break
                 except Exception as e:
-                    print(f"Error al procesar el icono de descarga: {e}")
+                    logger.error(f"Error al procesar el icono de descarga: {e}", exc_info=True)
             else:
-                print("No se encontró botón de descarga para marcar.")
+                logger.info("No se encontró botón de descarga para marcar.")
         except Exception as _e:
-            print(f"Error en descarga previa (scope): {_e}")
+            logger.error(f"Error en descarga previa (scope): {_e}", exc_info=True)
 
     # Guardar evidencia HTML con el botón resaltado
     try:
@@ -1540,13 +1546,13 @@ with sync_playwright() as p:
         with open(html_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
         
-        print(f"Evidencia HTML guardada en: {html_path}")
+        logger.info(f"Evidencia HTML guardada en: {html_path}")
     except Exception as e:
-        print(f"Error al guardar evidencia HTML: {e}")
+        logger.error(f"Error al guardar evidencia HTML: {e}", exc_info=True)
     
     # Esperar a que se complete la descarga
     try:
-        print("Esperando completar descarga...")
+        logger.info("Esperando completar descarga...")
         page.wait_for_timeout(5000)  # Esperar 5 segundos para que se complete la descarga
     except Exception:
         pass
@@ -1559,14 +1565,14 @@ with sync_playwright() as p:
             browser.close()
         except Exception:
             pass
-    print("Navegador cerrado. Script finalizado.")
+    logger.info("Navegador cerrado. Script finalizado.")
     
     # Llamar al script scrapeo.py al finalizar
     try:
         import subprocess
-        print("Ejecutando scrapeo.py...")
+        logger.info("Ejecutando scrapeo.py...")
         # Ruta confirmada para producción
         subprocess.call(["/var/www/html/venv/bin/python", "/var/www/html/scrapeo.py"])
     except Exception as e:
-        print(f"Error al ejecutar scrapeo.py: {e}")
+        logger.error(f"Error al ejecutar scrapeo.py: {e}", exc_info=True)
 

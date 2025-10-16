@@ -4,6 +4,10 @@ from datetime import datetime
 from flask import jsonify
 
 from constantes import DB_NAME
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 
 def get_db_connection():
@@ -18,12 +22,12 @@ def get_db_connection():
         conn.execute("PRAGMA journal_mode=WAL;") 
         return conn
     except Exception as e:
-        print(f"Error al conectar a la base de datos: {str(e)}")
+        logger.error(f"Error al conectar a la base de datos: {str(e)}", exc_info=True)
         raise
 
 def verificar_numero_proforma(numero):
     try:
-        print(f"Verificando número de proforma: {numero}")
+        logger.info(f"Verificando número de proforma: {numero}")
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -43,17 +47,17 @@ def verificar_numero_proforma(numero):
         })
     
     except Exception as e:
-        print(f"Error al verificar número de proforma: {str(e)}")
+        logger.error(f"Error al verificar número de proforma: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if 'conn' in locals():
             conn.close()
-            print("Conexión cerrada en verificar_numero_proforma")
+            logger.info("Conexión cerrada en verificar_numero_proforma")
 
 
 def verificar_numero_factura(numero):
     try:
-        print(f"Verificando número de factura: {numero}")
+        logger.info(f"Verificando número de factura: {numero}")
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -73,12 +77,12 @@ def verificar_numero_factura(numero):
         })
     
     except Exception as e:
-        print(f"Error al verificar número de proforma: {str(e)}")
+        logger.error(f"Error al verificar número de proforma: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if 'conn' in locals():
             conn.close()
-            print("Conexión cerrada en verificar_numero_proforma")
+            logger.info("Conexión cerrada en verificar_numero_proforma")
 
 
 def redondear_importe(valor):
@@ -131,7 +135,7 @@ def actualizar_numerador(tipo, conn=None, commit=True):
     except Exception as e:
         if conn and debe_cerrar:
             conn.rollback()
-        print(f"Error en actualizar_numerador: {str(e)}")
+        logger.error(f"Error en actualizar_numerador: {str(e)}", exc_info=True)
         raise
     finally:
         if debe_cerrar and conn:
@@ -162,7 +166,7 @@ def obtener_numerador(tipoNum, conn=None):
         prefijo = tipoNum
         return numerador, prefijo
     except Exception as e:
-        print(f"Error en obtener_numerador: {str(e)}")
+        logger.error(f"Error en obtener_numerador: {str(e)}", exc_info=True)
         if conn and debe_cerrar:
             conn.rollback()
         raise
@@ -193,7 +197,7 @@ def formatear_numero_documento(tipo, conn=None):
         
         return numero_formateado
     except Exception as e:
-        print(f"Error en formatear_numero_documento: {str(e)}")
+        logger.error(f"Error en formatear_numero_documento: {str(e)}", exc_info=True)
         return None
 
 # ------------------- Optimización: creación de índices ------------------- #
@@ -219,11 +223,12 @@ def ensure_gastos_indices():
         )
         conn.commit()
     except Exception as e:
-        print(f"[DB_UTILS] Error al crear índices de gastos: {e}")
+        logger.info(f"[DB_UTILS] Error al crear índices de gastos: {e}")
     finally:
         try:
             conn.close()
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             pass
 
 def ensure_factura_indices():
@@ -241,11 +246,12 @@ def ensure_factura_indices():
         cur.execute("CREATE INDEX IF NOT EXISTS FACTURA_ESTADO_FECHA ON factura (estado, fecha)")
         conn.commit()
     except Exception as e:
-        print(f"[DB_UTILS] Error al crear índices: {e}")
+        logger.info(f"[DB_UTILS] Error al crear índices: {e}")
     finally:
         try:
             conn.close()
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             pass
 
 # Ejecutar al importar el módulo para garantizar que existan

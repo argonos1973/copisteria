@@ -9,11 +9,14 @@ from flask import (Flask, Response, jsonify, request, send_file,
                    stream_with_context)
 from flask_cors import CORS
 import logging
+from logger_config import get_logger
+
+logger = get_logger('aleph70.app')
 
 try:
     from weasyprint import CSS, HTML
 except ImportError:
-    print("WeasyPrint no está instalado. La generación de PDF no estará disponible.")
+    logger.warning("WeasyPrint no está instalado. La generación de PDF no estará disponible.")
 
 import datetime
 import json
@@ -27,7 +30,7 @@ import factura
 try:
     import generar_pdf
 except Exception as e:
-    print(f"[AVISO] Error importando generar_pdf: {e}. Se deshabilita la generación de PDF.")
+    logger.error(f"[AVISO] Error importando generar_pdf: {e}. Se deshabilita la generación de PDF.")
     generar_pdf = None
 import productos
 import productos_franjas_utils
@@ -42,7 +45,7 @@ try:
     from config_loader import get as get_config
     VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", True))
 except Exception as _e:
-    print(f"[AVISO] No se pudo cargar config.json: {_e}. Suponemos VeriFactu HABILITADO")
+    logger.info(f"[AVISO] No se pudo cargar config.json: {_e}. Suponemos VeriFactu HABILITADO")
     VERIFACTU_HABILITADO = True
 # Nota: Los módulos recibos y usuarios no existen, se han comentado
 # import recibos
@@ -98,7 +101,7 @@ app.config['DATABASE'] = DB_NAME
 try:
     productos.ensure_tabla_descuentos_bandas()
 except Exception as e:
-    print(f"[AVISO] No se pudo asegurar la tabla de franjas de descuento: {e}")
+    logger.info(f"[AVISO] No se pudo asegurar la tabla de franjas de descuento: {e}")
 
 # ================== CONFIG.JSON ================== #
 @app.route('/config.json', methods=['GET'])
@@ -206,7 +209,8 @@ def format_date(date_value):
             from datetime import datetime
             date_obj = datetime.strptime(date_value, '%Y-%m-%d')
             return date_obj.strftime('%d/%m/%Y')
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             return date_value
     return date_value.strftime('%d/%m/%Y')
 
@@ -631,7 +635,7 @@ def filtrar_contactos():
         return jsonify(contactos_list)
 
     except Exception as e:
-        print(f"Error en filtrar_contactos: {str(e)}")
+        logger.error(f"Error en filtrar_contactos: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         if 'conn' in locals():
@@ -887,7 +891,7 @@ def actualizar_ticket():
             raw = ''
         try:
             preview = raw[:200] if isinstance(raw, str) else str(raw)[:200]
-            print(f"[DEBUG][/api/tickets/actualizar] CT={ct} CL={cl} len_raw={len(raw) if isinstance(raw,str) else 'NA'} raw_preview={preview}")
+            logger.debug(f"[DEBUG][/api/tickets/actualizar] CT={ct} CL={cl} len_raw={len(raw) if isinstance(raw,str) else 'NA'} raw_preview={preview}")
         except Exception:
             pass
         if raw and raw.strip():
@@ -1076,8 +1080,8 @@ def consulta_tickets():
 
         sql += ' ORDER BY t.fecha DESC, t.timestamp DESC'
 
-        print("SQL Query:", sql)  # Para depuración
-        print("Params:", params)  # Para depuración
+        logger.debug("SQL Query:", sql)  # Para depuración
+        logger.debug("Params:", params)  # Para depuración
 
         # Ejecutar la consulta
         cursor.execute(sql, params)
@@ -1092,7 +1096,7 @@ def consulta_tickets():
         return jsonify(tickets_list)
 
     except Exception as e:
-        print("Error en consulta_tickets:", str(e))  # Para depuración
+        logger.error("Error en consulta_tickets:", str(e))  # Para depuración
         return jsonify({'error': str(e)}), 500
     finally:
         if 'conn' in locals():
@@ -1154,8 +1158,8 @@ def manejar_producto_por_id(id):
                 return jsonify({'error': 'El campo nombre es requerido'}), 400
             
             import sys
-            print(f"DEBUG app.py - Actualizando producto ID: {id}", file=sys.stderr)
-            print(f"DEBUG app.py - Data recibida: {data}", file=sys.stderr)
+            logger.debug(f"DEBUG app.py - Actualizando producto ID: {id}", file=sys.stderr)
+            logger.debug(f"DEBUG app.py - Data recibida: {data}", file=sys.stderr)
             sys.stderr.flush()
                 
             resultado = productos.actualizar_producto(id, data)
@@ -1222,14 +1226,14 @@ def filtrar_productos():
                     filtros['impuestos'] = int(impuestos)
             except (ValueError, TypeError, AttributeError):
                 # Si hay error de conversión, no incluir el filtro
-                print(f"Error al convertir impuestos: {impuestos}")
+                logger.error(f"Error al convertir impuestos: {impuestos}")
                 pass
         
         # Buscar productos con los filtros
         resultados = productos.buscar_productos(filtros)
         return jsonify(resultados)
     except Exception as e:
-        print(f"Error en filtrar_productos: {str(e)}")
+        logger.error(f"Error en filtrar_productos: {str(e)}")
         return jsonify({'error': str(e), 'message': 'Error en la búsqueda'}), 500
 
 @app.route('/productos/paginado', methods=['GET'])
@@ -1325,17 +1329,17 @@ def actualizar_ticket_legacy():
         try:
             # Asegurarnos de que el importe_cobrado esté presente en los datos
             if 'importe_cobrado' not in data:
-                print("importe_cobrado no está presente en los datos")
+                logger.debug("importe_cobrado no está presente en los datos")
                 return jsonify({"error": "El campo importe_cobrado es requerido"}), 400
 
             # Convertir el importe_cobrado a float, reemplazando comas por puntos
             importe_cobrado_str = str(data['importe_cobrado']).replace(',', '.')
             importe_cobrado = redondear_importe(float(importe_cobrado_str))
-            print(f"Datos completos recibidos: {data}")
-            print(f"Importe cobrado recibido (raw): {data['importe_cobrado']}")
-            print(f"Importe cobrado convertido: {importe_cobrado}")
+            logger.debug(f"Datos completos recibidos: {data}")
+            logger.info(f"Importe cobrado recibido (raw): {data['importe_cobrado']}")
+            logger.debug(f"Importe cobrado convertido: {importe_cobrado}")
         except (ValueError, TypeError) as e:
-            print(f"Error al convertir importe_cobrado: {e}")
+            logger.error(f"Error al convertir importe_cobrado: {e}")
             return jsonify({"error": f"Error al procesar importe_cobrado: {str(e)}"}), 400
 
         total = redondear_importe(data.get('total', 0))
@@ -1355,7 +1359,7 @@ def actualizar_ticket_legacy():
             conn.rollback()
             return jsonify({"error": "Ticket no encontrado"}), 404
 
-        print(f"Datos actuales del ticket: {dict(ticket_actual)}")
+        logger.debug(f"Datos actuales del ticket: {dict(ticket_actual)}")
 
         # 1. Recuperar todos los detalles existentes
         cursor.execute('''
@@ -1386,15 +1390,15 @@ def actualizar_ticket_legacy():
                 if ha_cambiado:
                     # Si el detalle ha sido modificado, usar la nueva forma de pago
                     detalle_procesado['formaPago'] = formaPago
-                    print(f"Detalle {detalle['id']} modificado, asignando nueva formaPago: {formaPago}")
+                    logger.info(f"Detalle {detalle['id']} modificado, asignando nueva formaPago: {formaPago}")
                 else:
                     # Si no ha sido modificado, mantener la forma de pago original
                     detalle_procesado['formaPago'] = detalle_original['formaPago']
-                    print(f"Detalle {detalle['id']} sin cambios, manteniendo formaPago: {detalle_original['formaPago']}")
+                    logger.info(f"Detalle {detalle['id']} sin cambios, manteniendo formaPago: {detalle_original['formaPago']}")
             else:
                 # Es un detalle nuevo, asignar la nueva forma de pago
                 detalle_procesado['formaPago'] = formaPago
-                print(f"Detalle nuevo, asignando formaPago: {formaPago}")
+                logger.debug(f"Detalle nuevo, asignando formaPago: {formaPago}")
             
             detalles_finales.append(detalle_procesado)
 
@@ -1403,7 +1407,7 @@ def actualizar_ticket_legacy():
         importe_impuestos = redondear_importe(sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles_finales))
         total_ticket = redondear_importe(total)
 
-        print(f"Importes calculados: bruto={importe_bruto}, impuestos={importe_impuestos}, total={total_ticket}, cobrado={importe_cobrado}")
+        logger.debug(f"Importes calculados: bruto={importe_bruto}, impuestos={importe_impuestos}, total={total_ticket}, cobrado={importe_cobrado}")
 
         # Actualizar todos los campos de una vez, incluyendo el importe_cobrado
         cursor.execute('''
@@ -1430,9 +1434,9 @@ def actualizar_ticket_legacy():
         # Verificar el estado final
         cursor.execute('SELECT importe_cobrado, total FROM tickets WHERE id = ?', (id_ticket,))
         resultado_final = cursor.fetchone()
-        print("Estado final del ticket:")
-        print(f"Importe cobrado: {resultado_final['importe_cobrado']}")
-        print(f"Total: {resultado_final['total']}")
+        logger.debug("Estado final del ticket:")
+        logger.info(f"Importe cobrado: {resultado_final['importe_cobrado']}")
+        logger.info(f"Total: {resultado_final['total']}")
 
         # Actualizar detalles
         cursor.execute('DELETE FROM detalle_tickets WHERE id_ticket = ?', (id_ticket,))
@@ -1465,8 +1469,8 @@ def actualizar_ticket_legacy():
             ))
 
         conn.commit()
-        print(f"Ticket {id_ticket} actualizado correctamente")
-        print(f"Importe cobrado final: {importe_cobrado}")
+        logger.info(f"Ticket {id_ticket} actualizado correctamente")
+        logger.debug(f"Importe cobrado final: {importe_cobrado}")
         
         return jsonify({
             "mensaje": "Ticket actualizado correctamente",
@@ -1478,7 +1482,7 @@ def actualizar_ticket_legacy():
     except Exception as e:
         if 'conn' in locals():
             conn.rollback()
-        print(f"Error al actualizar ticket: {str(e)}")
+        logger.error(f"Error al actualizar ticket: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         if 'conn' in locals():
@@ -1507,14 +1511,14 @@ def actualizar_factura_endpoint():
         return result
     except Exception as e:
         import traceback
-        print(f"Error en actualizar factura: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"Error en actualizar factura: {str(e)}")
+        logger.error("Traceback:", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @app.route('/facturas/<int:idContacto>/<int:idFactura>', methods=['GET'])
 def buscar_factura_abierta(idContacto, idFactura):
     try:
-        print(f"Obteniendo factura {idFactura} para contacto {idContacto}")  # Debug
+        logger.debug(f"Obteniendo factura {idFactura} para contacto {idContacto}")  # Debug
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -1532,29 +1536,29 @@ def buscar_factura_abierta(idContacto, idFactura):
             INNER JOIN contactos c ON f.idContacto = c.idContacto
             WHERE f.id = %s AND f.idContacto = %s
         """
-        print(f"Ejecutando query: {query}")  # Debug
-        print(f"Con parámetros: idFactura={idFactura}, idContacto={idContacto}")  # Debug
+        logger.info(f"Ejecutando query: {query}")  # Debug
+        logger.debug(f"Con parámetros: idFactura={idFactura}, idContacto={idContacto}")  # Debug
         
         cursor.execute(query, (idFactura, idContacto))
         
         factura = cursor.fetchone()
-        print(f"Resultado de la query: {factura}")  # Debug
+        logger.debug(f"Resultado de la query: {factura}")  # Debug
         
         if not factura:
-            print("No se encontró la factura")  # Debug
+            logger.debug("No se encontró la factura")  # Debug
             return jsonify({'error': 'Factura no encontrada'}), 404
 
         # Convertir a diccionario usando los nombres de columnas
         columnas = [desc[0] for desc in cursor.description]
-        print("Nombres de columnas:", columnas)  # Debug
+        logger.debug("Nombres de columnas:", columnas)  # Debug
         
         factura_dict = dict(zip(columnas, factura))
-        print("Factura dict:", factura_dict)  # Debug
+        logger.debug("Factura dict:", factura_dict)  # Debug
         
         # Obtener detalles
         cursor.execute('SELECT * FROM detalle_factura WHERE id_factura = %s', (idFactura,))
         detalles = cursor.fetchall()
-        print(f"Detalles encontrados: {len(detalles)}")  # Debug
+        logger.debug(f"Detalles encontrados: {len(detalles)}")  # Debug
         
         # Convertir detalles a lista de diccionarios
         columnas_detalle = [desc[0] for desc in cursor.description]
@@ -1563,13 +1567,13 @@ def buscar_factura_abierta(idContacto, idFactura):
         # Agregar detalles al diccionario de la factura
         factura_dict['detalles'] = detalles_list
         
-        print("Datos completos de factura a devolver:", factura_dict)  # Debug
+        logger.debug("Datos completos de factura a devolver:", factura_dict)  # Debug
         return jsonify(factura_dict)
         
     except Exception as e:
-        print(f"Error al obtener factura: {str(e)}")
+        logger.error(f"Error al obtener factura: {str(e)}")
         import traceback
-        print(traceback.format_exc())  # Debug - muestra el stack trace completo
+        logger.error("Traceback:", exc_info=True)  # Debug - muestra el stack trace completo
         return jsonify({'error': str(e)}), 500
     finally:
         if cursor:
@@ -1645,17 +1649,17 @@ def actualizar_proforma():
         try:
             # Asegurarnos de que el importe_cobrado esté presente en los datos
             if 'importe_cobrado' not in data:
-                print("importe_cobrado no está presente en los datos")
+                logger.debug("importe_cobrado no está presente en los datos")
                 return jsonify({"error": "El campo importe_cobrado es requerido"}), 400
 
             # Convertir el importe_cobrado a float, reemplazando comas por puntos
             importe_cobrado_str = str(data['importe_cobrado']).replace(',', '.')
             importe_cobrado = redondear_importe(float(importe_cobrado_str))
-            print(f"Datos completos recibidos: {data}")
-            print(f"Importe cobrado recibido (raw): {data['importe_cobrado']}")
-            print(f"Importe cobrado convertido: {importe_cobrado}")
+            logger.debug(f"Datos completos recibidos: {data}")
+            logger.info(f"Importe cobrado recibido (raw): {data['importe_cobrado']}")
+            logger.debug(f"Importe cobrado convertido: {importe_cobrado}")
         except (ValueError, TypeError) as e:
-            print(f"Error al convertir importe_cobrado: {e}")
+            logger.error(f"Error al convertir importe_cobrado: {e}")
             return jsonify({"error": f"Error al procesar importe_cobrado: {str(e)}"}), 400
 
         total = redondear_importe(data.get('total', 0))
@@ -1675,7 +1679,7 @@ def actualizar_proforma():
             conn.rollback()
             return jsonify({"error": "Proforma no encontrada"}), 404
 
-        print(f"Datos actuales de la proforma: {dict(proforma_actual)}")
+        logger.debug(f"Datos actuales de la proforma: {dict(proforma_actual)}")
 
         # 1. Recuperar todos los detalles existentes
         cursor.execute('''
@@ -1706,15 +1710,15 @@ def actualizar_proforma():
                 if ha_cambiado:
                     # Si el detalle ha sido modificado, usar la nueva forma de pago
                     detalle_procesado['formaPago'] = formaPago
-                    print(f"Detalle {detalle['id']} modificado, asignando nueva formaPago: {formaPago}")
+                    logger.info(f"Detalle {detalle['id']} modificado, asignando nueva formaPago: {formaPago}")
                 else:
                     # Si no ha sido modificado, mantener la forma de pago original
                     detalle_procesado['formaPago'] = detalle_original['formaPago']
-                    print(f"Detalle {detalle['id']} sin cambios, manteniendo formaPago: {detalle_original['formaPago']}")
+                    logger.info(f"Detalle {detalle['id']} sin cambios, manteniendo formaPago: {detalle_original['formaPago']}")
             else:
                 # Es un detalle nuevo, asignar la nueva forma de pago
                 detalle_procesado['formaPago'] = formaPago
-                print(f"Detalle nuevo, asignando formaPago: {formaPago}")
+                logger.debug(f"Detalle nuevo, asignando formaPago: {formaPago}")
             
             detalles_finales.append(detalle_procesado)
 
@@ -1734,7 +1738,7 @@ def actualizar_proforma():
         
         total_proforma = redondear_importe(total_calculado)
 
-        print(f"Importes calculados: bruto={importe_bruto}, impuestos={importe_impuestos}, total={total_proforma}, cobrado={importe_cobrado}")
+        logger.debug(f"Importes calculados: bruto={importe_bruto}, impuestos={importe_impuestos}, total={total_proforma}, cobrado={importe_cobrado}")
 
         # Actualizar todos los campos de una vez, incluyendo el importe_cobrado
         cursor.execute('''
@@ -1785,8 +1789,8 @@ def actualizar_proforma():
             ))
 
         conn.commit()
-        print(f"Proforma {proforma_id} actualizada correctamente")
-        print(f"Importe cobrado final: {importe_cobrado}")
+        logger.debug(f"Proforma {proforma_id} actualizada correctamente")
+        logger.debug(f"Importe cobrado final: {importe_cobrado}")
         
         return jsonify({
             "mensaje": "Proforma actualizada correctamente",
@@ -1798,7 +1802,7 @@ def actualizar_proforma():
     except Exception as e:
         if 'conn' in locals():
             conn.rollback()
-        print(f"Error al actualizar proforma: {str(e)}")
+        logger.error(f"Error al actualizar proforma: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         if 'conn' in locals():
@@ -1861,7 +1865,7 @@ def consultar_proforma_por_id(id):
         return jsonify(resultado)
 
     except Exception as e:
-        print(f"Error al consultar proforma: {str(e)}")
+        logger.error(f"Error al consultar proforma: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         if 'conn' in locals():
@@ -1904,7 +1908,7 @@ def obtener_contacto_por_factura_id(factura_id):
             return jsonify({'error': 'Factura no encontrada'}), 404
     
     except Exception as e:
-        print(f"Error al obtener contacto para factura ID {factura_id}: {str(e)}")
+        logger.error(f"Error al obtener contacto para factura ID {factura_id}: {str(e)}")
         return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
     finally:
         if conn:
@@ -1974,17 +1978,17 @@ def obtener_factura_para_imprimir(factura_id):
             resultados_dict.append(resultado)
 
         # Obtener código QR, hash y CSV de la tabla registro_facturacion si existe
-        print(f"[DEBUG] Obteniendo QR, hash y CSV para factura_id: {factura_id}")
+        logger.debug(f"[DEBUG] Obteniendo QR, hash y CSV para factura_id: {factura_id}")
         cursor.execute("""
             SELECT codigo_qr, hash, csv FROM registro_facturacion
             WHERE factura_id = ?
         """, (factura_id,))
         registro = cursor.fetchone()
         
-        print(f"[DEBUG] ¿Se encontró registro en registro_facturacion?: {registro is not None}")
+        logger.debug(f"[DEBUG] ¿Se encontró registro en registro_facturacion?: {registro is not None}")
         if registro:
-            print(f"[DEBUG] Tipo de datos de registro['codigo_qr']: {type(registro['codigo_qr']) if registro['codigo_qr'] else 'None'}")
-            print(f"[DEBUG] Tamaño de datos QR: {len(registro['codigo_qr']) if registro['codigo_qr'] else 0} bytes")
+            logger.debug(f"[DEBUG] Tipo de datos de registro['codigo_qr']: {type(registro['codigo_qr']) if registro['codigo_qr'] else 'None'}")
+            logger.debug(f"[DEBUG] Tamaño de datos QR: {len(registro['codigo_qr']) if registro['codigo_qr'] else 0} bytes")
         
         # Definimos variables para el QR, hash y CSV
         qr_code_base64 = None
@@ -1995,14 +1999,14 @@ def obtener_factura_para_imprimir(factura_id):
         if registro:
             if registro['hash']:
                 hash_value = registro['hash']
-                print(f"[DEBUG] Usando hash de registro_facturacion: {hash_value}")
+                logger.debug(f"[DEBUG] Usando hash de registro_facturacion: {hash_value}")
             if registro['csv']:
                 csv_value = registro['csv']
-                print(f"[DEBUG] CSV encontrado: {csv_value}")
+                logger.debug(f"[DEBUG] CSV encontrado: {csv_value}")
         # Si no hay hash en registro, usar el hash de la tabla factura
         if hash_value == 'No disponible' and resultados_dict[0]['hash_factura']:
             hash_value = resultados_dict[0]['hash_factura']
-            print(f"[DEBUG] Usando hash de tabla factura: {hash_value}")
+            logger.debug(f"[DEBUG] Usando hash de tabla factura: {hash_value}")
         
         # Codificar el QR en base64 si existe o generarlo si no existe
         try:
@@ -2014,15 +2018,15 @@ def obtener_factura_para_imprimir(factura_id):
 
             # 1. Intentar obtener el QR de la base de datos
             if registro and registro['codigo_qr']:
-                print("[DEBUG] QR encontrado en la base de datos")
+                logger.debug("[DEBUG] QR encontrado en la base de datos")
                 qr_db_value = registro['codigo_qr']
-                print(f"[DEBUG] Tipo de datos QR almacenado: {type(qr_db_value)}")
+                logger.debug(f"[DEBUG] Tipo de datos QR almacenado: {type(qr_db_value)}")
 
                 # Caso A: el valor es bytes (BLOB) ➜ codificar a base64
                 if isinstance(qr_db_value, (bytes, bytearray)):
                     qr_bytes = bytes(qr_db_value)
                     qr_code_base64 = base64.b64encode(qr_bytes).decode('utf-8')
-                    print("[DEBUG] QR obtenido como bytes y codificado a base64")
+                    logger.debug("[DEBUG] QR obtenido como bytes y codificado a base64")
 
                 # Caso B: el valor es str (probablemente ya base64) ➜ usar directamente
                 elif isinstance(qr_db_value, str):
@@ -2031,24 +2035,24 @@ def obtener_factura_para_imprimir(factura_id):
                         qr_code_base64 = qr_db_value
                         try:
                             qr_bytes = base64.b64decode(qr_db_value)
-                            print("[DEBUG] QR era cadena base64: decodificado a bytes correctamente")
+                            logger.debug("[DEBUG] QR era cadena base64: decodificado a bytes correctamente")
                         except Exception as e:
-                            print(f"[WARNING] No se pudo decodificar la cadena base64 del QR: {e}")
+                            logger.info(f"[WARNING] No se pudo decodificar la cadena base64 del QR: {e}")
                             qr_bytes = None
                     else:
                         # Si la cadena no parece base64 (p.ej. se ha guardado como texto plano de bytes)
-                        print("[DEBUG] La cadena QR no parece base64, convirtiendo con latin1 y recodificando")
+                        logger.debug("[DEBUG] La cadena QR no parece base64, convirtiendo con latin1 y recodificando")
                         qr_bytes = qr_db_value.encode('latin1')
                         qr_code_base64 = base64.b64encode(qr_bytes).decode('utf-8')
             
             # 2. Si no hay QR en la base de datos, NO generarlo: esperar a AEAT
             else:
-                print("[DEBUG] QR no disponible en BBDD y no se generará hasta recibir CSV de AEAT")
+                logger.debug("[DEBUG] QR no disponible en BBDD y no se generará hasta recibir CSV de AEAT")
                 qr_bytes = None
                 qr_code_base64 = None
                 
                 # QR todavía no disponible; se mostrará cuando la AEAT proporcione el CSV.
-                print("[DEBUG] QR no disponible en BBDD. Esperando validación de AEAT para generarlo.")
+                logger.debug("[DEBUG] QR no disponible en BBDD. Esperando validación de AEAT para generarlo.")
                 qr_bytes = None
                 qr_code_base64 = None
 
@@ -2056,12 +2060,12 @@ def obtener_factura_para_imprimir(factura_id):
             # 3. Asegurarse de tener representación base64 válida para enviar al frontend
             if qr_code_base64 is None and qr_bytes is not None:
                 qr_code_base64 = base64.b64encode(qr_bytes).decode('utf-8')
-                print("[DEBUG] QR bytes codificados a base64 (no venían de BBDD en base64)")
+                logger.debug("[DEBUG] QR bytes codificados a base64 (no venían de BBDD en base64)")
 
             if qr_code_base64:
-                print(f"[DEBUG] Longitud de qr_code_base64 final: {len(qr_code_base64)}")
+                logger.debug(f"[DEBUG] Longitud de qr_code_base64 final: {len(qr_code_base64)}")
             else:
-                print("[ERROR] qr_code_base64 es None. No se podrá mostrar el QR en el frontal")
+                logger.error("[ERROR] qr_code_base64 es None. No se podrá mostrar el QR en el frontal")
             
             # 4. Guardar el QR en un archivo accesible (solo si se ha obtenido QR)
             if qr_bytes:
@@ -2074,23 +2078,23 @@ def obtener_factura_para_imprimir(factura_id):
                         f.write(qr_bytes)
                     # Ajustar permisos para que Apache pueda leerlo
                     os.chmod(qr_path, 0o644)
-                    print(f"[DEBUG] QR guardado en {qr_path} para verificación")
+                    logger.debug(f"[DEBUG] QR guardado en {qr_path} para verificación")
                 except Exception as e:
-                    print(f"[ERROR] Error al guardar archivo QR: {str(e)}")
+                    logger.error(f"[ERROR] Error al guardar archivo QR: {str(e)}")
                     import traceback
                     traceback.print_exc()
                 
         except Exception as e:
-            print(f"[ERROR] Error al procesar QR: {str(e)}")
+            logger.error(f"[ERROR] Error al procesar QR: {str(e)}")
             import traceback
             traceback.print_exc()
             qr_code_base64 = None
             
-        print(f"[DEBUG] ¿Se generó qr_code_base64?: {qr_code_base64 is not None}")
+        logger.debug(f"[DEBUG] ¿Se generó qr_code_base64?: {qr_code_base64 is not None}")
         if qr_code_base64:
-            print(f"[DEBUG] Inicio del QR base64: {qr_code_base64[:30]}...")
+            logger.debug(f"[DEBUG] Inicio del QR base64: {qr_code_base64[:30]}...")
         else:
-            print("[DEBUG] qr_code_base64 es None")
+            logger.debug("[DEBUG] qr_code_base64 es None")
         
         # Procesar los resultados
         base_total_dec = Decimal('0')
@@ -2148,7 +2152,7 @@ def obtener_factura_para_imprimir(factura_id):
                     'productoId': resultado['productoId'] if 'productoId' in resultado else None,
                     'fechaDetalle': resultado['fechaDetalle'] if 'fechaDetalle' in resultado else None
                 }
-                print(f"Agregando línea de detalle: {linea}")  # Debug
+                logger.debug(f"Agregando línea de detalle: {linea}")  # Debug
                 factura['detalles'].append(linea)
 
         # Si los importes de cabecera no existen, usar sumas calculadas
@@ -2169,7 +2173,7 @@ def obtener_factura_para_imprimir(factura_id):
         except Exception:
             verifactu_enabled = False
         
-        print("Datos completos de factura a enviar:", factura)  # Debug
+        logger.debug("Datos completos de factura a enviar:", factura)  # Debug
         cursor.close()
         conn.close()
         return jsonify({
@@ -2178,18 +2182,18 @@ def obtener_factura_para_imprimir(factura_id):
         })
         
     except Exception as e:
-        print(f"Error al obtener la factura: {str(e)}")
+        logger.error(f"Error al obtener la factura: {str(e)}")
         return jsonify({'error': 'Error interno del servidor', 'details': str(e)}), 500
 
 @app.route('/api/factura/abierta/<int:idContacto>/<int:idFactura>', methods=['GET'])
 def obtener_factura_abierta_endpoint(idContacto, idFactura):
-    print(f"Endpoint obtener_factura_abierta llamado con idContacto={idContacto}, idFactura={idFactura}")
+    logger.debug(f"Endpoint obtener_factura_abierta llamado con idContacto={idContacto}, idFactura={idFactura}")
     try:
         result = obtener_factura_abierta(idContacto, idFactura)
-        print(f"Resultado de obtener_factura_abierta: {result}")
+        logger.debug(f"Resultado de obtener_factura_abierta: {result}")
         return result
     except Exception as e:
-        print(f"Error al obtener factura abierta: {str(e)}")
+        logger.error(f"Error al obtener factura abierta: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # Importar la función enviar_factura_email_endpoint desde el módulo factura
@@ -2200,10 +2204,10 @@ from factura import enviar_factura_email_endpoint
 @app.route('/api/facturas/email/<int:id_factura>', methods=['POST'])
 def enviar_factura_email_route(id_factura):
     try:
-        print(f"Intentando enviar factura {id_factura} por email")
+        logger.debug(f"Intentando enviar factura {id_factura} por email")
         return enviar_factura_email_endpoint(id_factura)
     except Exception as e:
-        print(f"Error al enviar factura por email: {str(e)}")
+        logger.error(f"Error al enviar factura por email: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/facturas/anular/<int:id_factura>', methods=['POST'])
@@ -2222,7 +2226,7 @@ def consultar_facturas_route():
     try:
         return factura.consultar_facturas_get()
     except Exception as e:
-        print(f"Error al consultar facturas: {str(e)}")
+        logger.error(f"Error al consultar facturas: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # Rutas para API con redirecciones a las rutas sin prefijo
@@ -2292,7 +2296,7 @@ def ejecutar_scrapeo():
             # Asegurar que el archivo tiene permisos adecuados
             os.chmod(log_file, 0o666)  # Permisos de lectura/escritura para todos
         except Exception as e:
-            print(f"Error al escribir en el archivo de log: {str(e)}")
+            logger.error(f"Error al escribir en el archivo de log: {str(e)}")
             
         return jsonify({
             'exito': True, 
@@ -2363,7 +2367,8 @@ def estado_scraping():
             with open(log_file, "a") as f:
                 timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 f.write(f"[{timestamp}] Consulta de estado: {estado_actual}, Procesos activos: {en_ejecucion}\n")
-        except:
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
             pass  # No hacemos nada si falla el registro
         
         return jsonify({
@@ -2402,8 +2407,8 @@ def imprimir_factura_pdf(id_factura):
             return jsonify({'error': 'No se pudo generar el PDF de la factura'}), 500
     except Exception as e:
         import traceback
-        print(f"Error en endpoint imprimir_factura_pdf: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"Error en endpoint imprimir_factura_pdf: {str(e)}")
+        logger.error("Traceback:", exc_info=True)
         return jsonify({'error': f'Error al generar el PDF: {str(e)}'}), 500
 
 # Agregar la ruta al API también
@@ -2449,8 +2454,8 @@ def descargar_carta_reclamacion(numero_factura):
         )
         
     except Exception as e:
-        print(f"Error al descargar carta de reclamación: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"Error al descargar carta de reclamación: {str(e)}")
+        logger.error("Traceback:", exc_info=True)
         return jsonify({'error': f'Error al descargar la carta: {str(e)}'}), 500
 
 # Endpoints para manejar facturas firmadas electrónicamente (XSIG)
@@ -2909,12 +2914,12 @@ def obtener_media_por_documento():
                 }
         except Exception as e:
             # Si hay error al buscar proformas, continuamos sin ellas
-            print(f"Error al buscar proformas: {e}")
+            logger.error(f"Error al buscar proformas: {e}")
         
         return jsonify(resultado)
         
     except Exception as e:
-        print(f"Error en obtener_media_por_documento: {e}")
+        logger.error(f"Error en obtener_media_por_documento: {e}")
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
     finally:
