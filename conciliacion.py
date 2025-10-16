@@ -735,27 +735,34 @@ def conciliados():
         
         conciliaciones_normales = [dict(row) for row in cursor.fetchall()]
         
-        # Obtener liquidaciones TPV agrupadas por fecha extraída del concepto
+        # Obtener liquidaciones TPV - mostrar UNA FILA con los totales de fecha
+        # importe_gasto e importe_documento ya contienen los totales de fecha
         cursor.execute('''
-            SELECT 
-                MIN(c.id) as id,
-                SUBSTR(g.concepto, INSTR(g.concepto, 'El ') + 3, 10) as fecha_operacion,
-                'Liquidación TPV ' || SUBSTR(g.concepto, INSTR(g.concepto, 'El ') + 3, 10) as concepto_gasto,
+            SELECT DISTINCT
+                c.id,
+                SUBSTR(c.notas, INSTR(c.notas, 'TPV ') + 4, 10) as fecha_operacion,
+                'Liquidación TPV ' || SUBSTR(c.notas, INSTR(c.notas, 'TPV ') + 4, 10) as concepto_gasto,
                 'liquidacion_tpv' as tipo_documento,
-                COUNT(c.id) as num_liquidaciones,
-                SUM(c.importe_gasto) as importe_gasto,
-                SUM(c.importe_documento) as importe_documento,
-                SUM(c.importe_gasto) - SUM(c.importe_documento) as diferencia,
-                'conciliado' as estado,
-                'automatico' as metodo,
-                MAX(c.fecha_conciliacion) as fecha_conciliacion,
-                GROUP_CONCAT(c.notas, ' | ') as notas
+                (SELECT COUNT(DISTINCT c2.gasto_id) FROM conciliacion_gastos c2 
+                 WHERE c2.tipo_documento = 'liquidacion_tpv' 
+                 AND SUBSTR(c2.notas, INSTR(c2.notas, 'TPV ') + 4, 10) = SUBSTR(c.notas, INSTR(c.notas, 'TPV ') + 4, 10)
+                 AND c2.estado = 'conciliado') as num_liquidaciones,
+                c.importe_gasto,
+                c.importe_documento,
+                c.diferencia,
+                c.estado,
+                c.metodo,
+                c.fecha_conciliacion,
+                c.notas
             FROM conciliacion_gastos c
-            LEFT JOIN gastos g ON c.gasto_id = g.id
             WHERE c.estado = 'conciliado'
             AND c.tipo_documento = 'liquidacion_tpv'
-            GROUP BY SUBSTR(g.concepto, INSTR(g.concepto, 'El ') + 3, 10)
-            ORDER BY MAX(c.fecha_conciliacion) DESC
+            AND c.id IN (
+                SELECT MIN(id) FROM conciliacion_gastos 
+                WHERE tipo_documento = 'liquidacion_tpv' AND estado = 'conciliado'
+                GROUP BY SUBSTR(notas, INSTR(notas, 'TPV ') + 4, 10)
+            )
+            ORDER BY c.fecha_conciliacion DESC
         ''')
         
         liquidaciones_agrupadas = [dict(row) for row in cursor.fetchall()]
