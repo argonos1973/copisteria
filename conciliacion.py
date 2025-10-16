@@ -186,9 +186,9 @@ def buscar_coincidencias_automaticas(gasto):
                 AND numero = ?
                 AND ABS(total - ?) <= ?
                 AND NOT EXISTS (
-                    SELECT 1 FROM conciliacion_documentos cd
-                    WHERE cd.tipo_documento = 'factura' 
-                    AND cd.documento_id = id
+                    SELECT 1 FROM conciliacion_gastos cg
+                    WHERE cg.tipo_documento = 'factura' 
+                    AND cg.documento_id = id
                 )
             ''', (numero_buscado, importe, tolerancia))
         else:
@@ -206,9 +206,9 @@ def buscar_coincidencias_automaticas(gasto):
                 AND numero = ?
                 AND ABS(total - ?) <= ?
                 AND NOT EXISTS (
-                    SELECT 1 FROM conciliacion_documentos cd
-                    WHERE cd.tipo_documento = 'ticket'
-                    AND cd.documento_id = id
+                    SELECT 1 FROM conciliacion_gastos cg
+                    WHERE cg.tipo_documento = 'ticket'
+                    AND cg.documento_id = id
                 )
             ''', (numero_buscado, importe, tolerancia))
         
@@ -259,9 +259,9 @@ def buscar_coincidencias_automaticas(gasto):
             )
             AND ABS(total - ?) <= ?
             AND NOT EXISTS (
-                SELECT 1 FROM conciliacion_documentos cd
-                WHERE cd.tipo_documento = 'factura'
-                AND cd.documento_id = id
+                SELECT 1 FROM conciliacion_gastos cg
+                WHERE cg.tipo_documento = 'factura'
+                AND cg.documento_id = id
             )
         ''', (fecha_inicio, fecha_fin, fecha_inicio, fecha_fin, importe, tolerancia))
         
@@ -291,9 +291,9 @@ def buscar_coincidencias_automaticas(gasto):
             AND fecha BETWEEN ? AND ?
             AND ABS(total - ?) <= ?
             AND NOT EXISTS (
-                SELECT 1 FROM conciliacion_documentos cd
-                WHERE cd.tipo_documento = 'ticket'
-                AND cd.documento_id = id
+                SELECT 1 FROM conciliacion_gastos cg
+                WHERE cg.tipo_documento = 'ticket'
+                AND cg.documento_id = id
             )
         ''', (fecha_inicio, fecha_fin, importe, tolerancia))
         
@@ -839,8 +839,8 @@ def detalles_conciliacion(gasto_id):
                         WHEN cd.tipo_documento = 'ticket' THEN t.fecha
                     END as fecha
                 FROM conciliacion_documentos cd
-                LEFT JOIN factura f ON cd.tipo_documento = 'factura' AND cd.documento_id = f.id
-                LEFT JOIN tickets t ON cd.tipo_documento = 'ticket' AND cd.documento_id = t.id
+                LEFT JOIN factura f ON cd.tipo_documento = 'factura' AND cg.documento_id = f.id
+                LEFT JOIN tickets t ON cd.tipo_documento = 'ticket' AND cg.documento_id = t.id
                 WHERE cd.conciliacion_id = ?
                 ORDER BY fecha, numero
             ''', (conciliacion_id,))
@@ -1464,9 +1464,9 @@ def obtener_liquidaciones_tpv():
                 AND formaPago = 'T'
                 AND estado = 'C'
                 AND NOT EXISTS (
-                    SELECT 1 FROM conciliacion_documentos cd
-                    WHERE cd.tipo_documento = 'ticket'
-                    AND cd.documento_id = id
+                    SELECT 1 FROM conciliacion_gastos cg
+                    WHERE cg.tipo_documento = 'ticket'
+                    AND cg.documento_id = id
                 )
             ''', (fecha_busqueda,))
             
@@ -1511,9 +1511,9 @@ def obtener_liquidaciones_tpv():
                     AND formaPago = 'T'
                     AND estado = 'C'
                     AND NOT EXISTS (
-                        SELECT 1 FROM conciliacion_documentos cd
-                        WHERE cd.tipo_documento = 'factura' 
-                        AND cd.documento_id = id
+                        SELECT 1 FROM conciliacion_gastos cg
+                        WHERE cg.tipo_documento = 'factura' 
+                        AND cg.documento_id = id
                     )
                     ORDER BY total DESC
                 ''', (fecha_busqueda,))
@@ -1687,8 +1687,8 @@ def obtener_ingresos_efectivo():
                 AND f.formaPago = 'E'
                 AND f.estado = 'C'
                 AND NOT EXISTS (
-                    SELECT 1 FROM conciliacion_documentos cd
-                    WHERE cd.tipo_documento = 'factura' AND cd.documento_id = f.id
+                    SELECT 1 FROM conciliacion_gastos cg
+                    WHERE cg.tipo_documento = 'factura' AND cg.documento_id = f.id
                 )
             ''', (fecha_inicio, fecha_fin))
             
@@ -1706,8 +1706,8 @@ def obtener_ingresos_efectivo():
                 AND t.formaPago = 'E'
                 AND t.estado = 'C'
                 AND NOT EXISTS (
-                    SELECT 1 FROM conciliacion_documentos cd
-                    WHERE cd.tipo_documento = 'ticket' AND cd.documento_id = t.id
+                    SELECT 1 FROM conciliacion_gastos cg
+                    WHERE cg.tipo_documento = 'ticket' AND cg.documento_id = t.id
                 )
             ''', (fecha_inicio, fecha_fin))
             
@@ -1742,8 +1742,8 @@ def obtener_ingresos_efectivo():
                 AND f.formaPago = 'E'
                 AND f.estado = 'C'
                 AND NOT EXISTS (
-                    SELECT 1 FROM conciliacion_documentos cd
-                    WHERE cd.tipo_documento = 'factura' AND cd.documento_id = f.id
+                    SELECT 1 FROM conciliacion_gastos cg
+                    WHERE cg.tipo_documento = 'factura' AND cg.documento_id = f.id
                 )
             ''', (fecha_inicio, fecha_fin))
             facturas_lista = [dict(row) for row in cursor.fetchall()]
@@ -1755,8 +1755,8 @@ def obtener_ingresos_efectivo():
                 AND t.formaPago = 'E'
                 AND t.estado = 'C'
                 AND NOT EXISTS (
-                    SELECT 1 FROM conciliacion_documentos cd
-                    WHERE cd.tipo_documento = 'ticket' AND cd.documento_id = t.id
+                    SELECT 1 FROM conciliacion_gastos cg
+                    WHERE cg.tipo_documento = 'ticket' AND cg.documento_id = t.id
                 )
             ''', (fecha_inicio, fecha_fin))
             tickets_lista = [dict(row) for row in cursor.fetchall()]
@@ -1922,9 +1922,9 @@ def obtener_documentos_efectivo():
             AND f.formaPago = 'E'
             AND f.estado = 'C'
             AND NOT EXISTS (
-                SELECT 1 FROM conciliacion_documentos cd
-                WHERE cd.tipo_documento = 'factura' 
-                AND cd.documento_id = f.id
+                SELECT 1 FROM conciliacion_gastos cg
+                WHERE cg.tipo_documento = 'factura' 
+                AND cg.documento_id = f.id
             )
             ORDER BY COALESCE(f.fechaCobro, f.fecha) DESC, f.numero DESC
         ''', (fecha_inicio, fecha_fin))
@@ -1945,9 +1945,9 @@ def obtener_documentos_efectivo():
             AND formaPago = 'E'
             AND estado = 'C'
             AND NOT EXISTS (
-                SELECT 1 FROM conciliacion_documentos cd
-                WHERE cd.tipo_documento = 'ticket' 
-                AND cd.documento_id = id
+                SELECT 1 FROM conciliacion_gastos cg
+                WHERE cg.tipo_documento = 'ticket' 
+                AND cg.documento_id = id
             )
             ORDER BY fecha DESC, numero DESC
         ''', (fecha_inicio, fecha_fin))
@@ -2247,9 +2247,9 @@ def obtener_documentos_tarjeta():
             AND f.formaPago = 'T'
             AND f.estado = 'C'
             AND NOT EXISTS (
-                SELECT 1 FROM conciliacion_documentos cd
-                WHERE cd.tipo_documento = 'factura'
-                AND cd.documento_id = f.id
+                SELECT 1 FROM conciliacion_gastos cg
+                WHERE cg.tipo_documento = 'factura'
+                AND cg.documento_id = f.id
             )
             ORDER BY COALESCE(f.fechaCobro, f.fecha) DESC, f.numero DESC
         ''', (fecha_inicio, fecha_fin))
@@ -2270,9 +2270,9 @@ def obtener_documentos_tarjeta():
             AND t.formaPago = 'T'
             AND t.estado = 'C'
             AND NOT EXISTS (
-                SELECT 1 FROM conciliacion_documentos cd
-                WHERE cd.tipo_documento = 'ticket'
-                AND cd.documento_id = t.id
+                SELECT 1 FROM conciliacion_gastos cg
+                WHERE cg.tipo_documento = 'ticket'
+                AND cg.documento_id = t.id
             )
             ORDER BY t.fecha DESC, t.numero DESC
         ''', (fecha_inicio, fecha_fin))
