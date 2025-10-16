@@ -2235,7 +2235,7 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
     }
 }
 
-async function mostrarDetallesConciliacion(gastoId) {
+window.mostrarDetallesConciliacion = async function(gastoId) {
     console.log('mostrarDetallesConciliacion llamada con gastoId:', gastoId);
     try {
         const url = `${API_URL}/conciliacion/detalles/${gastoId}`;
