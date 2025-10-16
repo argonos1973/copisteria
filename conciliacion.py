@@ -1568,29 +1568,26 @@ def obtener_liquidaciones_tpv():
                         if abs(diferencia) <= tolerancia_config:
                             puede_conciliar = True
             
-            # Conciliación automática SOLO si hay UNA liquidación (evita bug con múltiples)
-            # Si hay múltiples liquidaciones en la fecha, el usuario debe conciliar manualmente
-            num_liquidaciones = len(datos['ids'])
-            if puede_conciliar and abs(diferencia) <= tolerancia_config and num_liquidaciones == 1:
+            # Conciliación automática: guardar total de liquidaciones vs total de documentos
+            # Cada liquidación individual guarda los MISMOS totales (representa conciliación de fecha)
+            if puede_conciliar and abs(diferencia) <= tolerancia_config:
                 try:
-                    # Conciliar cada liquidación de esta fecha con algoritmo de varita mágica
+                    # Conciliar cada liquidación de esta fecha
+                    # IMPORTANTE: total_liq y total_documentos son los TOTALES de la fecha
+                    notas_docs = f'{num_tickets} ticket(s)' if num_facturas == 0 else f'{num_tickets} ticket(s) + {num_facturas} factura(s)'
+                    notas = f'Liquidación TPV {fecha_str} - Total fecha: {round(total_liq, 2)}€ vs {round(total_documentos, 2)}€ - {notas_docs} - Dif: {round(diferencia, 2)}€'
+                    
                     for gasto_id in datos['ids']:
-                        cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
-                        gasto_row = cursor.fetchone()
-                        if gasto_row:
-                            importe_gasto = gasto_row['importe_eur']
-                            
-                            notas_docs = f'{num_tickets} ticket(s)' if num_facturas == 0 else f'{num_tickets} ticket(s) + {num_facturas} factura(s)'
-                            cursor.execute('''
-                                INSERT OR IGNORE INTO conciliacion_gastos 
-                                (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
-                                 importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
-                                VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico_tpv', 0, ?)
-                            ''', (int(gasto_id), 'liquidacion_tpv', 0, 
-                                  importe_gasto, total_documentos, diferencia,
-                                  f'Liquidación TPV {fecha_str} - {notas_docs} - Dif: {round(diferencia, 2)}€'))
+                        cursor.execute('''
+                            INSERT OR IGNORE INTO conciliacion_gastos 
+                            (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
+                             importe_gasto, importe_documento, diferencia, estado, metodo, notificado, notas)
+                            VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico_tpv', 0, ?)
+                        ''', (int(gasto_id), 'liquidacion_tpv', 0, 
+                              total_liq, total_documentos, diferencia, notas))
+                    
                     conn.commit()
-                    logger.info(f"Liquidación TPV {fecha_str} conciliada automáticamente: {notas_docs}, dif={round(diferencia, 2)}€")
+                    logger.info(f"Liquidación TPV {fecha_str} conciliada automáticamente: {len(datos['ids'])} liquidaciones, {notas_docs}, dif={round(diferencia, 2)}€")
                     # No añadir a resultado si se concilió automáticamente
                     continue
                 except Exception as e:
