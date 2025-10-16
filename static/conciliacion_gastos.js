@@ -380,7 +380,7 @@ async function procesarAutomaticoAlCargar() {
         // Recargar todas las tablas SIEMPRE para reflejar el estado actualizado
         console.log('🔄 Recargando tablas con datos actualizados...');
         await cargarGastosPendientes();
-        await cargarConciliacionesRealizadas();
+        await cargarConciliados();
         await cargarLiquidacionesTPV();
         await cargarIngresosEfectivo();
         await cargarEstadisticas();
