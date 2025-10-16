@@ -91,9 +91,8 @@ def estadisticas_gastos():
             'saldo_mes_actual': redondear_importe(saldo_mes_actual) if saldo_mes_actual is not None else None
         })
     except Exception as e:
-        logger.info(f"'ERROR EN /estadisticas_gastos:' str(e"))
-        logger.info(f"traceback.format_exc())
-        return jsonify({'error': str(e) 'trace': traceback.format_exc(")}), 500
+        logger.error(f"ERROR EN /estadisticas_gastos: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 
 def calcular_porcentaje(actual, anterior):
@@ -183,8 +182,7 @@ def fetch_data(query, params=()):
         return dict(result) if result else {'num_documentos': 0, 'media': 0, 'total': 0}
     except sqlite3.Error as e:
         logger.error(f"Error en la consulta SQL: {str(e)}", exc_info=True)
-        logger.info(f"traceback.format_exc())
-        return jsonify({'error': str(e) 'trace': traceback.format_exc(")}), 500
+        return {'num_documentos': 0, 'media': 0, 'total': 0}
     finally:
         cursor.close()
         conn.close()
@@ -824,9 +822,8 @@ def top_gastos():
             })
         return jsonify({'año_actual': anio_actual, 'año_anterior': anio_anterior, 'gastos': conceptos})
     except Exception as e:
-        logger.info(f"'ERROR EN /gastos/top_gastos:' str(e"))
-        logger.info(f"traceback.format_exc())
-        return jsonify({'error': str(e) 'trace': traceback.format_exc(")}), 500
+        logger.error(f"ERROR EN /gastos/top_gastos: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
     finally:
         try:
             cursor.close()

@@ -59,16 +59,15 @@ def ingresos_gastos_mes():
             'gastos': gastos
         })
     except Exception as e:
-        logger.info(f"'ERROR EN /ingresos_gastos_mes:' str(e"))
-        logger.info(f"format_exc())
-        return jsonify({'error': str(e) 'trace': format_exc(")}), 500
+        logger.error(f"ERROR EN /ingresos_gastos_mes: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 @gastos_bp.route('/gastos', methods=['GET'])
 @gastos_bp.route('/api/gastos', methods=['GET'])
 def consulta_gastos():
     try:
         # Logs de entrada
-        logger.info(f"'[CONSULTA_GASTOS] Petición recibida con args:' dict(request.args"))
+        logger.info(f"[CONSULTA_GASTOS] Petición recibida con args: {dict(request.args)}")
         fecha_inicio = request.args.get('fecha_inicio', '')
         if not fecha_inicio:
             hoy = datetime.now()
@@ -96,7 +95,7 @@ def consulta_gastos():
         query += " ORDER BY date(substr(fecha_valor,7,4)||'-'||substr(fecha_valor,4,2)||'-'||substr(fecha_valor,1,2)) DESC"
 
         conn = get_db_connection()
-        logger.info(f"'[CONSULTA_GASTOS] Ejecutando consulta SQL con params:' params")
+        logger.info(f"[CONSULTA_GASTOS] Ejecutando consulta SQL con params: {params}")
         gastos = conn.execute(query, params).fetchall()
         logger.info(f"[CONSULTA_GASTOS] Filas devueltas: {len(gastos)}")
         conn.close()
@@ -126,16 +125,11 @@ def consulta_gastos():
             'total_positivos': total_positivos,
             'diferencia': diferencia
         }
-        logger.info(f"'[CONSULTA_GASTOS] Resumen totales:' {
-            'total_negativos': total_negativos,
-            'total_positivos': total_positivos,
-            'diferencia': diferencia
-        }")
+        logger.info(f"[CONSULTA_GASTOS] Resumen totales: negativos={total_negativos}, positivos={total_positivos}, diferencia={diferencia}")
         return jsonify(respuesta)
     except Exception as e:
-        logger.info(f"'ERROR EN CONSULTA_GASTOS:' str(e"))
-        logger.info(f"format_exc())
-        return jsonify({'error': str(e) 'trace': format_exc(")}), 500
+        logger.error(f"ERROR EN CONSULTA_GASTOS: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 
 # -------------------------------------------------------------------------
@@ -275,6 +269,5 @@ def ingresos_gastos_totales():
             }
         })
     except Exception as e:
-        logger.info(f"'ERROR EN /ingresos_gastos_totales:' str(e"))
-        logger.info(f"format_exc())
-        return jsonify({'error': str(e) 'trace': format_exc(")}), 500
+        logger.error(f"ERROR EN /ingresos_gastos_totales: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500

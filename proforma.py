@@ -42,7 +42,7 @@ def crear_proforma():
     conn = None
     try:
         data = request.get_json()
-        logger.info(f""Datos recibidos en crear_proforma:" data")
+        logger.info(f"Datos recibidos en crear_proforma: {data}")
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400
 

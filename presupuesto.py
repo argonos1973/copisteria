@@ -6,16 +6,16 @@ from format_utils import format_currency_es_two, format_total_es_two, format_num
 from flask import Blueprint, Flask, jsonify, request, send_file
 import utilities
 from db_utils import (
-from logger_config import get_logger
-
-# Inicializar logger
-logger = get_logger(__name__)
     actualizar_numerador,
     formatear_numero_documento,
     get_db_connection,
     obtener_numerador,
     redondear_importe,
 )
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 def _formatear_detalle_presupuesto(detalle_row):
     det_dict = dict(detalle_row)
@@ -68,7 +68,7 @@ def crear_presupuesto():
     conn = None
     try:
         data = request.get_json() or {}
-        logger.info(f""[PRESUPUESTO] Datos recibidos en crear_presupuesto:" data")
+        logger.info(f"[PRESUPUESTO] Datos recibidos en crear_presupuesto: {data}")
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400
 
@@ -423,7 +423,7 @@ def consultar_presupuestos():
         sql = f"{base_sql}{filtros_sql} ORDER BY p.fecha DESC LIMIT 100"
 
         try:
-            logger.info(f""[CONSULTA_PRESUPUESTOS][SQL]" sql, "PARAMS", params")
+            logger.info(f"[CONSULTA_PRESUPUESTOS][SQL] {sql}, PARAMS: {params}")
         except Exception:
             pass
 
