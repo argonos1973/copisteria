@@ -1715,7 +1715,7 @@ def obtener_ingresos_efectivo():
             porcentaje_diferencia = (diferencia / abs(total_ing) * 100) if total_ing != 0 else 0
             
             # Determinar estado
-            if diferencia <= 1.0:
+            if diferencia <= 3.0:
                 estado = 'exacto'
             elif porcentaje_diferencia <= 5:
                 estado = 'aceptable'
@@ -1770,7 +1770,7 @@ def obtener_ingresos_efectivo():
                 f.flush()
             
             # Conciliar automáticamente si se encontró combinación válida
-            if mejor_combinacion and diferencia_combinacion is not None and diferencia_combinacion <= 1.0:
+            if mejor_combinacion and diferencia_combinacion is not None and diferencia_combinacion <= 3.0:
                 try:
                     # Calcular total de la combinación
                     total_combinacion = sum(doc['importe'] for doc in mejor_combinacion)
