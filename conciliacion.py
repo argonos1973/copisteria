@@ -1534,8 +1534,11 @@ def obtener_liquidaciones_tpv():
             diferencia = total_liq - total_documentos
             porcentaje_diferencia = (abs(diferencia) / abs(total_liq) * 100) if total_liq != 0 else 0
             
-            # Determinar estado
-            if abs(diferencia) <= 0.02:
+            # Obtener tolerancia configurada
+            tolerancia_config = get_tolerancia_conciliacion()
+            
+            # Determinar estado usando tolerancia dinámica
+            if abs(diferencia) <= tolerancia_config:
                 estado = 'exacto'
             elif porcentaje_diferencia <= 5:
                 estado = 'aceptable'
@@ -1544,7 +1547,6 @@ def obtener_liquidaciones_tpv():
             
             # Lógica de conciliación
             puede_conciliar = False
-            tolerancia_config = get_tolerancia_conciliacion()
             
             if abs(diferencia) <= tolerancia_config and num_documentos > 0:
                 # Diferencia <= tolerancia con solo tickets → conciliar directamente
