@@ -77,7 +77,7 @@ def conciliar(gasto_id, tipo_documento, documento_id):
         log(f"❌ Error conciliando gasto {gasto_id}: {e}")
         return False
 
-def encontrar_mejor_combinacion(documentos, objetivo, tolerancia=1.0):
+def encontrar_mejor_combinacion(documentos, objetivo, tolerancia=3.0):
     """
     Algoritmo de varita mágica para encontrar la mejor combinación de documentos
     que sumen el importe objetivo
@@ -186,12 +186,12 @@ def procesar_conciliacion_automatica():
                 log(f"    ❌ Error al conciliar con {tipo} {numero}")
         else:
             # Intentar encontrar combinación de documentos
-            mejor_combinacion = encontrar_mejor_combinacion(coincidencias, importe, tolerancia=1.0)
+            mejor_combinacion = encontrar_mejor_combinacion(coincidencias, importe, tolerancia=3.0)
             
             if mejor_combinacion:
                 diferencia_total = abs(importe - sum(d['importe'] for d in mejor_combinacion))
                 
-                if diferencia_total < 1.0:
+                if diferencia_total < 3.0:
                     # Conciliar con cada documento de la combinación
                     exito = True
                     for doc in mejor_combinacion:
