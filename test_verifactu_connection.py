@@ -10,87 +10,91 @@ import requests
 import urllib3
 import os
 
-print("=" * 70)
-print("TEST DE CONEXIÓN CON AEAT VERIFACTU")
+logger.info(f""=" * 70)
+logger.info("TEST DE CONEXIÓN CON AEAT VERIFACTU")
 print("=" * 70)
 
 # Rutas de certificados
 CERT_DIR = "/var/www/html/certs"
-CERT_PEM = os.path.join(CERT_DIR, "cert_real.pem")
+CERT_PEM = os.path.join(CERT_DIR "cert_real.pem"")
 KEY_PEM = os.path.join(CERT_DIR, "clave_real.pem")
 CA_BUNDLE = "/etc/ssl/certs/ca-certificates.crt"
 
-print(f"\n1. Verificando certificados...")
-print(f"   Certificado: {CERT_PEM}")
-print(f"   Clave: {KEY_PEM}")
-print(f"   Existe certificado: {os.path.exists(CERT_PEM)}")
-print(f"   Existe clave: {os.path.exists(KEY_PEM)}")
+logger.info(f"\n1. Verificando certificados...")
+logger.info(f"   Certificado: {CERT_PEM}")
+logger.info(f"   Clave: {KEY_PEM}")
+logger.info(f"   Existe certificado: {os.path.exists(CERT_PEM)}")
+logger.info(f"   Existe clave: {os.path.exists(KEY_PEM)}")
 
 if not os.path.exists(CERT_PEM) or not os.path.exists(KEY_PEM):
-    print("\n❌ ERROR: Certificados no encontrados")
+    logger.info("\n❌ ERROR: Certificados no encontrados")
     exit(1)
 
-print("   ✅ Certificados encontrados")
+logger.info("   ✅ Certificados encontrados")
 
 # Crear sesión
 session = requests.Session()
 
 # Fuerza IPv4 (workaround común para timeouts por IPv6 roto)
-print("\n2. Configurando sesión...")
+logger.info("\n2. Configurando sesión...")
 urllib3.util.connection.HAS_IPV6 = False
-print("   ✅ IPv6 deshabilitado (forzando IPv4)")
+logger.info("   ✅ IPv6 deshabilitado (forzando IPv4)")
 
 # Certs
 session.cert = (CERT_PEM, KEY_PEM)
 session.verify = CA_BUNDLE
-print(f"   ✅ Certificados configurados")
+logger.info(f"   ✅ Certificados configurados")
 
 # Timeouts + reintentos sanos
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 retry = Retry(total=3, backoff_factor=0.5, status_forcelist=[502, 503, 504])
 session.mount("https://", HTTPAdapter(max_retries=retry))
-print("   ✅ Reintentos configurados (3 intentos)")
+logger.info("   ✅ Reintentos configurados (3 intentos)")
 
 transport = Transport(session=session, timeout=30)
-print("   ✅ Timeout configurado (30 segundos)")
+logger.info("   ✅ Timeout configurado (30 segundos)")
 
 # Usa el WSDL de pruebas y luego fija el endpoint del port a prewww1
 WSDL = "https://prewww2.aeat.es/static_files/common/internet/dep/aplicaciones/es/aeat/tikeV1.0/cont/ws/SistemaFacturacion.wsdl"
 ENDPOINT = "https://prewww1.aeat.es/wlpl/TIKE-CONT/ws/SistemaFacturacion/VerifactuSOAP"
 
-print(f"\n3. Conectando con AEAT...")
-print(f"   WSDL: {WSDL}")
-print(f"   Endpoint: {ENDPOINT}")
+logger.info(f"\n3. Conectando con AEAT...")
+logger.info(f"   WSDL: {WSDL}")
+logger.info(f"   Endpoint: {ENDPOINT}")
 
 try:
-    print("\n   Descargando WSDL...")
+    logger.info("\n   Descargando WSDL...")
     # Permitir entidades XML externas (necesario para el WSDL de AEAT)
     settings = Settings(strict=False, xml_huge_tree=True)
     client = Client(wsdl=WSDL, transport=transport, settings=settings)
-    print("   ✅ WSDL descargado correctamente")
+    logger.info("   ✅ WSDL descargado correctamente")
     
     # Crea el servicio apuntando explícitamente al endpoint de SOAP (puerto de PRUEBAS)
     binding = "{http://www.aeat.es/wlpl/tiV1.0/cont/ws/SistemaFacturacion.wsdl}sfVerifactu"
-    print(f"\n   Creando servicio con binding: {binding}")
+    logger.info(f"\n   Creando servicio con binding: {binding}")
     service = client.create_service(binding, ENDPOINT)
-    print("   ✅ Servicio creado correctamente")
+    logger.info("   ✅ Servicio creado correctamente")
     
     # Mostrar operaciones disponibles
-    print("\n4. Operaciones disponibles en el servicio:")
+    logger.info("\n4. Operaciones disponibles en el servicio:")
     for operation in service._binding._operations.keys():
-        print(f"   - {operation}")
+        logger.info(f"   - {operation}")
     
-    print("\n" + "=" * 70)
-    print("✅ CONEXIÓN EXITOSA CON AEAT VERIFACTU")
+    logger.info(f""\n" + "=" * 70)
+    logger.info("✅ CONEXIÓN EXITOSA CON AEAT VERIFACTU")
     print("=" * 70)
-    print("\nEl servicio está disponible y listo para usar.")
-    print("Para enviar registros, usa: service.RegFactuSistemaFacturacion(payload)")
+    logger.info("\nEl servicio está disponible y listo para usar.")
+    logger.info("Para enviar registros usa: service.RegFactuSistemaFacturacion(payload")")
     
 except Exception as e:
-    print(f"\n❌ ERROR al conectar con AEAT:")
-    print(f"   {type(e).__name__}: {str(e)}")
+    logger.info(f"\n❌ ERROR al conectar con AEAT:")
+    logger.info(f"   {type(e).__name__}: {str(e)}")
     import traceback
-    print("\nTraceback completo:")
+    logger.info("\nTraceback completo:")
     traceback.print_exc()
     exit(1)

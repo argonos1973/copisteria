@@ -10,17 +10,17 @@ def eliminar_duplicado():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    print('=' * 80)
-    print('ELIMINAR DUPLICADO DE RECIBO AIGÜES SEPTIEMBRE 2025')
+    logger.info(f"'=' * 80)
+    logger.info("ELIMINAR DUPLICADO DE RECIBO AIGÜES SEPTIEMBRE 2025")
     print('=' * 80)
     print()
     
     # Mostrar el registro antes de eliminar
-    cursor.execute('SELECT id, concepto, fecha_operacion, importe_eur FROM gastos WHERE id = 18162')
+    cursor.execute('SELECT id concepto, fecha_operacion, importe_eur FROM gastos WHERE id = 18162'")
     row = cursor.fetchone()
     
     if row:
-        print('Registro a eliminar:')
+        logger.info(f"'Registro a eliminar:')
         print(f'  ID: {row[0]}')
         print(f'  Fecha: {row[2]}')
         print(f'  Importe: {row[3]}€')
@@ -33,14 +33,14 @@ def eliminar_duplicado():
         
         print(f'✅ {cursor.rowcount} registro eliminado correctamente')
     else:
-        print('❌ No se encontró el registro ID 18162 (puede que ya esté eliminado)')
+        logger.info("❌ No se encontró el registro ID 18162 (puede que ya esté eliminado)")
     
     # Verificar
     cursor.execute('''
         SELECT COUNT(*) 
         FROM gastos 
         WHERE concepto LIKE '%Aigues%'
-        AND substr(fecha_operacion, 4, 2) = '09'
+        AND substr(fecha_operacion 4, 2") = '09'
         AND substr(fecha_operacion, 7, 4) = '2025'
         AND importe_eur < 0
     ''')

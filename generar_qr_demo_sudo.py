@@ -8,6 +8,10 @@ Versión con privilegios elevados
 import os
 import subprocess
 from verifactu.qr.generator import generar_qr_verifactu
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 # Directorio donde se guardará el QR
 QR_DIR = "/var/www/html/static/tmp_qr"
@@ -18,7 +22,7 @@ def main():
     os.makedirs(QR_DIR, exist_ok=True)
     
     # Generar un QR de ejemplo
-    print("Generando código QR de ejemplo...")
+    logger.info("Generando código QR de ejemplo...")
     qr_bytes = generar_qr_verifactu(
         nif="B12345678", 
         numero_factura="F250001", 
@@ -32,7 +36,7 @@ def main():
         with open(temp_path, "wb") as f:
             f.write(qr_bytes)
             
-        print(f"QR generado temporalmente en {temp_path}")
+        logger.info(f"QR generado temporalmente en {temp_path}")
         
         # Mover al destino final con privilegios
         qr_path = os.path.join(QR_DIR, QR_FILE)
@@ -42,10 +46,10 @@ def main():
         subprocess.run(["sudo", "chmod", "666", qr_path], check=True)
         subprocess.run(["sudo", "chown", "www-data:www-data", qr_path], check=True)
         
-        print(f"QR movido a {qr_path} con permisos correctos")
-        print(f"Tamaño del archivo: {len(qr_bytes)} bytes")
+        logger.info(f"QR movido a {qr_path} con permisos correctos")
+        logger.info(f"Tamaño del archivo: {len(qr_bytes)} bytes")
     else:
-        print("Error al generar el código QR")
+        logger.error("Error al generar el código QR", exc_info=True)
 
 if __name__ == "__main__":
     main()

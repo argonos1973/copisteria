@@ -4,6 +4,10 @@ from traceback import format_exc
 from flask import Blueprint, jsonify, request
 
 from db_utils import get_db_connection
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 gastos_bp = Blueprint('gastos', __name__)
 
@@ -55,16 +59,16 @@ def ingresos_gastos_mes():
             'gastos': gastos
         })
     except Exception as e:
-        print('ERROR EN /ingresos_gastos_mes:', str(e))
-        print(format_exc())
-        return jsonify({'error': str(e), 'trace': format_exc()}), 500
+        logger.info(f"'ERROR EN /ingresos_gastos_mes:' str(e"))
+        logger.info(f"format_exc())
+        return jsonify({'error': str(e) 'trace': format_exc(")}), 500
 
 @gastos_bp.route('/gastos', methods=['GET'])
 @gastos_bp.route('/api/gastos', methods=['GET'])
 def consulta_gastos():
     try:
         # Logs de entrada
-        print('[CONSULTA_GASTOS] Petición recibida con args:', dict(request.args))
+        logger.info(f"'[CONSULTA_GASTOS] Petición recibida con args:' dict(request.args"))
         fecha_inicio = request.args.get('fecha_inicio', '')
         if not fecha_inicio:
             hoy = datetime.now()
@@ -92,9 +96,9 @@ def consulta_gastos():
         query += " ORDER BY date(substr(fecha_valor,7,4)||'-'||substr(fecha_valor,4,2)||'-'||substr(fecha_valor,1,2)) DESC"
 
         conn = get_db_connection()
-        print('[CONSULTA_GASTOS] Ejecutando consulta SQL con params:', params)
+        logger.info(f"'[CONSULTA_GASTOS] Ejecutando consulta SQL con params:' params")
         gastos = conn.execute(query, params).fetchall()
-        print(f"[CONSULTA_GASTOS] Filas devueltas: {len(gastos)}")
+        logger.info(f"[CONSULTA_GASTOS] Filas devueltas: {len(gastos)}")
         conn.close()
         # Validar y limpiar resultados
         gastos_list = []
@@ -122,16 +126,16 @@ def consulta_gastos():
             'total_positivos': total_positivos,
             'diferencia': diferencia
         }
-        print('[CONSULTA_GASTOS] Resumen totales:', {
+        logger.info(f"'[CONSULTA_GASTOS] Resumen totales:' {
             'total_negativos': total_negativos,
             'total_positivos': total_positivos,
             'diferencia': diferencia
-        })
+        }")
         return jsonify(respuesta)
     except Exception as e:
-        print('ERROR EN CONSULTA_GASTOS:', str(e))
-        print(format_exc())
-        return jsonify({'error': str(e), 'trace': format_exc()}), 500
+        logger.info(f"'ERROR EN CONSULTA_GASTOS:' str(e"))
+        logger.info(f"format_exc())
+        return jsonify({'error': str(e) 'trace': format_exc(")}), 500
 
 
 # -------------------------------------------------------------------------
@@ -214,7 +218,7 @@ def ingresos_gastos_totales():
             row_fecha = cur.fetchone()
             ultima_actualizacion = row_fecha['ultima_actualizacion'] if row_fecha and row_fecha['ultima_actualizacion'] else None
         except Exception as e:
-            print(f"Error al consultar la base de datos: {e}")
+            logger.error(f"Error al consultar la base de datos: {e}", exc_info=True)
             ultima_fecha = None
             ultima_actualizacion = None
         
@@ -271,6 +275,6 @@ def ingresos_gastos_totales():
             }
         })
     except Exception as e:
-        print('ERROR EN /ingresos_gastos_totales:', str(e))
-        print(format_exc())
-        return jsonify({'error': str(e), 'trace': format_exc()}), 500
+        logger.info(f"'ERROR EN /ingresos_gastos_totales:' str(e"))
+        logger.info(f"format_exc())
+        return jsonify({'error': str(e) 'trace': format_exc(")}), 500

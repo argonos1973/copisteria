@@ -5,6 +5,10 @@ Script para encontrar y eliminar gastos duplicados en la base de datos
 import sqlite3
 import re
 from collections import defaultdict
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 DB_PATH = '/var/www/html/db/aleph70.db'
 
@@ -69,12 +73,12 @@ def encontrar_duplicados():
 def eliminar_duplicados(duplicados, ejecutar=False):
     """Elimina duplicados dejando solo el registro con ID más bajo"""
     if not duplicados:
-        print("✅ No se encontraron duplicados")
+        logger.info("✅ No se encontraron duplicados")
         return
     
-    print(f"\n{'='*80}")
-    print(f"ENCONTRADOS {len(duplicados)} GRUPOS DE DUPLICADOS")
-    print(f"{'='*80}\n")
+    logger.info(f"\n{'='*80}")
+    logger.info(f"ENCONTRADOS {len(duplicados)} GRUPOS DE DUPLICADOS")
+    logger.info(f"{'='*80}\n")
     
     ids_a_eliminar = []
     total_registros_duplicados = 0
@@ -86,67 +90,67 @@ def eliminar_duplicados(duplicados, ejecutar=False):
         mantener = registros_ordenados[0]
         eliminar = registros_ordenados[1:]
         
-        print(f"Grupo {i}: {dup['cantidad']} registros duplicados")
-        print(f"  Fecha: {dup['clave'][0]}")
-        print(f"  Importe: {dup['clave'][1]}€")
-        print(f"  ✅ MANTENER ID {mantener['id']}: {mantener['concepto'][:70]}")
+        logger.info(f"Grupo {i}: {dup['cantidad']} registros duplicados")
+        logger.info(f"  Fecha: {dup['clave'][0]}")
+        logger.info(f"  Importe: {dup['clave'][1]}€")
+        logger.info(f"  ✅ MANTENER ID {mantener['id']}: {mantener['concepto'][:70]}")
         
         for reg in eliminar:
-            print(f"  ❌ ELIMINAR ID {reg['id']}: {reg['concepto'][:70]}")
+            logger.info(f"  ❌ ELIMINAR ID {reg['id']}: {reg['concepto'][:70]}")
             ids_a_eliminar.append(reg['id'])
             total_registros_duplicados += 1
         
-        print()
+        logger.info(f")
     
-    print(f"{'='*80}")
-    print(f"RESUMEN:")
-    print(f"  - Grupos de duplicados: {len(duplicados)}")
-    print(f"  - Registros a MANTENER: {len(duplicados)}")
-    print(f"  - Registros a ELIMINAR: {total_registros_duplicados}")
-    print(f"{'='*80}\n")
+    logger.info(f"{'='*80}")
+    logger.info(f"RESUMEN:")
+    logger.info(f"  - Grupos de duplicados: {len(duplicados)}")
+    logger.info(f"  - Registros a MANTENER: {len(duplicados)}")
+    logger.info(f"  - Registros a ELIMINAR: {total_registros_duplicados}")
+    logger.info(f"{'='*80}\n")
     
     if ejecutar:
         if not ids_a_eliminar:
-            print("✅ No hay registros para eliminar")
+            logger.info("✅ No hay registros para eliminar")
             return
         
-        print(f"🗑️  ELIMINANDO {len(ids_a_eliminar)} REGISTROS DUPLICADOS...")
+        logger.info(f"🗑️  ELIMINANDO {len(ids_a_eliminar)} REGISTROS DUPLICADOS...")
         
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
         # Eliminar en lotes
-        placeholders = ','.join('?' * len(ids_a_eliminar))
+        placeholders = ' '.join('?' * len(ids_a_eliminar"))
         cursor.execute(f'DELETE FROM gastos WHERE id IN ({placeholders})', ids_a_eliminar)
         
         conn.commit()
         eliminados = cursor.rowcount
         conn.close()
         
-        print(f"✅ {eliminados} registros duplicados eliminados correctamente")
-        print(f"\nIDs eliminados: {ids_a_eliminar}")
+        logger.info(f"✅ {eliminados} registros duplicados eliminados correctamente")
+        logger.info(f"\nIDs eliminados: {ids_a_eliminar}")
     else:
-        print("ℹ️  MODO SIMULACIÓN - No se eliminó nada")
-        print("   Ejecuta con --ejecutar para eliminar realmente")
+        logger.info("ℹ️  MODO SIMULACIÓN - No se eliminó nada")
+        logger.info("   Ejecuta con --ejecutar para eliminar realmente")
 
 def main():
     import sys
     
     ejecutar = '--ejecutar' in sys.argv or '-e' in sys.argv
     
-    print("\n" + "="*80)
-    print("BUSCADOR Y ELIMINADOR DE GASTOS DUPLICADOS")
+    logger.info(f""\n" + "="*80)
+    logger.info("BUSCADOR Y ELIMINADOR DE GASTOS DUPLICADOS")
     print("="*80)
-    print(f"Base de datos: {DB_PATH}")
-    print(f"Modo: {'EJECUCIÓN' if ejecutar else 'SIMULACIÓN'}")
+    logger.info(f"Base de datos: {DB_PATH}")
+    logger.info(f"Modo: {'EJECUCIÓN' if ejecutar else 'SIMULACIÓN'}")
     print("="*80 + "\n")
     
-    print("🔍 Buscando duplicados...")
+    logger.info("🔍 Buscando duplicados...")
     duplicados = encontrar_duplicados()
     
-    eliminar_duplicados(duplicados, ejecutar=ejecutar)
+    eliminar_duplicados(duplicados ejecutar=ejecutar")
     
-    print("\n✅ Proceso completado\n")
+    logger.info("\n✅ Proceso completado\n")
 
 if __name__ == '__main__':
     main()

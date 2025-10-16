@@ -9,6 +9,10 @@ import logging
 import os
 import sys
 import xml.etree.ElementTree as ET
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -144,20 +148,20 @@ def validar_totales_xsig(ruta_xsig):
     
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python validar_xsig_totales.py ruta/al/archivo.xsig")
+        logger.info("Uso: python validar_xsig_totales.py ruta/al/archivo.xsig")
         sys.exit(1)
         
     ruta_xsig = sys.argv[1]
-    print(f"Validando totales de archivo XSIG: {ruta_xsig}")
+    logger.info(f"Validando totales de archivo XSIG: {ruta_xsig}")
     
     resultado = validar_totales_xsig(ruta_xsig)
     
     if resultado['valido']:
-        print(f"\n✅ {resultado['mensaje']}")
+        logger.info(f"\n✅ {resultado['mensaje']}")
     else:
-        print(f"\n❌ {resultado['error']}")
+        logger.info(f"\n❌ {resultado['error']}")
     
     if 'totales' in resultado:
-        print("\nTotales encontrados:")
+        logger.info("\nTotales encontrados:")
         for clave, valor in resultado['totales'].items():
-            print(f"  - {clave}: {valor}")
+            logger.info(f"  - {clave}: {valor}")

@@ -7,6 +7,10 @@ import sys
 import tempfile
 
 from lxml import etree
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 
 def extraer_xml_desde_xsig(ruta_xsig):
@@ -21,7 +25,7 @@ def extraer_xml_desde_xsig(ruta_xsig):
     """
     # Verificar que existe el archivo
     if not os.path.exists(ruta_xsig):
-        print(f"El archivo {ruta_xsig} no existe.")
+        logger.info(f"El archivo {ruta_xsig} no existe.")
         return None, None
         
     # Crear un archivo temporal para guardar el XML extraído
@@ -35,13 +39,13 @@ def extraer_xml_desde_xsig(ruta_xsig):
         
         # Si falla xsltproc, intentar con openssl
         if resultado.returncode != 0:
-            print("xsltproc falló, intentando con openssl...")
+            logger.info("xsltproc falló, intentando con openssl...")
             comando_openssl = f"openssl smime -verify -inform DER -in {ruta_xsig} -noverify -out {archivo_temporal}"
             resultado = subprocess.run(comando_openssl, shell=True, capture_output=True, text=True)
             
             # Si openssl falla, probar con formato PEM en lugar de DER
             if resultado.returncode != 0:
-                print("openssl (DER) falló, intentando con formato PEM...")
+                logger.info("openssl (DER) falló, intentando con formato PEM...")
                 comando_openssl = f"openssl smime -verify -inform PEM -in {ruta_xsig} -noverify -out {archivo_temporal}"
                 resultado = subprocess.run(comando_openssl, shell=True, capture_output=True, text=True)
                 
@@ -51,10 +55,10 @@ def extraer_xml_desde_xsig(ruta_xsig):
                 contenido = f.read()
             return contenido, archivo_temporal
         else:
-            print("No se pudo extraer el XML del archivo XSIG.")
+            logger.info("No se pudo extraer el XML del archivo XSIG.")
             return None, None
     except Exception as e:
-        print(f"Error al extraer XML desde XSIG: {str(e)}")
+        logger.error(f"Error al extraer XML desde XSIG: {str(e)}", exc_info=True)
         return None, None
 
 def analizar_totales_xml(ruta_xml):
@@ -84,7 +88,7 @@ def analizar_totales_xml(ruta_xml):
         # Detectar el namespace real del documento
         doc_ns = root.nsmap.get(None)
         if doc_ns:
-            print(f"Namespace del documento: {doc_ns}")
+            logger.info(f"Namespace del documento: {doc_ns}")
             namespaces[None] = doc_ns
         
         # Definir las rutas XPath para los totales con varios namespaces posibles
@@ -104,17 +108,17 @@ def analizar_totales_xml(ruta_xml):
         for ruta in rutas_totales:
             elementos = root.xpath(ruta, namespaces=namespaces)
             if elementos:
-                print(f"Elementos encontrados con XPath: {ruta}")
-                print(f"Total de elementos: {len(elementos)}")
+                logger.info(f"Elementos encontrados con XPath: {ruta}")
+                logger.info(f"Total de elementos: {len(elementos)}")
                 break
         
         # Si no se encontraron elementos, volver a intentar extrayendo los elementos directamente
         if not elementos:
-            print("Buscando elementos manualmente...")
+            logger.info("Buscando elementos manualmente...")
             for elem in root.iter():
                 tag = elem.tag
                 if tag.endswith('TotalGrossAmount'):
-                    print(f"Encontrado elemento: {tag} = {elem.text}")
+                    logger.info(f"Encontrado elemento: {tag} = {elem.text}")
                     elementos = [elem]
                     break
                     
@@ -128,14 +132,14 @@ def analizar_totales_xml(ruta_xml):
             ('TotalExecutableAmount', '//TotalExecutableAmount'),
         ]
         
-        print("\n--- TOTALES DETECTADOS EN EL XML ---")
+        logger.info("\n--- TOTALES DETECTADOS EN EL XML ---")
         for nombre, xpath in paths:
             for ns_key, ns_uri in namespaces.items():
                 if ns_key is not None:
                     elementos = root.xpath(f"//{ns_key}:{nombre}", namespaces=namespaces)
                     if elementos:
                         totales[nombre] = elementos[0].text
-                        print(f"{nombre}: {elementos[0].text}")
+                        logger.info(f"{nombre}: {elementos[0].text}")
                         break
             
             # Si no encontramos con namespace, buscar sin él
@@ -143,13 +147,13 @@ def analizar_totales_xml(ruta_xml):
                 elementos = root.xpath(f"//{nombre}", namespaces=namespaces)
                 if elementos:
                     totales[nombre] = elementos[0].text
-                    print(f"{nombre}: {elementos[0].text}")
+                    logger.info(f"{nombre}: {elementos[0].text}")
                 else:
-                    print(f"{nombre}: No encontrado")
+                    logger.info(f"{nombre}: No encontrado")
                     
         return totales
     except Exception as e:
-        print(f"Error al analizar totales XML: {str(e)}")
+        logger.error(f"Error al analizar totales XML: {str(e)}", exc_info=True)
         import traceback
         traceback.print_exc()
         return {}
@@ -157,29 +161,29 @@ def analizar_totales_xml(ruta_xml):
 def main():
     """Función principal"""
     if len(sys.argv) < 2:
-        print("Uso: python extraer_xml_xsig.py ruta_archivo.xsig")
+        logger.info("Uso: python extraer_xml_xsig.py ruta_archivo.xsig")
         return
         
     ruta_xsig = sys.argv[1]
     contenido, archivo_temporal = extraer_xml_desde_xsig(ruta_xsig)
     
     if contenido and archivo_temporal:
-        print(f"XML extraído correctamente a: {archivo_temporal}")
-        print("\n--- PRIMERAS LÍNEAS DEL XML ---")
+        logger.info(f"XML extraído correctamente a: {archivo_temporal}")
+        logger.info("\n--- PRIMERAS LÍNEAS DEL XML ---")
         lineas = contenido.split('\n')
         for i, linea in enumerate(lineas[:20]):
-            print(f"{i+1}: {linea}")
+            logger.info(f"{i+1}: {linea}")
         
-        print("\n--- ANALIZANDO TOTALES ---")
+        logger.info("\n--- ANALIZANDO TOTALES ---")
         totales = analizar_totales_xml(archivo_temporal)
         
         # Analizar si los totales son correctos
         if 'InvoiceTotal' in totales and float(totales.get('InvoiceTotal', '0.00')) > 0:
-            print("\n✅ TOTALES CORRECTOS - La factura tiene valores correctos")
+            logger.info("\n✅ TOTALES CORRECTOS - La factura tiene valores correctos")
         else:
-            print("\n❌ TOTALES INCORRECTOS - Hay problemas con los totales de la factura")
+            logger.info("\n❌ TOTALES INCORRECTOS - Hay problemas con los totales de la factura")
     else:
-        print("No se pudo extraer el XML del archivo XSIG.")
+        logger.info("No se pudo extraer el XML del archivo XSIG.")
 
 if __name__ == "__main__":
     main()

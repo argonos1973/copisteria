@@ -16,6 +16,10 @@ from datetime import datetime
 from face_integration import FaceClient, cargar_configuracion
 
 from validar_facturas_mes import (obtener_directorio_mes,
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
                                   validar_facturas_directorio)
 
 
@@ -44,8 +48,8 @@ def crear_archivo_configuracion(ruta_config="/var/www/html/face_config.json"):
     with open(ruta_config, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=4, ensure_ascii=False)
     
-    print(f"✅ Archivo de configuración creado en: {ruta_config}")
-    print("⚠️ IMPORTANTE: Modifique este archivo con sus datos reales antes de enviar facturas a FACe")
+    logger.info(f"✅ Archivo de configuración creado en: {ruta_config}")
+    logger.info("⚠️ IMPORTANTE: Modifique este archivo con sus datos reales antes de enviar facturas a FACe")
     
     return True
 
@@ -61,16 +65,16 @@ def enviar_facturas_directorio(directorio, solo_validadas=True):
         dict: Resultado con facturas enviadas, errores, etc.
     """
     if not os.path.isdir(directorio):
-        print(f"❌ Error: El directorio {directorio} no existe")
+        logger.info(f"❌ Error: El directorio {directorio} no existe")
         return None
     
-    print("\n=== ENVÍO DE FACTURAS A FACE ===")
-    print(f"Directorio: {directorio}")
-    print(f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    logger.info("\n=== ENVÍO DE FACTURAS A FACE ===")
+    logger.info(f"Directorio: {directorio}")
+    logger.info(f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
     
     # Validar facturas primero si es necesario
     if solo_validadas:
-        print("\n🔍 Validando facturas antes del envío...")
+        logger.info("\n🔍 Validando facturas antes del envío...")
         resultados_validacion, _, _, _ = validar_facturas_directorio(directorio)
     
     # Buscar facturas .xsig
@@ -78,7 +82,7 @@ def enviar_facturas_directorio(directorio, solo_validadas=True):
                     if archivo.lower().endswith('.xsig')]
     
     if not facturas_xsig:
-        print(f"⚠️ No se encontraron facturas firmadas (.xsig) en {directorio}")
+        logger.info(f"⚠️ No se encontraron facturas firmadas (.xsig) en {directorio}")
         return None
     
     # Cargar configuración y crear cliente FACe
@@ -87,8 +91,8 @@ def enviar_facturas_directorio(directorio, solo_validadas=True):
     try:
         face_client = FaceClient(config)
     except Exception as e:
-        print(f"❌ Error al inicializar cliente FACe: {str(e)}")
-        print("Revise la configuración en face_config.json")
+        logger.info(f"❌ Error al inicializar cliente FACe: {str(e)}")
+        logger.info("Revise la configuración en face_config.json")
         return None
     
     # Resultados del procesamiento
@@ -105,22 +109,22 @@ def enviar_facturas_directorio(directorio, solo_validadas=True):
         # Si solo_validadas es True, comprobar si la factura pasó la validación
         if solo_validadas:
             if nombre_factura in resultados_validacion and not resultados_validacion[nombre_factura]['es_valido']:
-                print(f"⚠️ Omitiendo factura no válida: {nombre_factura}")
+                logger.info(f"⚠️ Omitiendo factura no válida: {nombre_factura}")
                 resultados['omitidas'].append({
                     'factura': nombre_factura,
                     'motivo': f"No pasó la validación: {resultados_validacion[nombre_factura]['mensaje']}"
                 })
                 continue
         
-        print(f"\n📤 Enviando factura: {nombre_factura}")
+        logger.info(f"\n📤 Enviando factura: {nombre_factura}")
         
         try:
             # Enviar factura a FACe
             resultado = face_client.enviar_factura(factura)
             
             if resultado['numero_registro']:
-                print("✅ Factura enviada correctamente")
-                print(f"   Número de registro: {resultado['numero_registro']}")
+                logger.info("✅ Factura enviada correctamente")
+                logger.info(f"   Número de registro: {resultado['numero_registro']}")
                 
                 resultados['enviadas'].append({
                     'factura': nombre_factura,
@@ -128,26 +132,26 @@ def enviar_facturas_directorio(directorio, solo_validadas=True):
                     'timestamp': resultado['timestamp']
                 })
             else:
-                print("❌ Error al enviar factura")
-                print(f"   Código: {resultado['codigo_registro']} - {resultado['descripcion']}")
+                logger.info("❌ Error al enviar factura")
+                logger.info(f"   Código: {resultado['codigo_registro']} - {resultado['descripcion']}")
                 
                 resultados['errores'].append({
                     'factura': nombre_factura,
                     'error': f"Código: {resultado['codigo_registro']} - {resultado['descripcion']}"
                 })
         except Exception as e:
-            print(f"❌ Error al enviar factura {nombre_factura}: {str(e)}")
+            logger.info(f"❌ Error al enviar factura {nombre_factura}: {str(e)}")
             resultados['errores'].append({
                 'factura': nombre_factura,
                 'error': str(e)
             })
     
     # Imprimir resumen
-    print("\n=== RESUMEN DE ENVÍO ===")
-    print(f"Total facturas procesadas: {len(facturas_xsig)}")
-    print(f"Facturas enviadas: {len(resultados['enviadas'])}")
-    print(f"Facturas con error: {len(resultados['errores'])}")
-    print(f"Facturas omitidas: {len(resultados['omitidas'])}")
+    logger.info("\n=== RESUMEN DE ENVÍO ===")
+    logger.info(f"Total facturas procesadas: {len(facturas_xsig)}")
+    logger.info(f"Facturas enviadas: {len(resultados['enviadas'])}")
+    logger.info(f"Facturas con error: {len(resultados['errores'])}")
+    logger.info(f"Facturas omitidas: {len(resultados['omitidas'])}")
     
     # Guardar informe de envío
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -163,7 +167,7 @@ def enviar_facturas_directorio(directorio, solo_validadas=True):
             'resultados': resultados
         }, f, indent=4, ensure_ascii=False)
     
-    print(f"📊 Informe de envío guardado en: {ruta_informe}")
+    logger.info(f"📊 Informe de envío guardado en: {ruta_informe}")
     
     return resultados
 
@@ -173,7 +177,7 @@ def main():
     ruta_config = "/var/www/html/face_config.json"
     if not os.path.exists(ruta_config):
         crear_archivo_configuracion(ruta_config)
-        print("Primero debe configurar los parámetros de conexión a FACe en el archivo face_config.json")
+        logger.info("Primero debe configurar los parámetros de conexión a FACe en el archivo face_config.json")
         sys.exit(1)
     
     # Definir argumentos de línea de comandos
@@ -189,14 +193,14 @@ def main():
     # Si se especifica una única factura
     if args.factura:
         if not os.path.exists(args.factura):
-            print(f"❌ Error: La factura {args.factura} no existe")
+            logger.info(f"❌ Error: La factura {args.factura} no existe")
             return
             
         if not args.factura.lower().endswith('.xsig'):
-            print("❌ Error: La factura debe ser un archivo .xsig (firmado)")
+            logger.info("❌ Error: La factura debe ser un archivo .xsig (firmado)")
             return
             
-        print(f"📤 Enviando factura individual: {args.factura}")
+        logger.info(f"📤 Enviando factura individual: {args.factura}")
         config = cargar_configuracion()
         
         try:
@@ -204,18 +208,18 @@ def main():
             resultado = face_client.enviar_factura(args.factura)
             
             if resultado['numero_registro']:
-                print("✅ Factura enviada correctamente")
-                print(f"   Número de registro: {resultado['numero_registro']}")
+                logger.info("✅ Factura enviada correctamente")
+                logger.info(f"   Número de registro: {resultado['numero_registro']}")
             else:
-                print("❌ Error al enviar factura")
-                print(f"   Código: {resultado['codigo_registro']} - {resultado['descripcion']}")
+                logger.info("❌ Error al enviar factura")
+                logger.info(f"   Código: {resultado['codigo_registro']} - {resultado['descripcion']}")
         except Exception as e:
-            print(f"❌ Error al enviar factura: {str(e)}")
+            logger.info(f"❌ Error al enviar factura: {str(e)}")
     
     # Si se especifica un directorio directamente
     elif args.directorio:
         if not os.path.isdir(args.directorio):
-            print(f"❌ Error: El directorio {args.directorio} no existe")
+            logger.info(f"❌ Error: El directorio {args.directorio} no existe")
             return
             
         enviar_facturas_directorio(args.directorio, not args.todas)
@@ -232,7 +236,7 @@ def main():
         if os.path.isdir(directorio):
             enviar_facturas_directorio(directorio, not args.todas)
         else:
-            print(f"❌ Error: El directorio para {args.anyo or datetime.now().year}-{args.mes or datetime.now().month} no existe")
+            logger.info(f"❌ Error: El directorio para {args.anyo or datetime.now().year}-{args.mes or datetime.now().month} no existe")
 
 if __name__ == "__main__":
     main()

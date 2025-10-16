@@ -9,6 +9,10 @@ from db_utils import (actualizar_numerador, formatear_numero_documento,
                       get_db_connection, obtener_numerador, redondear_importe,
                       verificar_numero_proforma)
 import utilities
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 app = Flask(__name__)
 
@@ -38,7 +42,7 @@ def crear_proforma():
     conn = None
     try:
         data = request.get_json()
-        print("Datos recibidos en crear_proforma:", data)
+        logger.info(f""Datos recibidos en crear_proforma:" data")
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400
 
@@ -56,8 +60,8 @@ def crear_proforma():
 
         # Si es una actualización (tiene ID válido), no verificamos el numerador
         es_actualizacion = 'id' in data and data['id'] is not None and data['id'] != 0
-        print(f"Es actualización: {es_actualizacion}, ID: {data.get('id')}")
-        print(f"Keys en data: {data.keys()}")
+        logger.info(f"Es actualización: {es_actualizacion}, ID: {data.get('id')}")
+        logger.info(f"Keys en data: {data.keys()}")
         
        
         # Calculate amounts using unified function
@@ -98,7 +102,7 @@ def crear_proforma():
         ))
         
         proforma_id = cursor.lastrowid
-        print(f"Proforma creada con ID: {proforma_id}")
+        logger.info(f"Proforma creada con ID: {proforma_id}")
 
         # Insertar los detalles
         for detalle in data['detalles']:
@@ -139,7 +143,7 @@ def crear_proforma():
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error en crear_proforma: {str(e)}")
+        logger.error(f"Error en crear_proforma: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:
@@ -179,25 +183,25 @@ def obtener_proforma(id):
 
 def obtener_proforma_abierta(idContacto):
     try:
-        print(f"Iniciando obtener_proforma_abierta para idContacto: {idContacto}")
+        logger.info(f"Iniciando obtener_proforma_abierta para idContacto: {idContacto}")
         conn = get_db_connection()
         conn.execute('PRAGMA busy_timeout = 10000')
         cursor = conn.cursor()
         
         # Primero obtener los datos del contacto
-        print("Ejecutando consulta de contacto...")
+        logger.info("Ejecutando consulta de contacto...")
         cursor.execute('SELECT * FROM contactos WHERE idContacto = ?', (idContacto,))
         contacto = cursor.fetchone()
         
         if not contacto:
-            print(f"No se encontró el contacto con idContacto: {idContacto}")
+            logger.info(f"No se encontró el contacto con idContacto: {idContacto}")
             return jsonify({'error': 'Contacto no encontrado'}), 404
             
         contacto_dict = dict(contacto)
-        print(f"Datos del contacto encontrados: {contacto_dict}")
+        logger.info(f"Datos del contacto encontrados: {contacto_dict}")
         
         # Buscar proforma abierta
-        print("Ejecutando consulta de proforma abierta...")
+        logger.info("Ejecutando consulta de proforma abierta...")
         sql = '''
             SELECT p.id, p.numero, p.fecha, p.estado, p.tipo, p.total, p.idcontacto
             FROM proforma p
@@ -206,18 +210,18 @@ def obtener_proforma_abierta(idContacto):
             ORDER BY p.fecha DESC, p.id DESC
             LIMIT 1
         '''
-        print(f"SQL proforma: {sql}")
-        print(f"Parámetros: idContacto = {idContacto}")
+        logger.info(f"SQL proforma: {sql}")
+        logger.info(f"Parámetros: idContacto = {idContacto}")
         
         cursor.execute(sql, (idContacto,))
         proforma = cursor.fetchone()
         
         if proforma:
-            print(f"Proforma abierta encontrada: {dict(proforma)}")
+            logger.info(f"Proforma abierta encontrada: {dict(proforma)}")
             proforma_dict = _formatear_importes_proforma(dict(proforma))
 
             detalles = _obtener_detalles_formateados(cursor, proforma_dict['id'])
-            print(f"Detalles formateados: {detalles}")
+            logger.info(f"Detalles formateados: {detalles}")
 
             response_data = {
                 'modo': 'edicion',
@@ -238,10 +242,10 @@ def obtener_proforma_abierta(idContacto):
                 },
                 'detalles': detalles
             }
-            print("Enviando respuesta modo edición")
+            logger.info("Enviando respuesta modo edición")
             return jsonify(response_data)
         else:
-            print("No se encontró proforma abierta, modo nuevo")
+            logger.info("No se encontró proforma abierta, modo nuevo")
             return jsonify({
                 'modo': 'nuevo',
                 'contacto': {
@@ -256,12 +260,12 @@ def obtener_proforma_abierta(idContacto):
             })
     
     except sqlite3.Error as e:
-        print(f"Error de SQLite en obtener_proforma_abierta: {str(e)}")
+        logger.error(f"Error de SQLite en obtener_proforma_abierta: {str(e)}", exc_info=True)
         return jsonify({'error': f"Error de base de datos: {str(e)}"}), 500
             
     except Exception as e:
-        print(f"Error general en obtener_proforma_abierta: {str(e)}")
-        print(f"Tipo de error: {type(e)}")
+        logger.error(f"Error general en obtener_proforma_abierta: {str(e)}", exc_info=True)
+        logger.info(f"Tipo de error: {type(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': f"Error al buscar proforma abierta: {str(e)}"}), 500
@@ -270,7 +274,7 @@ def obtener_proforma_abierta(idContacto):
             cursor.close()
         if 'conn' in locals():
             conn.close()
-        print("Conexión cerrada en obtener_proforma_abierta")
+        logger.info("Conexión cerrada en obtener_proforma_abierta")
 
 def listar_proformas():
     """
@@ -486,7 +490,7 @@ def consultar_proformas():
 
     except Exception as e:
         import traceback
-        print(f"Error en consultar_proformas: {str(e)}\n{traceback.format_exc()}")
+        logger.error(f"Error en consultar_proformas: {str(e)}\n{traceback.format_exc()}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if 'conn' in locals():
@@ -595,7 +599,7 @@ def convertir_proforma_a_factura(id_proforma):
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error al convertir proforma a factura: {str(e)}")
+        logger.error(f"Error al convertir proforma a factura: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:

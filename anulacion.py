@@ -15,13 +15,17 @@ from flask import jsonify
 
 from db_utils import get_db_connection
 from utils_emisor import cargar_datos_emisor
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 # Configuración externamente para habilitar VeriFactu
 try:
     from config_loader import get as get_config
     VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", True))
 except Exception as _e:
-    print(f"[ANULACION] No se pudo cargar config.json: {_e}. Suponemos VeriFactu ON")
+    logger.info(f"[ANULACION] No se pudo cargar config.json: {_e}. Suponemos VeriFactu ON")
     VERIFACTU_HABILITADO = True
 
 try:
@@ -45,7 +49,7 @@ def _ensure_column(table: str, col_name: str, col_type: str = "TEXT") -> None:
             cur.execute(f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}")
             conn.commit()
     except Exception as exc:
-        print(f"[ANULACION] No se pudo añadir columna {col_name} a {table}: {exc}")
+        logger.info(f"[ANULACION] No se pudo añadir columna {col_name} a {table}: {exc}")
     finally:
         if conn:
             conn.close()
@@ -154,7 +158,7 @@ def anular_factura(id_factura: int):
 
         # 4.5) Generar XML Facturae 3.2.2 para la factura rectificativa
         if not VERIFACTU_HABILITADO:
-            print("[ANULACION] VeriFactu deshabilitado: no se genera XML ni se envía a AEAT")
+            logger.info("[ANULACION] VeriFactu deshabilitado: no se genera XML ni se envía a AEAT")
             return jsonify({
                 'mensaje': 'Factura anulada y rectificativa creada (VeriFactu OFF)',
                 'id_rectificativa': id_rect
@@ -200,16 +204,16 @@ def anular_factura(id_factura: int):
                 }
 
                 facturae_ruta = generar_facturae_modular(datos_facturae)
-                print(f"[FACTURAE] XML de factura rectificativa generado en {facturae_ruta}")
+                logger.info(f"[FACTURAE] XML de factura rectificativa generado en {facturae_ruta}")
             except Exception as exc_generar_xml:
-                print(f"[FACTURAE][ERROR] No se pudo generar XML de la rectificativa: {exc_generar_xml}")
+                logger.info(f"[FACTURAE][ERROR] No se pudo generar XML de la rectificativa: {exc_generar_xml}")
                 import traceback; traceback.print_exc()
 
         # -------------------------------------------------------------------
         # 5) Enviar automáticamente la rectificativa a la AEAT (VERI*FACTU)
         # -------------------------------------------------------------------
         if not VERIFACTU_HABILITADO:
-            print("[ANULACION] VeriFactu deshabilitado: no se envía a AEAT")
+            logger.info("[ANULACION] VeriFactu deshabilitado: no se envía a AEAT")
             return jsonify({
                 'mensaje': 'Factura rectificativa generada (VeriFactu OFF)',
                 'id_rectificativa': id_rect

@@ -13,6 +13,10 @@ from format_utils import format_currency_es_two, format_total_es_two, format_num
 from flask import jsonify, request
 from db_utils import get_db_connection, formatear_numero_documento
 from verifactu.core import generar_datos_verifactu_para_ticket
+from logger_config import get_tickets_logger
+
+# Inicializar logger
+logger = get_tickets_logger()
 from utilities import calcular_importes
 
 # Cargar configuración de Verifactu
@@ -360,7 +364,7 @@ def guardar_ticket():
                 try:
                     generar_datos_verifactu_para_ticket(id_ticket)
                 except Exception as vf_exc:
-                    print(f"Error generando datos VERI*FACTU para ticket {id_ticket}: {vf_exc}")
+                    logger.warning(f"Error generando datos VERI*FACTU para ticket {id_ticket}: {vf_exc}")
 
             return jsonify({"mensaje": "Ticket guardado correctamente", "id": id_ticket})
 
@@ -375,7 +379,7 @@ def guardar_ticket():
     except Exception as e:
         if conn:
             conn.rollback()
-        print("Error al guardar ticket:", str(e))
+        logger.error(f"Error al guardar ticket: {str(e)}", exc_info=True)
         return jsonify({
             "error": "Error al procesar la solicitud",
             "detalle": str(e)
@@ -559,11 +563,11 @@ def total_tickets_cobrados_ano_actual():
             })
 
         except Exception as e:
-            print(f"Error en la consulta SQL: {str(e)}")
+            logger.error(f"Error en la consulta SQL (total_tickets_cobrados): {str(e)}", exc_info=True)
             return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
 
     except Exception as e:
-        print(f"Error en total_tickets_cobrados_ano_actual: {str(e)}")
+        logger.error(f"Error en total_tickets_cobrados_ano_actual: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if 'cursor' in locals():
@@ -595,11 +599,11 @@ def media_ventas_mensual():
             return jsonify({"media_ventas_mensual": media})
 
         except Exception as e:
-            print(f"Error en la consulta SQL: {str(e)}")
+            logger.error(f"Error en la consulta SQL (media_ventas_mensual): {str(e)}", exc_info=True)
             return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
 
     except Exception as e:
-        print(f"Error en media_ventas_mensual: {str(e)}")
+        logger.error(f"Error en media_ventas_mensual: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if 'cursor' in locals():
@@ -631,11 +635,11 @@ def media_ventas_diaria():
             return jsonify({"media_ventas_diaria": media})
 
         except Exception as e:
-            print(f"Error en la consulta SQL: {str(e)}")
+            logger.error(f"Error en la consulta SQL (media_ventas_diaria): {str(e)}", exc_info=True)
             return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
 
     except Exception as e:
-        print(f"Error en media_ventas_diaria: {str(e)}")
+        logger.error(f"Error en media_ventas_diaria: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if 'cursor' in locals():
@@ -671,11 +675,11 @@ def media_gasto_por_ticket():
             })
 
         except Exception as e:
-            print(f"Error en la consulta SQL: {str(e)}")
+            logger.error(f"Error en la consulta SQL (media_gasto_por_ticket): {str(e)}", exc_info=True)
             return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
 
     except Exception as e:
-        print(f"Error en media_gasto_por_ticket: {str(e)}")
+        logger.error(f"Error en media_gasto_por_ticket: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if 'cursor' in locals():
@@ -701,7 +705,7 @@ def actualizar_ticket():
             raw = ''
         try:
             preview = raw[:200] if isinstance(raw, str) else str(raw)[:200]
-            print(f"[DEBUG][/api/tickets/actualizar] CT={ct} CL={cl} len_raw={len(raw) if isinstance(raw,str) else 'NA'} raw_preview={preview}")
+            logger.debug(f"[/api/tickets/actualizar] CT={ct} CL={cl} len_raw={len(raw) if isinstance(raw,str) else 'NA'} raw_preview={preview}")
         except Exception:
             pass
         if raw and raw.strip():
@@ -872,8 +876,8 @@ def consulta_tickets():
 
         sql += ' ORDER BY t.fecha DESC, t.timestamp DESC'
 
-        print("SQL Query:", sql)  # Para depuración
-        print("Params:", params)  # Para depuración
+        logger.debug(f"SQL Query: {sql}")
+        logger.debug(f"Params: {params}")
 
         # Ejecutar la consulta
         cursor.execute(sql, params)
@@ -888,7 +892,7 @@ def consulta_tickets():
         return jsonify(tickets_list)
 
     except Exception as e:
-        print("Error en consulta_tickets:", str(e))  # Para depuración
+        logger.error(f"Error en consulta_tickets: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
         if 'conn' in locals():
@@ -936,18 +940,18 @@ def actualizar_ticket_legacy():
         try:
             # Asegurarnos de que el importe_cobrado esté presente en los datos
             if 'importe_cobrado' not in data:
-                print("importe_cobrado no está presente en los datos")
+                logger.warning("importe_cobrado no está presente en los datos")
                 return jsonify({"error": "El campo importe_cobrado es requerido"}), 400
 
             # Convertir el importe_cobrado a float, reemplazando comas por puntos
             importe_cobrado_str = str(data['importe_cobrado']).replace(',', '.')
             importes = calcular_importes(1, importe_cobrado_str, 0)
             importe_cobrado = importes['total']
-            print(f"Datos completos recibidos: {data}")
-            print(f"Importe cobrado recibido (raw): {data['importe_cobrado']}")
-            print(f"Importe cobrado convertido: {importe_cobrado}")
+            logger.debug(f"Datos completos recibidos: {data}")
+            logger.debug(f"Importe cobrado recibido (raw): {data['importe_cobrado']}")
+            logger.debug(f"Importe cobrado convertido: {importe_cobrado}")
         except (ValueError, TypeError) as e:
-            print(f"Error al convertir importe_cobrado: {e}")
+            logger.error(f"Error al convertir importe_cobrado: {e}", exc_info=True)
             return jsonify({"error": f"Error al procesar importe_cobrado: {str(e)}"}), 400
 
         total = float(Decimal(str(data.get('total', 0))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
@@ -966,7 +970,7 @@ def actualizar_ticket_legacy():
             conn.rollback()
             return jsonify({"error": "Ticket no encontrado"}), 404
 
-        print(f"Datos actuales del ticket: {dict(ticket_actual)}")
+        logger.debug(f"Datos actuales del ticket: {dict(ticket_actual)}")
 
         # 1. Recuperar todos los detalles existentes
         cursor.execute('''
@@ -997,15 +1001,15 @@ def actualizar_ticket_legacy():
                 if ha_cambiado:
                     # Si el detalle ha sido modificado, usar la nueva forma de pago
                     detalle_procesado['formaPago'] = formaPago
-                    print(f"Detalle {detalle['id']} modificado, asignando nueva formaPago: {formaPago}")
+                    logger.debug(f"Detalle {detalle['id']} modificado, asignando nueva formaPago: {formaPago}")
                 else:
                     # Si no ha sido modificado, mantener la forma de pago original
                     detalle_procesado['formaPago'] = detalle_original['formaPago']
-                    print(f"Detalle {detalle['id']} sin cambios, manteniendo formaPago: {detalle_original['formaPago']}")
+                    logger.debug(f"Detalle {detalle['id']} sin cambios, manteniendo formaPago: {detalle_original['formaPago']}")
             else:
                 # Es un detalle nuevo, asignar la nueva forma de pago
                 detalle_procesado['formaPago'] = formaPago
-                print(f"Detalle nuevo, asignando formaPago: {formaPago}")
+                logger.debug(f"Detalle nuevo, asignando formaPago: {formaPago}")
             
             detalles_finales.append(detalle_procesado)
 
@@ -1044,9 +1048,7 @@ def actualizar_ticket_legacy():
         # Verificar el estado final
         cursor.execute('SELECT importe_cobrado, total FROM tickets WHERE id = ?', (id_ticket,))
         resultado_final = cursor.fetchone()
-        print("Estado final del ticket:")
-        print(f"Importe cobrado: {resultado_final['importe_cobrado']}")
-        print(f"Total: {resultado_final['total']}")
+        logger.debug(f"Estado final del ticket: importe_cobrado={resultado_final['importe_cobrado']}, total={resultado_final['total']}")
 
         # Actualizar detalles
         cursor.execute('DELETE FROM detalle_tickets WHERE id_ticket = ?', (id_ticket,))
@@ -1071,8 +1073,7 @@ def actualizar_ticket_legacy():
             ))
 
         conn.commit()
-        print(f"Ticket {id_ticket} actualizado correctamente")
-        print(f"Importe cobrado final: {importe_cobrado}")
+        logger.info(f"Ticket {id_ticket} actualizado correctamente. Importe cobrado final: {importe_cobrado}")
         
         return jsonify({
             "mensaje": "Ticket actualizado correctamente",
@@ -1084,7 +1085,7 @@ def actualizar_ticket_legacy():
     except Exception as e:
         if 'conn' in locals():
             conn.rollback()
-        print(f"Error al actualizar ticket: {str(e)}")
+        logger.error(f"Error al actualizar ticket: {str(e)}", exc_info=True)
         return jsonify({"error": str(e)}), 500
     finally:
         if 'conn' in locals():

@@ -7,6 +7,10 @@ import re
 import sys
 
 import pdfplumber
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 # Configurar argumentos de línea de comandos
 parser = argparse.ArgumentParser(description='Procesa archivos PDF de facturas recibidas')
@@ -32,7 +36,7 @@ logging.info(f"Usando el directorio: {directorio}")
 # Verificar que el directorio existe y es accesible
 if not os.path.exists(directorio):
     logging.error(f"El directorio {directorio} no existe o no es accesible")
-    print(f"ERROR: El directorio {directorio} no existe o no es accesible")
+    logger.info(f"ERROR: El directorio {directorio} no existe o no es accesible")
     sys.exit(1)
 
 # Expresiones regulares para número de factura
@@ -155,8 +159,8 @@ try:
     logging.info(f"Se encontraron {len(archivos)} archivos en el directorio")
 except (PermissionError, FileNotFoundError) as e:
     logging.error(f"Error al acceder al directorio {directorio}: {str(e)}")
-    print(f"ERROR: No se puede acceder al directorio {directorio}")
-    print("Intente ejecutar el script con otro directorio usando --directorio=/ruta/a/directorio")
+    logger.info(f"ERROR: No se puede acceder al directorio {directorio}")
+    logger.info("Intente ejecutar el script con otro directorio usando --directorio=/ruta/a/directorio")
     sys.exit(1)
 
 archivos_pdf = [archivo for archivo in archivos if archivo.lower().endswith('.pdf')]
@@ -164,7 +168,7 @@ logging.info(f"Se encontraron {len(archivos_pdf)} archivos PDF")
 
 if not archivos_pdf:
     logging.warning("No se encontraron archivos PDF en el directorio")
-    print("ADVERTENCIA: No se encontraron archivos PDF en el directorio")
+    logger.info("ADVERTENCIA: No se encontraron archivos PDF en el directorio")
     sys.exit(0)
 
 for archivo in archivos_pdf:
@@ -184,15 +188,15 @@ for archivo in archivos_pdf:
                 texto += pagina.extract_text() + '\n'
             
             if args.texto_completo:
-                print(f"\n==== TEXTO COMPLETO DE {archivo} ====")
-                print(texto)
+                logger.info(f"\n==== TEXTO COMPLETO DE {archivo} ====")
+                logger.info(f"texto)
                 print("=" * 50)
             elif args.debug:
-                print(f"\n---- CONTENIDO DE {archivo} ----")
+                logger.info(f"\n---- CONTENIDO DE {archivo} ----")
                 print(texto[:500] + "..." if len(texto) > 500 else texto)
                 print("-" * 50)
             
-            resultado = extraer_datos_factura(texto, archivo)
+            resultado = extraer_datos_factura(texto archivo")
             resultados.append(resultado)
             logging.info(f"Archivo {archivo} procesado correctamente")
             
@@ -202,14 +206,14 @@ for archivo in archivos_pdf:
 
 # Mostrar resultados
 logging.info(f"Se procesaron correctamente {len(resultados)} archivos")
-print(f"\nResultados ({len(resultados)} archivos procesados correctamente):")
+logger.info(f"\nResultados ({len(resultados)} archivos procesados correctamente):")
 for r in resultados:
     num_factura = f" | N° Factura: {r['numero_factura']}" if r['numero_factura'] else ""
-    print(f"{r['archivo']}: Emisor: {r['emisor']}{num_factura} | Total: {r['total'] or 'No encontrado'} €")
+    logger.info(f"{r['archivo']}: Emisor: {r['emisor']}{num_factura} | Total: {r['total'] or 'No encontrado'} €")
 
 # Mostrar errores
 if errores:
     logging.warning(f"Se encontraron {len(errores)} archivos con errores")
-    print(f"\nArchivos con errores ({len(errores)}):")
+    logger.info(f"\nArchivos con errores ({len(errores)}):")
     for e in errores:
-        print(f"{e['archivo']}: {e['error']}")
+        logger.info(f"{e['archivo']}: {e['error']}")

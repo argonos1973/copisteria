@@ -1,5 +1,5 @@
 import { formatearFecha, formatearImporte, fetchConManejadorErrores, parsearImporte, buildApiUrl } from './scripts_utils.js?v=20250924_2157';
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, IS_PROD } from './constantes.js';
 
 // ==============================
 // ESTADISTICAS FACTURAS - COMPLETO
@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Si por cualquier motivo vino todo a 0, intentar reconstruir desde totales
     try {
       const totAct = (parsearImporte(datos?.tickets?.actual?.total) || 0) + (parsearImporte(datos?.facturas?.actual?.total) || 0);
-      const esProd = IP_SERVER === '192.168.1.18';
+      const esProd = IS_PROD;
       if (!esProd && (!datos || totAct === 0)) {
         console.warn('[estadisticas] Fallback 2: datos en 0, reconstruyendo desde total_mes');
         datos = await construirDatosDesdeTotales(mes, anio);
@@ -686,7 +686,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mediaMensual = parsearImporte(global.actual.media_mensual);
     // En local, tratar el mes seleccionado como el "mes en curso"; en producción usar el mes real
     const { mes: mesSel } = getFechaSeleccionada();
-    const esProd = IP_SERVER === '192.168.1.18';
+    const esProd = IS_PROD;
     const mesActual = esProd ? (new Date().getMonth() + 1) : parseInt(mesSel, 10);
     const acumulado = parsearImporte(global.actual.total);
     const previsto = acumulado + (mediaMensual * (12 - mesActual));

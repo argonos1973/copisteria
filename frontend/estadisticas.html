@@ -1527,9 +1527,17 @@ async function abrirModalDetallesGastoMes(categoria) {
         const datos = await respuesta.json();
         console.log('[MODAL MES] Datos recibidos:', datos);
         
-        document.getElementById('modal-total').textContent = formatearImporte(datos.estadisticas.total);
-        document.getElementById('modal-cantidad').textContent = datos.estadisticas.cantidad;
-        document.getElementById('modal-promedio').textContent = formatearImporte(datos.estadisticas.promedio);
+        // Mostrar total sin puntuales como valor principal
+        const hayPuntuales = datos.estadisticas.total !== datos.estadisticas.total_sin_puntuales;
+        const totalHTML = hayPuntuales 
+            ? `${formatearImporte(datos.estadisticas.total_sin_puntuales)} <span style="font-size:0.7rem;color:#999;font-weight:normal;">(Total bruto: ${formatearImporte(datos.estadisticas.total)})</span>`
+            : formatearImporte(datos.estadisticas.total);
+        
+        document.getElementById('modal-total').innerHTML = totalHTML;
+        document.getElementById('modal-cantidad').textContent = hayPuntuales 
+            ? `${datos.estadisticas.cantidad_sin_puntuales} (${datos.estadisticas.cantidad} total)`
+            : datos.estadisticas.cantidad;
+        document.getElementById('modal-promedio').textContent = formatearImporte(datos.estadisticas.promedio_sin_puntuales);
         document.getElementById('modal-minimo').textContent = '-';
         document.getElementById('modal-maximo').textContent = '-';
         
@@ -1544,17 +1552,32 @@ async function abrirModalDetallesGastoMes(categoria) {
         datos.gastos.forEach((gasto, index) => {
             const fila = document.createElement('tr');
             const periodo = gasto.cantidad > 1 ? `${gasto.cantidad}x` : gasto.fecha;
+            
+            // Determinar si es gasto puntual
+            const esPuntual = gasto.es_puntual === true;
+            const estiloFondo = esPuntual ? 'background-color:#fff3cd;' : '';
+            const etiquetaPuntual = esPuntual ? '<span style="display:inline-block;margin-left:0.5rem;font-size:0.65rem;background:#ffc107;color:#000;padding:0.1rem 0.4rem;border-radius:0.2rem;font-weight:600;" title="Excluido del promedio mensual">PUNTUAL</span>' : '';
+            
             fila.innerHTML = `
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem;">
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem;${estiloFondo}">
                     <span style="color:#999;font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
                     ${gasto.concepto}
                     ${gasto.cantidad > 1 ? '<span style="color:#999;font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
+                    ${etiquetaPuntual}
                 </td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: center;">${gasto.cantidad}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; color: #e74c3c;">${formatearImporte(gasto.importe)}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; color: #666;">${formatearImporte(gasto.importe / gasto.cantidad)}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; color: #999;">${periodo}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: center;${estiloFondo}">${gasto.cantidad}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; color: #e74c3c;${estiloFondo}">${formatearImporte(gasto.importe)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; color: #666;${estiloFondo}">${formatearImporte(gasto.importe / gasto.cantidad)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; color: #999;${estiloFondo}">${periodo}</td>
             `;
+            
+            // Aplicar estilo de fondo si es puntual
+            if (esPuntual) {
+                fila.style.backgroundColor = '#fff3cd';
+                fila.style.borderLeft = '4px solid #ffc107';
+                fila.title = 'Este gasto es puntual (>1000€ no recurrente) y está excluido del cálculo del promedio mensual';
+            }
+            
             tbody.appendChild(fila);
         });
         
@@ -1604,9 +1627,17 @@ async function abrirModalDetallesGastoAnio(categoria) {
         const datos = await respuesta.json();
         console.log('[MODAL ANIO] Datos recibidos:', datos);
         
-        document.getElementById('modal-total').textContent = formatearImporte(datos.estadisticas.total);
-        document.getElementById('modal-cantidad').textContent = datos.estadisticas.cantidad;
-        document.getElementById('modal-promedio').textContent = formatearImporte(datos.estadisticas.promedio);
+        // Mostrar total sin puntuales como valor principal
+        const hayPuntuales = datos.estadisticas.total !== datos.estadisticas.total_sin_puntuales;
+        const totalHTML = hayPuntuales 
+            ? `${formatearImporte(datos.estadisticas.total_sin_puntuales)} <span style="font-size:0.7rem;color:#999;font-weight:normal;">(Total bruto: ${formatearImporte(datos.estadisticas.total)})</span>`
+            : formatearImporte(datos.estadisticas.total);
+        
+        document.getElementById('modal-total').innerHTML = totalHTML;
+        document.getElementById('modal-cantidad').textContent = hayPuntuales 
+            ? `${datos.estadisticas.cantidad_sin_puntuales} (${datos.estadisticas.cantidad} total)`
+            : datos.estadisticas.cantidad;
+        document.getElementById('modal-promedio').textContent = formatearImporte(datos.estadisticas.promedio_sin_puntuales);
         document.getElementById('modal-minimo').textContent = '-';
         document.getElementById('modal-maximo').textContent = '-';
         
@@ -1621,17 +1652,32 @@ async function abrirModalDetallesGastoAnio(categoria) {
         datos.gastos.forEach((gasto, index) => {
             const fila = document.createElement('tr');
             const periodo = gasto.cantidad > 1 ? `${gasto.cantidad}x` : gasto.fecha;
+            
+            // Determinar si es gasto puntual
+            const esPuntual = gasto.es_puntual === true;
+            const estiloFondo = esPuntual ? 'background-color:#fff3cd;' : '';
+            const etiquetaPuntual = esPuntual ? '<span style="display:inline-block;margin-left:0.5rem;font-size:0.65rem;background:#ffc107;color:#000;padding:0.1rem 0.4rem;border-radius:0.2rem;font-weight:600;" title="Excluido del promedio mensual">PUNTUAL</span>' : '';
+            
             fila.innerHTML = `
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem;">
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem;${estiloFondo}">
                     <span style="color:#999;font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
                     ${gasto.concepto}
                     ${gasto.cantidad > 1 ? '<span style="color:#999;font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
+                    ${etiquetaPuntual}
                 </td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: center;">${gasto.cantidad}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; color: #e74c3c;">${formatearImporte(gasto.importe)}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; color: #666;">${formatearImporte(gasto.importe / gasto.cantidad)}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; color: #999;">${periodo}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: center;${estiloFondo}">${gasto.cantidad}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; color: #e74c3c;${estiloFondo}">${formatearImporte(gasto.importe)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; color: #666;${estiloFondo}">${formatearImporte(gasto.importe / gasto.cantidad)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; color: #999;${estiloFondo}">${periodo}</td>
             `;
+            
+            // Aplicar estilo de fondo si es puntual
+            if (esPuntual) {
+                fila.style.backgroundColor = '#fff3cd';
+                fila.style.borderLeft = '4px solid #ffc107';
+                fila.title = 'Este gasto es puntual (>1000€ no recurrente) y está excluido del cálculo del promedio mensual';
+            }
+            
             tbody.appendChild(fila);
         });
         
@@ -1745,7 +1791,19 @@ async function cargarGraficoGastosMes() {
                                 const value = context.parsed || 0;
                                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                 const percentage = ((value / total) * 100).toFixed(1);
-                                return `${label}: ${value.toFixed(2)} € (${percentage}%) - Click para ver detalles`;
+                                
+                                // Obtener información de gastos puntuales si existe
+                                const categoriaIndex = context.dataIndex;
+                                const categoria = datos.categorias[categoriaIndex];
+                                let tooltipLines = [`${label}: ${value.toFixed(2)} € (${percentage}%)`];
+                                
+                                if (categoria && categoria.total_puntuales > 0) {
+                                    tooltipLines.push(`Excluidos puntuales: ${categoria.total_puntuales.toFixed(2)} €`);
+                                    tooltipLines.push(`Total bruto: ${categoria.total_bruto.toFixed(2)} €`);
+                                }
+                                
+                                tooltipLines.push('Click para ver detalles');
+                                return tooltipLines;
                             }
                         }
                     }
@@ -2185,7 +2243,18 @@ async function aplicarEstrategia() {
             })
         });
         
+        if (!responseBase.ok) {
+            const errorData = await responseBase.json().catch(() => ({}));
+            throw new Error(errorData.error || `Error del servidor: ${responseBase.status}`);
+        }
+        
         const dataBase = await responseBase.json();
+        
+        // Validar que la respuesta tenga la estructura esperada
+        if (!dataBase || !dataBase.real) {
+            throw new Error('Respuesta del API inválida o incompleta');
+        }
+        
         const ventasReales = dataBase.real.ventas;
         const gastosReales = dataBase.real.gastos;
         const balanceReal = dataBase.real.balance;
@@ -2382,7 +2451,7 @@ console.log('[SIMULADOR] Sistema de simulador financiero cargado');
 </script>
 
 <!-- Módulo de estadísticas de gastos -->
-<script src="../static/estadisticas_gastos.js" type="module"></script>
+<script src="../static/estadisticas_gastos.js?v=20251015_gastos_puntuales" type="module"></script>
 
 </body>
 </html>

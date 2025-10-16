@@ -12,9 +12,13 @@ import pandas as pd
 from db_utils import get_db_connection
 from notificaciones_utils import guardar_notificacion
 from constantes import DB_NAME
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 # Registrar inicio del script
-print("=== scrapeo.py iniciado ===")
+logger.info("=== scrapeo.py iniciado ===")
 
 # ==== Modo simplificado: Importar gastos desde un Excel y terminar ====
 
@@ -173,7 +177,7 @@ def importar_desde_excel(ruta_excel: str):
         despues = conn.total_changes
         inserted = max(despues - antes, 0)
         logging.info("%d registros nuevos insertados en 'gastos'", inserted)
-        print(f"Registros insertados: {inserted}")
+        logger.info(f"Registros insertados: {inserted}")
         
         # Generar notificación si hubo inserciones
         if inserted > 0:
@@ -184,11 +188,11 @@ def importar_desde_excel(ruta_excel: str):
             )
     else:
         logging.info("No se encontraron registros nuevos para insertar en 'gastos'")
-        print("No hay registros nuevos para insertar (evitados duplicados)")
+        logger.info("No hay registros nuevos para insertar (evitados duplicados)")
 
     conn.close()
     logging.info("Importación de gastos completada desde Excel '%s'", ruta_excel)
-    print(f"Importación completada OK desde: {ruta_excel}")
+    logger.info(f"Importación completada OK desde: {ruta_excel}")
 
 
 if __name__ == "__main__":
@@ -216,7 +220,7 @@ if __name__ == "__main__":
     
     # Si aún no existe, mostrar error
     if not excel_path.exists():
-        print(f"ERROR: No se encontró el fichero {excel_path}")
+        logger.info(f"ERROR: No se encontró el fichero {excel_path}")
         sys.exit(1)
 
     importar_desde_excel(str(excel_path))

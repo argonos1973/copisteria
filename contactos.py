@@ -3,6 +3,10 @@ from db_utils import get_db_connection
 from functools import lru_cache
 
 from constantes import *
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 
 
@@ -144,10 +148,10 @@ def obtener_contactos():
         return [dict(c) for c in contactos]
         
     except sqlite3.Error as e:
-        print(f"Error de base de datos: {str(e)}")
+        logger.error(f"Error de base de datos: {str(e)}", exc_info=True)
         raise Exception("Error al obtener los contactos de la base de datos")
     except Exception as e:
-        print(f"Error inesperado: {str(e)}")
+        logger.error(f"Error inesperado: {str(e)}", exc_info=True)
         raise Exception("Error inesperado al obtener los contactos")
     finally:
         if 'conn' in locals():
@@ -262,7 +266,7 @@ def obtener_contactos_paginados(filtros, page=1, page_size=10, sort='razonsocial
             'total_pages': int(total_pages)
         }
     except sqlite3.Error as e:
-        print(f"Error de base de datos en obtener_contactos_paginados: {str(e)}")
+        logger.error(f"Error de base de datos en obtener_contactos_paginados: {str(e)}", exc_info=True)
         raise Exception(f"Error al obtener contactos paginados: {str(e)}")
     finally:
         if 'conn' in locals():

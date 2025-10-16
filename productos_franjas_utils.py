@@ -4,6 +4,10 @@ Utilidades para la gestión automática de franjas de descuento en productos.
 import sqlite3
 from constantes import DB_NAME
 from db_utils import get_db_connection
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 
 def generar_franjas_automaticas(producto_id, config):
@@ -95,7 +99,7 @@ def actualizar_configuracion_franjas_producto(producto_id, config):
             reemplazar_franjas_descuento_producto(producto_id, franjas)
         
     except Exception as e:
-        print(f"Error actualizando configuración de franjas: {e}")
+        logger.error(f"Error actualizando configuración de franjas: {e}", exc_info=True)
         raise
     finally:
         if 'conn' in locals():
@@ -139,7 +143,7 @@ def obtener_configuracion_franjas_producto(producto_id):
         return None
         
     except Exception as e:
-        print(f"Error obteniendo configuración de franjas: {e}")
+        logger.error(f"Error obteniendo configuración de franjas: {e}", exc_info=True)
         return None
     finally:
         if 'conn' in locals():

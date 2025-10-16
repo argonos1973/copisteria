@@ -2,10 +2,224 @@ from flask import Blueprint, jsonify, request
 from datetime import datetime
 from db_utils import get_db_connection
 import re
+from logger_config import get_estadisticas_logger
+
+logger = get_estadisticas_logger()
 
 estadisticas_gastos_bp = Blueprint('estadisticas_gastos', __name__)
 
 # ===== FUNCIONES AUXILIARES COMPARTIDAS =====
+
+def _inicializar_campo_puntual(conn):
+    """
+    Inicializa el campo 'puntual' en la tabla gastos si no existe.
+    El campo puntual indica si un gasto es puntual (1) o recurrente (0).
+    """
+    try:
+        cursor = conn.cursor()
+
+        # Verificar si el campo ya existe
+        cursor.execute("PRAGMA table_info(gastos)")
+        columnas = cursor.fetchall()
+        columnas_nombres = [col['name'] for col in columnas]
+
+        if 'puntual' not in columnas_nombres:
+            logger.info("Agregando campo 'puntual' a tabla gastos")
+            cursor.execute("ALTER TABLE gastos ADD COLUMN puntual INTEGER DEFAULT 0")
+
+        conn.commit()
+        logger.debug("Campo 'puntual' inicializado correctamente")
+    except Exception as e:
+        logger.error(f"Error al inicializar campo puntual: {e}", exc_info=True)
+        conn.rollback()
+
+def _marcar_gastos_puntuales(conn, gastos_puntuales_ids):
+    """
+    Marca los gastos puntuales en la base de datos.
+    puntual = 1: gastos puntuales automáticos (>1000€ no recurrentes)
+    puntual = 2: gastos excluidos manualmente (ej: devoluciones)
+    Args:
+        conn: conexión a la base de datos
+        gastos_puntuales_ids: set o lista de IDs de gastos que son puntuales
+    """
+    if not gastos_puntuales_ids:
+        # Si no hay gastos puntuales automáticos, desmarcar solo los automáticos (puntual=1)
+        # Preservar los manuales (puntual=2)
+        try:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE gastos SET puntual = 0 WHERE puntual = 1")
+            conn.commit()
+        except Exception as e:
+            logger.error(f"Error al desmarcar gastos puntuales automáticos: {e}", exc_info=True)
+            conn.rollback()
+        return
+
+    try:
+        cursor = conn.cursor()
+
+        # Convertir set a lista si es necesario
+        ids_lista = list(gastos_puntuales_ids) if isinstance(gastos_puntuales_ids, set) else gastos_puntuales_ids
+
+        # Marcar gastos puntuales automáticos (solo si no están marcados manualmente)
+        placeholders = ','.join('?' * len(ids_lista))
+        cursor.execute(f"""
+            UPDATE gastos
+            SET puntual = 1
+            WHERE id IN ({placeholders})
+            AND (puntual = 0 OR puntual IS NULL OR puntual = 1)
+        """, ids_lista)
+
+        # Desmarcar SOLO gastos automáticos (puntual=1) que ya no son puntuales
+        # NO tocar los manuales (puntual=2)
+        cursor.execute(f"""
+            UPDATE gastos
+            SET puntual = 0
+            WHERE puntual = 1 AND id NOT IN ({placeholders})
+        """, ids_lista)
+
+        conn.commit()
+        logger.info(f"Marcados {len(gastos_puntuales_ids)} gastos como puntuales")
+    except Exception as e:
+        logger.error(f"Error al marcar gastos puntuales: {e}", exc_info=True)
+        conn.rollback()
+
+def _identificar_gastos_puntuales(conn, anio, mes=None):
+    """
+    Identifica gastos puntuales según los criterios específicos del usuario:
+    - Gastos individuales >1000€ que no se repitan durante 3 meses
+    - Múltiples gastos del mismo día que sumen >1000€ y no se repitan durante 3 meses
+
+    Args:
+        conn: conexión a la base de datos
+        anio: año para analizar
+        mes: mes hasta el cual analizar (opcional)
+
+    Returns:
+        set: IDs de gastos que son puntuales según los criterios
+    """
+    cursor = conn.cursor()
+
+    # Obtener todos los gastos del año
+    if mes:
+        cursor.execute('''
+            SELECT id, concepto, ABS(importe_eur) as importe, fecha_operacion
+            FROM gastos
+            WHERE substr(fecha_operacion, 7, 4) = ?
+            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            AND importe_eur < 0
+        ''', (str(anio), mes))
+    else:
+        cursor.execute('''
+            SELECT id, concepto, ABS(importe_eur) as importe, fecha_operacion
+            FROM gastos
+            WHERE substr(fecha_operacion, 7, 4) = ?
+            AND importe_eur < 0
+        ''', (str(anio),))
+
+    gastos = cursor.fetchall()
+
+    if not gastos:
+        return set()
+
+    gastos_puntuales = set()
+
+    # 1. Agrupar todos los gastos por (concepto normalizado + fecha)
+    gastos_por_concepto_fecha = {}
+    for gasto in gastos:
+        concepto_norm = _normalizar_concepto(gasto['concepto'])
+        fecha = gasto['fecha_operacion']
+        clave = (concepto_norm, fecha)
+        
+        if clave not in gastos_por_concepto_fecha:
+            gastos_por_concepto_fecha[clave] = []
+        gastos_por_concepto_fecha[clave].append(gasto)
+
+    # 2. Identificar grupos que sumen >1000€ (individual o agregado del mismo día)
+    gastos_altos_por_concepto = {}
+    
+    for (concepto_norm, fecha), gastos_del_dia in gastos_por_concepto_fecha.items():
+        total_dia = sum(g['importe'] for g in gastos_del_dia)
+        
+        # Si el total del día >1000€, considerarlo como gasto alto
+        if total_dia > 1000:
+            if concepto_norm not in gastos_altos_por_concepto:
+                gastos_altos_por_concepto[concepto_norm] = []
+            
+            # Guardar todos los gastos de ese día junto con la fecha
+            gastos_altos_por_concepto[concepto_norm].append({
+                'gastos': gastos_del_dia,
+                'fecha': fecha,
+                'total': total_dia
+            })
+
+    # 3. Para cada concepto, verificar en cuántos meses diferentes aparece
+    for concepto_norm, dias_con_gastos in gastos_altos_por_concepto.items():
+        # Obtener los meses únicos en los que aparece este concepto con gastos >1000€
+        meses_unicos = set()
+        for dia_info in dias_con_gastos:
+            mes_gasto = dia_info['fecha'][3:5]  # Extraer MM de dd/MM/yyyy
+            meses_unicos.add(mes_gasto)
+
+        # Si este concepto aparece en menos de 3 meses diferentes, todos sus gastos son puntuales
+        if len(meses_unicos) < 3:
+            for dia_info in dias_con_gastos:
+                for g in dia_info['gastos']:
+                    gastos_puntuales.add(g['id'])
+
+    return gastos_puntuales
+
+def _calcular_media_mensual_sin_puntuales(conn, anio, mes=None):
+    """
+    Calcula la media mensual excluyendo gastos puntuales
+
+    Args:
+        conn: conexión a la base de datos
+        anio: año para calcular
+        mes: mes hasta el cual calcular (opcional)
+
+    Returns:
+        tuple: (media_mensual, total_gastos_sin_puntuales, num_meses)
+    """
+    # Inicializar campo puntual si no existe
+    _inicializar_campo_puntual(conn)
+
+    # Identificar y marcar gastos puntuales
+    gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
+    _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
+
+    # Calcular gastos excluyendo puntuales marcados
+    cursor = conn.cursor()
+    if mes:
+        cursor.execute('''
+            SELECT
+                COALESCE(SUM(ABS(importe_eur)), 0) as total_sin_puntuales,
+                COUNT(*) as cantidad_sin_puntuales
+            FROM gastos
+            WHERE substr(fecha_operacion, 7, 4) = ?
+            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            AND importe_eur < 0
+            AND (puntual IS NULL OR puntual = 0)
+        ''', (str(anio), mes))
+    else:
+        cursor.execute('''
+            SELECT
+                COALESCE(SUM(ABS(importe_eur)), 0) as total_sin_puntuales,
+                COUNT(*) as cantidad_sin_puntuales
+            FROM gastos
+            WHERE substr(fecha_operacion, 7, 4) = ?
+            AND importe_eur < 0
+            AND (puntual IS NULL OR puntual = 0)
+        ''', (str(anio),))
+
+    resultado = cursor.fetchone()
+    total_sin_puntuales = float(resultado['total_sin_puntuales'] or 0)
+    cantidad_sin_puntuales = int(resultado['cantidad_sin_puntuales'] or 0)
+
+    # Calcular media mensual
+    num_meses = mes if mes else 12
+    media_mensual = total_sin_puntuales / num_meses if num_meses > 0 else 0
+
+    return media_mensual, total_sin_puntuales, num_meses
 
 def _obtener_case_categoria_sql():
     """Devuelve el CASE SQL para categorizar gastos"""
@@ -15,7 +229,7 @@ def _obtener_case_categoria_sql():
             WHEN concepto LIKE 'Liquidacion%' THEN 'Liquidaciones TPV'
             WHEN concepto LIKE '%Transferencia%' THEN 'Transferencias'
             WHEN concepto LIKE '%Bizum%' THEN 'Bizum'
-            WHEN concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%' THEN 'Compras Tarjeta'
+            WHEN (concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%') AND concepto NOT LIKE 'Liquidacion%' THEN 'Compras Tarjeta'
             ELSE substr(concepto, 1, 30)
         END
     '''
@@ -27,7 +241,7 @@ def _obtener_filtro_categoria(categoria):
         'Liquidaciones TPV': "concepto LIKE 'Liquidacion%'",
         'Transferencias': "concepto LIKE '%Transferencia%'",
         'Bizum': "concepto LIKE '%Bizum%'",
-        'Compras Tarjeta': "(concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%')",
+        'Compras Tarjeta': "((concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%') AND concepto NOT LIKE 'Liquidacion%')",
         'Otros': """(concepto NOT LIKE 'Recibo%' 
                     AND concepto NOT LIKE 'Liquidacion%' 
                     AND concepto NOT LIKE '%Transferencia%' 
@@ -83,16 +297,21 @@ def _normalizar_concepto(concepto_original):
         if 'taxi' in concepto.lower() or 'autotaxi' in concepto.lower():
             concepto = 'Compra Taxi'
         
-        # Eliminar todo después de la segunda coma (ciudad, tarjeta, comisión)
+        # Eliminar información de tarjeta y comisión (con números)
+        # Formato: ", Tarjeta 4176570108340631 , Comision 0" o "Comision 0,00"
+        concepto = re.sub(r',\s*Tarjeta\s+[\d\s]+,\s*Comision\s+[\d,\.]+', '', concepto, flags=re.IGNORECASE)
+        # Formato más simple: ", Tarjeta , Comision"
+        concepto = re.sub(r',?\s*Tarjeta\s*,?\s*Comision\s*', '', concepto, flags=re.IGNORECASE)
+        # Eliminar solo ", Tarjeta" al final
+        concepto = re.sub(r',?\s*Tarjeta\s*$', '', concepto, flags=re.IGNORECASE)
+        concepto = re.sub(r',?\s*Tarj\.\s*:?\*?\d*\s*$', '', concepto, flags=re.IGNORECASE)
+        
+        # Eliminar todo después de la segunda coma (ciudad)
         partes = concepto.split(',')
         if len(partes) > 2:
             concepto = ','.join(partes[:2])
         # Eliminar ", [Ciudad]" al final
         concepto = re.sub(r',\s*[A-Z][\w\s]+$', '', concepto)
-        # Eliminar "Tarjeta , Comision" y variaciones
-        concepto = re.sub(r',?\s*Tarjeta\s*,?\s*Comision\s*', '', concepto, flags=re.IGNORECASE)
-        concepto = re.sub(r',?\s*Tarjeta\s*$', '', concepto, flags=re.IGNORECASE)
-        concepto = re.sub(r',?\s*Tarj\.\s*:?\*?\d*\s*$', '', concepto, flags=re.IGNORECASE)
     
     # Eliminar ", De" al final y variaciones
     concepto = re.sub(r',\s*De\s*$', '', concepto, flags=re.IGNORECASE)
@@ -152,38 +371,47 @@ def obtener_estadisticas_gastos():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Gastos totales del año actual HASTA el mes seleccionado (inclusive)
+        # Inicializar campo puntual si no existe
+        _inicializar_campo_puntual(conn)
+
+        # Identificar y marcar gastos puntuales
+        gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
+        _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
+
+        # Gastos totales del año actual HASTA el mes seleccionado (inclusive) - EXCLUYENDO PUNTUALES
         mes_str = str(mes).zfill(2)
         cursor.execute('''
-            SELECT 
+            SELECT
                 COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_anio,
                 COUNT(*) as cantidad_gastos_anio
             FROM gastos
             WHERE substr(fecha_operacion, 7, 4) = ?
             AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
+            AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes))
-        
+
         datos_anio = cursor.fetchone()
         total_gastos_anio = float(datos_anio['total_gastos_anio'] or 0)
         cantidad_gastos_anio = int(datos_anio['cantidad_gastos_anio'] or 0)
-        
-        # Gastos del mes actual
+
+        # Gastos del mes actual - EXCLUYENDO PUNTUALES
         cursor.execute('''
-            SELECT 
+            SELECT
                 COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_mes,
                 COUNT(*) as cantidad_gastos_mes
             FROM gastos
             WHERE substr(fecha_operacion, 7, 4) = ?
             AND substr(fecha_operacion, 4, 2) = ?
             AND importe_eur < 0
+            AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes_str))
-        
+
         datos_mes = cursor.fetchone()
         total_gastos_mes = float(datos_mes['total_gastos_mes'] or 0)
         cantidad_gastos_mes = int(datos_mes['cantidad_gastos_mes'] or 0)
-        
-        # Gastos del año anterior HASTA el mismo mes (para comparación justa)
+
+        # Gastos del año anterior HASTA el mismo mes (para comparación justa) - EXCLUYENDO PUNTUALES
         anio_anterior = anio - 1
         cursor.execute('''
             SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_anio_anterior
@@ -191,24 +419,25 @@ def obtener_estadisticas_gastos():
             WHERE substr(fecha_operacion, 7, 4) = ?
             AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
+            AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio_anterior), mes))
-        
+
         total_gastos_anio_anterior = float(cursor.fetchone()['total_gastos_anio_anterior'] or 0)
-        
-        # Gastos del mismo mes del año anterior
+
+        # Gastos del mismo mes del año anterior - EXCLUYENDO PUNTUALES
         cursor.execute('''
             SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_mes_anterior
             FROM gastos
             WHERE substr(fecha_operacion, 7, 4) = ?
             AND substr(fecha_operacion, 4, 2) = ?
             AND importe_eur < 0
+            AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio_anterior), mes_str))
-        
+
         total_gastos_mes_anterior = float(cursor.fetchone()['total_gastos_mes_anterior'] or 0)
         
-        # Media mensual de gastos (meses transcurridos del año)
-        meses_transcurridos = mes
-        media_mensual = total_gastos_anio / meses_transcurridos if meses_transcurridos > 0 else 0
+        # Media mensual de gastos (excluyendo gastos puntuales)
+        media_mensual, total_gastos_sin_puntuales, meses_transcurridos = _calcular_media_mensual_sin_puntuales(conn, anio, mes)
         
         # Previsión de gastos hasta fin de año
         meses_restantes = 12 - mes
@@ -237,7 +466,7 @@ def obtener_estadisticas_gastos():
         })
         
     except Exception as e:
-        print(f"Error en estadísticas gastos: {str(e)}")
+        logger.error(f"Error en estadísticas gastos: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 
@@ -253,13 +482,20 @@ def obtener_top10_gastos():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Inicializar y marcar gastos puntuales
+        _inicializar_campo_puntual(conn)
+        gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio)
+        _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
+        
         # Top 10 gastos por concepto (agrupando por primeras palabras)
         case_categoria = _obtener_case_categoria_sql()
         cursor.execute(f'''
             SELECT 
                 {case_categoria} as concepto_resumido,
                 COALESCE(SUM(ABS(importe_eur)), 0) as total_gasto,
-                COUNT(*) as cantidad
+                COUNT(*) as cantidad,
+                SUM(CASE WHEN puntual = 1 THEN 1 ELSE 0 END) as cantidad_puntuales,
+                COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales
             FROM gastos
             WHERE substr(fecha_operacion, 7, 4) = ?
             AND importe_eur < 0
@@ -270,10 +506,20 @@ def obtener_top10_gastos():
         
         top_gastos = []
         for row in cursor.fetchall():
+            cantidad_puntuales = int(row['cantidad_puntuales'] or 0)
+            total_puntuales = float(row['total_puntuales'] or 0)
+            total_gasto = float(row['total_gasto'] or 0)
+            
+            # Determinar si es principalmente puntual (más del 50% del total es puntual)
+            es_mayormente_puntual = (total_puntuales / total_gasto > 0.5) if total_gasto > 0 else False
+            
             top_gastos.append({
                 'concepto': row['concepto_resumido'],
-                'total': round(float(row['total_gasto'] or 0), 2),
-                'cantidad': int(row['cantidad'] or 0)
+                'total': round(total_gasto, 2),
+                'cantidad': int(row['cantidad'] or 0),
+                'es_puntual': es_mayormente_puntual,
+                'total_puntuales': round(total_puntuales, 2),
+                'cantidad_puntuales': cantidad_puntuales
             })
         
         # Obtener totales del año anterior para comparación
@@ -303,7 +549,7 @@ def obtener_top10_gastos():
         })
         
     except Exception as e:
-        print(f"Error en top10 gastos: {str(e)}")
+        logger.error(f"Error en top10 gastos: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @estadisticas_gastos_bp.route('/api/gastos/detalles', methods=['GET'])
@@ -406,13 +652,14 @@ def obtener_detalles_gasto():
         })
         
     except Exception as e:
-        print(f"Error al obtener detalles de gasto: {str(e)}")
+        logger.error(f"Error al obtener detalles de gasto: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @estadisticas_gastos_bp.route('/api/gastos/por-categoria-mes', methods=['GET'])
 def obtener_gastos_por_categoria_mes():
     """
     Devuelve gastos del mes actual agrupados por categoría para gráfico de pastel
+    EXCLUYENDO gastos puntuales (>1000€ no recurrentes)
     """
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
@@ -421,12 +668,17 @@ def obtener_gastos_por_categoria_mes():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Obtener gastos del mes actual por categoría
+        # Identificar y marcar gastos puntuales
+        gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
+        _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
+        
+        # Obtener gastos del mes actual por categoría EXCLUYENDO puntuales
         case_categoria = _obtener_case_categoria_sql().replace('ELSE substr(concepto, 1, 30)', 'ELSE \'Otros\'')
         cursor.execute(f'''
             SELECT 
                 {case_categoria} as categoria,
-                COALESCE(SUM(ABS(importe_eur)), 0) as total
+                COALESCE(SUM(ABS(importe_eur)), 0) as total,
+                COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales
             FROM gastos
             WHERE substr(fecha_operacion, 4, 2) = ?
             AND substr(fecha_operacion, 7, 4) = ?
@@ -437,9 +689,15 @@ def obtener_gastos_por_categoria_mes():
         
         categorias = []
         for row in cursor.fetchall():
+            total_bruto = float(row['total'] or 0)
+            total_puntuales = float(row['total_puntuales'] or 0)
+            total_sin_puntuales = total_bruto - total_puntuales
+            
             categorias.append({
                 'categoria': row['categoria'],
-                'total': round(float(row['total'] or 0), 2)
+                'total': round(total_sin_puntuales, 2),  # Mostrar sin puntuales
+                'total_bruto': round(total_bruto, 2),
+                'total_puntuales': round(total_puntuales, 2)
             })
         
         conn.close()
@@ -451,7 +709,7 @@ def obtener_gastos_por_categoria_mes():
         })
         
     except Exception as e:
-        print(f"Error al obtener gastos por categoría: {str(e)}")
+        logger.error(f"Error al obtener gastos por categoría: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @estadisticas_gastos_bp.route('/api/gastos/por-categoria-anio', methods=['GET'])
@@ -493,7 +751,7 @@ def obtener_gastos_por_categoria_anio():
         })
         
     except Exception as e:
-        print(f"Error al obtener gastos por categoría del año: {str(e)}")
+        logger.error(f"Error al obtener gastos por categoría del año: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @estadisticas_gastos_bp.route('/api/gastos/detalles-categoria', methods=['GET'])
@@ -512,6 +770,11 @@ def obtener_detalles_categoria():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Inicializar y marcar gastos puntuales
+        _inicializar_campo_puntual(conn)
+        gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
+        _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
+        
         # Determinar el filtro de categoría
         filtro_categoria = _obtener_filtro_categoria(categoria)
         
@@ -521,7 +784,8 @@ def obtener_detalles_categoria():
                 SELECT 
                     concepto,
                     fecha_operacion,
-                    ABS(importe_eur) as importe
+                    ABS(importe_eur) as importe,
+                    puntual
                 FROM gastos
                 WHERE substr(fecha_operacion, 4, 2) = ?
                 AND substr(fecha_operacion, 7, 4) = ?
@@ -534,7 +798,8 @@ def obtener_detalles_categoria():
                 SELECT 
                     concepto,
                     fecha_operacion,
-                    ABS(importe_eur) as importe
+                    ABS(importe_eur) as importe,
+                    puntual
                 FROM gastos
                 WHERE substr(fecha_operacion, 7, 4) = ?
                 AND importe_eur < 0
@@ -551,22 +816,45 @@ def obtener_detalles_categoria():
                     'concepto': concepto_norm,
                     'fecha': row['fecha_operacion'],
                     'importe': 0.0,
-                    'cantidad': 0
+                    'importe_sin_puntuales': 0.0,
+                    'cantidad': 0,
+                    'es_puntual': False,
+                    'cantidad_puntuales': 0
                 }
             gastos_agrupados[concepto_norm]['importe'] += float(row['importe'] or 0)
             gastos_agrupados[concepto_norm]['cantidad'] += 1
+            
+            # Sumar solo si NO es puntual (ni automático ni manual)
+            if row['puntual'] not in (1, 2):
+                gastos_agrupados[concepto_norm]['importe_sin_puntuales'] += float(row['importe'] or 0)
+            else:
+                gastos_agrupados[concepto_norm]['cantidad_puntuales'] += 1
+        
+        # Determinar si cada concepto es mayormente puntual y filtrar los que son 100% puntuales
+        gastos_filtrados = []
+        for concepto_norm, datos in gastos_agrupados.items():
+            if datos['cantidad_puntuales'] > 0 and datos['cantidad_puntuales'] >= datos['cantidad'] * 0.5:
+                datos['es_puntual'] = True
+            
+            # Excluir conceptos que son 100% puntuales (todas sus transacciones son puntuales)
+            if datos['cantidad_puntuales'] < datos['cantidad']:
+                gastos_filtrados.append(datos)
         
         # Convertir a lista y ordenar
-        gastos = sorted(gastos_agrupados.values(), key=lambda x: x['importe'], reverse=True)[:100]
+        gastos = sorted(gastos_filtrados, key=lambda x: x['importe'], reverse=True)[:100]
         
         # Redondear importes
         for g in gastos:
             g['importe'] = round(g['importe'], 2)
+            g['importe_sin_puntuales'] = round(g.get('importe_sin_puntuales', g['importe']), 2)
         
         # Estadísticas
         total = sum(g['importe'] for g in gastos)
+        total_sin_puntuales = sum(g['importe_sin_puntuales'] for g in gastos)
         cantidad = sum(g['cantidad'] for g in gastos)
+        cantidad_sin_puntuales = sum(g['cantidad'] - g.get('cantidad_puntuales', 0) for g in gastos)
         promedio = total / cantidad if cantidad > 0 else 0
+        promedio_sin_puntuales = total_sin_puntuales / cantidad_sin_puntuales if cantidad_sin_puntuales > 0 else 0
         
         conn.close()
         
@@ -576,20 +864,24 @@ def obtener_detalles_categoria():
             'mes': mes,
             'estadisticas': {
                 'total': round(total, 2),
+                'total_sin_puntuales': round(total_sin_puntuales, 2),
                 'cantidad': cantidad,
-                'promedio': round(promedio, 2)
+                'cantidad_sin_puntuales': cantidad_sin_puntuales,
+                'promedio': round(promedio, 2),
+                'promedio_sin_puntuales': round(promedio_sin_puntuales, 2)
             },
             'gastos': gastos
         })
         
     except Exception as e:
-        print(f"Error al obtener detalles de categoría: {str(e)}")
+        logger.error(f"Error al obtener detalles de categoría: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @estadisticas_gastos_bp.route('/api/gastos/evolucion-mensual', methods=['GET'])
 def obtener_evolucion_mensual():
     """
     Devuelve la evolución mensual de gastos para una categoría específica
+    EXCLUYENDO gastos puntuales (>1000€ no recurrentes)
     """
     try:
         categoria = request.args.get('categoria', 'global', type=str)
@@ -598,33 +890,65 @@ def obtener_evolucion_mensual():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Determinar el filtro de categoría
-        filtro_categoria = _obtener_filtro_categoria(categoria if categoria != 'global' else 'Otros')
+        # Inicializar campo puntual si no existe
+        _inicializar_campo_puntual(conn)
         
-        # Query para obtener gastos por mes
-        query = f'''
-            SELECT 
-                CAST(substr(fecha_operacion, 4, 2) AS INTEGER) as mes,
-                SUM(ABS(importe_eur)) as total,
-                COUNT(*) as cantidad
-            FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND importe_eur < 0
-            AND {filtro_categoria}
-            GROUP BY mes
-            ORDER BY mes
-        '''
+        # Identificar y marcar gastos puntuales para todo el año
+        gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio)
+        _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
+        
+        # Determinar el filtro de categoría
+        if categoria == 'global':
+            # Para global, no aplicar filtro de categoría (todas las categorías)
+            query = f'''
+                SELECT 
+                    CAST(substr(fecha_operacion, 4, 2) AS INTEGER) as mes,
+                    SUM(ABS(importe_eur)) as total,
+                    COUNT(*) as cantidad,
+                    COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales,
+                    COALESCE(SUM(CASE WHEN puntual = 1 THEN 1 ELSE 0 END), 0) as cantidad_puntuales
+                FROM gastos
+                WHERE substr(fecha_operacion, 7, 4) = ?
+                AND importe_eur < 0
+                GROUP BY mes
+                ORDER BY mes
+            '''
+        else:
+            # Para categorías específicas, aplicar filtro
+            filtro_categoria = _obtener_filtro_categoria(categoria)
+            query = f'''
+                SELECT 
+                    CAST(substr(fecha_operacion, 4, 2) AS INTEGER) as mes,
+                    SUM(ABS(importe_eur)) as total,
+                    COUNT(*) as cantidad,
+                    COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales,
+                    COALESCE(SUM(CASE WHEN puntual = 1 THEN 1 ELSE 0 END), 0) as cantidad_puntuales
+                FROM gastos
+                WHERE substr(fecha_operacion, 7, 4) = ?
+                AND importe_eur < 0
+                AND {filtro_categoria}
+                GROUP BY mes
+                ORDER BY mes
+            '''
         
         cursor.execute(query, (str(anio),))
         
         # Crear array con todos los meses (0 si no hay datos)
-        meses_data = {i: {'total': 0.0, 'cantidad': 0} for i in range(1, 13)}
+        meses_data = {i: {'total': 0.0, 'cantidad': 0, 'total_puntuales': 0.0, 'cantidad_puntuales': 0, 'total_bruto': 0.0} for i in range(1, 13)}
         
         for row in cursor.fetchall():
             mes = int(row['mes'])
+            total_bruto = float(row['total'] or 0)
+            total_puntuales = float(row['total_puntuales'] or 0)
+            cantidad_total = int(row['cantidad'])
+            cantidad_puntuales = int(row['cantidad_puntuales'] or 0)
+            
             meses_data[mes] = {
-                'total': round(float(row['total'] or 0), 2),
-                'cantidad': int(row['cantidad'])
+                'total': round(total_bruto - total_puntuales, 2),  # Excluir puntuales
+                'cantidad': cantidad_total - cantidad_puntuales,
+                'total_puntuales': round(total_puntuales, 2),
+                'cantidad_puntuales': cantidad_puntuales,
+                'total_bruto': round(total_bruto, 2)
             }
         
         # Convertir a lista ordenada
@@ -636,7 +960,10 @@ def obtener_evolucion_mensual():
                 'mes': mes,
                 'nombre': nombres_meses[mes - 1],
                 'total': meses_data[mes]['total'],
-                'cantidad': meses_data[mes]['cantidad']
+                'cantidad': meses_data[mes]['cantidad'],
+                'total_puntuales': meses_data[mes]['total_puntuales'],
+                'cantidad_puntuales': meses_data[mes]['cantidad_puntuales'],
+                'total_bruto': meses_data[mes]['total_bruto']
             })
         
         conn.close()
@@ -648,7 +975,7 @@ def obtener_evolucion_mensual():
         })
         
     except Exception as e:
-        print(f"Error al obtener evolución mensual: {str(e)}")
+        logger.error(f"Error al obtener evolución mensual: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @estadisticas_gastos_bp.route('/api/informe-situacion', methods=['GET'])
@@ -722,28 +1049,37 @@ def generar_informe_situacion():
         # Total mes (facturas + tickets)
         ventas_mes = facturas_mes + tickets_mes
         
+        # Inicializar campo puntual si no existe
+        _inicializar_campo_puntual(conn)
+
+        # Identificar y marcar gastos puntuales
+        gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
+        _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
+
         # ===== DATOS DE GASTOS =====
-        # Total gastos del año hasta el mes actual
+        # Total gastos del año hasta el mes actual - EXCLUYENDO PUNTUALES
         cursor.execute('''
-            SELECT 
+            SELECT
                 COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos,
                 COUNT(*) as num_gastos
             FROM gastos
             WHERE substr(fecha_operacion, 7, 4) = ?
             AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
+            AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes))
         gastos_anio = cursor.fetchone()
         total_gastos = float(gastos_anio['total_gastos'] or 0)
         num_gastos = int(gastos_anio['num_gastos'] or 0)
-        
-        # Gastos del mes actual
+
+        # Gastos del mes actual - EXCLUYENDO PUNTUALES
         cursor.execute('''
             SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_mes
             FROM gastos
             WHERE substr(fecha_operacion, 7, 4) = ?
             AND substr(fecha_operacion, 4, 2) = ?
             AND importe_eur < 0
+            AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes_str))
         gastos_mes = float(cursor.fetchone()['total_mes'] or 0)
         
@@ -758,7 +1094,7 @@ def generar_informe_situacion():
         
         # Medias mensuales
         media_ventas_mensual = total_ventas / mes if mes > 0 else 0
-        media_gastos_mensual = total_gastos / mes if mes > 0 else 0
+        media_gastos_mensual, gastos_sin_puntuales, _ = _calcular_media_mensual_sin_puntuales(conn, anio, mes)
         media_balance_mensual = balance_anio / mes if mes > 0 else 0
         
         # Proyecciones para fin de año
@@ -856,7 +1192,7 @@ def generar_informe_situacion():
         })
         
     except Exception as e:
-        print(f"Error al generar informe de situación: {str(e)}")
+        logger.error(f"Error al generar informe de situación: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @estadisticas_gastos_bp.route('/api/simulador-financiero', methods=['POST'])
@@ -879,7 +1215,14 @@ def simular_escenarios():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Obtener datos reales actuales
+        # Inicializar campo puntual si no existe
+        _inicializar_campo_puntual(conn)
+
+        # Identificar y marcar gastos puntuales
+        gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
+        _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
+
+        # Obtener datos reales actuales - EXCLUYENDO GASTOS PUNTUALES
         # Facturas cobradas
         cursor.execute('''
             SELECT COALESCE(SUM(importe_cobrado), 0) as total
@@ -889,7 +1232,7 @@ def simular_escenarios():
             AND estado = 'C'
         ''', (anio, mes))
         ventas_facturas = float(cursor.fetchone()['total'] or 0)
-        
+
         # Tickets cobrados
         cursor.execute('''
             SELECT COALESCE(SUM(importe_cobrado), 0) as total
@@ -899,18 +1242,17 @@ def simular_escenarios():
             AND estado = 'C'
         ''', (anio, mes))
         ventas_tickets = float(cursor.fetchone()['total'] or 0)
-        
-        # Gastos
+
+        # Gastos - EXCLUYENDO PUNTUALES
         cursor.execute('''
             SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total
             FROM gastos
             WHERE substr(fecha_operacion, 7, 4) = ?
             AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
+            AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes))
         gastos_totales = float(cursor.fetchone()['total'] or 0)
-        
-        conn.close()
         
         # Datos reales
         ventas_reales = ventas_facturas + ventas_tickets
@@ -936,7 +1278,7 @@ def simular_escenarios():
         
         # Real
         media_ventas_real = ventas_reales / mes if mes > 0 else 0
-        media_gastos_real = gastos_totales / mes if mes > 0 else 0
+        media_gastos_real, gastos_sin_puntuales, _ = _calcular_media_mensual_sin_puntuales(conn, anio, mes)
         proyeccion_ventas_real = ventas_reales + (media_ventas_real * meses_restantes)
         proyeccion_gastos_real = gastos_totales + (media_gastos_real * meses_restantes)
         proyeccion_balance_real = proyeccion_ventas_real - proyeccion_gastos_real
@@ -990,5 +1332,9 @@ def simular_escenarios():
         })
         
     except Exception as e:
-        print(f"Error en simulador financiero: {str(e)}")
+        logger.error(f"Error en simulador financiero: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
+    finally:
+        # Cerrar conexión siempre
+        if 'conn' in locals():
+            conn.close()

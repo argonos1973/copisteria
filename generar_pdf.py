@@ -9,12 +9,16 @@ from db_utils import get_db_connection
 from verifactu_logger import logger  # Ajusta según tu sistema
 from verifactu.config import VERIFACTU_CONSTANTS  # Ruta corregida al módulo
 from format_utils import format_currency_es_two, format_total_es_two, format_number_es_max5, format_percentage
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 try:
     from config_loader import get as get_config
     VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", True))
 except Exception as _e:
-    print(f"[PDF] No se pudo cargar config.json: {_e}")
+    logger.info(f"[PDF] No se pudo cargar config.json: {_e}")
     VERIFACTU_HABILITADO = True
 
 def extraer_huella_desde_xml(xml: str) -> str | None:
@@ -152,7 +156,7 @@ def generar_factura_pdf(id_factura):
         str: Ruta del archivo PDF generado o None si hay error
     """
     try:
-        print(f"Iniciando generación del PDF para factura {id_factura}")
+        logger.info(f"Iniciando generación del PDF para factura {id_factura}")
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -174,24 +178,24 @@ def generar_factura_pdf(id_factura):
         cursor.execute(query, (id_factura,))
         factura = cursor.fetchone()
         
-        print(f"Resultado de la consulta para PDF: {factura}")
-        print(f"ID factura: {id_factura}")
+        logger.info(f"Resultado de la consulta para PDF: {factura}")
+        logger.info(f"ID factura: {id_factura}")
 
         if not factura:
-            print(f"Factura {id_factura} no encontrada")
+            logger.info(f"Factura {id_factura} no encontrada")
             return None
 
         # Convertir la tupla de la factura en un diccionario con nombres de columnas
         nombres_columnas = [description[0] for description in cursor.description]
         factura_dict = dict(zip(nombres_columnas, factura))
         
-        print(f"Datos del cliente en factura_dict:")
-        print(f"  razonsocial: {factura_dict.get('razonsocial')}")
-        print(f"  direccion: {factura_dict.get('direccion')}")
-        print(f"  cp: {factura_dict.get('cp')}")
-        print(f"  localidad: {factura_dict.get('localidad')}")
-        print(f"  provincia: {factura_dict.get('provincia')}")
-        print(f"  identificador: {factura_dict.get('identificador')}")
+        logger.info(f"Datos del cliente en factura_dict:")
+        logger.info(f"  razonsocial: {factura_dict.get('razonsocial')}")
+        logger.info(f"  direccion: {factura_dict.get('direccion')}")
+        logger.info(f"  cp: {factura_dict.get('cp')}")
+        logger.info(f"  localidad: {factura_dict.get('localidad')}")
+        logger.info(f"  provincia: {factura_dict.get('provincia')}")
+        logger.info(f"  identificador: {factura_dict.get('identificador')}")
         
         # Obtener detalles de la factura
         cursor.execute("""
@@ -236,12 +240,12 @@ def generar_factura_pdf(id_factura):
 
         # Generar el PDF
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
-            print(f"Generando PDF para factura {id_factura}")
+            logger.info(f"Generando PDF para factura {id_factura}")
             
             # Obtener datos de VERI*FACTU si existen (usando aleph70.db)
             cursor.execute("SELECT hash_factura FROM factura WHERE id = ?", (id_factura,))
             hash_factura = cursor.fetchone()
-            print(f"Hash factura obtenido: {hash_factura}")
+            logger.info(f"Hash factura obtenido: {hash_factura}")
             
             # Obtener todos los datos VERI*FACTU de la tabla registro_facturacion
             cursor.execute("""
@@ -250,7 +254,7 @@ def generar_factura_pdf(id_factura):
                 WHERE factura_id = ?
             """, (id_factura,))
             registro = cursor.fetchone()
-            print(f"Registro facturación obtenido: {registro is not None}")
+            logger.info(f"Registro facturación obtenido: {registro is not None}")
             
             # Definimos variables para usar en la plantilla
             qr_code = None
@@ -267,22 +271,22 @@ def generar_factura_pdf(id_factura):
                 # Obtener el hash para la factura (siempre se muestra)
                 if registro[1]:
                     hash_value = registro[1]
-                    print(f"Usando hash de registro_facturacion: {hash_value}")
+                    logger.info(f"Usando hash de registro_facturacion: {hash_value}")
                 # Si no está ahí, usamos el de la tabla factura
                 elif hash_factura and hash_factura[0]:
                     hash_value = hash_factura[0]
-                    print(f"Usando hash de tabla factura: {hash_value}")
+                    logger.info(f"Usando hash de tabla factura: {hash_value}")
                 
                 # Codificar el QR en base64 SOLO si la factura está validada por AEAT
                 if validado_aeat and registro[0]:
                     qr_code = base64.b64encode(registro[0]).decode('utf-8')
-                    print(f"Factura VALIDADA por AEAT. Código QR codificado, longitud: {len(qr_code)}")
+                    logger.info(f"Factura VALIDADA por AEAT. Código QR codificado, longitud: {len(qr_code)}")
                 elif validado_aeat and not registro[0]:
-                    print("Factura validada por AEAT pero no se encontró el código QR")
+                    logger.info("Factura validada por AEAT pero no se encontró el código QR")
                 else:
-                    print(f"Factura NO validada por AEAT (estado: {estado_envio}). No se incluirá código QR.")
+                    logger.info(f"Factura NO validada por AEAT (estado: {estado_envio}). No se incluirá código QR.")
             else:
-                print("No se encontró registro VERI*FACTU para esta factura")
+                logger.info("No se encontró registro VERI*FACTU para esta factura")
                 
             # Leer el HTML base con la codificación correcta
             with open('/var/www/html/frontend/IMPRIMIR_FACTURA.html', 'r', encoding='utf-8') as f:
@@ -475,6 +479,6 @@ def generar_factura_pdf(id_factura):
         return pdf_path
 
     except Exception as e:
-        print(f"Error al generar PDF de factura: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"Error al generar PDF de factura: {str(e)}", exc_info=True)
+        logger.info(f"{{traceback.format_exc()}}")
         return None

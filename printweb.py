@@ -3,6 +3,10 @@ import subprocess
 
 from flask import Flask, render_template_string, request
 from werkzeug.utils import secure_filename
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 UPLOAD_FOLDER = "/tmp/impresiones"
 ALLOWED_EXTENSIONS = {"pdf"}
@@ -20,19 +24,19 @@ def allowed_file(filename):
 def get_printers():
     result = subprocess.run(["lpstat", "-v"], capture_output=True, text=True)
     printers = []
-    print("--- DEBUG: salida de lpstat -v ---")
-    print(result.stdout)
+    logger.info("--- DEBUG: salida de lpstat -v ---")
+    logger.info(f"result.stdout)
     for line in result.stdout.splitlines():
         if "para" in line or "device for" in line:
             parts = line.split()
             if len(parts) >= 3:
                 printer_name = parts[2].rstrip(":")
                 printers.append(printer_name)
-    print("--- DEBUG: impresoras detectadas ---")
-    print(printers)
+    logger.info("--- DEBUG: impresoras detectadas ---")
+    logger.info(f"{{printers}}")
     return printers
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/" methods=["GET", "POST"]")
 def upload_file():
     printers = get_printers()
     if not printers:

@@ -12,6 +12,10 @@ from datetime import datetime
 
 from facturae_utils import leer_contenido_xsig
 from validar_facturae import validar_facturae
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 
 def obtener_directorio_mes(base_dir="/var/www/html/factura_e", año=None, mes=None):
@@ -51,10 +55,10 @@ def validar_facturas_directorio(directorio):
         tuple: (dict de resultados, total_facturas, facturas_válidas, facturas_inválidas)
     """
     if not os.path.isdir(directorio):
-        print(f"❌ El directorio {directorio} no existe")
+        logger.info(f"❌ El directorio {directorio} no existe")
         return {}, 0, 0, 0
     
-    print(f"📁 Procesando facturas en: {directorio}")
+    logger.info(f"📁 Procesando facturas en: {directorio}")
     
     resultados = {}
     total = 0
@@ -67,7 +71,7 @@ def validar_facturas_directorio(directorio):
             ruta_completa = os.path.join(directorio, archivo)
             total += 1
             
-            print(f"🔍 Validando: {archivo}...")
+            logger.info(f"🔍 Validando: {archivo}...")
             try:
                 es_valido, mensaje = validar_facturae(ruta_completa)
                 
@@ -110,7 +114,7 @@ def validar_facturas_directorio(directorio):
                     'info': info_adicional
                 }
                 
-                print(f"    {estado}: {mensaje}{info_adicional}")
+                logger.info(f"    {estado}: {mensaje}{info_adicional}")
                 
             except Exception as e:
                 invalidos += 1
@@ -120,7 +124,7 @@ def validar_facturas_directorio(directorio):
                     'ruta': ruta_completa,
                     'info': ""
                 }
-                print(f"    ❌ Error al procesar: {str(e)}")
+                logger.info(f"    ❌ Error al procesar: {str(e)}")
     
     return resultados, total, validos, invalidos
 
@@ -216,27 +220,27 @@ def main():
         mes=args.mes
     )
     
-    print("\n=== VALIDADOR DE FACTURAS ELECTRÓNICAS ===")
-    print(f"Fecha actual: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
-    print(f"Directorio a procesar: {directorio}")
+    logger.info("\n=== VALIDADOR DE FACTURAS ELECTRÓNICAS ===")
+    logger.info(f"Fecha actual: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}")
+    logger.info(f"Directorio a procesar: {directorio}")
     
     # Validar facturas en el directorio
     resultados, total, validos, invalidos = validar_facturas_directorio(directorio)
     
     if total == 0:
-        print(f"\n⚠️ No se encontraron facturas para validar en {directorio}")
-        print("Puede especificar otro mes o año con --anyo y --mes")
+        logger.info(f"\n⚠️ No se encontraron facturas para validar en {directorio}")
+        logger.info("Puede especificar otro mes o año con --anyo y --mes")
         return
     
     # Generar informe
     ruta_informe = generar_informe(resultados, directorio, total, validos, invalidos)
     
-    print("\n=== RESUMEN DE VALIDACIÓN ===")
-    print(f"Total facturas: {total}")
-    print(f"Facturas válidas: {validos} ({(validos/total*100):.1f}%)")
-    print(f"Facturas inválidas: {invalidos}")
-    print(f"\nInforme generado en: {ruta_informe}")
-    print("Puede visualizarlo en su navegador")
+    logger.info("\n=== RESUMEN DE VALIDACIÓN ===")
+    logger.info(f"Total facturas: {total}")
+    logger.info(f"Facturas válidas: {validos} ({(validos/total*100):.1f}%)")
+    logger.info(f"Facturas inválidas: {invalidos}")
+    logger.info(f"\nInforme generado en: {ruta_informe}")
+    logger.info("Puede visualizarlo en su navegador")
 
 if __name__ == "__main__":
     main()

@@ -2,6 +2,10 @@ import sqlite3
 from datetime import datetime
 
 from constantes import DB_NAME
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 
 def guardar_notificacion(mensaje, tipo='info', db_path=DB_NAME):
@@ -25,4 +29,4 @@ def guardar_notificacion(mensaje, tipo='info', db_path=DB_NAME):
         conn.commit()
         conn.close()
     except Exception as e:
-        print(f"Error al guardar notificación: {e}")
+        logger.error(f"Error al guardar notificación: {e}", exc_info=True)

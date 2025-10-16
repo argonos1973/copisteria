@@ -1236,20 +1236,18 @@ export async function fetchConManejadorErrores(url, opciones = {}) {
     try {
       const u = new URL(primaria, window.location.origin);
       if (u.pathname.startsWith('/api')) {
-        const knownServers = ['192.168.1.23', '192.168.1.18'];
-        for (const ip of knownServers) {
-          const candidate = `http://${ip}:${PORT}${u.pathname}${u.search}`;
-          if (!candidates.includes(candidate)) candidates.push(candidate);
-        }
+        // Solo usar el servidor actual (detectado automáticamente)
+        const currentHost = window.location.hostname;
+        const candidate = `http://${currentHost}:${PORT}${u.pathname}${u.search}`;
+        if (!candidates.includes(candidate)) candidates.push(candidate);
       }
     } catch (_) {
       const p = (typeof url === 'string' && url.startsWith('/')) ? url : `/${url}`;
       if (p.startsWith('/api')) {
-        const knownServers = ['192.168.1.23', '192.168.1.18'];
-        for (const ip of knownServers) {
-          const candidate = `http://${ip}:${PORT}${p}`;
-          if (!candidates.includes(candidate)) candidates.push(candidate);
-        }
+        // Solo usar el servidor actual (detectado automáticamente)
+        const currentHost = window.location.hostname;
+        const candidate = `http://${currentHost}:${PORT}${p}`;
+        if (!candidates.includes(candidate)) candidates.push(candidate);
       }
     }
 

@@ -1,6 +1,6 @@
 // constantes.js
-// Resolución robusta de IP para APIs, sin depender de window.location.hostname
-const DEFAULT_LOCAL_SERVER_IP = '192.168.1.18';
+// Resolución automática de IP/hostname para APIs
+const DEFAULT_LOCAL_SERVER_IP = window.location.hostname || '127.0.0.1';
 
 function getOverrideIp() {
   try {
@@ -30,5 +30,6 @@ export const API_URL_PRIMARY = `http://${IP_SERVER}:${PORT}`;
 export const API_URL_FALLBACK = `http://${IP_SERVER}:${PORT}`;
 export const API_GASTOS = `http://${IP_SERVER}:${PORT}/api/gastos`;
 
-// Conveniencia: flag de entorno de producción (basado en IP conocida de prod)
-export const IS_PROD = (IP_SERVER === '192.168.1.18');
+// Conveniencia: flag de entorno de producción (basado en hostname)
+// Se considera producción si NO es localhost ni 127.0.0.1
+export const IS_PROD = (IP_SERVER !== 'localhost' && IP_SERVER !== '127.0.0.1');

@@ -2,6 +2,10 @@ import os
 import sys
 
 from lxml import etree
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 # Ruta fija al XSD local (modificado con schemaLocation local)
 #XSD_PATH = os.path.join(os.path.dirname(__file__), 'certs', 'Facturaev3_2_2_local.xsd')
@@ -19,7 +23,7 @@ def validar_xml(xml_path, xsd_path=XSD_PATH):
             doc = etree.parse(f)
 
         schema.assertValid(doc)
-        print(f'✅ VÁLIDO: {xml_path}')
+        logger.info(f"f'✅ VÁLIDO: {xml_path}')
         return True
     except etree.DocumentInvalid as e:
         print(f'❌ NO VÁLIDO: {xml_path}\n  Motivo: {e}')
@@ -28,7 +32,7 @@ def validar_xml(xml_path, xsd_path=XSD_PATH):
         print(f'⚠️ ERROR: {xml_path}\n  Motivo: {e}')
         return False
 
-def validar_facturae(ruta_factura, xsd_path=XSD_PATH):
+def validar_facturae(ruta_factura xsd_path=XSD_PATH"):
     """
     Valida una factura electrónica Facturae contra el esquema XSD oficial.
     
@@ -85,16 +89,16 @@ def buscar_y_validar_xmls(root_dir, xsd_path=XSD_PATH):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Uso: python3 validar_facturae.py /ruta/a/carpeta_de_facturas")
+        logger.info("Uso: python3 validar_facturae.py /ruta/a/carpeta_de_facturas")
         sys.exit(1)
 
     FACTURAE_ROOT = sys.argv[1]
 
     if not os.path.exists(XSD_PATH):
-        print(f'⛔ No se encuentra el XSD: {XSD_PATH}')
+        logger.info(f"f'⛔ No se encuentra el XSD: {XSD_PATH}')
         sys.exit(1)
     if not os.path.exists(FACTURAE_ROOT):
         print(f'⛔ No se encuentra la carpeta de facturas: {FACTURAE_ROOT}')
         sys.exit(1)
 
-    buscar_y_validar_xmls(FACTURAE_ROOT, XSD_PATH)
+    buscar_y_validar_xmls(FACTURAE_ROOT XSD_PATH")

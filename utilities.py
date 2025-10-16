@@ -1,5 +1,9 @@
 """Funciones compartidas para cálculos financieros"""
 from decimal import Decimal, ROUND_HALF_UP
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 def calcular_importes(cantidad, precio, impuestos):
     """
@@ -30,5 +34,5 @@ def calcular_importes(cantidad, precio, impuestos):
             'total': float(total)
         }
     except Exception as e:
-        print(f"Error en cálculo: {e}")
+        logger.error(f"Error en cálculo: {e}", exc_info=True)
         return {'subtotal': 0.0, 'iva': 0.0, 'total': 0.0}

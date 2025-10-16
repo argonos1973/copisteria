@@ -74,7 +74,8 @@ async function cargarEstadisticasGastos() {
         const [anio, mes] = selectorFecha.value.split('-');
         console.log(`[GASTOS] Año: ${anio}, Mes: ${mes}`);
         
-        const response = await fetch(`http://192.168.1.18:5001/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`);
+        const apiHost = window.location.hostname;
+        const response = await fetch(`http://${apiHost}:5001/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -138,7 +139,8 @@ async function cargarEstadisticasGastos() {
 async function cargarTop10Gastos(anio) {
     try {
         console.log(`[TOP10 GASTOS] Cargando top 10 para año ${anio}`);
-        const response = await fetch(`http://192.168.1.18:5001/api/gastos/top10?anio=${anio}`);
+        const apiHost = window.location.hostname;
+        const response = await fetch(`http://${apiHost}:5001/api/gastos/top10?anio=${anio}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -171,16 +173,29 @@ async function cargarTop10Gastos(anio) {
                 diferenciaHTML = `<span class="stats-percentage ${pctClass}">${pctSymbol} ${formatearPorcentaje(Math.abs(gasto.porcentaje_diferencia))}</span>`;
             }
             
+            // Determinar si es gasto puntual (excluido del promedio)
+            const esPuntual = gasto.es_puntual === true;
+            const estiloFondo = esPuntual ? 'background-color:#fff3cd;border-left:4px solid #ffc107;' : '';
+            const etiquetaPuntual = esPuntual ? '<span style="display:inline-block;margin-left:0.5rem;font-size:0.65rem;background:#ffc107;color:#000;padding:0.1rem 0.4rem;border-radius:0.2rem;font-weight:600;" title="Excluido del promedio mensual">PUNTUAL</span>' : '';
+            
             tr.innerHTML = `
-                <td style="font-size:0.8rem;padding:0.5rem 0.3rem;">
+                <td style="font-size:0.8rem;padding:0.5rem 0.3rem;${estiloFondo}">
                     <span style="color:#999;font-weight:600;margin-right:0.5rem;">${index + 1}.</span>
                     ${escaparHtml(gasto.concepto)}
+                    ${etiquetaPuntual}
                 </td>
-                <td style="text-align:right;font-size:0.85rem;font-weight:600;padding:0.5rem 0.3rem;">${formatearImporte(gasto.total)}</td>
-                <td style="text-align:center;font-size:0.75rem;padding:0.5rem 0.3rem;">
+                <td style="text-align:right;font-size:0.85rem;font-weight:600;padding:0.5rem 0.3rem;${estiloFondo}">${formatearImporte(gasto.total)}</td>
+                <td style="text-align:center;font-size:0.75rem;padding:0.5rem 0.3rem;${estiloFondo}">
                     ${diferenciaHTML}
                 </td>
             `;
+            
+            // Aplicar estilo de fondo si es puntual
+            if (esPuntual) {
+                tr.style.backgroundColor = '#fff3cd';
+                tr.style.borderLeft = '4px solid #ffc107';
+                tr.title = 'Este gasto es puntual (>1000€ no recurrente) y está excluido del cálculo del promedio mensual';
+            }
             
             // Agregar evento click para abrir modal con detalles
             tr.style.cursor = 'pointer';
@@ -193,11 +208,13 @@ async function cargarTop10Gastos(anio) {
             });
             
             // Hover effect
+            const colorHoverOriginal = esPuntual ? '#ffe8a1' : '#f5f5f5';
+            const colorFondoOriginal = esPuntual ? '#fff3cd' : '';
             tr.addEventListener('mouseenter', () => {
-                tr.style.backgroundColor = '#f5f5f5';
+                tr.style.backgroundColor = colorHoverOriginal;
             });
             tr.addEventListener('mouseleave', () => {
-                tr.style.backgroundColor = '';
+                tr.style.backgroundColor = colorFondoOriginal;
             });
             
             tbody.appendChild(tr);

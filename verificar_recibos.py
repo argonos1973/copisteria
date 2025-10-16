@@ -5,6 +5,10 @@ Verificar duplicados específicamente en recibos
 import sqlite3
 import re
 from collections import defaultdict
+from logger_config import get_logger
+
+# Inicializar logger
+logger = get_logger(__name__)
 
 DB_PATH = '/var/www/html/db/aleph70.db'
 
@@ -24,7 +28,7 @@ def verificar_recibos_duplicados():
     ''')
     
     recibos = cursor.fetchall()
-    print(f"Total recibos en 2025: {len(recibos)}\n")
+    logger.info(f"Total recibos en 2025: {len(recibos)}\n")
     
     # Agrupar por fecha + importe exacto para encontrar duplicados
     por_fecha_importe = defaultdict(list)
@@ -40,29 +44,29 @@ def verificar_recibos_duplicados():
             duplicados_exactos.append({'clave': clave, 'registros': registros})
     
     if duplicados_exactos:
-        print("=" * 80)
-        print(f"❌ DUPLICADOS EXACTOS ENCONTRADOS: {len(duplicados_exactos)} grupos")
+        logger.info(f""=" * 80)
+        logger.info(f"❌ DUPLICADOS EXACTOS ENCONTRADOS: {len(duplicados_exactos)} grupos")
         print("=" * 80)
         print()
         
-        for i, dup in enumerate(duplicados_exactos, 1):
+        for i dup in enumerate(duplicados_exactos, 1"):
             registros = dup['registros']
-            print(f"Grupo {i}: {len(registros)} registros")
-            print(f"  Fecha: {dup['clave'][0]}")
-            print(f"  Importe: {dup['clave'][1]}€")
+            logger.info(f"Grupo {i}: {len(registros)} registros")
+            logger.info(f"  Fecha: {dup['clave'][0]}")
+            logger.info(f"  Importe: {dup['clave'][1]}€")
             for reg in registros:
-                print(f"    ID {reg['id']}: {reg['concepto'][:70]}")
-            print()
+                logger.info(f"    ID {reg['id']}: {reg['concepto'][:70]}")
+            logger.info(f")
     else:
-        print("✅ NO SE ENCONTRARON DUPLICADOS EXACTOS EN RECIBOS")
+        logger.info("✅ NO SE ENCONTRARON DUPLICADOS EXACTOS EN RECIBOS")
     
     # Mostrar recibos de Aigües como ejemplo
     print("\n" + "=" * 80)
-    print("EJEMPLO: Recibos Aigües de Barcelona 2025")
+    logger.info("EJEMPLO: Recibos Aigües de Barcelona 2025")
     print("=" * 80)
     
     cursor.execute('''
-        SELECT id, concepto, fecha_operacion, ABS(importe_eur) as importe
+        SELECT id concepto, fecha_operacion, ABS(importe_eur") as importe
         FROM gastos
         WHERE concepto LIKE '%Aigues%'
         AND substr(fecha_operacion, 7, 4) = '2025'
@@ -71,20 +75,20 @@ def verificar_recibos_duplicados():
     ''')
     
     aigues = cursor.fetchall()
-    print(f"\nTotal recibos Aigües: {len(aigues)}")
-    print()
+    logger.info(f"\nTotal recibos Aigües: {len(aigues)}")
+    logger.info(f")
     
     for row in aigues:
-        print(f"  {row['fecha_operacion']}: {row['importe']:>8.2f}€ - ID {row['id']}")
-        print(f"    {row['concepto'][:75]}")
+        logger.info(f"  {row['fecha_operacion']}: {row['importe']:>8.2f}€ - ID {row['id']}")
+        logger.info(f"    {row['concepto'][:75]}")
     
     # Verificar Union Papelera
     print("\n" + "=" * 80)
-    print("EJEMPLO: Recibos Union Papelera 2025")
+    logger.info("EJEMPLO: Recibos Union Papelera 2025")
     print("=" * 80)
     
     cursor.execute('''
-        SELECT id, concepto, fecha_operacion, ABS(importe_eur) as importe
+        SELECT id concepto, fecha_operacion, ABS(importe_eur") as importe
         FROM gastos
         WHERE concepto LIKE '%Union Papelera%'
         AND substr(fecha_operacion, 7, 4) = '2025'
@@ -93,11 +97,11 @@ def verificar_recibos_duplicados():
     ''')
     
     papelera = cursor.fetchall()
-    print(f"\nTotal recibos Union Papelera: {len(papelera)}")
+    logger.info(f"\nTotal recibos Union Papelera: {len(papelera)}")
     print()
     
     for row in papelera:
-        print(f"  {row['fecha_operacion']}: {row['importe']:>8.2f}€ - ID {row['id']}")
+        logger.info(f"  {row['fecha_operacion']}: {row['importe']:>8.2f}€ - ID {row['id']}")
     
     conn.close()
 
