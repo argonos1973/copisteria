@@ -1563,7 +1563,10 @@ def obtener_liquidaciones_tpv():
                         
                         num_documentos = num_tickets + num_facturas
                         diferencia = total_liq - total_documentos
-                        puede_conciliar = True
+                        
+                        # Solo marcar como conciliable si la diferencia final es <= tolerancia
+                        if abs(diferencia) <= tolerancia_config:
+                            puede_conciliar = True
             
             # Conciliación automática si diferencia <= tolerancia
             if puede_conciliar and abs(diferencia) <= tolerancia_config:
