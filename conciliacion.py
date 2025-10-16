@@ -139,7 +139,7 @@ def buscar_coincidencias_automaticas(gasto):
     """
     Buscar coincidencias automáticas para un gasto bancario
     Criterios:
-    1. Importe exacto o muy cercano (±0.02€)
+    1. Importe exacto o muy cercano (±3.0€)
     2. Fecha cercana (±15 días) - EXCEPTO si hay número de factura/ticket en concepto
     """
     import re
@@ -155,7 +155,7 @@ def buscar_coincidencias_automaticas(gasto):
     patron_numero = re.search(r'[FT](\d{6})', concepto)
     tiene_numero_documento = bool(patron_numero)
     
-    tolerancia = 0.02
+    tolerancia = 3.0  # Tolerancia aumentada de 0.02€ a 3.0€ para conciliación más flexible
     coincidencias = []
     
     if tiene_numero_documento:
