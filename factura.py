@@ -8,10 +8,14 @@ import traceback
 from datetime import datetime, timedelta
 
 from flask import Flask, jsonify, render_template, request, Blueprint
+from logger_config import get_factura_logger
+
+logger = get_factura_logger()
+
 try:
     from weasyprint import CSS, HTML
 except ImportError:
-    print("WeasyPrint no está instalado. La generación de PDF no estará disponible.")
+    logger.warning("WeasyPrint no está instalado. La generación de PDF no estará disponible.")
     # Mock classes to prevent import errors
     class CSS:
         def __init__(self, *args, **kwargs):
@@ -88,7 +92,7 @@ def crear_factura():
     conn = None
     try:
         data = request.get_json()
-        print("Datos recibidos en crear_factura:", data)
+        logger.debug("Datos recibidos en crear_factura:", data)
         # Lista para acumular mensajes de progreso que se devolverán al frontend
         notificaciones = []
         def push_notif(msg, tipo='info', scope='factura'):
@@ -110,7 +114,7 @@ def crear_factura():
                 notif_conn.commit()
                 notif_conn.close()
             except Exception as e:
-                print(f"Error al guardar notificación: {e}")
+                logger.error(f"Error al guardar notificación: {e}")
             time.sleep(0.4)  # retardo breve para visualización progresiva
         # Primera notificación
         push_notif("Datos de factura recibidos")
@@ -151,8 +155,8 @@ def crear_factura():
                 data['numero'],
                 data['fecha'],
                 data.get('fvencimiento', 
-                         # Si no se proporciona fecha de vencimiento, se calcula como fecha + 15 días
-                         (datetime.strptime(data['fecha'], '%Y-%m-%d') + timedelta(days=15)).strftime('%Y-%m-%d')),
+                         # Si no se proporciona fecha de vencimiento, se calcula como fecha + 30 días
+                         (datetime.strptime(data['fecha'], '%Y-%m-%d') + timedelta(days=30)).strftime('%Y-%m-%d')),
                 data.get('estado', 'P'),  # P=Pendiente, C=Cobrada, V=Vencida
                 data['idContacto'],
                 emisor_nif,
@@ -203,11 +207,11 @@ def crear_factura():
             num_doc = str(data.get('numero', ''))
             es_rectificativa = (estado_doc == 'RE') or (tipo_doc.upper() == 'R') or num_doc.upper().endswith('-R')
             
-            print(f"[DEBUG crear_factura] estado={estado_doc}, presentar_face_flag={presentar_face_flag}, es_rectificativa={es_rectificativa}")
+            logger.debug(f"[DEBUG crear_factura] estado={estado_doc}, presentar_face_flag={presentar_face_flag}, es_rectificativa={es_rectificativa}")
             
             if estado_doc != 'C' and not es_rectificativa:
                 push_notif("Factura guardada", tipo='success')
-                print("[FACTURA] Guardada como pendiente: se omite generación de XML y envío AEAT")
+                logger.info("[FACTURA] Guardada como pendiente: se omite generación de XML y envío AEAT")
                 return jsonify({
                     'mensaje': 'Factura guardada como pendiente',
                     'id': factura_id,
@@ -215,10 +219,10 @@ def crear_factura():
                 })
 
             # --- Generación de Facturae ---
-            print(f"[FACTURA] Generando XML Facturae (presentar_face={presentar_face_flag}, VERIFACTU_HABILITADO={VERIFACTU_HABILITADO})")
+            logger.info(f"[FACTURA] Generando XML Facturae (presentar_face={presentar_face_flag}, VERIFACTU_HABILITADO={VERIFACTU_HABILITADO})")
 
             try:
-                print("[FACTURAE] Iniciando integración Facturae para factura_id:", factura_id)
+                logger.info("[FACTURAE] Iniciando integración Facturae para factura_id:", factura_id)
                 push_notif("Generando XML Facturae ...")
                 cursor.execute('''
                     SELECT razonsocial, identificador, direccion, cp, localidad, provincia,
@@ -227,7 +231,7 @@ def crear_factura():
                 ''', (data['idContacto'],))
                 contacto = cursor.fetchone()
                 if contacto:
-                    print(f"[FACTURAE] Datos de contacto encontrados: {contacto}")
+                    logger.info(f"[FACTURAE]Datos de contacto encontrados: {contacto}")
                     # Convierte contacto (sqlite3.Row o tuple) a dict para acceso seguro
                     datos_contacto = {
                         'razonsocial': contacto[0],
@@ -253,7 +257,7 @@ def crear_factura():
                             faltantes.append('DIR3 Unidad tramitadora')
                         if faltantes:
                             mensaje_error = f"El contacto requiere FACe pero faltan códigos DIR3: {', '.join(faltantes)}"
-                            print(f"[FACTURAE][ERROR] {mensaje_error}")
+                            logger.info(f"[FACTURAE][ERROR] {mensaje_error}")
                             conn.rollback()
                             return jsonify({'error': mensaje_error, 'codigo': 'DIR3_INCOMPLETO'}), 400
 
@@ -304,7 +308,7 @@ def crear_factura():
                         'dir3_unidad': datos_contacto.get('dir3_unidad')
                     }
                 else:
-                    print("[FACTURAE] No se encontraron datos del contacto, usando valores por defecto para receptor.")
+                    logger.info("[FACTURAE] No se encontraron datos del contacto, usando valores por defecto para receptor.")
                     datos_facturae = {
                         'emisor': cargar_datos_emisor(),
                         'receptor': {
@@ -357,7 +361,7 @@ def crear_factura():
                 datos_facturae['verifactu'] = VERIFACTU_DISPONIBLE  # Se genera formato VERI*FACTU sólo si está habilitado
                 datos_facturae['factura_id'] = factura_id  # ID de factura para registro en VERI*FACTU
                 
-                print("[FACTURAE] Llamando a generar_facturae con configuración VERI*FACTU")
+                logger.info("[FACTURAE] Llamando a generar_facturae con configuración VERI*FACTU")
                 # Log detallado antes de llamar a generar_facturae
                 with safe_append_debug('facturae_env_debug.txt') as f:
                     f.write(f'[DEBUG][factura.py] datos_facturae={datos_facturae}\n')
@@ -370,19 +374,19 @@ def crear_factura():
                     push_notif("Firmando XML Facturae ...")  # noqa: E501
                     # Usar la versión modular que genera el XML en formato Facturae 3.2.2 compatible con VERI*FACTU
                     ruta_xml_final = generar_facturae_modular(datos_facturae)
-                    print(f"[FACTURAE] Facturae 3.2.2 generada y firmada en {ruta_xml_final}")
+                    logger.info(f"[FACTURAE]Facturae 3.2.2 generada y firmada en {ruta_xml_final}")
                     if ruta_xml_final and ruta_xml_final.lower().endswith('.xsig'):
                         push_notif("XML Facturae generado")
-                    print(f"[FACTURAE] Factura electrónica generada correctamente para factura ID: {factura_id}")
+                    logger.info(f"[FACTURAE]Factura electrónica generada correctamente para factura ID: {factura_id}")
                     conn.commit()
                 except Exception as e:
-                    print(f"[FACTURAE][ERROR] Error generando Facturae: {e}")
+                    logger.info(f"[FACTURAE][ERROR] Error generando Facturae: {e}")
                     push_notif("Error al generar XML Facturae", tipo='error')
                     # Registrar traza completa del error
                     import traceback
-                    print(traceback.format_exc())
+                    logger.error("Traceback:", exc_info=True)
             except Exception as e:
-                print(f"[FACTURAE][ERROR] Error en integración Facturae: {e}")
+                logger.info(f"[FACTURAE][ERROR] Error en integración Facturae: {e}")
 
             # --- Integración VERI*FACTU ---
             respuesta = {
@@ -391,14 +395,14 @@ def crear_factura():
                 'notificaciones': notificaciones  # lista de pasos realizados
             }
             try:
-                print("[VERIFACTU] Iniciando integración VERI*FACTU para factura_id:", factura_id)
+                logger.info("[VERIFACTU] Iniciando integración VERI*FACTU para factura_id:", factura_id)
                 push_notif("Enviando registro AEAT ...")
                 # Generar datos VERI*FACTU para la factura (solo si está disponible)
                 if VERIFACTU_DISPONIBLE:
                     try:
                         datos_verifactu = verifactu.generar_datos_verifactu_para_factura(factura_id)
                         if datos_verifactu and 'datos' in datos_verifactu and 'hash' in datos_verifactu['datos']:
-                            print(f"[VERIFACTU] Datos generados correctamente: hash={datos_verifactu['datos']['hash'][:10]}...")
+                            logger.info(f"[VERIFACTU]Datos generados correctamente: hash={datos_verifactu['datos']['hash'][:10]}...")
                             push_notif("QR generado")
                             # Enviamos como parte del retorno
                             respuesta['datos_adicionales'] = {
@@ -406,7 +410,7 @@ def crear_factura():
                                 'verifactu': True
                             }
                         else:
-                            print("[VERIFACTU] No se pudieron generar los datos VERI*FACTU")
+                            logger.info("[VERIFACTU] No se pudieron generar los datos VERI*FACTU")
                             # Intentar extraer código/descripcion de error devuelto por AEAT
                             codigo_err = None
                             descripcion_err = None
@@ -428,7 +432,7 @@ def crear_factura():
                                 'codigo_error_aeat': codigo_err
                             }
                     except Exception as e:
-                        print(f"[!] Error al generar datos VERI*FACTU: {str(e)}")
+                        logger.warning(f"[!] Error al generar datos VERI*FACTU: {str(e)}")
                         push_notif("Error al enviar registro AEAT", tipo='error')
                         # Continuamos sin VERI*FACTU
                         respuesta['datos_adicionales'] = {
@@ -436,22 +440,22 @@ def crear_factura():
                             'error': f"Error VERI*FACTU: {str(e)}"
                         }
                 else:
-                    print("[!] Módulo VERI*FACTU no disponible - Omitiendo generación de datos")
+                    logger.warning("[!] Módulo VERI*FACTU no disponible - Omitiendo generación de datos")
                     respuesta['datos_adicionales'] = {
                         'verifactu': False,
                         'error': "Módulo VERI*FACTU no disponible"
                     }
             except Exception as e:
-                print(f"[VERIFACTU][ERROR] Error en integración VERI*FACTU: {e}")
+                logger.info(f"[VERIFACTU][ERROR] Error en integración VERI*FACTU: {e}")
                 import traceback
-                print(traceback.format_exc())
+                logger.error("Traceback:", exc_info=True)
                 respuesta['datos_adicionales'] = {
                     'verifactu': False,
                     'error': f"Error en integración VERI*FACTU: {str(e)}"
                 }
             
             push_notif("Factura creada", tipo='success')
-            print("[DEBUG] Respuesta enviada a frontend:", respuesta)
+            logger.debug("[DEBUG] Respuesta enviada a frontend:", respuesta)
             return jsonify(respuesta)
             # Devolver respuesta sin mencionar VERI*FACTU si hubo algún problema
             return jsonify({
@@ -464,7 +468,7 @@ def crear_factura():
             raise e
 
     except Exception as e:
-        print(f"Error en crear_factura: {str(e)}")
+        logger.error(f"Error en crear_factura: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:
@@ -472,7 +476,7 @@ def crear_factura():
 
 def obtener_factura(idContacto, id):
     try:
-        print(f"Obteniendo factura {id} para contacto {idContacto}")  # Debug
+        logger.debug(f"Obteniendo factura {id} para contacto {idContacto}")  # Debug
         conn = get_db_connection()
         cursor = conn.cursor()
         
@@ -501,16 +505,16 @@ def obtener_factura(idContacto, id):
             INNER JOIN contactos c ON f.idContacto = c.idContacto
             WHERE f.id = ? AND f.idContacto = ?
         """
-        print(f"Ejecutando query: {query}")  # Debug
-        print(f"Con parámetros: id={id}, idContacto={idContacto}")  # Debug
+        logger.debug(f"Ejecutando query: {query}")  # Debug
+        logger.debug(f"Con parámetros: id={id}, idContacto={idContacto}")  # Debug
         
         cursor.execute(query, (id, idContacto))
         
         factura = cursor.fetchone()
-        print(f"Resultado de la query: {factura}")  # Debug
+        logger.debug(f"Resultado de la query: {factura}")  # Debug
         
         if not factura:
-            print("No se encontró la factura")  # Debug
+            logger.info("No se encontró la factura")  # Debug
             return jsonify({'error': 'Factura no encontrada'}), 404
 
         # Convertir a diccionario usando los nombres de columnas
@@ -520,15 +524,15 @@ def obtener_factura(idContacto, id):
             'tipo',
             'razonsocial', 'identificador', 'direccion', 'cp', 'localidad', 'provincia', 'email'
         ]
-        print("Nombres de columnas:", columnas)  # Debug
+        logger.debug("Nombres de columnas:", columnas)  # Debug
         
         factura_dict = dict(zip(columnas, factura))
-        print("Factura dict:", factura_dict)  # Debug
+        logger.debug("Factura dict:", factura_dict)  # Debug
         
         # Obtener detalles ordenados por id
         cursor.execute('SELECT * FROM detalle_factura WHERE id_factura = ? ORDER BY id', (id,))
         detalles = cursor.fetchall()
-        print(f"Detalles encontrados: {len(detalles)}")  # Debug
+        logger.debug(f"Detalles encontrados: {len(detalles)}")  # Debug
         
         # Convertir detalles a lista de diccionarios
         columnas_detalle = [desc[0] for desc in cursor.description]
@@ -537,13 +541,13 @@ def obtener_factura(idContacto, id):
         # Agregar detalles al diccionario de la factura
         factura_dict['detalles'] = detalles_list
         
-        print("Datos completos de factura a devolver:", factura_dict)  # Debug
+        logger.debug("Datos completos de factura a devolver:", factura_dict)  # Debug
         return jsonify(factura_dict)
         
     except Exception as e:
-        print(f"Error al obtener factura: {str(e)}")
+        logger.error(f"Error al obtener factura: {str(e)}")
         import traceback
-        print(traceback.format_exc())  # Debug - muestra el stack trace completo
+        logger.error("Traceback:", exc_info=True)  # Debug - muestra el stack trace completo
         return jsonify({'error': str(e)}), 500
     finally:
         if cursor:
@@ -553,12 +557,12 @@ def obtener_factura(idContacto, id):
 
 def obtener_factura_abierta(idContacto,idFactura):
     try:
-        print(f"Iniciando obtener_factura_abierta para idContacto: {idContacto}")
+        logger.debug(f"Iniciando obtener_factura_abierta para idContacto: {idContacto}")
         conn = get_db_connection()
         cursor = conn.cursor()
         
         # Primero obtener los datos del contacto
-        print("Ejecutando consulta de contacto...")
+        logger.info("Ejecutando consulta de contacto...")
         cursor.execute("""
             SELECT 
                 idContacto,
@@ -579,14 +583,14 @@ def obtener_factura_abierta(idContacto,idFactura):
         contacto = cursor.fetchone()
         
         if not contacto:
-            print(f"No se encontró el contacto con idContacto: {idContacto}")
+            logger.debug(f"No se encontró el contacto con idContacto: {idContacto}")
             return jsonify({'error': 'Contacto no encontrado'}), 404
             
         contacto_dict = dict(contacto)
-        print(f"Datos del contacto encontrados: {contacto_dict}")
+        logger.debug(f"Datos del contacto encontrados: {contacto_dict}")
         
         # Buscar factura abierta
-        print("Ejecutando consulta de factura abierta...")
+        logger.info("Ejecutando consulta de factura abierta...")
         sql = '''
             SELECT id, numero, fecha, estado, total, idContacto, tipo, presentar_face
             FROM factura
@@ -594,18 +598,18 @@ def obtener_factura_abierta(idContacto,idFactura):
             AND id = ?
             LIMIT 1
         '''
-        print(f"SQL factura: {sql}")
-        print(f"Parámetros: idContacto = {idContacto}, id = {idFactura}")
+        logger.debug(f"SQL factura: {sql}")
+        logger.debug(f"Parámetros: idContacto = {idContacto}, id = {idFactura}")
         
         cursor.execute(sql, (idContacto,idFactura,))
         factura = cursor.fetchone()
         
         if factura:
-            print(f"Factura abierta encontrada: {dict(factura)}")
+            logger.debug(f"Factura abierta encontrada: {dict(factura)}")
             factura_dict = dict(factura)
             
             # Obtener los detalles de la factura
-            print(f"Buscando detalles para factura id: {factura_dict['id']}")
+            logger.debug(f"Buscando detalles para factura id: {factura_dict['id']}")
             cursor.execute('''
                 SELECT id, concepto, descripcion, cantidad, precio, impuestos, total, 
                        productoId, fechaDetalle
@@ -614,7 +618,7 @@ def obtener_factura_abierta(idContacto,idFactura):
                 ORDER BY id
             ''', (factura_dict['id'],))
             detalles = cursor.fetchall()
-            print(f"Detalles encontrados: {[dict(d) for d in detalles]}")
+            logger.debug(f"Detalles encontrados: {[dict(d) for d in detalles]}")
             
             # Construir respuesta completa
             response_data = {
@@ -629,25 +633,25 @@ def obtener_factura_abierta(idContacto,idFactura):
                 'contacto': contacto_dict,
                 'detalles': [dict(d) for d in detalles]
             }
-            print("Enviando respuesta modo edición")
-            print("Datos completos:", response_data)
+            logger.info("Enviando respuesta modo edición")
+            logger.debug("Datos completos:", response_data)
             return jsonify(response_data)
         else:
-            print("No se encontró factura abierta, modo nuevo")
+            logger.info("No se encontró factura abierta, modo nuevo")
             response_data = {
                 'modo': 'nuevo',
                 'contacto': contacto_dict
             }
-            print("Datos completos:", response_data)
+            logger.debug("Datos completos:", response_data)
             return jsonify(response_data)
     
     except sqlite3.Error as e:
-        print(f"Error de SQLite en obtener_factura_abierta: {str(e)}")
+        logger.error(f"Error de SQLite en obtener_factura_abierta: {str(e)}")
         return jsonify({'error': f"Error de base de datos: {str(e)}"}), 500
             
     except Exception as e:
-        print(f"Error general en obtener_factura_abierta: {str(e)}")
-        print(f"Tipo de error: {type(e)}")
+        logger.error(f"Error general en obtener_factura_abierta: {str(e)}")
+        logger.error(f"Tipo de error: {type(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({'error': f"Error al buscar factura abierta: {str(e)}"}), 500
@@ -656,7 +660,7 @@ def obtener_factura_abierta(idContacto,idFactura):
             cursor.close()
         if 'conn' in locals():
             conn.close()
-        print("Conexión cerrada en obtener_factura_abierta")
+        logger.info("Conexión cerrada en obtener_factura_abierta")
 
 
 def consultar_facturas():
@@ -717,7 +721,7 @@ def consultar_facturas():
             if estado:
                 if estado == 'PV':  # Caso especial para Pendiente+Vencida
                     query += " AND (f.estado IN ('P', 'V'))"
-                    print("Aplicando filtro especial PV: Pendiente o Vencida")
+                    logger.info("Aplicando filtro especial PV: Pendiente o Vencida")
                 else:
                     query += " AND f.estado = ?"
                     params.append(estado)
@@ -736,11 +740,11 @@ def consultar_facturas():
         query += " ORDER BY f.fecha DESC LIMIT 100"
 
         # Ejecutar la consulta
-        print(f"Consulta SQL: {query}")
-        print(f"Parámetros: {params}")
+        logger.debug(f"Consulta SQL: {query}")
+        logger.debug(f"Parámetros: {params}")
         cursor.execute(query, params)
         facturas = cursor.fetchall()
-        print(f"Facturas encontradas: {len(facturas)}")
+        logger.debug(f"Facturas encontradas: {len(facturas)}")
         
         
         # Obtener los nombres de las columnas para mapeo preciso
@@ -771,7 +775,7 @@ def consultar_facturas():
         return jsonify(result)
 
     except Exception as e:
-        print(f"Error en consultar_facturas: {str(e)}")
+        logger.error(f"Error en consultar_facturas: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         if 'conn' in locals():
@@ -1093,7 +1097,7 @@ def obtener_facturas_por_contacto(idContacto):
         return jsonify(resultado)
         
     except Exception as e:
-        print(f"Error en obtener_facturas_por_contacto: {str(e)}")
+        logger.error(f"Error en obtener_facturas_por_contacto: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
@@ -1153,7 +1157,7 @@ def crear_factura_por_contacto(idContacto):
     except Exception as e:
         if conn:
             conn.rollback()
-        print(f"Error en crear_factura_por_contacto: {str(e)}")
+        logger.error(f"Error en crear_factura_por_contacto: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:
@@ -1203,7 +1207,7 @@ def filtrar_facturas():
         if estado:
             if estado == 'PV':  # Caso especial para Pendiente+Vencida
                 query += " AND (f.estado IN ('P', 'V'))"
-                print("Aplicando filtro especial PV: Pendiente o Vencida")
+                logger.info("Aplicando filtro especial PV: Pendiente o Vencida")
             else:
                 query += " AND f.estado = ?"
                 params.append(estado)
@@ -1256,7 +1260,7 @@ def filtrar_facturas():
         return jsonify(resultado)
         
     except Exception as e:
-        print(f"Error en filtrar_facturas: {str(e)}")
+        logger.error(f"Error en filtrar_facturas: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
@@ -1331,7 +1335,7 @@ def obtener_factura_para_imprimir(factura_id):
         )
 
     except Exception as e:
-        print(f"Error al obtener factura para imprimir: {str(e)}")
+        logger.error(f"Error al obtener factura para imprimir: {str(e)}")
         return None
     finally:
         if conn:
@@ -1339,7 +1343,7 @@ def obtener_factura_para_imprimir(factura_id):
 
 def enviar_factura_email(id_factura, email_destino_override=None, return_dict=False, adjunto_adicional=None):
     try:
-        print(f"Iniciando envío de factura {id_factura}")
+        logger.debug(f"Iniciando envío de factura {id_factura}")
         conn = get_db_connection()
         cursor = conn.cursor()
 
@@ -1361,10 +1365,10 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
         cursor.execute(query, (id_factura,))
         factura = cursor.fetchone()
         
-        print(f"Resultado de la consulta: {factura}")
+        logger.debug(f"Resultado de la consulta: {factura}")
 
         if not factura:
-            print(f"Factura {id_factura} no encontrada")
+            logger.debug(f"Factura {id_factura} no encontrada")
             if return_dict:
                 return {'success': False, 'error': 'Factura no encontrada'}
             return jsonify({'error': 'Factura no encontrada'}), 404
@@ -1373,14 +1377,14 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
         nombres_columnas = [description[0] for description in cursor.description]
         factura_dict = dict(zip(nombres_columnas, factura))
         
-        print("Columnas de la factura:", nombres_columnas)
-        print("Datos de la factura:", factura_dict)
+        logger.debug("Columnas de la factura:", nombres_columnas)
+        logger.info("Datos de la factura:", factura_dict)
 
         # Si se proporciona email_destino_override, usarlo; si no, usar el del cliente
         email_destino = email_destino_override if email_destino_override else factura_dict.get('mail')
         
         if not email_destino:
-            print(f"Factura {id_factura} no tiene email registrado")
+            logger.debug(f"Factura {id_factura} no tiene email registrado")
             if return_dict:
                 return {'success': False, 'error': 'El contacto no tiene email registrado'}
             return jsonify({'error': 'El contacto no tiene email registrado'}), 400
@@ -1395,7 +1399,7 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
         detalles = cursor.fetchall()
         detalles_list = [dict(zip([d[0] for d in cursor.description], detalle)) for detalle in detalles]
         
-        print("Detalles de la factura:", detalles_list)
+        logger.info("Detalles de la factura:", detalles_list)
 
         # Utilidad segura para parsear importes en formato europeo o numérico
         def _parse_euro(value):
@@ -1472,12 +1476,12 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
 
         # Generar el PDF
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
-            print(f"Generando PDF para factura {id_factura}")
+            logger.debug(f"Generando PDF para factura {id_factura}")
             
             # Obtener datos de VERI*FACTU si existen (usando aleph70.db)
             cursor.execute("SELECT hash_factura FROM factura WHERE id = ?", (id_factura,))
             hash_factura = cursor.fetchone()
-            print(f"Hash factura obtenido: {hash_factura}")
+            logger.debug(f"Hash factura obtenido: {hash_factura}")
             
             # Obtener código QR de la tabla registro_facturacion, si existe
             cursor.execute("""
@@ -1485,7 +1489,7 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
                 WHERE factura_id = ?
             """, (id_factura,))
             registro = cursor.fetchone()
-            print(f"Registro facturación obtenido: {registro is not None}")
+            logger.debug(f"Registro facturación obtenido: {registro is not None}")
             
             # Definimos variables para usar en la plantilla
             qr_code = None
@@ -1494,11 +1498,11 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             # Primero intentamos obtener el hash de registro_facturacion
             if registro and registro['hash']:
                 hash_value = registro['hash']
-                print(f"Usando hash de registro_facturacion: {hash_value}")
+                logger.debug(f"Usando hash de registro_facturacion: {hash_value}")
             # Si no está ahí, usamos el de la tabla factura
             elif hash_factura and hash_factura['hash_factura']:
                 hash_value = hash_factura['hash_factura']
-                print(f"Usando hash de tabla factura: {hash_value}")
+                logger.debug(f"Usando hash de tabla factura: {hash_value}")
                 
             # Codificar el QR en base64 si existe
             if registro and registro['codigo_qr']:
@@ -1509,11 +1513,11 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
                 elif isinstance(qr_raw, str):
                     qr_code = qr_raw.strip()
                 else:
-                    print("Tipo de dato no esperado para código QR")
+                    logger.info("Tipo de dato no esperado para código QR")
                     qr_code = None
-                print(f"Código QR codificado en base64, longitud: {len(qr_code)}")
+                logger.debug(f"Código QR codificado en base64, longitud: {len(qr_code)}")
             else:
-                print("No se encontró código QR en la base de datos")
+                logger.info("No se encontró código QR en la base de datos")
                 
             # Leer el HTML base con la codificación correcta
             with open('/var/www/html/frontend/IMPRIMIR_FACTURA.html', 'r', encoding='utf-8') as f:
@@ -1699,24 +1703,24 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
                             num_orig = row_orig["numero"] if isinstance(row_orig, dict) else row_orig[0]
                             fecha_orig = row_orig["fecha"] if isinstance(row_orig, dict) else row_orig[1]
                     except Exception as e:
-                        print(f"Error obteniendo factura original para leyenda rectificativa: {e}")
+                        logger.error(f"Error obteniendo factura original para leyenda rectificativa: {e}")
                 rect_html = f'<div style="border:2px solid #c00; padding:10px; margin:10px 0;"><h2 style="color:#c00; text-align:center;">FACTURA RECTIFICATIVA</h2><p><strong>Factura rectificada:</strong> Nº {num_orig} de fecha {fecha_orig}</p><p><strong>Motivo:</strong> {motivo}</p></div>'
                 html_modificado = re.sub(pattern_rect, rect_html, html_modificado, flags=re.IGNORECASE)
             else:
                 html_modificado = re.sub(pattern_rect, '', html_modificado, flags=re.IGNORECASE)
             
-            print("Modificando el HTML para insertar hash y QR VERI*FACTU...")
+            logger.info("Modificando el HTML para insertar hash y QR VERI*FACTU...")
             
             # Enfoque directo para insertar el hash y el QR
             # 1. (Deshabilitado) No escribir HTML temporal en disco
-            # print("HTML temporal omitido (/tmp/html_antes.html)")
+            # logger.info("HTML temporal omitido (/tmp/html_antes.html)")
             # Si la configuración deshabilita VERI*FACTU, omitimos leyenda y QR
             import re
             csv_value = registro['csv'] if registro else None
             has_csv = bool(csv_value and str(csv_value).strip())
             if not has_csv or not VERIFACTU_HABILITADO:
                 qr_code = None
-                print("Factura sin CSV VERI*FACTU o VERIFACTU deshabilitado - se omite leyenda y QR.")
+                logger.info("Factura sin CSV VERI*FACTU o VERIFACTU deshabilitado - se omite leyenda y QR.")
                 # Eliminar leyenda y QR relativos a VERI*FACTU
                 html_modificado = html_modificado.replace('<p id="hash-factura">Hash: </p>', '')
                 # Eliminar también cualquier div del QR VERI*FACTU completo
@@ -1738,9 +1742,9 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             # 4. Realizar reemplazos
             if hash_placeholder in html_modificado:
                 html_modificado = html_modificado.replace(hash_placeholder, hash_replacement)
-                print("Hash reemplazado con éxito")
+                logger.info("Hash reemplazado con éxito")
             else:
-                print(f"ERROR: No se encontró el marcador del hash: {hash_placeholder}")
+                logger.error(f"ERROR: No se encontró el marcador del hash: {hash_placeholder}")
             
             # 5. Insertar el QR si existe
             if qr_code:
@@ -1749,28 +1753,28 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
                 # Asegurarse de que el div del QR exista en el HTML y reemplazarlo
                 if qr_placeholder in html_modificado:
                     html_modificado = html_modificado.replace(qr_placeholder, qr_replacement)
-                    print("QR insertado con éxito")
+                    logger.info("QR insertado con éxito")
                 else:
                     # Si no encuentra el placeholder exacto, intentar con búsqueda más general
-                    print("No se encontró el marcador exacto del QR, intentando con búsqueda alternativa")
+                    logger.info("No se encontró el marcador exacto del QR, intentando con búsqueda alternativa")
                     if '<div id="qr-verifactu"' in html_modificado:
                         # Usar expresiones regulares para encontrar y reemplazar el div del QR
                         import re
                         pattern = r'<div id="qr-verifactu"[^>]*>.*?</div>'
                         html_modificado = re.sub(pattern, qr_replacement, html_modificado, flags=re.DOTALL)
-                        print("QR insertado con método alternativo")
+                        logger.info("QR insertado con método alternativo")
                     else:
                         # Si aún no lo encuentra, añadirlo al final del documento antes del cierre del body
-                        print("Insertando QR antes del cierre del body")
+                        logger.info("Insertando QR antes del cierre del body")
                         html_modificado = html_modificado.replace('</body>', f'{qr_replacement}\n</body>')
             else:
-                print("No hay código QR para insertar")
+                logger.info("No hay código QR para insertar")
                 
             # 6. (Deshabilitado) No escribir HTML final en disco
-            # print("HTML final omitido (/tmp/html_despues.html)")
+            # logger.info("HTML final omitido (/tmp/html_despues.html)")
 
 
-            print("Convirtiendo HTML a PDF")
+            logger.info("Convirtiendo HTML a PDF")
             # Convertir HTML a PDF usando WeasyPrint con ruta base para recursos estáticos
             HTML(
                 string=html_modificado,
@@ -1780,7 +1784,7 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
                 stylesheets=[CSS(string='@page { size: A4; margin: 1cm }')]
             )
             
-            print("Preparando correo")
+            logger.info("Preparando correo")
             # Preparar el correo (incluir fecha y vencimiento)
             fecha_fmt = datetime.strptime(factura_dict["fecha"], "%Y-%m-%d").strftime("%d/%m/%Y") if factura_dict.get("fecha") else ""
             # Calcular fecha de vencimiento como fecha_emision + 30 días (no usar fvencimiento de BD)
@@ -1815,7 +1819,7 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
                     "SAMUEL RODRIGUEZ MIQUEL\n"
                 )
 
-            print(f"Enviando correo a {email_destino}")
+            logger.debug(f"Enviando correo a {email_destino}")
             # Enviar el correo (con adjunto adicional si se proporciona)
             if adjunto_adicional:
                 # Importar función modificada para múltiples adjuntos
@@ -1840,30 +1844,30 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             os.unlink(tmp.name)
 
             if exito:
-                print("Correo enviado exitosamente")
+                logger.info("Correo enviado exitosamente")
                 # Actualizar el campo 'enviado' a 1 en la base de datos
                 try:
                     cursor.execute("UPDATE factura SET enviado = 1 WHERE id = ?", (id_factura,))
                     conn.commit()
-                    print(f"Campo 'enviado' actualizado a 1 para la factura {id_factura}")
+                    logger.info(f"Campo 'enviado' actualizado a 1 para la factura {id_factura}")
                     if return_dict:
                         return {'success': True, 'mensaje': 'Factura enviada correctamente', 'id': id_factura}
                     return jsonify({'mensaje': 'Factura enviada correctamente', 'id': id_factura})
                 except Exception as e_update:
-                    print(f"Error al actualizar campo 'enviado': {str(e_update)}")
+                    logger.error(f"Error al actualizar campo 'enviado': {str(e_update)}")
                     if return_dict:
                         return {'success': True, 'mensaje': 'Factura enviada correctamente pero no se pudo actualizar el estado de envío', 'id': id_factura}
                     return jsonify({'mensaje': 'Factura enviada correctamente pero no se pudo actualizar el estado de envío', 'id': id_factura})
             else:
-                print(f"Error al enviar correo: {mensaje}")
+                logger.error(f"Error al enviar correo: {mensaje}")
                 if return_dict:
                     return {'success': False, 'error': mensaje}
                 return jsonify({'error': mensaje}), 500
 
     except Exception as e:
         import traceback
-        print(f"Error en enviar_factura_email: {str(e)}")
-        print(traceback.format_exc())
+        logger.error(f"Error en enviar_factura_email: {str(e)}")
+        logger.error("Traceback:", exc_info=True)
         if return_dict:
             return {'success': False, 'error': str(e)}
         return jsonify({'error': str(e)}), 500
@@ -1873,10 +1877,10 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
 
 def enviar_factura_email_endpoint(id_factura):
     try:
-        print(f"Iniciando envío de factura {id_factura}")
+        logger.debug(f"Iniciando envío de factura {id_factura}")
         return enviar_factura_email(id_factura)
     except Exception as e:
-        print(f"Error en enviar_factura_email_endpoint: {str(e)}")
+        logger.error(f"Error en enviar_factura_email_endpoint: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 def redondear_importe(valor):
@@ -1927,7 +1931,7 @@ def actualizar_factura(id, data):
         presentar_face_flag = 1 if int(data.get('presentar_face', 0)) == 1 else 0
         
         # Log inmediato para debugging
-        print(f"[DEBUG actualizar_producto] ID={id}, estado={estado}, presentar_face_flag={presentar_face_flag}")
+        logger.debug(f"[DEBUG actualizar_producto] ID={id}, estado={estado}, presentar_face_flag={presentar_face_flag}")
         
         conn = get_db_connection()
         conn.execute('BEGIN EXCLUSIVE TRANSACTION')
@@ -1949,7 +1953,7 @@ def actualizar_factura(id, data):
                 except Exception:
                     estado_anterior = None
         
-        print(f"[DEBUG estados] estado_anterior={estado_anterior}, nuevo_estado={estado}, presentar_face={presentar_face_flag}")
+        logger.debug(f"[DEBUG estados] estado_anterior={estado_anterior}, nuevo_estado={estado}, presentar_face={presentar_face_flag}")
         
         if not factura_existente:
             conn.rollback()
@@ -2029,7 +2033,9 @@ def actualizar_factura(id, data):
         ''', (
             data['numero'],
             data['fecha'],
-            data.get('fechaVencimiento', data['fecha']),
+            data.get('fechaVencimiento', 
+                         # Si no se proporciona fecha de vencimiento, se calcula como fecha + 30 días
+                         (datetime.strptime(data['fecha'], '%Y-%m-%d') + timedelta(days=30)).strftime('%Y-%m-%d')),
             estado,
             data['idContacto'],
             emisor_nif,
@@ -2075,14 +2081,14 @@ def actualizar_factura(id, data):
         # Generar si el checkbox presentar_face está marcado y la factura está cobrada
         trigger_generar_facturae = (estado == 'C' and presentar_face_flag == 1)
         
-        print(f"[DEBUG trigger] trigger_generar_facturae={trigger_generar_facturae}, estado={estado}, presentar_face={presentar_face_flag}")
+        logger.debug(f"[DEBUG trigger] trigger_generar_facturae={trigger_generar_facturae}, estado={estado}, presentar_face={presentar_face_flag}")
         
         try:
             with safe_append_debug('facturae_debug.log') as log_file:
                 log_file.write(f"\n[{datetime.now().isoformat()}] Actualizar Factura ID={id}: estado={estado}, presentar_face={presentar_face_flag}\n")
                 log_file.write(f"Trigger generar facturae: {trigger_generar_facturae}\n")
         except Exception as e:
-            print(f"[DEBUG] Error escribiendo log: {e}")
+            logger.debug(f"[DEBUG] Error escribiendo log: {e}")
             pass
 
         # Generar factura electrónica sólo si pasamos de Pendiente (u otro) a Cobrado
@@ -2288,7 +2294,7 @@ def actualizar_factura(id, data):
                     with safe_append_debug('facturae_debug.log') as log_file:
                         log_file.write(f"[{datetime.now().isoformat()}] Procesando factura {data['numero']}\n")
                         log_file.write(f"Datos de totales recibidos: {base_imponible}, {impuestos}, {total}\n")
-                    print(f"DEBUG: Totales enviados al generador - Base: {base_imponible}, IVA: {impuestos}, Total: {total}")
+                    logger.info(f"DEBUG: Totales enviados al generador - Base: {base_imponible}, IVA: {impuestos}, Total: {total}")
                     
                     # Crear log de los datos de la factura
                     with safe_append_debug('facturae_debug.log') as log_file:
@@ -2350,7 +2356,7 @@ def actualizar_factura(id, data):
         # Continuamos para integrar con VERI*FACTU si procede
         
         try:
-            print("[VERIFACTU] Actualizando datos VERI*FACTU para factura_id:", id)
+            logger.info("[VERIFACTU] Actualizando datos VERI*FACTU para factura_id:", id)
             
             # Verificar si VERI*FACTU está disponible (desactivado en actualización para evitar duplicados)
             if VERIFACTU_DISPONIBLE:
@@ -2369,7 +2375,7 @@ def actualizar_factura(id, data):
                         tiene_qr = 'qr_data' in datos_verifactu and datos_verifactu['qr_data'] is not None
                         
                         if validado_aeat and tiene_qr:
-                            print(f"[VERIFACTU] Factura validada por AEAT. Hash={datos_verifactu['hash'][:10]}..., ID={datos_verifactu.get('id_verificacion', 'N/A')}")
+                            logger.info(f"[VERIFACTU]Factura validada por AEAT. Hash={datos_verifactu['hash'][:10]}..., ID={datos_verifactu.get('id_verificacion', 'N/A')}")
                             respuesta['datos_adicionales'] = {
                                 'hash': datos_verifactu['hash'],
                                 'verifactu': True,
@@ -2379,7 +2385,7 @@ def actualizar_factura(id, data):
                                 'mensaje': datos_verifactu.get('mensaje', 'Factura validada correctamente')
                             }
                         elif validado_aeat and not tiene_qr:
-                            print(f"[VERIFACTU] Factura validada por AEAT pero sin QR generado. Hash={datos_verifactu['hash'][:10]}...")
+                            logger.info(f"[VERIFACTU]Factura validada por AEAT pero sin QR generado. Hash={datos_verifactu['hash'][:10]}...")
                             respuesta['datos_adicionales'] = {
                                 'hash': datos_verifactu['hash'],
                                 'verifactu': True,
@@ -2388,7 +2394,7 @@ def actualizar_factura(id, data):
                                 'mensaje': "Factura validada pero sin QR generado"
                             }
                         else:
-                            print(f"[VERIFACTU] Factura NO validada por AEAT. Hash={datos_verifactu['hash'][:10]}...")
+                            logger.info(f"[VERIFACTU]Factura NO validada por AEAT. Hash={datos_verifactu['hash'][:10]}...")
                             respuesta['datos_adicionales'] = {
                                 'hash': datos_verifactu['hash'],
                                 'verifactu': True,
@@ -2397,7 +2403,7 @@ def actualizar_factura(id, data):
                                 'mensaje': datos_verifactu.get('mensaje', 'Factura no validada por AEAT')
                             }
                     else:
-                        print("[VERIFACTU] No se pudieron actualizar los datos VERI*FACTU")
+                        logger.info("[VERIFACTU] No se pudieron actualizar los datos VERI*FACTU")
                         respuesta['datos_adicionales'] = {
                             'verifactu': False,
                             'mensaje': "Fallo al regenerar datos VERI*FACTU",
@@ -2405,9 +2411,9 @@ def actualizar_factura(id, data):
                             'qr_disponible': False
                         }
                 except Exception as e:
-                    print(f"[!] Error al regenerar datos VERI*FACTU: {str(e)}")
+                    logger.warning(f"[!] Error al regenerar datos VERI*FACTU: {str(e)}")
                     import traceback
-                    print(traceback.format_exc())
+                    logger.error("Traceback:", exc_info=True)
                     respuesta['datos_adicionales'] = {
                         'verifactu': False,
                         'mensaje': f"Error VERI*FACTU: {str(e)}",
@@ -2415,7 +2421,7 @@ def actualizar_factura(id, data):
                         'qr_disponible': False
                     }
             else:
-                print("[!] Módulo VERI*FACTU no disponible - Omitiendo actualización de datos")
+                logger.warning("[!] Módulo VERI*FACTU no disponible - Omitiendo actualización de datos")
                 respuesta['datos_adicionales'] = {
                     'verifactu': False,
                     'mensaje': "Módulo VERI*FACTU no disponible",
@@ -2423,9 +2429,9 @@ def actualizar_factura(id, data):
                     'qr_disponible': False
                 }
         except Exception as e:
-            print(f"[VERIFACTU][ERROR] Error al actualizar datos VERI*FACTU: {e}")
+            logger.info(f"[VERIFACTU][ERROR] Error al actualizar datos VERI*FACTU: {e}")
             import traceback
-            print(traceback.format_exc())
+            logger.error("Traceback:", exc_info=True)
             respuesta['datos_adicionales'] = {
                 'verifactu': False,
                 'mensaje': f"Error en integración VERI*FACTU: {str(e)}",
@@ -2448,8 +2454,8 @@ def actualizar_factura(id, data):
         tb = traceback.format_exc()
         # Volcar a stdout y a log UTF-8 para diagnóstico
         try:
-            print(f"Error en actualizar_factura: {str(e)}")
-            print(tb)
+            logger.error(f"Error en actualizar_factura: {str(e)}")
+            logger.error("Traceback:", exc_info=True)
         except Exception:
             pass
         try:
