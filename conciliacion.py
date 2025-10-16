@@ -1503,7 +1503,7 @@ def obtener_liquidaciones_tpv():
                 # Diferencia <= tolerancia con solo tickets → conciliar directamente
                 puede_conciliar = True
             elif abs(diferencia) > tolerancia_config:
-                # Diferencia > 1€ → buscar facturas (excluir ya conciliadas)
+                # Diferencia > tolerancia → buscar facturas y usar algoritmo de varita mágica
                 cursor.execute('''
                     SELECT id, numero, total
                     FROM factura
@@ -1515,37 +1515,67 @@ def obtener_liquidaciones_tpv():
                         WHERE cg.tipo_documento = 'factura' 
                         AND cg.documento_id = id
                     )
-                    ORDER BY total DESC
                 ''', (fecha_busqueda,))
                 
                 facturas_disponibles = cursor.fetchall()
                 
                 if facturas_disponibles:
-                    # Sumar todas las facturas encontradas
+                    # Preparar lista de documentos para el algoritmo
+                    documentos = []
+                    # Agregar tickets existentes
+                    cursor.execute('''
+                        SELECT id, numero, total
+                        FROM tickets
+                        WHERE fecha = ? AND formaPago = 'T' AND estado = 'C'
+                        AND NOT EXISTS (
+                            SELECT 1 FROM conciliacion_gastos cg
+                            WHERE cg.tipo_documento = 'ticket' AND cg.documento_id = id
+                        )
+                    ''', (fecha_busqueda,))
+                    for ticket in cursor.fetchall():
+                        documentos.append({'id': ticket['id'], 'tipo': 'ticket', 'importe': ticket['total']})
+                    
+                    # Agregar facturas disponibles
                     for factura in facturas_disponibles:
-                        total_documentos += factura['total']
-                        num_facturas += 1
-                        num_documentos += 1
-                        total_facturas += factura['total']
+                        documentos.append({'id': factura['id'], 'tipo': 'factura', 'importe': factura['total']})
                     
-                    # Recalcular diferencia con facturas (mantener signo)
-                    diferencia = total_liq - total_documentos
+                    # Usar algoritmo de varita mágica para encontrar mejor combinación
+                    mejor_combinacion, mejor_diferencia = encontrar_mejor_combinacion_documentos(
+                        documentos, total_liq, tolerancia_config
+                    )
                     
-                    # Si con facturas la diferencia es <= tolerancia → conciliar
-                    if abs(diferencia) <= tolerancia_config:
+                    if mejor_combinacion and mejor_diferencia is not None:
+                        # Recalcular totales con la mejor combinación
+                        total_documentos = 0
+                        total_tickets = 0
+                        total_facturas = 0
+                        num_tickets = 0
+                        num_facturas = 0
+                        
+                        for doc in mejor_combinacion:
+                            total_documentos += doc['importe']
+                            if doc['tipo'] == 'ticket':
+                                total_tickets += doc['importe']
+                                num_tickets += 1
+                            else:
+                                total_facturas += doc['importe']
+                                num_facturas += 1
+                        
+                        num_documentos = num_tickets + num_facturas
+                        diferencia = total_liq - total_documentos
                         puede_conciliar = True
             
-            # Conciliación automática de liquidaciones TPV si diferencia <= tolerancia
-            if puede_conciliar:
+            # Conciliación automática si diferencia <= tolerancia
+            if puede_conciliar and abs(diferencia) <= tolerancia_config:
                 try:
-                    # Conciliar cada liquidación de esta fecha
-                    # Todas comparten el mismo total de documentos y diferencia
+                    # Conciliar cada liquidación de esta fecha con algoritmo de varita mágica
                     for gasto_id in datos['ids']:
                         cursor.execute('SELECT importe_eur FROM gastos WHERE id = ?', (int(gasto_id),))
                         gasto_row = cursor.fetchone()
                         if gasto_row:
                             importe_gasto = gasto_row['importe_eur']
                             
+                            notas_docs = f'{num_tickets} ticket(s)' if num_facturas == 0 else f'{num_tickets} ticket(s) + {num_facturas} factura(s)'
                             cursor.execute('''
                                 INSERT OR IGNORE INTO conciliacion_gastos 
                                 (gasto_id, tipo_documento, documento_id, fecha_conciliacion, 
@@ -1553,8 +1583,9 @@ def obtener_liquidaciones_tpv():
                                 VALUES (?, ?, ?, datetime('now'), ?, ?, ?, 'conciliado', 'automatico_tpv', 0, ?)
                             ''', (int(gasto_id), 'liquidacion_tpv', 0, 
                                   importe_gasto, total_documentos, diferencia,
-                                  f'Liquidación TPV {fecha_str} - {num_documentos} documentos - Dif: {round(diferencia, 2)}€'))
+                                  f'Liquidación TPV {fecha_str} - {notas_docs} - Dif: {round(diferencia, 2)}€'))
                     conn.commit()
+                    logger.info(f"Liquidación TPV {fecha_str} conciliada automáticamente: {notas_docs}, dif={round(diferencia, 2)}€")
                     # No añadir a resultado si se concilió automáticamente
                     continue
                 except Exception as e:
