@@ -16,56 +16,7 @@ conciliacion_bp = Blueprint('conciliacion', __name__)
 # CONFIGURACIÓN CENTRALIZADA (JSON)
 # ============================================================================
 
-import json
-import os
-
-CONFIG_FILE = '/var/www/html/config/conciliacion_config.json'
-
-def inicializar_config_conciliacion():
-    """Crear archivo de configuración si no existe con valores por defecto"""
-    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
-    
-    config_default = {
-        "tolerancia_euros": 3.0,
-        "descripcion": "Tolerancia máxima en euros para conciliación automática",
-        "fecha_modificacion": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    }
-    
-    if not os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(config_default, f, indent=4)
-
-def get_tolerancia_conciliacion():
-    """Obtener tolerancia de conciliación desde archivo JSON"""
-    try:
-        if not os.path.exists(CONFIG_FILE):
-            inicializar_config_conciliacion()
-        
-        with open(CONFIG_FILE, 'r') as f:
-            config = json.load(f)
-        
-        return config.get('tolerancia_euros', 3.0)
-    except Exception as e:
-        logger.error(f"Error obteniendo tolerancia: {e}", exc_info=True)
-        return 3.0  # Valor por defecto en caso de error
-
-def set_tolerancia_conciliacion(nueva_tolerancia):
-    """Actualizar tolerancia de conciliación en archivo JSON"""
-    try:
-        if not os.path.exists(CONFIG_FILE):
-            inicializar_config_conciliacion()
-        
-        with open(CONFIG_FILE, 'r') as f:
-            config = json.load(f)
-        
-        config['tolerancia_euros'] = nueva_tolerancia
-        config['fecha_modificacion'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(config, f, indent=4)
-    except Exception as e:
-        logger.error(f"Error actualizando tolerancia: {e}", exc_info=True)
-        raise
+from config_conciliacion import get_tolerancia_conciliacion, set_tolerancia_conciliacion
 
 def encontrar_mejor_combinacion_documentos(documentos, importe_objetivo, tolerancia=1.0):
     """

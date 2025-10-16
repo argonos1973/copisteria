@@ -13,7 +13,7 @@ from datetime import datetime
 # Añadir directorio padre al path para importar constantes
 sys.path.insert(0, '/var/www/html')
 from constantes import DB_NAME, IP_SERVIDOR
-from conciliacion import get_tolerancia_conciliacion
+from config_conciliacion import get_tolerancia_conciliacion
 
 # Configuración
 API_URL = f"http://{IP_SERVIDOR}:5001"
