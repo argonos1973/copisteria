@@ -1489,10 +1489,10 @@ def obtener_liquidaciones_tpv():
             # Lógica de conciliación
             puede_conciliar = False
             
-            if abs(diferencia) <= 1.0 and num_documentos > 0:
-                # Diferencia <= 1€ con solo tickets → conciliar directamente
+            if abs(diferencia) <= 3.0 and num_documentos > 0:
+                # Diferencia <= 3€ con solo tickets → conciliar directamente
                 puede_conciliar = True
-            elif abs(diferencia) > 1.0:
+            elif abs(diferencia) > 3.0:
                 # Diferencia > 1€ → buscar facturas (excluir ya conciliadas)
                 cursor.execute('''
                     SELECT id, numero, total
@@ -1521,8 +1521,8 @@ def obtener_liquidaciones_tpv():
                     # Recalcular diferencia con facturas (mantener signo)
                     diferencia = total_liq - total_documentos
                     
-                    # Si con facturas la diferencia es <= 1€ → conciliar
-                    if abs(diferencia) <= 1.0:
+                    # Si con facturas la diferencia es <= 3€ → conciliar
+                    if abs(diferencia) <= 3.0:
                         puede_conciliar = True
             
             # DESHABILITADO: La conciliación automática ahora se hace desde el frontend
