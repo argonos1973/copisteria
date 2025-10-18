@@ -1022,9 +1022,22 @@ def generar_informe_situacion():
         total_tickets = float(tickets_anio['total_ventas'] or 0)
         num_tickets = int(tickets_anio['num_tickets'] or 0)
         
-        # Total ventas (facturas + tickets)
-        total_ventas = total_facturas + total_tickets
-        num_documentos = num_facturas + num_tickets
+        # Facturas pendientes del año (para incluir en cálculos)
+        cursor.execute('''
+            SELECT 
+                COALESCE(SUM(total), 0) as total_pendientes,
+                COUNT(*) as num_pendientes
+            FROM factura
+            WHERE estado = 'P'
+            AND CAST(substr(fecha, 1, 4) AS INTEGER) = ?
+        ''', (anio,))
+        facturas_pend = cursor.fetchone()
+        total_fact_pendientes = float(facturas_pend['total_pendientes'] or 0)
+        num_fact_pendientes = int(facturas_pend['num_pendientes'] or 0)
+        
+        # Total ventas (facturas cobradas + tickets + facturas pendientes)
+        total_ventas = total_facturas + total_tickets + total_fact_pendientes
+        num_documentos = num_facturas + num_tickets + num_fact_pendientes
         
         # Ventas del mes actual (facturas cobradas)
         cursor.execute('''
@@ -1159,6 +1172,8 @@ def generar_informe_situacion():
                 'num_documentos': num_documentos,
                 'total_facturas': round(total_facturas, 2),
                 'total_tickets': round(total_tickets, 2),
+                'total_facturas_pendientes': round(total_fact_pendientes, 2),
+                'num_facturas_pendientes': num_fact_pendientes,
                 'media_mensual': round(media_ventas_mensual, 2),
                 'media_por_documento': round(total_ventas / num_documentos, 2) if num_documentos > 0 else 0
             },

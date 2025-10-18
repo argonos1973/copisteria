@@ -820,19 +820,22 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        if 'numero' in filtros and filtros['numero'] and filtros['numero'].strip():
-            where_sql = 'WHERE f.numero = ?'
-            params = [filtros["numero"]]
+        # Extraer filtros antes del condicional para evitar NameError
+        fecha_inicio = (filtros or {}).get('fecha_inicio', '')
+        fecha_fin = (filtros or {}).get('fecha_fin', '')
+        estado = (filtros or {}).get('estado', '')
+        numero = (filtros or {}).get('numero', '')
+        contacto = (filtros or {}).get('contacto', '')
+        identificador = (filtros or {}).get('identificador', '')
+        concepto = (filtros or {}).get('concepto', '')
+
+        if numero and numero.strip():
+            # Si hay filtro de número, ignorar todos los demás filtros
+            where_sql = 'WHERE f.numero LIKE ?'
+            params = [f'%{numero}%']
         else:
             where_sql = 'WHERE 1=1'
             params = []
-
-            fecha_inicio = (filtros or {}).get('fecha_inicio', '')
-            fecha_fin = (filtros or {}).get('fecha_fin', '')
-            estado = (filtros or {}).get('estado', '')
-            contacto = (filtros or {}).get('contacto', '')
-            identificador = (filtros or {}).get('identificador', '')
-            concepto = (filtros or {}).get('concepto', '')
 
             # Filtros (solo si no se filtró por número)
             if fecha_inicio:
@@ -886,7 +889,8 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                 f.tipo,
                 c.razonsocial,
                 COALESCE(c.mail, '') as mail,
-                COALESCE(f.enviado, 0) as enviado
+                COALESCE(f.enviado, 0) as enviado,
+                COALESCE(f.carta_enviada, 0) as carta_enviada
             FROM factura f
             LEFT JOIN contactos c ON f.idcontacto = c.idContacto
             {where_sql}
@@ -917,6 +921,8 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                     raw['total'] = format_total_es_two(raw['total'])
                 if 'enviado' in raw:
                     raw['enviado'] = int(raw['enviado']) if raw['enviado'] is not None else 0
+                if 'carta_enviada' in raw:
+                    raw['carta_enviada'] = int(raw['carta_enviada']) if raw['carta_enviada'] is not None else 0
                 items.append(raw)
 
         # Calcular totales globales según el estado del filtro (como numérico) y devolver formateados
@@ -928,7 +934,7 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
         }
         
         # Solo calcular totales si hay un estado específico en el filtro (y no se filtró por número)
-        if estado and not ('numero' in filtros and filtros['numero']):
+        if estado and not (numero and numero.strip()):
             totales_sql = f'''
                 SELECT 
                     SUM(f.importe_bruto) as total_base,

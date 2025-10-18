@@ -1073,6 +1073,7 @@
                 <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;"><i class="fas fa-euro-sign"></i> VENTAS</div>
                 <div id="informe-ventas-total" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">0,00 €</div>
                 <div id="informe-ventas-detalles" style="font-size: 0.75rem; opacity: 0.8;">0 facturas • 0,00 €/mes</div>
+                <div id="informe-ventas-nota" style="font-size: 0.7rem; opacity: 0.7; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.3);"></div>
             </div>
             
             <!-- Gastos -->
@@ -2007,6 +2008,14 @@ async function abrirModalInformeSituacion() {
         document.getElementById('informe-ventas-total').textContent = formatearImporte(data.ventas.total_anio);
         document.getElementById('informe-ventas-detalles').textContent = 
             `${data.ventas.num_facturas} fact. + ${data.ventas.num_tickets} tick. • ${formatearImporte(data.ventas.media_mensual)}/mes`;
+        
+        // Nota sobre facturas pendientes
+        const ventasNota = document.getElementById('informe-ventas-nota');
+        if (data.ventas.num_facturas_pendientes > 0) {
+            ventasNota.innerHTML = `<i class="fas fa-info-circle"></i> Incluye ${data.ventas.num_facturas_pendientes} fact. pendientes (${formatearImporte(data.ventas.total_facturas_pendientes)})`;
+        } else {
+            ventasNota.style.display = 'none';
+        }
         
         // Gastos
         document.getElementById('informe-gastos-total').textContent = formatearImporte(data.gastos.total_anio);

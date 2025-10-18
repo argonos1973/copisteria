@@ -131,6 +131,51 @@ def importar_desde_excel(ruta_excel: str):
     ahora = datetime.now()
     df['ejercicio'] = ahora.year
     df['TS'] = ahora.isoformat()
+    
+    # NORMALIZAR FECHAS: Convertir todas las fechas a formato DD/MM/YYYY antes de insertar
+    import re
+    def normalizar_fecha_a_dd_mm_yyyy(fecha):
+        """Convierte cualquier formato de fecha a DD/MM/YYYY"""
+        if pd.isna(fecha):
+            return None
+        try:
+            # Si es string, intentar parsear
+            if isinstance(fecha, str):
+                fecha_txt = fecha.split()[0]  # Quitar hora si existe
+                # Intentar parsear diferentes formatos
+                for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%Y/%m/%d", "%d-%m-%Y"):
+                    try:
+                        fecha_dt = datetime.strptime(fecha_txt, fmt)
+                        return fecha_dt.strftime("%d/%m/%Y")
+                    except:
+                        continue
+                return fecha_txt  # Si no se puede parsear, devolver original
+            else:
+                # Si es datetime/timestamp
+                return fecha.strftime("%d/%m/%Y")
+        except:
+            return str(fecha)
+    
+    df['fecha_operacion'] = df['fecha_operacion'].apply(normalizar_fecha_a_dd_mm_yyyy)
+    df['fecha_valor'] = df['fecha_valor'].apply(normalizar_fecha_a_dd_mm_yyyy)
+    
+    # NORMALIZAR FECHAS EN CONCEPTOS DE LIQUIDACIONES TPV
+    def normalizar_fecha_en_concepto(concepto):
+        """Normaliza fechas dentro del concepto de liquidaciones TPV al formato DD/MM/YYYY"""
+        if pd.isna(concepto):
+            return concepto
+        concepto_str = str(concepto)
+        
+        # Buscar patrón "El YYYY-MM-DD" y convertir a "El DD/MM/YYYY"
+        patron_iso = r'El (\d{4})-(\d{2})-(\d{2})'
+        def reemplazar_iso(match):
+            año, mes, dia = match.groups()
+            return f'El {dia}/{mes}/{año}'
+        
+        concepto_normalizado = re.sub(patron_iso, reemplazar_iso, concepto_str)
+        return concepto_normalizado
+    
+    df['concepto'] = df['concepto'].apply(normalizar_fecha_en_concepto)
 
     # Reordenar columnas
     df = df[['fecha_operacion', 'fecha_valor', 'concepto', 'importe_eur', 'saldo', 'ejercicio', 'TS']]

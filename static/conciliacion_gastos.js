@@ -821,7 +821,14 @@ function renderizarPaginaConciliados() {
         
         let tipoDocumento = '';
         if (conc.tipo_documento === 'liquidacion_tpv') {
-            tipoDocumento = `<span class="badge badge-info">LIQUIDACIÓN TPV (${conc.num_liquidaciones || 0})</span>`;
+            // Construir desglose de documentos
+            const desglose = [];
+            if ((conc.num_tickets || 0) > 0) desglose.push(`${conc.num_tickets} T`);
+            if ((conc.num_facturas || 0) > 0) desglose.push(`${conc.num_facturas} F`);
+            if ((conc.num_proformas || 0) > 0) desglose.push(`${conc.num_proformas} P`);
+            
+            const textoDesglose = desglose.length > 0 ? ` → ${desglose.join(' + ')}` : '';
+            tipoDocumento = `<span class="badge badge-info">LIQUIDACIÓN TPV (${conc.num_liquidaciones || 0})${textoDesglose}</span>`;
         } else {
             tipoDocumento = `<span class="badge badge-info">${conc.tipo_documento.toUpperCase()} ${conc.numero_documento || ''}</span>`;
         }
@@ -1433,6 +1440,7 @@ async function renderizarPaginaLiquidaciones() {
             <td class="text-right">${formatearImporte(Math.abs(liq.total_liquidaciones))}</td>
             <td class="text-center">${liq.num_tickets}</td>
             <td class="text-center">${liq.num_facturas || 0}</td>
+            <td class="text-center">${liq.num_proformas || 0}</td>
             <td class="text-right">${formatearImporte(liq.total_documentos)}</td>
             <td class="text-right">${formatearImporte(liq.diferencia)}</td>
             <td class="text-center"><span class="${estadoClass}">${estadoTexto}</span></td>
@@ -2104,10 +2112,10 @@ function encontrarMejorCombinacion(documentos, objetivo) {
 // DETALLES DE CONCILIACIÓN
 // ============================================================================
 
-async function mostrarDetallesLiquidacionTPV(fecha) {
-    console.log('mostrarDetallesLiquidacionTPV llamada con fecha:', fecha);
+async function mostrarDetallesLiquidacionTPV(fecha, mostrarTodos = true) {
+    console.log('mostrarDetallesLiquidacionTPV llamada con fecha:', fecha, 'mostrarTodos:', mostrarTodos);
     try {
-        const url = `${API_URL}/conciliacion/liquidacion-tpv-detalles?fecha=${encodeURIComponent(fecha)}`;
+        const url = `${API_URL}/conciliacion/liquidacion-tpv-detalles?fecha=${encodeURIComponent(fecha)}&mostrar_todos=${mostrarTodos}`;
         console.log('Fetching URL:', url);
         const response = await fetch(url);
         console.log('Response status:', response.status);
@@ -2121,8 +2129,15 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
         
         const tickets = data.tickets;
         const facturas = data.facturas || [];
+        const proformas = data.proformas || [];
         const liquidacionInfo = data.liquidacion_info;
         const diferencia = data.diferencia || 0;
+        
+        // Verificar si no hay conciliaciones para esta fecha
+        if (tickets.length === 0 && facturas.length === 0 && proformas.length === 0) {
+            mostrarNotificacion(data.mensaje || 'No hay conciliaciones para esta fecha', 'info');
+            return;
+        }
         
         // Crear modal
         const modal = document.createElement('div');
@@ -2134,9 +2149,10 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
         tickets.forEach(ticket => {
             ticketsHTML += `
                 <tr>
-                    <td><span class="badge badge-info">TICKET</span></td>
+                    <td><span class="badge badge-primary">TICKET</span></td>
                     <td>${ticket.numero || '-'}</td>
                     <td>${formatearFecha(ticket.fecha)}</td>
+                    <td>-</td>
                     <td class="text-right">${formatearImporte(ticket.importe)}</td>
                 </tr>
             `;
@@ -2152,6 +2168,7 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                         <td><span class="badge badge-warning">FACTURA</span></td>
                         <td>${factura.numero || '-'}</td>
                         <td>${formatearFecha(factura.fecha)}</td>
+                        <td>${factura.fechaCobro ? formatearFecha(factura.fechaCobro) : '-'}</td>
                         <td class="text-right">${formatearImporte(factura.importe)}</td>
                     </tr>
                 `;
@@ -2159,8 +2176,25 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
             });
         }
         
+        let proformasHTML = '';
+        let totalProformas = 0;
+        if (proformas.length > 0) {
+            proformas.forEach(proforma => {
+                proformasHTML += `
+                    <tr style="background: #d4edda;">
+                        <td><span class="badge badge-success">PROFORMA</span></td>
+                        <td>${proforma.numero || '-'}</td>
+                        <td>${formatearFecha(proforma.fecha)}</td>
+                        <td>-</td>
+                        <td class="text-right">${formatearImporte(proforma.importe)}</td>
+                    </tr>
+                `;
+                totalProformas += proforma.importe;
+            });
+        }
+        
         const totalLiquidaciones = liquidacionInfo.total_liquidaciones || 0;
-        const totalDocumentos = totalTickets + totalFacturas;
+        const totalDocumentos = totalTickets + totalFacturas + totalProformas;
         
         modal.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
@@ -2176,46 +2210,49 @@ async function mostrarDetallesLiquidacionTPV(fecha) {
                             <div><strong>Liquidaciones Banco:</strong> ${formatearImporte(totalLiquidaciones)}</div>
                             <div><strong>Total Tickets TPV:</strong> ${formatearImporte(totalTickets)}</div>
                             <div><strong>Total Facturas TPV:</strong> ${formatearImporte(totalFacturas)}</div>
-                            <div style="grid-column: 1 / -1;"><strong>Total Documentos:</strong> ${formatearImporte(totalTickets + totalFacturas)}</div>
-                            <div style="grid-column: 1 / -1;" class="${Math.abs(totalLiquidaciones - (totalTickets + totalFacturas)) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
-                                <strong>Diferencia Final:</strong> ${formatearImporte(totalLiquidaciones - (totalTickets + totalFacturas))}
+                            ${proformas.length > 0 ? `<div><strong>Total Proformas TPV:</strong> ${formatearImporte(totalProformas)}</div>` : ''}
+                            <div style="grid-column: 1 / -1;"><strong>Total Documentos:</strong> ${formatearImporte(totalDocumentos)}</div>
+                            <div style="grid-column: 1 / -1;" class="${Math.abs(totalLiquidaciones - totalDocumentos) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
+                                <strong>Diferencia Final:</strong> ${formatearImporte(totalLiquidaciones - totalDocumentos)}
                             </div>
                         </div>
                     </div>
                     
-                    ${facturas.length > 0 ? `
-                        <div style="margin-bottom: 15px; padding: 10px; background: #d1ecf1; border-left: 4px solid #0c5460; border-radius: 4px;">
-                            <strong>ℹ️ Información:</strong> Se encontraron ${facturas.length} factura(s) cobrada(s) con TPV el ${fecha}.
-                        </div>
-                    ` : ''}
+                    <div style="margin-bottom: 15px; padding: 10px; background: ${mostrarTodos ? '#fff3cd' : '#d4edda'}; border-left: 4px solid ${mostrarTodos ? '#856404' : '#155724'}; border-radius: 4px;">
+                        <strong>ℹ️ Información:</strong> ${mostrarTodos ? 
+                            'Se muestran TODOS los documentos cobrados con TPV el ' + fecha + ' (conciliados y no conciliados).' :
+                            'Se muestran únicamente los documentos conciliados con estas liquidaciones bancarias. La diferencia mostrada coincide con la de la tabla principal.'}
+                    </div>
                     
-                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">Documentos Cobrados con TPV (${tickets.length + facturas.length})</h4>
+                    <h4 style="margin: 20px 0 10px 0; color: #2c3e50;">${mostrarTodos ? 'Todos los Documentos TPV del' : 'Documentos Conciliados con estas Liquidaciones'} ${fecha} (${tickets.length + facturas.length + proformas.length})</h4>
                     <table class="grid" style="width: 100%; margin-bottom: 15px;">
                         <thead>
                             <tr>
                                 <th>Tipo</th>
                                 <th>Número</th>
                                 <th>Fecha</th>
+                                <th>Fecha Cobro</th>
                                 <th class="text-right">Importe</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${ticketsHTML}
                             ${facturasHTML}
+                            ${proformasHTML}
                         </tbody>
                         <tfoot>
                             <tr style="font-weight: bold; background: #f8f9fa;">
-                                <td colspan="3" class="text-right">Total Documentos:</td>
-                                <td class="text-right">${formatearImporte(totalTickets + totalFacturas)}</td>
+                                <td colspan="4" class="text-right">Total Documentos:</td>
+                                <td class="text-right">${formatearImporte(totalDocumentos)}</td>
                             </tr>
                             <tr style="font-weight: bold;">
-                                <td colspan="3" class="text-right">Liquidación Banco:</td>
+                                <td colspan="4" class="text-right">Liquidación Banco:</td>
                                 <td class="text-right">${formatearImporte(totalLiquidaciones)}</td>
                             </tr>
                             <tr style="font-weight: bold;">
-                                <td colspan="3" class="text-right">Diferencia:</td>
-                                <td class="text-right ${Math.abs(totalLiquidaciones - (totalTickets + totalFacturas)) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
-                                    ${formatearImporte(totalLiquidaciones - (totalTickets + totalFacturas))}
+                                <td colspan="4" class="text-right">Diferencia:</td>
+                                <td class="text-right ${Math.abs(totalLiquidaciones - totalDocumentos) < 0.01 ? 'importe-positivo' : 'importe-negativo'}">
+                                    ${formatearImporte(totalLiquidaciones - totalDocumentos)}
                                 </td>
                             </tr>
                         </tfoot>
