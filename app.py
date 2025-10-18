@@ -2224,7 +2224,7 @@ def anular_ticket_route(id_ticket):
 @app.route('/facturas/consulta', methods=['GET'])
 def consultar_facturas_route():
     try:
-        return factura.consultar_facturas_get()
+        return factura.consultar_facturas()
     except Exception as e:
         logger.error(f"Error al consultar facturas: {str(e)}")
         return jsonify({'error': str(e)}), 500

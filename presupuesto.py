@@ -577,7 +577,7 @@ def convertir_presupuesto_a_factura(id_presupuesto):
                 )
             )
 
-        cursor.execute('UPDATE presupuesto SET estado = ? WHERE id = ?', ('F', id_presupuesto))
+        cursor.execute('UPDATE presupuesto SET estado = ? WHERE id = ?', ('AP', id_presupuesto))
 
         numerador_actual, _ = actualizar_numerador('F', conn, commit=False)
         if numerador_actual is None:
@@ -699,7 +699,7 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
                 )
             )
 
-        cursor.execute('UPDATE presupuesto SET estado = ? WHERE id = ?', ('T', id_presupuesto))
+        cursor.execute('UPDATE presupuesto SET estado = ? WHERE id = ?', ('AP', id_presupuesto))
 
         numerador_actual, _ = actualizar_numerador('T', conn, commit=False)
         if numerador_actual is None:

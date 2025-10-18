@@ -419,7 +419,7 @@ def obtener_ticket_con_detalles(id_ticket):
         ticket_dict['importe_cobrado'] = format_currency_es_two(ticket_dict.get('importe_cobrado'))
 
         # Obtener datos VERI*FACTU (QR y CSV) si existen
-        cursor.execute('SELECT codigo_qr, csv FROM registro_facturacion WHERE factura_id = ?', (id_ticket,))
+        cursor.execute('SELECT codigo_qr, csv FROM registro_facturacion WHERE ticket_id = ?', (id_ticket,))
         reg = cursor.fetchone()
         codigo_qr = reg['codigo_qr'] if reg else None
         csv = reg['csv'] if reg else None

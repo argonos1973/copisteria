@@ -20,8 +20,8 @@ def inicializar_config_conciliacion():
     }
     
     if not os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(config_default, f, indent=4)
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config_default, f, indent=4, ensure_ascii=False)
 
 def get_tolerancia_conciliacion():
     """Obtener tolerancia de conciliación desde archivo JSON"""
@@ -29,7 +29,7 @@ def get_tolerancia_conciliacion():
         if not os.path.exists(CONFIG_FILE):
             inicializar_config_conciliacion()
         
-        with open(CONFIG_FILE, 'r') as f:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             config = json.load(f)
         
         return config.get('tolerancia_euros', 3.0)
@@ -44,14 +44,14 @@ def set_tolerancia_conciliacion(nueva_tolerancia):
         if not os.path.exists(CONFIG_FILE):
             inicializar_config_conciliacion()
         
-        with open(CONFIG_FILE, 'r') as f:
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             config = json.load(f)
         
         config['tolerancia_euros'] = nueva_tolerancia
         config['fecha_modificacion'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(config, f, indent=4)
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=4, ensure_ascii=False)
     except Exception as e:
         print(f"Error actualizando tolerancia: {e}")
         raise

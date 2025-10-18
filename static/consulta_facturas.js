@@ -306,6 +306,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             row.innerHTML = `
                 <td>${formatDateToDisplay(factura.fecha)}</td>
                 <td title="${tooltipText}" style="${vencimientoStyle}">${vencimientoDisplay}</td>
+                <td>${factura.fechaCobro ? formatDateToDisplay(factura.fechaCobro) : '-'}</td>
                 <td>${factura.numero}</td>
                 <td>${factura.razonsocial || ''}</td>
                 <td class="text-right">${baseRaw} €</td>

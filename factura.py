@@ -699,7 +699,8 @@ def consultar_facturas():
                 f.tipo,
                 c.razonsocial,
                 COALESCE(c.mail, '') as mail,
-                COALESCE(f.enviado, 0) as enviado
+                COALESCE(f.enviado, 0) as enviado,
+                f.fechaCobro
             FROM factura f
             LEFT JOIN contactos c ON f.idcontacto = c.idContacto
             WHERE 1=1
@@ -890,7 +891,8 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                 c.razonsocial,
                 COALESCE(c.mail, '') as mail,
                 COALESCE(f.enviado, 0) as enviado,
-                COALESCE(f.carta_enviada, 0) as carta_enviada
+                COALESCE(f.carta_enviada, 0) as carta_enviada,
+                f.fechaCobro
             FROM factura f
             LEFT JOIN contactos c ON f.idcontacto = c.idContacto
             {where_sql}
