@@ -65,7 +65,7 @@ def main():
     if len(sys.argv) > 1:
         carpeta_compartida = sys.argv[1]
     else:
-        carpeta_compartida = '/var/www/html/compartida'
+        carpeta_compartida = '/media/sami/compartida'
     
     if not os.path.exists(carpeta_compartida):
         print(f"❌ ERROR: No existe la carpeta '{carpeta_compartida}'")
