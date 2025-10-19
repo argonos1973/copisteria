@@ -102,17 +102,17 @@ def _identificar_gastos_puntuales(conn, anio, mes=None):
     # Obtener todos los gastos del año
     if mes:
         cursor.execute('''
-            SELECT id, concepto, ABS(importe_eur) as importe, fecha_operacion
+            SELECT id, concepto, ABS(importe_eur) as importe, fecha_valor
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            WHERE substr(fecha_valor, 7, 4) = ?
+            AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
         ''', (str(anio), mes))
     else:
         cursor.execute('''
-            SELECT id, concepto, ABS(importe_eur) as importe, fecha_operacion
+            SELECT id, concepto, ABS(importe_eur) as importe, fecha_valor
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
+            WHERE substr(fecha_valor, 7, 4) = ?
             AND importe_eur < 0
         ''', (str(anio),))
 
@@ -127,7 +127,7 @@ def _identificar_gastos_puntuales(conn, anio, mes=None):
     gastos_por_concepto_fecha = {}
     for gasto in gastos:
         concepto_norm = _normalizar_concepto(gasto['concepto'])
-        fecha = gasto['fecha_operacion']
+        fecha = gasto['fecha_valor']
         clave = (concepto_norm, fecha)
         
         if clave not in gastos_por_concepto_fecha:
@@ -195,8 +195,8 @@ def _calcular_media_mensual_sin_puntuales(conn, anio, mes=None):
                 COALESCE(SUM(ABS(importe_eur)), 0) as total_sin_puntuales,
                 COUNT(*) as cantidad_sin_puntuales
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            WHERE substr(fecha_valor, 7, 4) = ?
+            AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
             AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes))
@@ -206,7 +206,7 @@ def _calcular_media_mensual_sin_puntuales(conn, anio, mes=None):
                 COALESCE(SUM(ABS(importe_eur)), 0) as total_sin_puntuales,
                 COUNT(*) as cantidad_sin_puntuales
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
+            WHERE substr(fecha_valor, 7, 4) = ?
             AND importe_eur < 0
             AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio),))
@@ -229,7 +229,7 @@ def _obtener_case_categoria_sql():
             WHEN concepto LIKE 'Liquidacion%' THEN 'Liquidaciones TPV'
             WHEN concepto LIKE '%Transferencia%' THEN 'Transferencias'
             WHEN concepto LIKE '%Bizum%' THEN 'Bizum'
-            WHEN (concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%') AND concepto NOT LIKE 'Liquidacion%' THEN 'Compras Tarjeta'
+            WHEN (concepto LIKE '%Tarjeta%' OR concepto LIKE '%Tarj.%' OR concepto LIKE '%Compra%' OR concepto LIKE 'Pago Movil%' OR concepto LIKE 'Pago Con Tarjeta%') AND concepto NOT LIKE 'Liquidacion%' THEN 'Compras Tarjeta'
             ELSE substr(concepto, 1, 30)
         END
     '''
@@ -241,13 +241,16 @@ def _obtener_filtro_categoria(categoria):
         'Liquidaciones TPV': "concepto LIKE 'Liquidacion%'",
         'Transferencias': "concepto LIKE '%Transferencia%'",
         'Bizum': "concepto LIKE '%Bizum%'",
-        'Compras Tarjeta': "((concepto LIKE '%Tarjeta%' OR concepto LIKE '%Compra%') AND concepto NOT LIKE 'Liquidacion%')",
+        'Compras Tarjeta': "((concepto LIKE '%Tarjeta%' OR concepto LIKE '%Tarj.%' OR concepto LIKE '%Compra%' OR concepto LIKE 'Pago Movil%' OR concepto LIKE 'Pago Con Tarjeta%') AND concepto NOT LIKE 'Liquidacion%')",
         'Otros': """(concepto NOT LIKE 'Recibo%' 
                     AND concepto NOT LIKE 'Liquidacion%' 
                     AND concepto NOT LIKE '%Transferencia%' 
                     AND concepto NOT LIKE '%Bizum%' 
                     AND concepto NOT LIKE '%Tarjeta%' 
-                    AND concepto NOT LIKE '%Compra%')"""
+                    AND concepto NOT LIKE '%Tarj.%'
+                    AND concepto NOT LIKE '%Compra%'
+                    AND concepto NOT LIKE 'Pago Movil%'
+                    AND concepto NOT LIKE 'Pago Con Tarjeta%')"""
     }
     return filtros.get(categoria, "1=1")
 
@@ -385,8 +388,8 @@ def obtener_estadisticas_gastos():
                 COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_anio,
                 COUNT(*) as cantidad_gastos_anio
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            WHERE substr(fecha_valor, 7, 4) = ?
+            AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
             AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes))
@@ -401,8 +404,8 @@ def obtener_estadisticas_gastos():
                 COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_mes,
                 COUNT(*) as cantidad_gastos_mes
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND substr(fecha_operacion, 4, 2) = ?
+            WHERE substr(fecha_valor, 7, 4) = ?
+            AND substr(fecha_valor, 4, 2) = ?
             AND importe_eur < 0
             AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes_str))
@@ -416,8 +419,8 @@ def obtener_estadisticas_gastos():
         cursor.execute('''
             SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_anio_anterior
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            WHERE substr(fecha_valor, 7, 4) = ?
+            AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
             AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio_anterior), mes))
@@ -428,8 +431,8 @@ def obtener_estadisticas_gastos():
         cursor.execute('''
             SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_mes_anterior
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND substr(fecha_operacion, 4, 2) = ?
+            WHERE substr(fecha_valor, 7, 4) = ?
+            AND substr(fecha_valor, 4, 2) = ?
             AND importe_eur < 0
             AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio_anterior), mes_str))
@@ -497,7 +500,7 @@ def obtener_top10_gastos():
                 SUM(CASE WHEN puntual = 1 THEN 1 ELSE 0 END) as cantidad_puntuales,
                 COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
+            WHERE substr(fecha_valor, 7, 4) = ?
             AND importe_eur < 0
             GROUP BY concepto_resumido
             ORDER BY total_gasto DESC
@@ -528,7 +531,7 @@ def obtener_top10_gastos():
             cursor.execute(f'''
                 SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_anterior
                 FROM gastos
-                WHERE substr(fecha_operacion, 7, 4) = ?
+                WHERE substr(fecha_valor, 7, 4) = ?
                 AND importe_eur < 0
                 AND ({case_categoria}) = ?
             ''', (str(anio_anterior), gasto['concepto']))
@@ -575,12 +578,12 @@ def obtener_detalles_gasto():
             SELECT 
                 concepto as concepto_original,
                 ABS(importe_eur) as importe,
-                fecha_operacion
+                fecha_valor
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
+            WHERE substr(fecha_valor, 7, 4) = ?
             AND importe_eur < 0
             AND ({where_clause}) = ?
-            ORDER BY fecha_operacion DESC
+            ORDER BY fecha_valor DESC
         ''', (str(anio), concepto))
         
         # Agrupar manualmente por concepto normalizado
@@ -597,7 +600,7 @@ def obtener_detalles_gasto():
             
             agrupados[concepto_norm]['conceptos_originales'].add(row['concepto_original'])
             agrupados[concepto_norm]['importes'].append(float(row['importe']))
-            agrupados[concepto_norm]['fechas'].append(row['fecha_operacion'])
+            agrupados[concepto_norm]['fechas'].append(row['fecha_valor'])
         
         # Convertir a lista ordenada por total
         gastos_agrupados = []
@@ -628,7 +631,7 @@ def obtener_detalles_gasto():
                 COALESCE(MIN(ABS(importe_eur)), 0) as minimo,
                 COALESCE(MAX(ABS(importe_eur)), 0) as maximo
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
+            WHERE substr(fecha_valor, 7, 4) = ?
             AND importe_eur < 0
             AND ({where_clause}) = ?
         ''', (str(anio), concepto))
@@ -680,8 +683,8 @@ def obtener_gastos_por_categoria_mes():
                 COALESCE(SUM(ABS(importe_eur)), 0) as total,
                 COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales
             FROM gastos
-            WHERE substr(fecha_operacion, 4, 2) = ?
-            AND substr(fecha_operacion, 7, 4) = ?
+            WHERE substr(fecha_valor, 4, 2) = ?
+            AND substr(fecha_valor, 7, 4) = ?
             AND importe_eur < 0
             GROUP BY categoria
             ORDER BY total DESC
@@ -730,7 +733,7 @@ def obtener_gastos_por_categoria_anio():
                 {case_categoria} as categoria,
                 COALESCE(SUM(ABS(importe_eur)), 0) as total
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
+            WHERE substr(fecha_valor, 7, 4) = ?
             AND importe_eur < 0
             GROUP BY categoria
             ORDER BY total DESC
@@ -783,12 +786,12 @@ def obtener_detalles_categoria():
             query = f'''
                 SELECT 
                     concepto,
-                    fecha_operacion,
+                    fecha_valor,
                     ABS(importe_eur) as importe,
                     puntual
                 FROM gastos
-                WHERE substr(fecha_operacion, 4, 2) = ?
-                AND substr(fecha_operacion, 7, 4) = ?
+                WHERE substr(fecha_valor, 4, 2) = ?
+                AND substr(fecha_valor, 7, 4) = ?
                 AND importe_eur < 0
                 AND {filtro_categoria}
             '''
@@ -797,11 +800,11 @@ def obtener_detalles_categoria():
             query = f'''
                 SELECT 
                     concepto,
-                    fecha_operacion,
+                    fecha_valor,
                     ABS(importe_eur) as importe,
                     puntual
                 FROM gastos
-                WHERE substr(fecha_operacion, 7, 4) = ?
+                WHERE substr(fecha_valor, 7, 4) = ?
                 AND importe_eur < 0
                 AND {filtro_categoria}
             '''
@@ -814,7 +817,7 @@ def obtener_detalles_categoria():
             if concepto_norm not in gastos_agrupados:
                 gastos_agrupados[concepto_norm] = {
                     'concepto': concepto_norm,
-                    'fecha': row['fecha_operacion'],
+                    'fecha': row['fecha_valor'],
                     'importe': 0.0,
                     'importe_sin_puntuales': 0.0,
                     'cantidad': 0,
@@ -902,13 +905,13 @@ def obtener_evolucion_mensual():
             # Para global, no aplicar filtro de categoría (todas las categorías)
             query = f'''
                 SELECT 
-                    CAST(substr(fecha_operacion, 4, 2) AS INTEGER) as mes,
+                    CAST(substr(fecha_valor, 4, 2) AS INTEGER) as mes,
                     SUM(ABS(importe_eur)) as total,
                     COUNT(*) as cantidad,
                     COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales,
                     COALESCE(SUM(CASE WHEN puntual = 1 THEN 1 ELSE 0 END), 0) as cantidad_puntuales
                 FROM gastos
-                WHERE substr(fecha_operacion, 7, 4) = ?
+                WHERE substr(fecha_valor, 7, 4) = ?
                 AND importe_eur < 0
                 GROUP BY mes
                 ORDER BY mes
@@ -918,13 +921,13 @@ def obtener_evolucion_mensual():
             filtro_categoria = _obtener_filtro_categoria(categoria)
             query = f'''
                 SELECT 
-                    CAST(substr(fecha_operacion, 4, 2) AS INTEGER) as mes,
+                    CAST(substr(fecha_valor, 4, 2) AS INTEGER) as mes,
                     SUM(ABS(importe_eur)) as total,
                     COUNT(*) as cantidad,
                     COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales,
                     COALESCE(SUM(CASE WHEN puntual = 1 THEN 1 ELSE 0 END), 0) as cantidad_puntuales
                 FROM gastos
-                WHERE substr(fecha_operacion, 7, 4) = ?
+                WHERE substr(fecha_valor, 7, 4) = ?
                 AND importe_eur < 0
                 AND {filtro_categoria}
                 GROUP BY mes
@@ -1035,9 +1038,22 @@ def generar_informe_situacion():
         total_fact_pendientes = float(facturas_pend['total_pendientes'] or 0)
         num_fact_pendientes = int(facturas_pend['num_pendientes'] or 0)
         
-        # Total ventas (facturas cobradas + tickets + facturas pendientes)
-        total_ventas = total_facturas + total_tickets + total_fact_pendientes
-        num_documentos = num_facturas + num_tickets + num_fact_pendientes
+        # Facturas vencidas del año (para incluir en cálculos)
+        cursor.execute('''
+            SELECT 
+                COALESCE(SUM(total), 0) as total_vencidas,
+                COUNT(*) as num_vencidas
+            FROM factura
+            WHERE estado = 'V'
+            AND CAST(substr(fecha, 1, 4) AS INTEGER) = ?
+        ''', (anio,))
+        facturas_venc = cursor.fetchone()
+        total_fact_vencidas = float(facturas_venc['total_vencidas'] or 0)
+        num_fact_vencidas = int(facturas_venc['num_vencidas'] or 0)
+        
+        # Total ventas (facturas cobradas + tickets + facturas pendientes + facturas vencidas)
+        total_ventas = total_facturas + total_tickets + total_fact_pendientes + total_fact_vencidas
+        num_documentos = num_facturas + num_tickets + num_fact_pendientes + num_fact_vencidas
         
         # Ventas del mes actual (facturas cobradas)
         cursor.execute('''
@@ -1076,8 +1092,8 @@ def generar_informe_situacion():
                 COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos,
                 COUNT(*) as num_gastos
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            WHERE substr(fecha_valor, 7, 4) = ?
+            AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
             AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes))
@@ -1089,8 +1105,8 @@ def generar_informe_situacion():
         cursor.execute('''
             SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_mes
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND substr(fecha_operacion, 4, 2) = ?
+            WHERE substr(fecha_valor, 7, 4) = ?
+            AND substr(fecha_valor, 4, 2) = ?
             AND importe_eur < 0
             AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes_str))
@@ -1124,8 +1140,8 @@ def generar_informe_situacion():
                 COALESCE(SUM(ABS(importe_eur)), 0) as total,
                 COUNT(*) as cantidad
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            WHERE substr(fecha_valor, 7, 4) = ?
+            AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
             GROUP BY categoria
             ORDER BY total DESC
@@ -1174,6 +1190,8 @@ def generar_informe_situacion():
                 'total_tickets': round(total_tickets, 2),
                 'total_facturas_pendientes': round(total_fact_pendientes, 2),
                 'num_facturas_pendientes': num_fact_pendientes,
+                'total_facturas_vencidas': round(total_fact_vencidas, 2),
+                'num_facturas_vencidas': num_fact_vencidas,
                 'media_mensual': round(media_ventas_mensual, 2),
                 'media_por_documento': round(total_ventas / num_documentos, 2) if num_documentos > 0 else 0
             },
@@ -1262,8 +1280,8 @@ def simular_escenarios():
         cursor.execute('''
             SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
-            AND CAST(substr(fecha_operacion, 4, 2) AS INTEGER) <= ?
+            WHERE substr(fecha_valor, 7, 4) = ?
+            AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
             AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes))

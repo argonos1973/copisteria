@@ -2009,10 +2009,25 @@ async function abrirModalInformeSituacion() {
         document.getElementById('informe-ventas-detalles').textContent = 
             `${data.ventas.num_facturas} fact. + ${data.ventas.num_tickets} tick. • ${formatearImporte(data.ventas.media_mensual)}/mes`;
         
-        // Nota sobre facturas pendientes
+        // Nota sobre facturas pendientes y vencidas
         const ventasNota = document.getElementById('informe-ventas-nota');
-        if (data.ventas.num_facturas_pendientes > 0) {
-            ventasNota.innerHTML = `<i class="fas fa-info-circle"></i> Incluye ${data.ventas.num_facturas_pendientes} fact. pendientes (${formatearImporte(data.ventas.total_facturas_pendientes)})`;
+        const numPendientes = data.ventas.num_facturas_pendientes || 0;
+        const numVencidas = data.ventas.num_facturas_vencidas || 0;
+        const totalPendientes = data.ventas.total_facturas_pendientes || 0;
+        const totalVencidas = data.ventas.total_facturas_vencidas || 0;
+        
+        if (numPendientes > 0 || numVencidas > 0) {
+            let notaTexto = '<i class="fas fa-info-circle"></i> Incluye ';
+            const partes = [];
+            
+            if (numPendientes > 0) {
+                partes.push(`${numPendientes} fact. pendientes (${formatearImporte(totalPendientes)})`);
+            }
+            if (numVencidas > 0) {
+                partes.push(`${numVencidas} fact. vencidas (${formatearImporte(totalVencidas)})`);
+            }
+            
+            ventasNota.innerHTML = notaTexto + partes.join(' + ');
         } else {
             ventasNota.style.display = 'none';
         }
