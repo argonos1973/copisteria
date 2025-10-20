@@ -634,11 +634,15 @@ with sync_playwright() as p:
         python = sys.executable
         os.execl(python, python, *sys.argv)
 
-    # Cerrar ventana emergente si aparece
+    # Cerrar ventana emergente si aparece (puede no existir)
     try:
-        page.locator("#mcp-cross-close").click(timeout=5000)
+        if page.locator("#mcp-cross-close").count() > 0:
+            page.locator("#mcp-cross-close").click(timeout=3000)
+            logger.info("Popup #mcp-cross-close cerrado correctamente")
+        else:
+            logger.info("Popup #mcp-cross-close no encontrado (puede que ya no exista)")
     except Exception as e:
-        logger.error(f"Error: {e}", exc_info=True)
+        logger.warning(f"No se pudo cerrar popup #mcp-cross-close (probablemente no existe): {e}")
         pass
 
     # Permanecer en la página actual de cuenta; no navegar a otra URL
@@ -780,24 +784,45 @@ with sync_playwright() as p:
                 page.wait_for_timeout(1500)
                 # --- NUEVO: Pulsar botón "Descargar" (abre modal de opciones) ---
                 try:
-                    logger.info("Buscando botón 'Descargar' (wrap-chip) …")
+                    logger.info("Buscando botón 'Descargar' visible en página de movimientos…")
                     modal_abierto = False
+                    
+                    # Intento 0: Selector directo por texto visible "Descargar" (más simple y directo)
                     try:
+                        btn_descargar_simple = page.locator("button:has-text('Descargar')").first
+                        if btn_descargar_simple and btn_descargar_simple.count() > 0:
+                            if btn_descargar_simple.is_visible():
+                                logger.info("Botón 'Descargar' encontrado por texto, haciendo clic...")
+                                btn_descargar_simple.click()
+                                page.wait_for_timeout(1000)
+                                # Verificar si se abrió modal
+                                try:
+                                    dlg = page.locator(":is([role=dialog], san-modal, .modal, .cdk-overlay-container, .mat-dialog-container)")
+                                    if dlg and dlg.count() > 0:
+                                        logger.info("✅ Modal de opciones de descarga abierto correctamente")
+                                        modal_abierto = True
+                                except Exception:
+                                    pass
+                    except Exception as e:
+                        logger.warning(f"Intento simple por texto falló: {e}")
+                    
+                    if not modal_abierto:
                         # Intento 1: por rol y nombre accesible
-                        btn_desc = page.get_by_role("button", name=re.compile("Descargar", re.I)).first
-                        if btn_desc and btn_desc.count() > 0 and btn_desc.is_visible():
-                            btn_desc.click()
-                            # Esperar apertura de modal
-                            page.wait_for_timeout(500)
-                            try:
-                                dlg = page.locator(":is([role=dialog], san-modal, .modal, .cdk-overlay-container, .mat-dialog-container)")
-                                if dlg and dlg.count() > 0:
-                                    logger.info("Modal de opciones de descarga abierto (por rol)")
-                                    modal_abierto = True
-                            except Exception:
-                                pass
-                    except Exception:
-                        pass
+                        try:
+                            btn_desc = page.get_by_role("button", name=re.compile("Descargar", re.I)).first
+                            if btn_desc and btn_desc.count() > 0 and btn_desc.is_visible():
+                                btn_desc.click()
+                                # Esperar apertura de modal
+                                page.wait_for_timeout(500)
+                                try:
+                                    dlg = page.locator(":is([role=dialog], san-modal, .modal, .cdk-overlay-container, .mat-dialog-container)")
+                                    if dlg and dlg.count() > 0:
+                                        logger.info("Modal de opciones de descarga abierto (por rol)")
+                                        modal_abierto = True
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
                     if not modal_abierto:
                         # Intento 2: selector específico del botón indicado
                         try:
