@@ -14,18 +14,23 @@ def get_db_connection():
     """
     Crea y retorna una conexión a la base de datos SQLite.
     En sistema multiempresa, usa la BD de la empresa activa en sesión.
-    Si no hay sesión activa, usa la BD por defecto.
+    Si no hay sesión activa o contexto de petición, usa la BD por defecto.
     La conexión usa Row como row_factory para acceder a las columnas por nombre.
     """
     try:
-        # Obtener BD según empresa de sesión (sistema multiempresa)
-        if 'empresa_db' in session:
-            db_path = session['empresa_db']
-            logger.debug(f"Usando BD de empresa: {db_path}")
-        else:
-            # Fallback a BD por defecto si no hay sesión
-            db_path = DB_NAME
-            logger.debug(f"Usando BD por defecto: {db_path}")
+        db_path = DB_NAME  # Default
+        
+        # Intentar obtener BD de sesión (solo en contexto de petición)
+        try:
+            from flask import has_request_context
+            if has_request_context() and 'empresa_db' in session:
+                db_path = session['empresa_db']
+                logger.debug(f"Usando BD de empresa: {db_path}")
+            else:
+                logger.debug(f"Usando BD por defecto: {db_path}")
+        except (RuntimeError, ImportError):
+            # Fuera de contexto de petición, usar BD por defecto
+            logger.debug(f"Sin contexto de petición, usando BD por defecto: {db_path}")
         
         conn = sqlite3.connect(db_path, timeout=30)
         conn.row_factory = sqlite3.Row
