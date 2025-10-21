@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Aleph70 Multiempresa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .login-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .login-body {
+            padding: 40px 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-error {
+            background: #fee;
+            color: #c33;
+            border: 1px solid #fcc;
+        }
+
+        .alert-success {
+            background: #efe;
+            color: #3c3;
+            border: 1px solid #cfc;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .version-info {
+            text-align: center;
+            margin-top: 20px;
+            color: #999;
+            font-size: 12px;
+        }
+
+        #empresa-selector {
+            display: none;
+        }
+
+        .empresa-item {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .empresa-item:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateX(5px);
+        }
+
+        .empresa-logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .empresa-nombre {
+            font-weight: 500;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🔐 Aleph70</h1>
+            <p>Sistema Multiempresa</p>
+        </div>
+        
+        <div class="login-body">
+            <div id="alert-container" class="alert"></div>
+            
+            <!-- Paso 1: Credenciales -->
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="username">Usuario</label>
+                    <input type="text" id="username" name="username" 
+                           placeholder="Introduce tu usuario" required autofocus>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" 
+                           placeholder="Introduce tu contraseña" required>
+                </div>
+                
+                <button type="submit" class="btn-login" id="btn-siguiente">
+                    Siguiente →
+                </button>
+            </form>
+            
+            <!-- Paso 2: Selector de empresa (oculto inicialmente) -->
+            <div id="empresa-selector">
+                <h3 style="margin-bottom: 20px; color: #333;">Selecciona una empresa:</h3>
+                <div id="empresas-lista"></div>
+                <button type="button" class="btn-login" onclick="volverLogin()" 
+                        style="margin-top: 10px; background: #999;">
+                    ← Volver
+                </button>
+            </div>
+            
+            <div class="loading-spinner" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px; color: #666;">Iniciando sesión...</p>
+            </div>
+            
+            <div class="version-info">
+                v1.0.0 - Sistema Multiempresa<br>
+                © 2025 Aleph70
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUsername = '';
+        let currentPassword = '';
+
+        // Manejo del formulario de login
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            currentUsername = document.getElementById('username').value.trim();
+            currentPassword = document.getElementById('password').value;
+            
+            if (!currentUsername || !currentPassword) {
+                mostrarAlerta('Por favor completa todos los campos', 'error');
+                return;
+            }
+            
+            mostrarCargando(true);
+            
+            try {
+                // Obtener empresas del usuario
+                const response = await fetch(`/api/auth/empresas/${currentUsername}`);
+                const empresas = await response.json();
+                
+                if (empresas.length === 0) {
+                    mostrarAlerta('Usuario sin empresas asignadas', 'error');
+                    mostrarCargando(false);
+                    return;
+                }
+                
+                if (empresas.length === 1) {
+                    // Solo una empresa, login directo
+                    await realizarLogin(empresas[0].codigo);
+                } else {
+                    // Múltiples empresas, mostrar selector
+                    mostrarSelectorEmpresas(empresas);
+                }
+                
+                mostrarCargando(false);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error obteniendo empresas', 'error');
+                mostrarCargando(false);
+            }
+        });
+
+        function mostrarSelectorEmpresas(empresas) {
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('empresa-selector').style.display = 'block';
+            
+            const lista = document.getElementById('empresas-lista');
+            lista.innerHTML = '';
+            
+            empresas.forEach(empresa => {
+                const item = document.createElement('div');
+                item.className = 'empresa-item';
+                item.onclick = () => realizarLogin(empresa.codigo);
+                
+                item.innerHTML = `
+                    <img src="${empresa.logo}" class="empresa-logo" 
+                         onerror="this.src='/static/logos/default_header.png'">
+                    <div class="empresa-nombre">${empresa.nombre}</div>
+                `;
+                
+                lista.appendChild(item);
+            });
+        }
+
+        async function realizarLogin(empresaCodigo) {
+            mostrarCargando(true);
+            ocultarAlerta();
+            
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: currentUsername,
+                        password: currentPassword,
+                        empresa: empresaCodigo
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    mostrarAlerta(`✅ Bienvenido ${data.usuario}`, 'success');
+                    setTimeout(() => {
+                        window.location.href = '/estadisticas.html';
+                    }, 500);
+                } else {
+                    mostrarAlerta(data.error || 'Error en el login', 'error');
+                    volverLogin();
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error de conexión con el servidor', 'error');
+                volverLogin();
+            } finally {
+                mostrarCargando(false);
+            }
+        }
+
+        function volverLogin() {
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('empresa-selector').style.display = 'none';
+            document.getElementById('password').value = '';
+            ocultarAlerta();
+        }
+
+        function mostrarAlerta(mensaje, tipo) {
+            const alert = document.getElementById('alert-container');
+            alert.textContent = mensaje;
+            alert.className = `alert alert-${tipo}`;
+            alert.style.display = 'block';
+        }
+
+        function ocultarAlerta() {
+            document.getElementById('alert-container').style.display = 'none';
+        }
+
+        function mostrarCargando(mostrar) {
+            document.getElementById('loading').style.display = mostrar ? 'block' : 'none';
+            document.getElementById('btn-siguiente').disabled = mostrar;
+        }
+
+        // Enter en password también envía el formulario
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('login-form').dispatchEvent(new Event('submit'));
+            }
+        });
+    </script>
+</body>
+</html>
