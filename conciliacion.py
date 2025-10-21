@@ -516,22 +516,20 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
             metodo
         ))
         
-        # REGLA: Marcar factura como cobrada solo si:
+        # REGLA: Marcar factura como cobrada si:
         # 1. Es una factura pendiente (estado = 'P') o vencida (estado = 'V')
         # 2. Diferencia exacta (< 0.01€)
-        # 3. Coincidencia por número de factura en el concepto del gasto
+        # 3. Conciliación AUTOMÁTICA (para manual, requiere verificación)
         factura_marcada_cobrada = False
         numero_factura_cobrada = None
         
         if tipo_documento == 'factura' and documento.get('estado') in ['P', 'V'] and abs(diferencia) < 0.01:
-            # Verificar si el número de factura está en el concepto del gasto
             numero_factura = documento.get('numero', '')
             concepto_gasto = gasto.get('concepto', '').upper()
+            estado_anterior = documento.get('estado', 'P')
             
-            # Buscar el número de factura en el concepto (puede estar como F250046 o similar)
-            tiene_numero_factura = numero_factura and numero_factura.upper() in concepto_gasto
-            
-            if tiene_numero_factura:
+            # Para conciliación AUTOMÁTICA: marcar como cobrada sin restricciones adicionales
+            if metodo == 'automatico':
                 fecha_hoy = datetime.now()
                 cursor.execute('''
                     UPDATE factura 
@@ -545,10 +543,29 @@ def conciliar_automaticamente(gasto_id, tipo_documento, documento_id, metodo='au
                 if cursor.rowcount > 0:
                     factura_marcada_cobrada = True
                     numero_factura_cobrada = numero_factura
-                    estado_anterior = documento.get('estado', 'P')
-                    logger.info(f"✓ Factura {numero_factura} marcada como COBRADA (estado: {estado_anterior} → C) - Coincidencia exacta por número")
+                    logger.info(f"✓ Factura {numero_factura} marcada como COBRADA automáticamente (estado: {estado_anterior} → C) - Diferencia: {abs(diferencia):.2f}€")
+            
+            # Para conciliación MANUAL: verificar número en concepto (seguridad adicional)
             else:
-                logger.info(f"⊗ Factura {numero_factura} NO marcada como cobrada - Sin coincidencia por número en concepto")
+                tiene_numero_factura = numero_factura and numero_factura.upper() in concepto_gasto
+                
+                if tiene_numero_factura:
+                    fecha_hoy = datetime.now()
+                    cursor.execute('''
+                        UPDATE factura 
+                        SET estado = 'C',
+                            importe_cobrado = ?,
+                            timestamp = ?,
+                            fechaCobro = ?
+                        WHERE id = ? AND estado IN ('P', 'V')
+                    ''', (documento['total'], fecha_hoy.isoformat(), fecha_hoy.strftime('%Y-%m-%d'), documento_id))
+                    
+                    if cursor.rowcount > 0:
+                        factura_marcada_cobrada = True
+                        numero_factura_cobrada = numero_factura
+                        logger.info(f"✓ Factura {numero_factura} marcada como COBRADA manualmente (estado: {estado_anterior} → C) - Número encontrado en concepto")
+                else:
+                    logger.info(f"⊗ Factura {numero_factura} NO marcada como cobrada - Conciliación manual sin número en concepto")
         
         conn.commit()
         

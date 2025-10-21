@@ -147,6 +147,10 @@ def crear_factura():
             presentar_face_flag = 1 if int(data.get('presentar_face', 0)) == 1 else 0
 
             # Insertar la factura
+            estado_inicial = data.get('estado', 'P')  # P=Pendiente, C=Cobrada, V=Vencida
+            # Solo establecer fecha de cobro si la factura se crea como cobrada
+            fecha_cobro_inicial = datetime.now().strftime('%Y-%m-%d') if estado_inicial == 'C' else None
+            
             cursor.execute('''
                 INSERT INTO factura (numero, fecha, fvencimiento, estado, idContacto, nif, total, formaPago, 
                                    importe_bruto, importe_impuestos, importe_cobrado, timestamp, tipo, presentar_face, fechaCobro)
@@ -157,7 +161,7 @@ def crear_factura():
                 data.get('fvencimiento', 
                          # Si no se proporciona fecha de vencimiento, se calcula como fecha + 30 días
                          (datetime.strptime(data['fecha'], '%Y-%m-%d') + timedelta(days=30)).strftime('%Y-%m-%d')),
-                data.get('estado', 'P'),  # P=Pendiente, C=Cobrada, V=Vencida
+                estado_inicial,
                 data['idContacto'],
                 emisor_nif,
                 data['total'],
@@ -168,7 +172,7 @@ def crear_factura():
                 datetime.now().isoformat(),
                 data.get('tipo', 'N'),  # N=Normal (con descuentos), A=Sin descuentos
                 presentar_face_flag,
-                datetime.now().strftime('%Y-%m-%d')  # fechaCobro = fecha actual
+                fecha_cobro_inicial  # Solo si estado inicial es 'C'
             ))
             
             factura_id = cursor.lastrowid
@@ -2001,20 +2005,30 @@ def actualizar_factura(id, data):
         importe_impuestos = float(importe_impuestos_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
         total = float(total_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
-        # Determinar fecha de cobro si la factura se está cobrando
+        # Determinar fecha de cobro según el cambio de estado
         fecha_cobro = None
+        
         if estado == 'C' and estado_anterior != 'C':
-            # La factura se está cobrando ahora, establecer fecha de cobro = fecha actual
+            # CASO 1: La factura se está cobrando AHORA (P/V -> C)
             fecha_cobro = datetime.now().strftime('%Y-%m-%d')
-        elif estado == 'C':
-            # La factura ya estaba cobrada, mantener la fecha de cobro existente si existe
+        elif estado == 'C' and estado_anterior == 'C':
+            # CASO 2: La factura YA estaba cobrada (C -> C), mantener fecha existente
             cursor.execute('SELECT fechaCobro FROM factura WHERE id = ?', (id,))
             fecha_cobro_existente = cursor.fetchone()
             if fecha_cobro_existente and fecha_cobro_existente[0]:
                 fecha_cobro = fecha_cobro_existente[0]
             else:
-                # Si no tenía fecha de cobro, establecer la actual
+                # Si no tenía fecha de cobro (caso raro), establecer la actual
                 fecha_cobro = datetime.now().strftime('%Y-%m-%d')
+        elif estado != 'C' and estado_anterior == 'C':
+            # CASO 3: La factura se marca como NO cobrada (C -> P/V), limpiar fecha de cobro
+            fecha_cobro = None
+        else:
+            # CASO 4: Estado no cobrado se mantiene (P->P, P->V, V->P, V->V), mantener fecha_cobro existente
+            cursor.execute('SELECT fechaCobro FROM factura WHERE id = ?', (id,))
+            fecha_cobro_existente = cursor.fetchone()
+            if fecha_cobro_existente:
+                fecha_cobro = fecha_cobro_existente[0]  # Puede ser None, y está bien
         
         # Actualizar la factura
         cursor.execute('''
