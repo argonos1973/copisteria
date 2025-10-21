@@ -3104,6 +3104,39 @@ def enviar_email_presupuesto_endpoint(id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ================== RUTAS HTML FRONTEND ================== #
+@app.route('/LOGIN.html')
+def servir_login():
+    """Sirve la página de login del sistema multiempresa"""
+    try:
+        with open(os.path.join(BASE_DIR, 'frontend', 'LOGIN.html'), 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo LOGIN.html: {e}", exc_info=True)
+        return Response(f'Error sirviendo LOGIN.html: {e}', status=500)
+
+@app.route('/')
+def ruta_raiz():
+    """Redirige la raíz al login si no hay sesión activa"""
+    if 'user_id' in session:
+        # Usuario logueado, redirigir a estadisticas
+        try:
+            with open(os.path.join(BASE_DIR, 'frontend', 'estadisticas.html'), 'r', encoding='utf-8') as f:
+                content = f.read()
+            content = content.replace('../static/', './static/')
+            return Response(content, mimetype='text/html')
+        except Exception as e:
+            return Response(f'Error: {e}', status=500)
+    else:
+        # Sin sesión, mostrar login
+        try:
+            with open(os.path.join(BASE_DIR, 'frontend', 'LOGIN.html'), 'r', encoding='utf-8') as f:
+                content = f.read()
+            return Response(content, mimetype='text/html')
+        except Exception as e:
+            return Response(f'Error: {e}', status=500)
+
 if __name__ == '__main__':
     # Permite ejecutar la app directamente (modo desarrollo/standalone)
     # Escucha en 0.0.0.0:5001 para que sea accesible desde la red local
