@@ -330,7 +330,7 @@
                 if (response.ok && data.success) {
                     mostrarAlerta(`✅ Bienvenido ${data.usuario}`, 'success');
                     setTimeout(() => {
-                        window.location.href = '/estadisticas.html';
+                        window.location.href = '/DASHBOARD.html';
                     }, 500);
                 } else {
                     mostrarAlerta(data.error || 'Error en el login', 'error');

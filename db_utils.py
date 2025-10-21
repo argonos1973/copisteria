@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-from flask import jsonify
+from flask import jsonify, session
 
 from constantes import DB_NAME
 from logger_config import get_logger
@@ -13,10 +13,21 @@ logger = get_logger(__name__)
 def get_db_connection():
     """
     Crea y retorna una conexión a la base de datos SQLite.
+    En sistema multiempresa, usa la BD de la empresa activa en sesión.
+    Si no hay sesión activa, usa la BD por defecto.
     La conexión usa Row como row_factory para acceder a las columnas por nombre.
     """
     try:
-        conn = sqlite3.connect(DB_NAME, timeout=30)  # Aumentar timeout
+        # Obtener BD según empresa de sesión (sistema multiempresa)
+        if 'empresa_db' in session:
+            db_path = session['empresa_db']
+            logger.debug(f"Usando BD de empresa: {db_path}")
+        else:
+            # Fallback a BD por defecto si no hay sesión
+            db_path = DB_NAME
+            logger.debug(f"Usando BD por defecto: {db_path}")
+        
+        conn = sqlite3.connect(db_path, timeout=30)
         conn.row_factory = sqlite3.Row
         conn.execute('PRAGMA encoding="UTF-8"')  # Asegura UTF-8
         conn.execute("PRAGMA journal_mode=WAL;") 

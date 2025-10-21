@@ -539,11 +539,13 @@ def contactos_paginado():
 
 
 @app.route('/api/facturas/paginado', methods=['GET'])
+@login_required
 def api_facturas_paginado():
     return facturas_paginado()
 
 
 @app.route('/facturas/paginado', methods=['GET'])
+@login_required
 def facturas_paginado():
     try:
         # Filtros de consulta
@@ -3116,15 +3118,39 @@ def servir_login():
         logger.error(f"Error sirviendo LOGIN.html: {e}", exc_info=True)
         return Response(f'Error sirviendo LOGIN.html: {e}', status=500)
 
+@app.route('/DASHBOARD.html')
+@login_required
+def servir_dashboard():
+    """Sirve el dashboard principal del sistema"""
+    try:
+        with open(os.path.join(BASE_DIR, 'frontend', 'DASHBOARD.html'), 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo DASHBOARD.html: {e}", exc_info=True)
+        return Response(f'Error sirviendo DASHBOARD.html: {e}', status=500)
+
+@app.route('/ADMIN_PERMISOS.html')
+@login_required
+@require_admin
+def servir_admin_permisos():
+    """Sirve la pantalla de administración de permisos (solo admins)"""
+    try:
+        with open(os.path.join(BASE_DIR, 'frontend', 'ADMIN_PERMISOS.html'), 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo ADMIN_PERMISOS.html: {e}", exc_info=True)
+        return Response(f'Error sirviendo ADMIN_PERMISOS.html: {e}', status=500)
+
 @app.route('/')
 def ruta_raiz():
     """Redirige la raíz al login si no hay sesión activa"""
     if 'user_id' in session:
-        # Usuario logueado, redirigir a estadisticas
+        # Usuario logueado, redirigir a dashboard
         try:
-            with open(os.path.join(BASE_DIR, 'frontend', 'estadisticas.html'), 'r', encoding='utf-8') as f:
+            with open(os.path.join(BASE_DIR, 'frontend', 'DASHBOARD.html'), 'r', encoding='utf-8') as f:
                 content = f.read()
-            content = content.replace('../static/', './static/')
             return Response(content, mimetype='text/html')
         except Exception as e:
             return Response(f'Error: {e}', status=500)

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Aleph70</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-primario: #2c3e50;
+            --color-secundario: #3498db;
+            --color-success: #27ae60;
+            --color-warning: #f39c12;
+            --color-danger: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: var(--color-primario);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+        }
+
+        .empresa-info h1 {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .empresa-info p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-info {
+            text-align: right;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .user-role {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .btn-logout {
+            background: var(--color-danger);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        /* Welcome Section */
+        .welcome {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+
+        .welcome h2 {
+            color: var(--color-primario);
+            margin-bottom: 10px;
+        }
+
+        .welcome p {
+            color: #7f8c8d;
+            font-size: 15px;
+        }
+
+        /* Módulos Grid */
+        .modulos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .modulo-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .modulo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border-color: var(--color-secundario);
+        }
+
+        .modulo-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .modulo-nombre {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--color-primario);
+            margin-bottom: 8px;
+        }
+
+        .modulo-permisos {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .permiso-badge {
+            background: #ecf0f1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #7f8c8d;
+        }
+
+        .permiso-badge.active {
+            background: var(--color-success);
+            color: white;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--color-primario);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--color-primario);
+        }
+
+        .stat-icon {
+            font-size: 24px;
+            float: right;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="logo-container">
+                <img id="logo" src="/static/logos/default_header.png" class="logo" alt="Logo">
+                <div class="empresa-info">
+                    <h1 id="empresa-nombre">Cargando...</h1>
+                    <p id="empresa-codigo"></p>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="user-info">
+                <div class="user-name" id="user-nombre">Usuario</div>
+                <div class="user-role" id="user-rol">Rol</div>
+            </div>
+            <button class="btn-logout" onclick="logout()">🚪 Salir</button>
+        </div>
+    </div>
+
+    <!-- Container -->
+    <div class="container">
+        <!-- Welcome -->
+        <div class="welcome">
+            <h2>👋 Bienvenido al Sistema</h2>
+            <p id="welcome-message">Selecciona un módulo para comenzar</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Módulos disponibles</div>
+                <div class="stat-value" id="total-modulos">0</div>
+                <div class="stat-icon">📦</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Permisos activos</div>
+                <div class="stat-value" id="total-permisos">0</div>
+                <div class="stat-icon">🔑</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Rol del usuario</div>
+                <div class="stat-value" style="font-size: 18px;" id="rol-usuario">-</div>
+                <div class="stat-icon">👤</div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Cargando módulos...</p>
+        </div>
+
+        <!-- Módulos Grid -->
+        <div class="modulos-grid" id="modulos-container" style="display: none;"></div>
+    </div>
+
+    <script>
+        // Cargar datos al iniciar
+        document.addEventListener('DOMContentLoaded', async () => {
+            await cargarSesion();
+            await cargarBranding();
+            await cargarModulos();
+        });
+
+        async function cargarSesion() {
+            try {
+                const response = await fetch('/api/auth/session');
+                if (!response.ok) {
+                    window.location.href = '/LOGIN.html';
+                    return;
+                }
+                
+                const sesion = await response.json();
+                
+                document.getElementById('user-nombre').textContent = sesion.usuario;
+                document.getElementById('user-rol').textContent = sesion.rol;
+                document.getElementById('empresa-nombre').textContent = sesion.empresa;
+                document.getElementById('empresa-codigo').textContent = sesion.empresa_codigo;
+                document.getElementById('rol-usuario').textContent = sesion.rol.toUpperCase();
+                
+                document.getElementById('welcome-message').textContent = 
+                    `Hola ${sesion.usuario}, bienvenido a ${sesion.empresa}`;
+                    
+            } catch (error) {
+                console.error('Error cargando sesión:', error);
+                window.location.href = '/LOGIN.html';
+            }
+        }
+
+        async function cargarBranding() {
+            try {
+                const response = await fetch('/api/auth/branding');
+                const branding = await response.json();
+                
+                // Aplicar logo
+                document.getElementById('logo').src = branding.logo_header;
+                
+                // Aplicar colores
+                document.documentElement.style.setProperty('--color-primario', branding.colores.primario);
+                document.documentElement.style.setProperty('--color-secundario', branding.colores.secundario);
+                
+            } catch (error) {
+                console.error('Error cargando branding:', error);
+            }
+        }
+
+        async function cargarModulos() {
+            try {
+                const response = await fetch('/api/auth/menu');
+                const modulos = await response.json();
+                
+                const container = document.getElementById('modulos-container');
+                const loading = document.getElementById('loading');
+                
+                container.innerHTML = '';
+                
+                modulos.forEach(modulo => {
+                    const card = crearTarjetaModulo(modulo);
+                    container.appendChild(card);
+                });
+                
+                // Actualizar stats
+                document.getElementById('total-modulos').textContent = modulos.length;
+                
+                const totalPermisos = modulos.reduce((sum, m) => {
+                    return sum + Object.values(m.permisos).filter(p => p).length;
+                }, 0);
+                document.getElementById('total-permisos').textContent = totalPermisos;
+                
+                loading.style.display = 'none';
+                container.style.display = 'grid';
+                
+            } catch (error) {
+                console.error('Error cargando módulos:', error);
+                document.getElementById('loading').innerHTML = 
+                    '<p style="color: #e74c3c;">❌ Error cargando módulos</p>';
+            }
+        }
+
+        function crearTarjetaModulo(modulo) {
+            const card = document.createElement('div');
+            card.className = 'modulo-card';
+            card.onclick = () => window.location.href = modulo.ruta;
+            
+            card.innerHTML = `
+                <div class="modulo-icon">${modulo.icono}</div>
+                <div class="modulo-nombre">${modulo.nombre}</div>
+                <div class="modulo-permisos">
+                    ${Object.entries(modulo.permisos).map(([permiso, activo]) => `
+                        <span class="permiso-badge ${activo ? 'active' : ''}">
+                            ${permiso}
+                        </span>
+                    `).join('')}
+                </div>
+            `;
+            
+            return card;
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+                window.location.href = '/LOGIN.html';
+            } catch (error) {
+                console.error('Error en logout:', error);
+                window.location.href = '/LOGIN.html';
+            }
+        }
+    </script>
+</body>
+</html>
