@@ -6,10 +6,15 @@ from decimal import Decimal, ROUND_HALF_UP
 from format_utils import format_currency_es_two, format_total_es_two, format_number_es_max5, format_percentage
 
 from flask import (Flask, Response, jsonify, request, send_file,
-                   stream_with_context)
+                   stream_with_context, session)
 from flask_cors import CORS
 import logging
 from logger_config import get_logger
+
+# Sistema Multiempresa
+from multiempresa_config import SESSION_CONFIG, inicializar_bd_usuarios
+from auth_routes import auth_bp
+from auth_middleware import login_required, require_admin, require_permission
 
 logger = get_logger('aleph70.app')
 
@@ -72,10 +77,24 @@ application = Flask(__name__,
                    template_folder='templates',
                    static_folder='static')
 app = application
+
+# Configurar sesiones para sistema multiempresa
+app.config['SECRET_KEY'] = SESSION_CONFIG['SECRET_KEY']
+app.config['PERMANENT_SESSION_LIFETIME'] = SESSION_CONFIG['PERMANENT_SESSION_LIFETIME']
+app.config['SESSION_COOKIE_NAME'] = SESSION_CONFIG['SESSION_COOKIE_NAME']
+app.config['SESSION_COOKIE_HTTPONLY'] = SESSION_CONFIG['SESSION_COOKIE_HTTPONLY']
+app.config['SESSION_COOKIE_SAMESITE'] = SESSION_CONFIG['SESSION_COOKIE_SAMESITE']
+
+# Inicializar BD de usuarios al arrancar
+inicializar_bd_usuarios()
+
+# Registrar blueprints
+app.register_blueprint(auth_bp)  # Sistema de autenticación
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(gastos_bp, url_prefix='')
 app.register_blueprint(estadisticas_gastos_bp, url_prefix='')
 app.register_blueprint(conciliacion.conciliacion_bp, url_prefix='')
+
 # Configurar CORS
 CORS(app, resources={
     r"/*": {"origins": "*"}  # Permitir cualquier ruta
