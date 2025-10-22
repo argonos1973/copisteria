@@ -96,8 +96,12 @@ def login_required(f):
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # DEBUG: Ver contenido de la sesión
+        session_data = dict(session)
+        logger.debug(f"Verificando sesión para {request.path}: {list(session_data.keys())}")
+        
         if 'user_id' not in session:
-            logger.warning(f"Acceso no autenticado a: {request.path}")
+            logger.warning(f"Acceso no autenticado a: {request.path} - Sesión: {list(session_data.keys())}")
             
             # Si es petición AJAX, retornar JSON
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -106,6 +110,7 @@ def login_required(f):
             # Si es petición normal, redirigir a login
             return redirect('/LOGIN.html')
         
+        logger.debug(f"Sesión válida para user_id={session.get('user_id')}")
         return f(*args, **kwargs)
     
     return decorated_function
@@ -250,7 +255,7 @@ def autenticar_usuario(username, password, empresa_codigo):
         
         # Verificar acceso a empresa
         cursor.execute('''
-            SELECT ue.rol, ue.es_admin_empresa, e.id, e.nombre, e.db_path
+            SELECT ue.rol, ue.es_admin_empresa, e.id, e.nombre, e.db_path, e.logo_header
             FROM usuario_empresa ue
             JOIN empresas e ON ue.empresa_id = e.id
             WHERE ue.usuario_id = ? 
@@ -265,7 +270,7 @@ def autenticar_usuario(username, password, empresa_codigo):
             conn.close()
             return {'error': 'No tienes acceso a esta empresa'}
         
-        rol, es_admin_empresa, empresa_id, empresa_nombre, db_path = empresa
+        rol, es_admin_empresa, empresa_id, empresa_nombre, db_path, logo_header = empresa
         
         # Reset intentos fallidos y actualizar último acceso
         cursor.execute('''
@@ -279,6 +284,8 @@ def autenticar_usuario(username, password, empresa_codigo):
         conn.close()
         
         # Registrar login exitoso
+        # NO usar session.clear() porque borra metadatos de Flask-Session
+        session.permanent = True  # Hacer que la sesión persista según PERMANENT_SESSION_LIFETIME
         session['user_id'] = user_id
         session['username'] = username
         session['nombre_completo'] = nombre_completo
@@ -286,13 +293,16 @@ def autenticar_usuario(username, password, empresa_codigo):
         session['empresa_codigo'] = empresa_codigo
         session['empresa_nombre'] = empresa_nombre
         session['empresa_db'] = db_path
+        session['empresa_logo'] = logo_header or 'default_header.png'
         session['rol'] = rol
         session['es_admin_empresa'] = bool(es_admin_empresa)
         session['es_superadmin'] = bool(es_superadmin)
+        session.modified = True  # FORZAR guardado de sesión
         
         registrar_auditoria('login_exitoso', descripcion=f'Login a empresa {empresa_nombre}')
         
-        logger.info(f"✅ Login exitoso: {username} → {empresa_nombre}")
+        logger.info(f"✅ Login exitoso: {username} → {empresa_nombre} (user_id={user_id} en sesión)")
+        logger.info(f"DEBUG: Sesión después de login: {dict(session)}")
         
         return {
             'success': True,
@@ -356,3 +366,20 @@ def get_empresa_db():
     Función de compatibilidad con código existente
     """
     return session.get('empresa_db', '/var/www/html/db/aleph70.db')
+
+def superadmin_required(f):
+    """
+    Decorador que verifica que el usuario sea superadministrador
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            logger.warning(f"Acceso no autenticado a: {request.path}")
+            return redirect(url_for('auth.login'))
+        
+        if not session.get('es_superadmin'):
+            logger.warning(f"Acceso denegado (no superadmin): user_id={session.get('user_id')} a {request.path}")
+            return jsonify({'error': 'Acceso denegado - Se requieren permisos de superadministrador'}), 403
+        
+        return f(*args, **kwargs)
+    return decorated_function

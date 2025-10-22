@@ -329,9 +329,18 @@
                 
                 if (response.ok && data.success) {
                     mostrarAlerta(`✅ Bienvenido ${data.usuario}`, 'success');
+                    
+                    // Esperar 1 segundo para que la cookie se establezca
                     setTimeout(() => {
-                        window.location.href = '/DASHBOARD.html';
-                    }, 500);
+                        // Admin va a administración
+                        if (data.es_admin) {
+                            window.location.href = '/ADMIN_PERMISOS.html';
+                        } 
+                        // Usuario normal va a la aplicación principal
+                        else {
+                            window.location.href = '/api/auth/app';
+                        }
+                    }, 1500);
                 } else {
                     mostrarAlerta(data.error || 'Error en el login', 'error');
                     volverLogin();

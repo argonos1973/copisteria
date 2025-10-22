@@ -9,7 +9,8 @@ Fecha: 2025-10-21
 ============================================================================
 """
 
-from flask import Blueprint, request, jsonify, session, render_template_string
+import os
+from flask import Blueprint, request, jsonify, session, render_template_string, Response, make_response
 from logger_config import get_logger
 from auth_middleware import (
     autenticar_usuario, cerrar_sesion, obtener_empresas_usuario,
@@ -63,7 +64,11 @@ def login():
         if 'error' in resultado:
             return jsonify(resultado), 401
         
-        return jsonify(resultado), 200
+        # IMPORTANTE: Usar make_response para asegurar que la cookie se envíe
+        response = make_response(jsonify(resultado), 200)
+        # Forzar que Flask guarde la sesión
+        session.modified = True
+        return response
         
     except Exception as e:
         logger.error(f"Error en endpoint login: {e}", exc_info=True)
@@ -108,6 +113,7 @@ def obtener_sesion():
             'username': session.get('username'),
             'empresa': session.get('empresa_nombre'),
             'empresa_codigo': session.get('empresa_codigo'),
+            'logo': f"/static/logos/{session.get('empresa_logo', 'default_header.png')}",
             'rol': session.get('rol'),
             'es_admin': session.get('es_admin_empresa') or session.get('es_superadmin'),
             'es_superadmin': session.get('es_superadmin')
@@ -127,6 +133,8 @@ def obtener_menu():
         empresa_id = session.get('empresa_id')
         es_superadmin = session.get('es_superadmin')
         
+        logger.info(f"[MENU] user_id={user_id}, empresa_id={empresa_id}, es_superadmin={es_superadmin}")
+        
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
@@ -140,7 +148,7 @@ def obtener_menu():
             ''')
         else:
             # Usuario normal según permisos
-            cursor.execute('''
+            sql = '''
                 SELECT 
                     m.codigo,
                     m.nombre,
@@ -160,10 +168,67 @@ def obtener_menu():
                 AND p.puede_ver = 1
                 AND m.activo = 1
                 ORDER BY m.orden
-            ''', (user_id, empresa_id))
+            '''
+            logger.info(f"[MENU] Ejecutando query con user_id={user_id}, empresa_id={empresa_id}")
+            cursor.execute(sql, (user_id, empresa_id))
+        
+        rows = cursor.fetchall()
+        logger.info(f"[MENU] Encontrados {len(rows)} módulos")
+        
+        # Definir submódulos fuera del loop
+        submenu_map = {
+            'facturas_emitidas': [
+                {
+                    'nombre': 'Tickets',
+                    'icono': 'fas fa-ticket-alt',
+                    'ruta': '#',
+                    'submenu': [
+                        {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_TICKETS.html'},
+                        {'nombre': 'Nuevo', 'icono': 'fas fa-plus', 'ruta': '/GESTION_TICKETS.html'}
+                    ]
+                },
+                {
+                    'nombre': 'Facturas',
+                    'icono': 'fas fa-file-invoice',
+                    'ruta': '#',
+                    'submenu': [
+                        {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_FACTURAS.html'}
+                    ]
+                },
+                {
+                    'nombre': 'Proformas',
+                    'icono': 'fas fa-file-contract',
+                    'ruta': '#',
+                    'submenu': [
+                        {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_PROFORMAS.html'}
+                    ]
+                }
+            ],
+            'presupuestos': [
+                {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_PRESUPUESTOS.html'},
+                {'nombre': 'Nuevo', 'icono': 'fas fa-plus', 'ruta': '/GESTION_PRESUPUESTOS.html'}
+            ],
+            'productos': [
+                {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_PRODUCTOS.html'},
+                {'nombre': 'Franjas', 'icono': 'fas fa-percentage', 'ruta': '/FRANJAS_DESCUENTO.html'}
+            ],
+            'contactos': [
+                {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_CONTACTOS.html'},
+                {'nombre': 'Nuevo', 'icono': 'fas fa-plus', 'ruta': '/GESTION_CONTACTOS.html'}
+            ],
+            'gastos': [
+                {'nombre': 'Consultar Gastos', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_GASTOS.html'},
+                {'nombre': 'Conciliación', 'icono': 'fas fa-exchange-alt', 'ruta': '/CONCILIACION_GASTOS.html'},
+                {'nombre': 'Configuración', 'icono': 'fas fa-cog', 'ruta': '/CONFIGURACION_CONCILIACION.html'}
+            ]
+        }
+        
+        # Módulos que ya están incluidos en submenus (no deben aparecer como items independientes)
+        modulos_en_submenu = ['facturas', 'tickets', 'proformas']
         
         menu = []
-        for row in cursor.fetchall():
+        for row in rows:
+            logger.info(f"[MENU] Procesando módulo: {row[0]} - {row[1]}")
             item = {
                 'codigo': row[0],
                 'nombre': row[1],
@@ -193,7 +258,21 @@ def obtener_menu():
                     'exportar': 1
                 }
             
-            menu.append(item)
+            # Agregar submódulos según el código del módulo
+            codigo_modulo = item['codigo']
+            if codigo_modulo in submenu_map:
+                item['submenu'] = submenu_map[codigo_modulo]
+                logger.info(f"[MENU] Submódulos agregados a {codigo_modulo}")
+            
+            # Solo agregar si NO está en un submenu
+            if codigo_modulo not in modulos_en_submenu:
+                menu.append(item)
+                logger.info(f"[MENU] Item agregado al menú: {item['nombre']}")
+            else:
+                logger.info(f"[MENU] Item omitido (está en submenu): {item['nombre']}")
+        
+        logger.info(f"[MENU] Total items en menú: {len(menu)}")
+        
         
         conn.close()
         
@@ -204,6 +283,20 @@ def obtener_menu():
     except Exception as e:
         logger.error(f"Error obteniendo menú: {e}", exc_info=True)
         return jsonify({'error': 'Error obteniendo menú'}), 500
+
+@auth_bp.route('/app', methods=['GET'])
+@login_required
+def servir_aplicacion():
+    """Sirve la aplicación principal (requiere autenticación)"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', '_app_private.html')
+        with open(app_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo aplicación: {e}", exc_info=True)
+        return jsonify({'error': 'Error sirviendo aplicación'}), 500
 
 @auth_bp.route('/branding', methods=['GET'])
 @login_required

@@ -1,0 +1,285 @@
+<\!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Empresas</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { color: #2c3e50; margin-bottom: 30px; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: 0.3s; }
+        .btn-primary { background: #3498db; color: white; }
+        .btn-primary:hover { background: #2980b9; }
+        .btn-success { background: #27ae60; color: white; }
+        .btn-success:hover { background: #229954; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
+        .modal.active { display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 10px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h2 { color: #2c3e50; }
+        .close { font-size: 28px; cursor: pointer; color: #7f8c8d; }
+        .close:hover { color: #2c3e50; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        .form-group input[type="color"] { height: 45px; cursor: pointer; }
+        .form-group input[type="file"] { padding: 8px; }
+        
+        .empresas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
+        .empresa-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); transition: 0.3s; }
+        .empresa-card:hover { box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+        .empresa-header { display: flex; align-items: center; margin-bottom: 15px; }
+        .empresa-logo { width: 60px; height: 60px; object-fit: contain; margin-right: 15px; border-radius: 5px; }
+        .empresa-info h3 { color: #2c3e50; margin-bottom: 5px; }
+        .empresa-info .codigo { color: #7f8c8d; font-size: 12px; }
+        .empresa-details { color: #555; font-size: 14px; line-height: 1.6; }
+        .empresa-details p { margin: 5px 0; }
+        .empresa-details i { width: 20px; color: #3498db; }
+        .empresa-status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; margin-top: 10px; }
+        .empresa-status.activo { background: #d4edda; color: #155724; }
+        .empresa-status.inactivo { background: #f8d7da; color: #721c24; }
+        
+        .no-empresas { text-align: center; padding: 60px 20px; color: #7f8c8d; }
+        .no-empresas i { font-size: 60px; margin-bottom: 20px; }
+        
+        .loading { text-align: center; padding: 40px; color: #3498db; }
+        .loading i { font-size: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        
+        .alert { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <h1><i class="fas fa-building"></i> Gestión de Empresas</h1>
+            <button class="btn btn-success" onclick="abrirModalCrear()">
+                <i class="fas fa-plus"></i> Nueva Empresa
+            </button>
+        </div>
+        
+        <div id="alert-container"></div>
+        
+        <div id="empresas-container" class="loading">
+            <i class="fas fa-spinner"></i>
+            <p>Cargando empresas...</p>
+        </div>
+    </div>
+    
+    <\!-- Modal Crear Empresa -->
+    <div id="modalCrear" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-building"></i> Nueva Empresa</h2>
+                <span class="close" onclick="cerrarModal()">&times;</span>
+            </div>
+            
+            <form id="formCrearEmpresa" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="nombre">Nombre de la Empresa *</label>
+                    <input type="text" id="nombre" name="nombre" required>
+                    <small style="color: #7f8c8d;">El código se generará automáticamente (primeros 5 caracteres)</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cif">CIF/NIF</label>
+                    <input type="text" id="cif" name="cif">
+                </div>
+                
+                <div class="form-group">
+                    <label for="direccion">Dirección</label>
+                    <input type="text" id="direccion" name="direccion">
+                </div>
+                
+                <div class="form-group">
+                    <label for="telefono">Teléfono</label>
+                    <input type="text" id="telefono" name="telefono">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="web">Sitio Web</label>
+                    <input type="text" id="web" name="web">
+                </div>
+                
+                <div class="form-group">
+                    <label for="logo">Logo de la Empresa</label>
+                    <input type="file" id="logo" name="logo" accept="image/*">
+                    <small style="color: #7f8c8d;">Formatos: PNG, JPG, SVG (máx. 2MB)</small>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label for="color_primario">Color Primario</label>
+                        <input type="color" id="color_primario" name="color_primario" value="#2c3e50">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="color_secundario">Color Secundario</label>
+                        <input type="color" id="color_secundario" name="color_secundario" value="#3498db">
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="cerrarModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Crear Empresa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = `http://${window.location.hostname}:5001/api`;
+        
+        // Cargar empresas al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarEmpresas();
+        });
+        
+        async function cargarEmpresas() {
+            try {
+                const response = await fetch(`${API_URL}/empresas`);
+                
+                if (\!response.ok) {
+                    throw new Error('Error cargando empresas');
+                }
+                
+                const empresas = await response.json();
+                renderizarEmpresas(empresas);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('empresas-container').innerHTML = `
+                    <div class="no-empresas">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Error cargando empresas. Verifica tu conexión.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderizarEmpresas(empresas) {
+            const container = document.getElementById('empresas-container');
+            
+            if (empresas.length === 0) {
+                container.innerHTML = `
+                    <div class="no-empresas">
+                        <i class="fas fa-building"></i>
+                        <p>No hay empresas registradas</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Haz clic en "Nueva Empresa" para comenzar</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.className = 'empresas-grid';
+            container.innerHTML = empresas.map(emp => `
+                <div class="empresa-card">
+                    <div class="empresa-header">
+                        ${emp.logo_header ? 
+                            `<img src="/static/logos/${emp.logo_header}" class="empresa-logo" alt="Logo">` : 
+                            `<div class="empresa-logo" style="background: ${emp.color_primario}; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;">${emp.nombre.charAt(0)}</div>`
+                        }
+                        <div class="empresa-info">
+                            <h3>${emp.nombre}</h3>
+                            <div class="codigo">Código: ${emp.codigo}</div>
+                        </div>
+                    </div>
+                    <div class="empresa-details">
+                        ${emp.cif ? `<p><i class="fas fa-id-card"></i> ${emp.cif}</p>` : ''}
+                        ${emp.direccion ? `<p><i class="fas fa-map-marker-alt"></i> ${emp.direccion}</p>` : ''}
+                        ${emp.telefono ? `<p><i class="fas fa-phone"></i> ${emp.telefono}</p>` : ''}
+                        ${emp.email ? `<p><i class="fas fa-envelope"></i> ${emp.email}</p>` : ''}
+                        ${emp.web ? `<p><i class="fas fa-globe"></i> ${emp.web}</p>` : ''}
+                        <p><i class="fas fa-database"></i> BD: ${emp.codigo}.db</p>
+                        <span class="empresa-status ${emp.activo ? 'activo' : 'inactivo'}">
+                            ${emp.activo ? '✓ Activa' : '✗ Inactiva'}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function abrirModalCrear() {
+            document.getElementById('modalCrear').classList.add('active');
+            document.getElementById('formCrearEmpresa').reset();
+        }
+        
+        function cerrarModal() {
+            document.getElementById('modalCrear').classList.remove('active');
+        }
+        
+        function mostrarAlerta(mensaje, tipo) {
+            const container = document.getElementById('alert-container');
+            const alerta = document.createElement('div');
+            alerta.className = `alert alert-${tipo}`;
+            alerta.innerHTML = `
+                <strong>${tipo === 'success' ? '✓' : '✗'}</strong> ${mensaje}
+            `;
+            container.appendChild(alerta);
+            
+            setTimeout(() => {
+                alerta.remove();
+            }, 5000);
+        }
+        
+        // Enviar formulario
+        document.getElementById('formCrearEmpresa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+            
+            try {
+                const response = await fetch(`${API_URL}/empresas`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    mostrarAlerta(data.mensaje || 'Empresa creada exitosamente', 'success');
+                    cerrarModal();
+                    cargarEmpresas();
+                } else {
+                    mostrarAlerta(data.error || 'Error creando empresa', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error de conexión con el servidor', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+        
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('modalCrear');
+            if (event.target === modal) {
+                cerrarModal();
+            }
+        }
+    </script>
+</body>
+</html>

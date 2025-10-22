@@ -1,7 +1,7 @@
 import csv
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from format_utils import format_currency_es_two, format_total_es_two, format_number_es_max5, format_percentage
 
@@ -14,6 +14,8 @@ from logger_config import get_logger
 # Sistema Multiempresa
 from multiempresa_config import SESSION_CONFIG, inicializar_bd_usuarios
 from auth_routes import auth_bp
+from empresas_routes import empresas_bp
+from admin_routes import admin_bp
 from auth_middleware import login_required, require_admin, require_permission
 
 logger = get_logger('aleph70.app')
@@ -78,18 +80,19 @@ application = Flask(__name__,
                    static_folder='static')
 app = application
 
-# Configurar sesiones para sistema multiempresa
-app.config['SECRET_KEY'] = SESSION_CONFIG['SECRET_KEY']
-app.config['PERMANENT_SESSION_LIFETIME'] = SESSION_CONFIG['PERMANENT_SESSION_LIFETIME']
-app.config['SESSION_COOKIE_NAME'] = SESSION_CONFIG['SESSION_COOKIE_NAME']
-app.config['SESSION_COOKIE_HTTPONLY'] = SESSION_CONFIG['SESSION_COOKIE_HTTPONLY']
-app.config['SESSION_COOKIE_SAMESITE'] = SESSION_CONFIG['SESSION_COOKIE_SAMESITE']
+# Configurar sesiones - CONFIGURACIÓN SIMPLE QUE FUNCIONA
+app.config['SECRET_KEY'] = 'clave-super-secreta-cambiar-en-produccion-12345'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 # Inicializar BD de usuarios al arrancar
 inicializar_bd_usuarios()
 
 # Registrar blueprints
 app.register_blueprint(auth_bp)  # Sistema de autenticación
+app.register_blueprint(empresas_bp)  # Gestión de empresas
+app.register_blueprint(admin_bp)  # Sistema de administración
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(gastos_bp, url_prefix='')
 app.register_blueprint(estadisticas_gastos_bp, url_prefix='')
@@ -135,19 +138,30 @@ def servir_config_json():
         return jsonify({'verifactu_enabled': False}), 200
 
 # ================== HTML: imprimir ticket ================== #
+@login_required
 @app.route('/api/imprimir-ticket.html', methods=['GET'])
 def servir_imprimir_ticket_html():
-    """Sirve la página de impresión del ticket desde frontend para la ruta /api/.."""
+    """Sirve la página de impresión del ticket con el logo de la empresa"""
     try:
         ruta = os.path.join(BASE_DIR, 'frontend', 'imprimir-ticket.html')
         if not os.path.exists(ruta):
             return Response('imprimir-ticket.html no encontrado', status=404)
-        # No alteramos el contenido: la propia página/JS leerá ticketId de la query
-        return send_file(ruta)
+        
+        # Leer el contenido del HTML
+        with open(ruta, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        # Obtener logo de la empresa desde la sesión
+        empresa_logo = session.get('empresa_logo', 'default_header.png')
+        logo_header = f'/static/logos/{empresa_logo}'
+        
+        # Reemplazar el logo hardcoded con el logo de la empresa
+        html_content = html_content.replace('src="/static/img/logo.png"', f'src="{logo_header}"')
+        
+        return Response(html_content, mimetype='text/html')
     except Exception as e:
         return Response(f'Error sirviendo imprimir-ticket.html: {e}', status=500)
 
-# ================== API: aplicar franjas a todos los productos ================== #
 @app.route('/api/productos/aplicar_franjas', methods=['POST'])
 def api_aplicar_franjas_todos():
     try:
@@ -494,10 +508,12 @@ def api_generar_franjas_automaticas(producto_id):
 
  
 
+@login_required
 @app.route('/tickets/paginado', methods=['GET'])
 def tickets_paginado_route():
     return tickets.tickets_paginado()
 
+@login_required
 @app.route('/api/tickets/paginado', methods=['GET'])
 def api_tickets_paginado():
     return tickets.tickets_paginado()
@@ -538,6 +554,7 @@ def contactos_paginado():
 
 
 
+@login_required
 @app.route('/api/facturas/paginado', methods=['GET'])
 @login_required
 def api_facturas_paginado():
@@ -826,10 +843,12 @@ def eliminar(idContacto):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@login_required
 @app.route('/api/tickets/obtener_numerador/<string:tipoNum>', methods=['GET'])
 def obtener_numero_ticket_route(tipoNum):
     return tickets.obtener_numero_ticket(tipoNum)
 
+@login_required
 @app.route('/api/facturas/siguiente_numero', methods=['GET'])
 def obtener_siguiente_numero_factura():
     try:
@@ -852,6 +871,7 @@ def obtener_siguiente_numero_factura():
         if conn:
             conn.close()
 
+@login_required
 @app.route('/api/proformas/siguiente_numero', methods=['GET'])
 def obtener_siguiente_numero_proforma():
     try:
@@ -890,10 +910,12 @@ def media_ventas_diaria():
 def media_gasto_por_ticket():
     return tickets.media_gasto_por_ticket()
 
+@login_required
 @app.route('/api/tickets/guardar', methods=['POST'])
 def guardar_ticket_route():
     return tickets.guardar_ticket()
 
+@login_required
 @app.route('/api/tickets/actualizar', methods=['PATCH', 'PUT', 'POST'])
 def actualizar_ticket():
     conn = None
@@ -1056,6 +1078,7 @@ def actualizar_ticket():
             except Exception:
                 pass
 
+@login_required
 @app.route('/tickets/consulta', methods=['GET'])
 def consulta_tickets():
     try:
@@ -1305,21 +1328,25 @@ def productos_paginado():
 # ===== Alias con prefijo /api para compatibilidad con el frontend =====
 # NOTA: /api/clientes/ventas_mes está ahora en dashboard_routes.py (no duplicar)
 
+@login_required
 @app.route('/api/productos', methods=['GET', 'POST'])
 def api_manejar_productos():
     """Maneja GET (listar) y POST (crear) productos - versión API"""
     return manejar_productos()
 
+@login_required
 @app.route('/api/productos/buscar', methods=['GET'])
 def api_filtrar_productos():
     return filtrar_productos()
 
 
+@login_required
 @app.route('/api/productos/paginado', methods=['GET'])
 def api_productos_paginado():
     return productos_paginado()
 
 
+@login_required
 @app.route('/api/productos/<int:id>', methods=['GET', 'PUT', 'DELETE'])
 def api_manejar_producto_por_id(id):
     """Maneja GET, PUT y DELETE para un producto - versión API"""
@@ -1333,6 +1360,7 @@ def api_manejar_producto_por_id(id):
 def obtener_ticket_con_detalles_route(id_ticket):
     return tickets.obtener_ticket_con_detalles(id_ticket)
 
+@login_required
 @app.route('/api/tickets/obtenerTicket/<int:id_ticket>', methods=['GET'])
 def consultar_ticket_detalles(id_ticket):
     return tickets.obtener_ticket_con_detalles(id_ticket)
@@ -1513,6 +1541,7 @@ def actualizar_ticket_legacy():
 def verificar_numero_ticket_route(numero):
     return tickets.verificar_numero_ticket(numero)
 
+@login_required
 @app.route('/api/facturas/actualizar', methods=['PATCH'])
 def actualizar_factura_endpoint():
     try:
@@ -1602,6 +1631,7 @@ def buscar_factura_abierta(idContacto, idFactura):
         if conn:
             conn.close()
 
+@login_required
 @app.route('/api/facturas', methods=['POST'])
 def crear_factura_endpoint():
     try:
@@ -1609,6 +1639,7 @@ def crear_factura_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@login_required
 @app.route('/api/factura/numero', methods=['GET'])
 def obtener_numero_factura_endpoint():
     try:
@@ -1624,10 +1655,12 @@ def obtener_numero_factura_endpoint():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@login_required
 @app.route('/api/proforma/abierta/<int:idContacto>', methods=['GET'])
 def buscar_proforma_abierta(idContacto):
     return obtener_proforma_abierta(idContacto)
 
+@login_required
 @app.route('/api/proforma/numero', methods=['GET'])
 def obtener_numero_proforma_endpoint():
     try:
@@ -1650,6 +1683,7 @@ def obtener_proforma(id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@login_required
 @app.route('/api/proforma', methods=['POST'])
 def crear_proforma():
     try:
@@ -1657,6 +1691,7 @@ def crear_proforma():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@login_required
 @app.route('/api/proformas/actualizar', methods=['PATCH'])
 def actualizar_proforma():
     try:
@@ -1829,10 +1864,12 @@ def actualizar_proforma():
         if 'conn' in locals():
             conn.close()
 
+@login_required
 @app.route('/api/proformas/consulta', methods=['GET'])
 def consultar_proformas():
     return proforma.consultar_proformas()
 
+@login_required
 @app.route('/api/proformas/consulta/<int:id>', methods=['GET'])
 def consultar_proforma_por_id(id):
     try:
@@ -3017,6 +3054,7 @@ def obtener_totales_mes():
         conn.close()
 
 @app.route('/estadisticas.html')
+@login_required
 def estadisticas_html():
     """Serve estadisticas.html with corrected paths"""
     import os
@@ -3034,6 +3072,7 @@ def estadisticas_html():
         return f"Error loading estadisticas.html: {str(e)}", 500
 
 # ================== API: Presupuestos ================== #
+@login_required
 @app.route('/api/presupuesto/numero', methods=['GET'])
 def obtener_numero_presupuesto_endpoint():
     try:
@@ -3107,6 +3146,27 @@ def enviar_email_presupuesto_endpoint(id):
         return jsonify({'error': str(e)}), 500
 
 # ================== RUTAS HTML FRONTEND ================== #
+
+# Ruta raíz e index - debe estar ANTES de la ruta genérica
+@app.route('/')
+def ruta_raiz():
+    """Redirige a index.html que manejará la lógica de sesión"""
+    # NO limpiar sesión aquí, dejar que index.html verifique
+    return redirect('/index.html')
+
+@app.route('/app')
+@app.route('/app.html')
+@login_required
+def servir_app():
+    """Sirve la aplicación principal (requiere autenticación)"""
+    try:
+        with open(os.path.join(BASE_DIR, 'frontend', '_app_private.html'), 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo aplicación: {e}", exc_info=True)
+        return Response(f'Error sirviendo aplicación: {e}', status=500)
+
 @app.route('/LOGIN.html')
 def servir_login():
     """Sirve la página de login del sistema multiempresa"""
@@ -3118,6 +3178,42 @@ def servir_login():
         logger.error(f"Error sirviendo LOGIN.html: {e}", exc_info=True)
         return Response(f'Error sirviendo LOGIN.html: {e}', status=500)
 
+@app.route('/<path:filename>.html')
+@login_required
+def servir_html_protegido(filename):
+    """
+    Ruta genérica para servir todos los archivos HTML del frontend con protección de login.
+    Excepciones: LOGIN.html (ya tiene su propia ruta sin protección)
+    """
+    try:
+        # Páginas especiales que requieren permisos de admin
+        if filename == 'ADMIN_PERMISOS':
+            if not (session.get('es_admin_empresa') or session.get('es_superadmin')):
+                return Response('Acceso denegado. Se requieren permisos de administrador.', status=403)
+        
+        # Construir ruta del archivo
+        archivo_path = os.path.join(BASE_DIR, 'frontend', f'{filename}.html')
+        
+        # Verificar que el archivo existe
+        if not os.path.exists(archivo_path):
+            logger.warning(f"Archivo HTML no encontrado: {filename}.html")
+            return Response(f'Página no encontrada: {filename}.html', status=404)
+        
+        # Leer y servir el archivo
+        with open(archivo_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Correcciones especiales para estadisticas.html
+        if filename == 'estadisticas':
+            content = content.replace('../static/', './static/')
+        
+        return Response(content, mimetype='text/html')
+        
+    except Exception as e:
+        logger.error(f"Error sirviendo {filename}.html: {e}", exc_info=True)
+        return Response(f'Error sirviendo {filename}.html: {e}', status=500)
+
+# Rutas específicas mantenidas por compatibilidad
 @app.route('/DASHBOARD.html')
 @login_required
 def servir_dashboard():
@@ -3143,25 +3239,6 @@ def servir_admin_permisos():
         logger.error(f"Error sirviendo ADMIN_PERMISOS.html: {e}", exc_info=True)
         return Response(f'Error sirviendo ADMIN_PERMISOS.html: {e}', status=500)
 
-@app.route('/')
-def ruta_raiz():
-    """Redirige la raíz al login si no hay sesión activa"""
-    if 'user_id' in session:
-        # Usuario logueado, redirigir a dashboard
-        try:
-            with open(os.path.join(BASE_DIR, 'frontend', 'DASHBOARD.html'), 'r', encoding='utf-8') as f:
-                content = f.read()
-            return Response(content, mimetype='text/html')
-        except Exception as e:
-            return Response(f'Error: {e}', status=500)
-    else:
-        # Sin sesión, mostrar login
-        try:
-            with open(os.path.join(BASE_DIR, 'frontend', 'LOGIN.html'), 'r', encoding='utf-8') as f:
-                content = f.read()
-            return Response(content, mimetype='text/html')
-        except Exception as e:
-            return Response(f'Error: {e}', status=500)
 
 if __name__ == '__main__':
     # Permite ejecutar la app directamente (modo desarrollo/standalone)

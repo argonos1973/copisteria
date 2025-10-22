@@ -26,7 +26,9 @@ SESSION_CONFIG = {
     'PERMANENT_SESSION_LIFETIME': 3600 * 8,  # 8 horas
     'SESSION_COOKIE_NAME': 'aleph70_session',
     'SESSION_COOKIE_HTTPONLY': True,
-    'SESSION_COOKIE_SAMESITE': 'Lax'
+    'SESSION_COOKIE_SAMESITE': 'Lax',
+    'SESSION_COOKIE_PATH': '/',  # Cookies disponibles en todas las rutas
+    'SESSION_COOKIE_SECURE': False  # True solo si usas HTTPS
 }
 
 # Configuración de seguridad
