@@ -1,0 +1,315 @@
+/* 
+ * Sistema de colores personalizables por empresa
+ * Estos colores se sobreescriben dinámicamente desde _app_private.html
+ */
+
+:root {
+    --color-primario: #2c3e50;
+    --color-secundario: #3498db;
+    --color-success: #27ae60;
+    --color-warning: #f39c12;
+    --color-danger: #e74c3c;
+    --color-info: #3498db;
+    --color-button: #3498db;
+    --color-button-hover: #2980b9;
+    --color-header-bg: #2c3e50;
+    --color-header-text: #ffffff;
+    --color-grid-header: #2c3e50;
+    --color-grid-hover: rgba(52, 152, 219, 0.1);
+}
+
+/* Botones */
+.btn-primary,
+.btn.btn-primary,
+button.btn-primary {
+    background-color: var(--color-button) !important;
+    border-color: var(--color-button) !important;
+}
+
+.btn-primary:hover,
+.btn.btn-primary:hover,
+button.btn-primary:hover {
+    background-color: var(--color-button-hover) !important;
+    border-color: var(--color-button-hover) !important;
+}
+
+.btn-success {
+    background-color: var(--color-success) !important;
+    border-color: var(--color-success) !important;
+}
+
+.btn-warning {
+    background-color: var(--color-warning) !important;
+    border-color: var(--color-warning) !important;
+}
+
+.btn-danger {
+    background-color: var(--color-danger) !important;
+    border-color: var(--color-danger) !important;
+}
+
+.btn-info {
+    background-color: var(--color-info) !important;
+    border-color: var(--color-info) !important;
+}
+
+/* Notificaciones */
+.notification.success,
+.notif-item.success {
+    background-color: rgba(var(--color-success-rgb), 0.15) \!important;
+    border-left-color: var(--color-success) !important;
+}
+
+.notification.warning,
+.notif-item.warning {
+    background-color: rgba(var(--color-warning-rgb), 0.15) \!important;
+    border-left-color: var(--color-warning) !important;
+}
+
+.notification.error,
+.notification.danger,
+.notif-item.error,
+.notif-item.danger {
+    background-color: rgba(var(--color-danger-rgb), 0.15) \!important;
+    border-left-color: var(--color-danger) !important;
+}
+
+.notification.info,
+.notif-item.info {
+    background-color: var(--color-info) !important;
+    border-left-color: var(--color-info) !important;
+}
+
+/* Tablas - Headers */
+table thead,
+.grid-header,
+.table-header {
+    background-color: var(--color-grid-header) !important;
+}
+
+table thead th {
+    background-color: var(--color-grid-header) !important;
+    color: white !important;
+}
+
+/* Tablas - Filas hover */
+table tbody tr:hover,
+.grid-row:hover {
+    background-color: var(--color-grid-hover) !important;
+}
+
+/* Links y elementos activos */
+a.active,
+.nav-link.active,
+.tab-active {
+    color: var(--color-secundario) !important;
+    border-bottom-color: var(--color-secundario) !important;
+}
+
+/* Badges y etiquetas */
+.badge-success,
+.status-success {
+    background-color: var(--color-success) !important;
+}
+
+.badge-warning,
+.status-warning {
+    background-color: var(--color-warning) !important;
+}
+
+.badge-danger,
+.status-danger {
+    background-color: var(--color-danger) !important;
+}
+
+.badge-info,
+.status-info {
+    background-color: var(--color-info) !important;
+}
+
+/* Iconos de estado */
+.icon-success,
+i.success {
+    color: var(--color-success) !important;
+}
+
+.icon-warning,
+i.warning {
+    color: var(--color-warning) !important;
+}
+
+.icon-danger,
+i.danger {
+    color: var(--color-danger) !important;
+}
+
+.icon-info,
+i.info {
+    color: var(--color-info) !important;
+}
+
+/* Bordes y separadores */
+.border-primary {
+    border-color: var(--color-primario) !important;
+}
+
+.border-secondary {
+    border-color: var(--color-secundario) !important;
+}
+
+/* Fondos */
+.bg-primary {
+    background-color: var(--color-primario) !important;
+}
+
+.bg-secondary {
+    background-color: var(--color-secundario) !important;
+}
+
+.bg-success {
+    background-color: var(--color-success) !important;
+}
+
+.bg-warning {
+    background-color: var(--color-warning) !important;
+}
+
+.bg-danger {
+    background-color: var(--color-danger) !important;
+}
+
+.bg-info {
+    background-color: var(--color-info) !important;
+}
+
+/* Textos */
+.text-primary {
+    color: var(--color-primario) !important;
+}
+
+.text-secondary {
+    color: var(--color-secundario) !important;
+}
+
+.text-success {
+    color: var(--color-success) !important;
+}
+
+.text-warning {
+    color: var(--color-warning) !important;
+}
+
+.text-danger {
+    color: var(--color-danger) !important;
+}
+
+.text-info {
+    color: var(--color-info) !important;
+}
+
+/* Inputs focus */
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: var(--color-secundario) !important;
+    box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25) !important;
+}
+
+/* Checkboxes y radios */
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+    background-color: var(--color-secundario) !important;
+    border-color: var(--color-secundario) !important;
+}
+
+/* Progress bars */
+.progress-bar {
+    background-color: var(--color-secundario) !important;
+}
+
+.progress-bar-success {
+    background-color: var(--color-success) !important;
+}
+
+.progress-bar-warning {
+    background-color: var(--color-warning) !important;
+}
+
+.progress-bar-danger {
+    background-color: var(--color-danger) !important;
+}
+
+/* Alertas */
+.alert-success {
+    background-color: var(--color-success) !important;
+    border-color: var(--color-success) !important;
+}
+
+.alert-warning {
+    background-color: var(--color-warning) !important;
+    border-color: var(--color-warning) !important;
+}
+
+.alert-danger {
+    background-color: var(--color-danger) !important;
+    border-color: var(--color-danger) !important;
+}
+
+.alert-info {
+    background-color: var(--color-info) !important;
+    border-color: var(--color-info) !important;
+}
+
+/* Spinners y loaders */
+.spinner,
+.loader {
+    border-top-color: var(--color-secundario) !important;
+}
+
+/* Paginación */
+.pagination .active {
+    background-color: var(--color-secundario) !important;
+    border-color: var(--color-secundario) !important;
+}
+
+.pagination a:hover {
+    background-color: var(--color-button-hover) !important;
+}
+
+/* Modales */
+.modal-header {
+    background-color: var(--color-primario) !important;
+    color: white !important;
+}
+
+/* Cards */
+.card-header {
+    background-color: var(--color-primario) !important;
+    color: white !important;
+}
+
+/* Tooltips */
+.tooltip {
+    background-color: var(--color-primario) !important;
+}
+
+/* Dropdown activo */
+.dropdown-item.active,
+.dropdown-item:active {
+    background-color: var(--color-secundario) !important;
+}
+
+/* Headers de sección */
+.page-header,
+.section-header {
+    background: linear-gradient(90deg, var(--color-header-bg) 0%, rgba(44,62,80,0.8) 30%, rgba(44,62,80,0.4) 60%, rgba(44,62,80,0.1) 80%, transparent 100%) !important;
+}
+
+.page-header h1,
+.page-header h2,
+.page-header h3,
+.section-header h1,
+.section-header h2,
+.section-header h3 {
+    color: var(--color-header-text) !important;
+}

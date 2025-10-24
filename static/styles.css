@@ -245,7 +245,7 @@
     overflow: hidden;
     font-size: var(--font-size-normal);
     color: var(--color-primario);
-    background-color: var(--color-fondo);
+    background-color: var(--color-app-bg, var(--color-fondo, #ffffff));
 }
   /* Encabezados */
   h1, h2, h3 {
@@ -363,7 +363,7 @@
   .form-group input,
   .form-group select {
     padding: 8px;
-    border: 1px solid #ddd;
+    border: 1px solid #dddddd;
     border-radius: 4px;
     font-size: 14px;
   }
@@ -378,8 +378,8 @@
   /* Botones genéricos */
   button {
     padding: 10px 20px;
-    color: #fff;
-    background: var(--color-primario);
+    color: var(--color-button-text, #ffffff) !important;
+    background: var(--color-button) !important;
     border: none;
     border-radius: 5px;
     cursor: pointer;
@@ -390,11 +390,20 @@
     margin-right: 10px; /* Separación entre botones */
   }
   button:hover {
-    background-color: var(--color-boton-hover);
+    background-color: var(--color-button-hover) !important;
     box-shadow: 0 4px 8px var(--color-shadow);
   }
   button:active {
-    background-color: var(--color-boton-active);
+    background-color: var(--color-button-hover) !important;
+  }
+  
+  .btn, .btn-primary, .btn-secondary {
+    color: var(--color-button-text, #ffffff) !important;
+    background: var(--color-button) !important;
+  }
+  
+  .btn:hover, .btn-primary:hover, .btn-secondary:hover {
+    background-color: var(--color-button-hover) !important;
   }
   
   /* Form actions (alineación) */
@@ -424,14 +433,14 @@
     border-collapse: separate;
     border-spacing: 0;
     margin-bottom: 20px;
-    border: 1px solid #ddd;
+    border: 1px solid #dddddd;
     border-radius: 8px;
     overflow: hidden;
     table-layout: fixed; /* Respeta anchos fijos */
   }
   thead {
-    background-color: var(--color-primario);
-    color: #fff;
+    background-color: var(--color-grid-header, var(--color-primario)) !important;
+    color: var(--color-header-text, #fff) !important;
     position: sticky;
     top: 0;
     z-index: 2;
@@ -445,7 +454,7 @@
   th, td {
     padding: 6px 8px;
     text-align: left;
-    border: 1px solid #ddd;
+    border: 1px solid #dddddd;
     font-size: 13px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -458,7 +467,7 @@
     background-color: #f9f9f9;
   }
   tbody tr:hover {
-     background-color: var(--color-hover);
+     background-color: var(--color-grid-hover, var(--color-hover, rgba(52,152,219,0.1))) !important;
      cursor: pointer;
    }
 
@@ -686,7 +695,7 @@
   .progress-bar-fill {
     height: 100%;
     width: 0%;
-    background-color: var(--color-primario);
+    background: linear-gradient(135deg, var(--color-primario) 0%, var(--color-secundario) 100%);
     transition: width 0.4s ease;
   }
   
@@ -1175,7 +1184,7 @@ td .fas {
   left: 0;
   right: 0;
   background-color: #fff;
-  border-top: 1px solid #ddd;
+  border-top: 1px solid #dddddd;
   padding: 10px;
   z-index: 1000;
 }
@@ -1317,7 +1326,7 @@ td .fas {
 .fixed-footer th,
 .fixed-footer td {
   padding: 12px 15px;
-  border: 0px solid #ddd;
+  border: 0px solid #dddddd;
   text-align: right;
   font-size: 14px;
   color: #333;
@@ -1383,7 +1392,7 @@ td .fas {
     border-top-left-radius: 8px;
     border-top-right-radius: 8px;
     border-bottom: 1px solid var(--color-borde);
-    background-color: var(--color-primario);
+    background: linear-gradient(135deg, var(--color-primario) 0%, var(--color-secundario) 100%);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1474,7 +1483,7 @@ td .fas {
 .boton-centro button {
     width: 200px;
     padding: 12px 20px;
-    background-color: var(--color-primario) !important;
+    background-color: var(--color-button) !important;
     color: var(--color-texto) !important;
     font-size: 18px;
     border: none;
@@ -1486,12 +1495,12 @@ td .fas {
 }
 
 .boton-centro button:hover {
-    background-color: var(--color-boton-hover) !important;
+    background-color: var(--color-button-hover) !important;
     box-shadow: 0 4px 8px var(--color-shadow);
 }
 
 .boton-centro button:active {
-    background-color: var(--color-boton-active) !important;
+    background-color: var(--color-button-hover) !important;
 }
 
 /* -------------------------------------------------------------------------
@@ -1509,7 +1518,7 @@ td .fas {
   left: 0;
   right: 0;
   background-color: white;
-  border: 2px solid #ddd;
+  border: 2px solid #dddddd;
   border-radius: 4px;
   max-height: 200px;
   overflow-y: auto;
@@ -1852,7 +1861,7 @@ td .fas {
 
 /* Estilo para el hover en los detalles */
 #tabla-detalle-proforma tbody tr:hover {
-    background-color: rgba(52, 73, 94, 0.1) !important;
+    background-color: var(--color-grid-hover, rgba(52, 73, 94, 0.1)) !important;
     cursor: pointer;
 }
 
@@ -1884,7 +1893,7 @@ td .fas {
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background-color: var(--color-primario);
+    background: linear-gradient(135deg, var(--color-primario) 0%, var(--color-secundario) 100%);
     color: #ffffff;
     border: none;
     display: inline-flex;
@@ -2084,7 +2093,7 @@ td .fas {
 
 /* Estilo para el hover en los detalles (aplicado a todas las tablas) */
 table:not(.fixed-footer table) tbody tr:hover {
-    background-color: rgba(52, 73, 94, 0.1) !important;
+    background-color: var(--color-grid-hover, rgba(52, 73, 94, 0.1)) !important;
     cursor: pointer;
 }
 
@@ -2315,7 +2324,7 @@ table:not(.fixed-footer table) tbody tr:hover {
 #tabla-detalle-proforma thead th {
     position: sticky;
     top: 0;
-    background-color: var(--color-primario);
+    background-color: var(--color-grid-header, var(--color-primario)) !important;
     padding: 10px;
     text-align: left;
     font-weight: bold;
@@ -2330,7 +2339,7 @@ table:not(.fixed-footer table) tbody tr:hover {
 
 #tabla-detalle-ticket tbody tr:hover,
 #tabla-detalle-proforma tbody tr:hover {
-    background-color: rgba(52, 73, 94, 0.1) !important;
+    background-color: var(--color-grid-hover, rgba(52, 73, 94, 0.1)) !important;
     cursor: pointer;
 }
 
@@ -2510,5 +2519,53 @@ thead .columna-fija {
     display: inline-block;
     margin: 0;
     padding: 0;
-    height: 1em;
+
+/* Estilos para campos deshabilitados */
+input:disabled,
+select:disabled,
+textarea:disabled {
+    background-color: var(--color-disabled-bg, #f0f0f0) \!important;
+    color: var(--color-disabled-text, #999999) \!important;
+    border-color: var(--color-input-border, #dddddd) \!important;
+    cursor: not-allowed;
+    opacity: 0.7;
 }
+
+
+/* Estilos para notificaciones */
+.notification {
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    border-left: 4px solid;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notification.success {
+    background-color: rgba(39, 174, 96, 0.15);
+    border-left-color: var(--color-success, #27ae60);
+    color: var(--color-success, #27ae60);
+}
+
+.notification.warning {
+    background-color: rgba(243, 156, 18, 0.15);
+    border-left-color: var(--color-warning, #f39c12);
+    color: var(--color-warning, #f39c12);
+}
+
+.notification.danger,
+.notification.error {
+    background-color: rgba(231, 76, 60, 0.15);
+    border-left-color: var(--color-danger, #e74c3c);
+    color: var(--color-danger, #e74c3c);
+}
+
+.notification.info {
+    background-color: rgba(52, 152, 219, 0.15);
+    border-left-color: var(--color-info, #3498db);
+    color: var(--color-info, #3498db);
+}
+
