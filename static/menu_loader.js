@@ -5,6 +5,21 @@ async function verificarSesionYCargarMenu() {
     try {
         console.log('[MENU] Iniciando carga de menú según permisos...');
         
+        // Primero obtener datos de sesión
+        const sessionResponse = await fetch('/api/auth/session');
+        if (!sessionResponse.ok) {
+            console.error('[MENU] Sesión no válida');
+            window.location.href = '/LOGIN.html';
+            return;
+        }
+        
+        const sessionData = await sessionResponse.json();
+        console.log('[MENU] Datos de sesión:', sessionData);
+        
+        // Actualizar info de usuario
+        actualizarInfoUsuario(sessionData);
+        
+        // Luego cargar el menú
         const menuResponse = await fetch('/api/auth/menu');
         
         if (!menuResponse.ok) {
@@ -41,6 +56,51 @@ async function verificarSesionYCargarMenu() {
     }
 }
 
+function actualizarInfoUsuario(sessionData) {
+    console.log('[MENU] Actualizando info de usuario:', sessionData);
+    
+    // Actualizar logo de la empresa
+    const logoEmpresa = document.getElementById('logo-empresa');
+    if (logoEmpresa && sessionData.logo) {
+        logoEmpresa.src = sessionData.logo;
+        logoEmpresa.style.display = 'block';
+        console.log('[MENU] Logo actualizado a:', sessionData.logo);
+    }
+    
+    // Actualizar info en menú inferior
+    const bottomUsuario = document.getElementById('bottom-usuario');
+    const bottomEmpresa = document.getElementById('bottom-empresa');
+    const bottomTime = document.getElementById('bottom-time');
+    
+    if (bottomUsuario) {
+        bottomUsuario.textContent = sessionData.usuario || 'Usuario';
+        console.log('[MENU] Usuario actualizado:', sessionData.usuario);
+    }
+    if (bottomEmpresa) {
+        bottomEmpresa.textContent = sessionData.empresa || 'Empresa';
+        console.log('[MENU] Empresa actualizada:', sessionData.empresa);
+    }
+    
+    // Iniciar reloj
+    if (bottomTime) {
+        actualizarReloj();
+        setInterval(actualizarReloj, 1000);
+    }
+}
+
+function actualizarReloj() {
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const timeString = `${hours}:${minutes}:${seconds}`;
+    
+    const bottomTime = document.getElementById('bottom-time');
+    if (bottomTime) {
+        bottomTime.textContent = timeString;
+    }
+}
+
 function renderizarMenu(menuItems) {
     const menuList = document.querySelector('.menu-list');
     if (!menuList) {
@@ -50,18 +110,31 @@ function renderizarMenu(menuItems) {
     
     menuList.innerHTML = '';
     
+    // Siempre añadir "Inicio" primero
+    const inicioItem = crearMenuItem('Inicio', 'fas fa-home', '/estadisticas.html', null);
+    menuList.appendChild(inicioItem);
+    console.log('[MENU] Item "Inicio" añadido');
+    
     // Renderizar módulos según permisos
     menuItems.forEach(modulo => {
+        console.log('[MENU] Módulo:', modulo.nombre, '- estructura:', modulo);
+        console.log('[MENU] Campos:', Object.keys(modulo).join(', '));
         const menuItem = crearMenuItem(
             modulo.nombre,
             modulo.icono || 'fas fa-folder',
             modulo.ruta,
-            modulo.submodulos
+            modulo.submenu || modulo.submodulos  // ← API usa 'submenu', no 'submodulos'
         );
         menuList.appendChild(menuItem);
     });
     
     console.log('[MENU] Menú renderizado correctamente');
+    
+    // Cargar colores de la empresa DESPUÉS de renderizar el menú
+    if (window.cargarColoresEmpresa) {
+        console.log('[MENU] Cargando colores de empresa...');
+        window.cargarColoresEmpresa();
+    }
     
     // Forzar reinicialización de eventos del menú después de un pequeño delay
     setTimeout(() => {
@@ -90,7 +163,8 @@ function crearMenuItem(nombre, icono, ruta, submodulos) {
 
         submodulos.forEach(sub => {
             // Si el submódulo tiene sus propios submódulos (anidados)
-            if (sub.submodulos && sub.submodulos.length > 0) {
+            const subSubmenuArray = sub.submenu || sub.submodulos || [];
+            if (subSubmenuArray && subSubmenuArray.length > 0) {
                 const subBlock = document.createElement('div');
                 subBlock.className = 'submenu-block';
                 
@@ -104,7 +178,7 @@ function crearMenuItem(nombre, icono, ruta, submodulos) {
                 const subSubmenu = document.createElement('div');
                 subSubmenu.className = 'submenu';
                 
-                sub.submodulos.forEach(subSub => {
+                subSubmenuArray.forEach(subSub => {
                     const subSubLink = document.createElement('a');
                     subSubLink.href = '#';
                     subSubLink.className = 'submenu-item submenu-nested';

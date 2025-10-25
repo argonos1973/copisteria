@@ -1,11 +1,23 @@
 function inicializarEventosMenu() {
+    // Eliminar cualquier estado guardado de menús activos
+    sessionStorage.removeItem('activeMenus');
+    
     const menuItems = document.querySelectorAll('.menu-item');
     const contentFrame = document.getElementById('content-frame');
+    
+    if (menuItems.length === 0) {
+        console.log('[MENU] No hay items de menú para configurar eventos');
+        return;
+    }
+    
+    console.log('[MENU] Configurando eventos para', menuItems.length, 'items');
+    
     let activeMenus = [];
     
     // --- SUBMENÚS ANIDADOS ---
     // Gestionar el despliegue de los submenu-block (Tickets, Proformas, etc. dentro de Facturas Emitidas)
     const submenuBlocks = document.querySelectorAll('.submenu-block > .submenu-item');
+    console.log('[MENU] Submenu blocks encontrados:', submenuBlocks.length);
     submenuBlocks.forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
@@ -91,22 +103,27 @@ function inicializarEventosMenu() {
     
     menuItems.forEach(item => {
         const link = item.querySelector('.menu-link');
+        const submenu = item.querySelector('.submenu');
         
-        // No restaurar estado activo
-        // if (activeMenus.includes(link.textContent)) {
-        //     item.classList.add('active');
-        // }
-        
-        // Cargar página si el enlace tiene un target
-        if (link.dataset.target && link.dataset.target !== '#') {
-            link.addEventListener('click', async function(e) {
-                e.preventDefault();
-                await loadPage(link.dataset.target);
-            });
-        }
-        
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', async (e) => {
             e.preventDefault();
+            
+            // Si NO tiene submenú Y tiene una ruta → Cargar la página
+            if (!submenu && link.dataset.target && link.dataset.target !== '#') {
+                console.log('[MENU] Item sin submenú, cargando página:', link.dataset.target);
+                await loadPage(link.dataset.target);
+                // Cerrar otros menús y activar este
+                closeOtherMenus(item);
+                item.classList.add('active');
+                if (!activeMenus.includes(link.textContent)) {
+                    activeMenus.push(link.textContent);
+                    sessionStorage.setItem('activeMenus', JSON.stringify(activeMenus));
+                }
+                return;
+            }
+            
+            // Si tiene submenú → Solo toggle expand/collapse
+            console.log('[MENU] Item con submenú, toggle expand/collapse');
             
             // Cerrar otros menús
             closeOtherMenus(item);
