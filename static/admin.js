@@ -8,6 +8,193 @@ function hexToRgba(hex, alpha) {
 }
 
 // Variables globales
+
+// ============= SISTEMA DE PREVIEW EN TIEMPO REAL =============
+
+function hexToRgb(hex) {
+    if (!hex) return '0, 0, 0';
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `${r}, ${g}, ${b}`;
+}
+
+function actualizarPreviewEnTiempoReal(colores) {
+    const root = document.documentElement;
+    
+    // COLORES PRINCIPALES
+    if (colores.color_app_bg) {
+        root.style.setProperty('--preview-color-app-bg', colores.color_app_bg);
+    }
+    if (colores.color_primario) {
+        root.style.setProperty('--preview-color-primario', colores.color_primario);
+        root.style.setProperty('--preview-color-primario-rgb', hexToRgb(colores.color_primario));
+    }
+    if (colores.color_secundario) {
+        root.style.setProperty('--preview-color-secundario', colores.color_secundario);
+        root.style.setProperty('--preview-color-secundario-rgb', hexToRgb(colores.color_secundario));
+    }
+    
+    // COLORES DE ESTADO
+    if (colores.color_success) {
+        root.style.setProperty('--preview-color-success', colores.color_success);
+        root.style.setProperty('--preview-color-success-rgb', hexToRgb(colores.color_success));
+    }
+    if (colores.color_warning) {
+        root.style.setProperty('--preview-color-warning', colores.color_warning);
+        root.style.setProperty('--preview-color-warning-rgb', hexToRgb(colores.color_warning));
+    }
+    if (colores.color_danger) {
+        root.style.setProperty('--preview-color-danger', colores.color_danger);
+        root.style.setProperty('--preview-color-danger-rgb', hexToRgb(colores.color_danger));
+    }
+    if (colores.color_info) {
+        root.style.setProperty('--preview-color-info', colores.color_info);
+        root.style.setProperty('--preview-color-info-rgb', hexToRgb(colores.color_info));
+    }
+    
+    // COLORES DE BOTONES
+    if (colores.color_button) {
+        root.style.setProperty('--preview-color-button', colores.color_button);
+    }
+    if (colores.color_button_hover) {
+        root.style.setProperty('--preview-color-button-hover', colores.color_button_hover);
+    }
+    if (colores.color_button_text) {
+        root.style.setProperty('--preview-color-button-text', colores.color_button_text);
+    }
+    
+    // COLORES DE HEADER
+    if (colores.color_header_bg) {
+        root.style.setProperty('--preview-color-header-bg', colores.color_header_bg);
+    }
+    if (colores.color_header_text) {
+        root.style.setProperty('--preview-color-header-text', colores.color_header_text);
+    }
+    
+    // COLORES DE TABLA
+    if (colores.color_grid_header) {
+        root.style.setProperty('--preview-color-grid-header', colores.color_grid_header);
+    }
+    
+    // COLORES DE INPUTS
+    if (colores.color_input_bg) {
+        root.style.setProperty('--preview-color-input-bg', colores.color_input_bg);
+    }
+    if (colores.color_input_text) {
+        root.style.setProperty('--preview-color-input-text', colores.color_input_text);
+    }
+    if (colores.color_input_border) {
+        root.style.setProperty('--preview-color-input-border', colores.color_input_border);
+    }
+    
+    // COLORES DE SELECTS
+    if (colores.color_select_bg) {
+        root.style.setProperty('--preview-color-select-bg', colores.color_select_bg);
+    }
+    if (colores.color_select_text) {
+        root.style.setProperty('--preview-color-select-text', colores.color_select_text);
+    }
+    if (colores.color_select_border) {
+        root.style.setProperty('--preview-color-select-border', colores.color_select_border);
+    }
+    
+    // COLORES DE DISABLED
+    if (colores.color_disabled_bg) {
+        root.style.setProperty('--preview-color-disabled-bg', colores.color_disabled_bg);
+    }
+    if (colores.color_disabled_text) {
+        root.style.setProperty('--preview-color-disabled-text', colores.color_disabled_text);
+    }
+    
+    // COLORES DE SUBMENU
+    if (colores.color_submenu_bg) {
+        root.style.setProperty('--preview-color-submenu-bg', colores.color_submenu_bg);
+    }
+    if (colores.color_submenu_text) {
+        root.style.setProperty('--preview-color-submenu-text', colores.color_submenu_text);
+    }
+    if (colores.color_submenu_hover) {
+        root.style.setProperty('--preview-color-submenu-hover', colores.color_submenu_hover);
+    }
+    
+    // COLORES DE GRIDS E ICONOS
+    if (colores.color_grid_bg) {
+        root.style.setProperty('--preview-color-grid-bg', colores.color_grid_bg);
+    }
+    if (colores.color_grid_text) {
+        root.style.setProperty('--preview-color-grid-text', colores.color_grid_text);
+    }
+    if (colores.color_icon) {
+        root.style.setProperty('--preview-color-icon', colores.color_icon);
+        root.style.setProperty('--preview-color-icon-rgb', hexToRgb(colores.color_icon));
+    }
+}
+
+function renderizarListaPlantillasPreview(prefijo = '') {
+    const contenedor = document.getElementById('plantillas-list-preview');
+    if (!contenedor) return;
+    
+    let html = '';
+    Object.keys(plantillasColores).forEach(key => {
+        const plantilla = plantillasColores[key];
+        const isPersonalizada = key.startsWith('personalizada_');
+        html += `<div class="plantilla-card" data-template="${key}" onclick="aplicarPlantillaConPreview('${key}', '${prefijo}')">
+            <div style="font-weight: 600; font-size: 11px; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
+                <span>${plantilla.nombre}</span>
+                ${isPersonalizada ? '<i class="fas fa-star" style="color: #f39c12; font-size: 10px;"></i>' : ''}
+            </div>
+            <div style="display: flex; gap: 3px; margin-bottom: 4px;">
+                <div style="width: 20px; height: 20px; border-radius: 2px; background: ${plantilla.color_primario}; border: 1px solid rgba(0,0,0,0.1);"></div>
+                <div style="width: 20px; height: 20px; border-radius: 2px; background: ${plantilla.color_secundario}; border: 1px solid rgba(0,0,0,0.1);"></div>
+                <div style="width: 20px; height: 20px; border-radius: 2px; background: ${plantilla.color_success || '#27ae60'}; border: 1px solid rgba(0,0,0,0.1);"></div>
+                <div style="width: 20px; height: 20px; border-radius: 2px; background: ${plantilla.color_warning || '#f39c12'}; border: 1px solid rgba(0,0,0,0.1);"></div>
+            </div>
+            <div style="font-size: 9px; color: #666; line-height: 1.3;">${plantilla.descripcion || ''}</div>
+        </div>`;
+    });
+    contenedor.innerHTML = html;
+}
+
+function aplicarPlantillaConPreview(nombrePlantilla, prefijo = '') {
+    const plantilla = plantillasColores[nombrePlantilla];
+    if (!plantilla) return;
+    
+    document.querySelectorAll('.plantilla-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.template === nombrePlantilla);
+    });
+    
+    // Actualizar CSS Variables (preview nuevo)
+    actualizarPreviewEnTiempoReal(plantilla);
+    
+    // Actualizar inputs de color
+    Object.keys(plantilla).forEach(campo => {
+        if (campo.startsWith('color_')) {
+            const input = document.getElementById(prefijo + campo);
+            if (input) input.value = plantilla[campo];
+        }
+    });
+    
+    // CRÍTICO: También actualizar el preview viejo (IDs directos)
+    setTimeout(() => {
+        actualizarVistaPrevia();
+    }, 50);
+    
+    plantillaBaseActual = nombrePlantilla;
+    coloresOriginalesPlantilla = { ...plantilla };
+}
+
+function inicializarPreviewEnTiempoReal(prefijo = '') {
+    renderizarListaPlantillasPreview(prefijo);
+    
+    // Los inputs ya tienen oninput="actualizarVistaPrevia()" en el HTML
+    // No añadimos event listeners duplicados para evitar loops infinitos
+    
+    const selectPlantilla = document.getElementById(prefijo + 'plantilla_base');
+    if (selectPlantilla && selectPlantilla.value) {
+        setTimeout(() => aplicarPlantillaConPreview(selectPlantilla.value, prefijo), 100);
+    }
+}
 let usuarios = [];
 let empresas = [];
 let modulos = [];
@@ -1007,239 +1194,339 @@ async function editarEmpresa(empresaId) {
                                 <i class="fas fa-swatchbook"></i> Plantillas de Colores
                             </h4>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-                                <button type="button" data-plantilla="clasico" onclick="aplicarPlantilla('clasico'); marcarPlantillaActiva('clasico');" style="padding: 15px; border: 2px solid #1976d2; border-radius: 8px; background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%); color: white; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="clasico" onclick="aplicarPlantillaConPreview('clasico', 'edit_'); marcarPlantillaActiva('clasico');" style="padding: 15px; border: 2px solid #1976d2; border-radius: 8px; background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%); color: white; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fab fa-google"></i> Material Design<br><small style="opacity: 0.8;">Limpio y profesional</small>
                                 </button>
-                                <button type="button" data-plantilla="oscuro" onclick="aplicarPlantilla('oscuro'); marcarPlantillaActiva('oscuro');" style="padding: 15px; border: 2px solid #282a36; border-radius: 8px; background: linear-gradient(135deg, #282a36 0%, #44475a 100%); color: #f8f8f2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="oscuro" onclick="aplicarPlantillaConPreview('oscuro', 'edit_'); marcarPlantillaActiva('oscuro');" style="padding: 15px; border: 2px solid #282a36; border-radius: 8px; background: linear-gradient(135deg, #282a36 0%, #44475a 100%); color: #f8f8f2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fas fa-moon"></i> Dracula<br><small style="opacity: 0.8;">Oscuro elegante</small>
                                 </button>
-                                <button type="button" data-plantilla="verde" onclick="aplicarPlantilla('verde'); marcarPlantillaActiva('verde');" style="padding: 15px; border: 2px solid #2e3440; border-radius: 8px; background: linear-gradient(135deg, #2e3440 0%, #3b4252 100%); color: #eceff4; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="verde" onclick="aplicarPlantillaConPreview('verde', 'edit_'); marcarPlantillaActiva('verde');" style="padding: 15px; border: 2px solid #2e3440; border-radius: 8px; background: linear-gradient(135deg, #2e3440 0%, #3b4252 100%); color: #eceff4; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fas fa-mountain"></i> Nord<br><small style="opacity: 0.8;">Minimalista escandinavo</small>
                                 </button>
-                                <button type="button" data-plantilla="morado" onclick="aplicarPlantilla('morado'); marcarPlantillaActiva('morado');" style="padding: 15px; border: 2px solid #282c34; border-radius: 8px; background: linear-gradient(135deg, #282c34 0%, #3e4451 100%); color: #abb2bf; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="morado" onclick="aplicarPlantillaConPreview('morado', 'edit_'); marcarPlantillaActiva('morado');" style="padding: 15px; border: 2px solid #282c34; border-radius: 8px; background: linear-gradient(135deg, #282c34 0%, #3e4451 100%); color: #abb2bf; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fas fa-atom"></i> One Dark<br><small style="opacity: 0.8;">Atom Editor</small>
                                 </button>
-                                <button type="button" data-plantilla="naranja" onclick="aplicarPlantilla('naranja'); marcarPlantillaActiva('naranja');" style="padding: 15px; border: 2px solid #268bd2; border-radius: 8px; background: linear-gradient(135deg, #fdf6e3 0%, #eee8d5 100%); color: #268bd2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="naranja" onclick="aplicarPlantillaConPreview('naranja', 'edit_'); marcarPlantillaActiva('naranja');" style="padding: 15px; border: 2px solid #268bd2; border-radius: 8px; background: linear-gradient(135deg, #fdf6e3 0%, #eee8d5 100%); color: #268bd2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fas fa-sun"></i> Solarized Light<br><small style="opacity: 0.8;">Suave para ojos</small>
                                 </button>
-                                <button type="button" data-plantilla="turquesa" onclick="aplicarPlantilla('turquesa'); marcarPlantillaActiva('turquesa');" style="padding: 15px; border: 2px solid #0d1117; border-radius: 8px; background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); color: #c9d1d9; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="turquesa" onclick="aplicarPlantillaConPreview('turquesa', 'edit_'); marcarPlantillaActiva('turquesa');" style="padding: 15px; border: 2px solid #0d1117; border-radius: 8px; background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); color: #c9d1d9; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fab fa-github"></i> GitHub Dark<br><small style="opacity: 0.8;">Tema de GitHub</small>
                                 </button>
-                                <button type="button" data-plantilla="gris" onclick="aplicarPlantilla('gris'); marcarPlantillaActiva('gris');" style="padding: 15px; border: 2px solid #272822; border-radius: 8px; background: linear-gradient(135deg, #272822 0%, #3e3d32 100%); color: #f8f8f2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="gris" onclick="aplicarPlantillaConPreview('gris', 'edit_'); marcarPlantillaActiva('gris');" style="padding: 15px; border: 2px solid #272822; border-radius: 8px; background: linear-gradient(135deg, #272822 0%, #3e3d32 100%); color: #f8f8f2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fas fa-code"></i> Monokai<br><small style="opacity: 0.8;">Sublime Text</small>
                                 </button>
-                                <button type="button" data-plantilla="rojo" onclick="aplicarPlantilla('rojo'); marcarPlantillaActiva('rojo');" style="padding: 15px; border: 2px solid #282828; border-radius: 8px; background: linear-gradient(135deg, #282828 0%, #3c3836 100%); color: #ebdbb2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="rojo" onclick="aplicarPlantillaConPreview('rojo', 'edit_'); marcarPlantillaActiva('rojo');" style="padding: 15px; border: 2px solid #282828; border-radius: 8px; background: linear-gradient(135deg, #282828 0%, #3c3836 100%); color: #ebdbb2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fas fa-tv"></i> Gruvbox<br><small style="opacity: 0.8;">Retro cálido</small>
                                 </button>
-                                <button type="button" data-plantilla="glassmorphism" onclick="aplicarPlantilla('glassmorphism'); marcarPlantillaActiva('glassmorphism');" style="padding: 15px; border: 2px solid #23a2f6; border-radius: 8px; background: linear-gradient(135deg, #080710 0%, #1845ad 50%, #ff512f 100%); color: #ffffff; cursor: pointer; font-weight: bold; transition: transform 0.2s; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="glassmorphism" onclick="aplicarPlantillaConPreview('glassmorphism', 'edit_'); marcarPlantillaActiva('glassmorphism');" style="padding: 15px; border: 2px solid #23a2f6; border-radius: 8px; background: linear-gradient(135deg, #080710 0%, #1845ad 50%, #ff512f 100%); color: #ffffff; cursor: pointer; font-weight: bold; transition: transform 0.2s; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fas fa-glass-whiskey"></i> Glassmorphism<br><small style="opacity: 0.8;">Efectos de vidrio</small>
                                 </button>
-                                <button type="button" data-plantilla="indigo" onclick="aplicarPlantilla('indigo'); marcarPlantillaActiva('indigo');" style="padding: 15px; border: 2px solid #6366f1; border-radius: 8px; background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%); color: #ffffff; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="indigo" onclick="aplicarPlantillaConPreview('indigo', 'edit_'); marcarPlantillaActiva('indigo');" style="padding: 15px; border: 2px solid #6366f1; border-radius: 8px; background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%); color: #ffffff; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fas fa-paint-brush"></i> Moderno Índigo<br><small style="opacity: 0.8;">Limpio y profesional</small>
                                 </button>
-                                <button type="button" data-plantilla="classic" onclick="aplicarPlantilla('classic'); marcarPlantillaActiva('classic');" style="padding: 15px; border: 2px solid #34495e; border-radius: 8px; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: #ecf0f1; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="classic" onclick="aplicarPlantillaConPreview('classic', 'edit_'); marcarPlantillaActiva('classic');" style="padding: 15px; border: 2px solid #34495e; border-radius: 8px; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: #ecf0f1; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fas fa-desktop"></i> Classic Panel<br><small style="opacity: 0.8;">Panel oscuro profesional</small>
                                 </button>
-                                <button type="button" data-plantilla="aleph70" onclick="aplicarPlantilla('aleph70'); marcarPlantillaActiva('aleph70');" style="padding: 15px; border: 2px solid #2d3339; border-radius: 8px; background: linear-gradient(135deg, #2d3339 0%, #34495e 100%); color: #ffffff; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                <button type="button" data-plantilla="aleph70" onclick="aplicarPlantillaConPreview('aleph70', 'edit_'); marcarPlantillaActiva('aleph70');" style="padding: 15px; border: 2px solid #2d3339; border-radius: 8px; background: linear-gradient(135deg, #2d3339 0%, #34495e 100%); color: #ffffff; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                     <i class="fas fa-star"></i> Aleph70<br><small style="opacity: 0.8;">Tema original del sistema</small>
                                 </button>
                             </div>
                         
                         
-                        <\!-- Vista Previa Completa -->
-                        <div id="color-preview" style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin: 12px 0; border: 2px solid #3498db;">
-                            <h4 style="margin: 0 0 4px 0; color: #2c3e50; text-align: center; font-size: 9px; font-weight: 600;">
-                                <i class="fas fa-eye"></i> Vista Previa
-                            </h4>
-                            
-                            <div style="display: grid; gap: 10px;">
-                                <\!-- Fila 1: Icono con color primario (compacto) -->
-
-                                <\!-- Fila 1.1: Mapa de Colores (24) -->
-                                <div>
-                                    <label style="font-size: 8px; color: #2c3e50; display: block; margin-bottom: 3px;"><i class="fas fa-sitemap"></i> Mapa de colores</label>
-                                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
-
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Colores principales</div>
-                                        <\!-- principales: Fondo, Primario, Secundario -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Botones</div>
-                                        <\!-- botones: Btn, Hover, Texto -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Encabezados</div>
-                                        <\!-- encabezados: Hdr, Hdr Txt -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Tablas y Estados</div>
-                                        <\!-- grid header + success/warn/danger/info -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Inputs</div>
-                                        <\!-- input: fondo/texto/borde -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Selects</div>
-                                        <\!-- select: fondo/texto/borde -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Disabled</div>
-                                        <\!-- disabled: fondo/texto -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Submenús</div>
-                                        <\!-- submenu: fondo/texto/hover -->
-                                        <div id="sw-app-bg" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Fondo App</div>
-                                        <div id="sw-primario" style="height: 20px; border-radius: 3px; font-size: 7px; color:#fff; display:flex; align-items:center; justify-content:center;">Primario</div>
-                                        <div id="sw-secundario" style="height: 20px; border-radius: 3px; font-size: 7px; color:#fff; display:flex; align-items:center; justify-content:center;">Secundario</div>
-                                        <div id="sw-button" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Btn</div>
-                                        <div id="sw-button-hover" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Btn Hov</div>
-                                        <div id="sw-button-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Btn Txt</div>
-                                        <div id="sw-header-bg" style="height: 20px; border-radius: 3px; font-size: 7px; color:#fff; display:flex; align-items:center; justify-content:center;">Hdr</div>
-                                        <div id="sw-header-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Hdr Txt</div>
-
-                                        <div id="sw-grid-header" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Grid Hdr</div>
-                                        <div id="sw-success" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">OK</div>
-                                        <div id="sw-warning" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Warn</div>
-                                        <div id="sw-danger" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Error</div>
-                                        <div id="sw-info" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Info</div>
-                                        <div id="sw-input-bg" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Inp</div>
-                                        <div id="sw-input-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Inp Txt</div>
-                                        <div id="sw-input-border" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center; border:1px solid #ddd;">Inp Bor</div>
-
-                                        <div id="sw-select-bg" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Sel</div>
-                                        <div id="sw-select-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Sel Txt</div>
-                                        <div id="sw-select-border" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center; border:1px solid #ddd;">Sel Bor</div>
-                                        <div id="sw-disabled-bg" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Dis</div>
-                                        <div id="sw-disabled-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Dis Txt</div>
-                                        <div id="sw-submenu-bg" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Sub</div>
-                                        <div id="sw-submenu-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Sub Txt</div>
-                                        <div id="sw-submenu-hover" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Sub Hov</div>
-                                    </div>
-                                </div>
-
-                                <div style="display: flex; justify-content: flex-start; margin-bottom: 10px;">
-                                    <div id="preview-menu" style="padding: 12px 12px; border-radius: 6px; font-size: 9px; text-align: center; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 72px;"><i class="fas fa-palette" style="font-size: 14px;"></i> Icono</div>
-                                </div>
+                        <!-- Vista Previa en Tiempo Real -->
+                        <div id="preview-main-container" style="max-height: 600px; overflow-y: auto; padding: 20px; background: var(--preview-color-app-bg, #f8f9fa); border-radius: 6px; transition: background 0.3s;">
+                            <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 14px; text-align: center; font-weight: 600;">
+                                <i class="fas fa-eye"></i> Vista Previa en Tiempo Real
+                            </h3>
                                 
-                                <\!-- Fila 2: Inputs y Selectores -->
-                                <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                                <div id="live-preview-container" style="display: grid; gap: 12px;">
+                                    
+                                    <!-- Encabezado / Header -->
                                     <div>
-                                        <label style="font-size: 7px; color: #2c3e50; display: block; margin-bottom: 2px;">Input</label>
-                                        <input type="text" value="Texto" style="width: 100%; padding: 8px 2px; border: 1px solid #ddd; border-radius: 2px; font-size: 8px; text-align: center;">
-                                    </div>
-                                    <div>
-                                        <label style="font-size: 7px; color: #2c3e50; display: block; margin-bottom: 2px;">Select</label>
-                                        <select style="width: 100%; padding: 8px 2px; border: 1px solid #ddd; border-radius: 2px; font-size: 8px; text-align: center;"><option>Opt</option></select>
-                                    </div>
-                                    <div>
-                                        <label style="font-size: 7px; color: #2c3e50; display: block; margin-bottom: 2px;">Input 2</label>
-                                        <input type="text" value="Texto" style="width: 100%; padding: 8px 2px; border: 1px solid #ddd; border-radius: 2px; font-size: 8px; text-align: center;">
-                                    </div>
-                                    <div>
-                                        <label style="font-size: 7px; color: #2c3e50; display: block; margin-bottom: 2px;">Select 2</label>
-                                        <select style="width: 100%; padding: 8px 2px; border: 1px solid #ddd; border-radius: 2px; font-size: 8px; text-align: center;"><option>Opt</option></select>
-                                    </div>
-                                </div>
-                                
-                                <\!-- Fila 3: Campos Disabled -->
-                                <div>
-                                    <label style="font-size: 8px; color: #2c3e50; display: block; margin-bottom: 2px;"><i class="fas fa-ban"></i> Disabled</label>
-                                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
-
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Colores principales</div>
-                                        <\!-- principales: Fondo, Primario, Secundario -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Botones</div>
-                                        <\!-- botones: Btn, Hover, Texto -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Encabezados</div>
-                                        <\!-- encabezados: Hdr, Hdr Txt -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Tablas y Estados</div>
-                                        <\!-- grid header + success/warn/danger/info -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Inputs</div>
-                                        <\!-- input: fondo/texto/borde -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Selects</div>
-                                        <\!-- select: fondo/texto/borde -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Disabled</div>
-                                        <\!-- disabled: fondo/texto -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Submenús</div>
-                                        <\!-- submenu: fondo/texto/hover -->
-                                        <input id="preview-disabled-input" type="text" value="Disabled" disabled style="width: 100%; padding: 8px 2px; border: 1px solid; border-radius: 2px; font-size: 8px; text-align: center;">
-                                        <select id="preview-disabled-select" disabled style="width: 100%; padding: 8px 2px; border: 1px solid; border-radius: 2px; font-size: 8px; text-align: center;"><option>Disabled</option></select>
-                                        <input type="text" value="Campo" disabled style="width: 100%; padding: 8px 2px; border: 1px solid; border-radius: 2px; font-size: 8px; text-align: center;">
-                                        <select disabled style="width: 100%; padding: 8px 2px; border: 1px solid; border-radius: 2px; font-size: 8px; text-align: center;"><option>Select</option></select>
-                                    </div>
-                                </div>
-                                
-                                <\!-- Fila 4: Notificaciones -->
-                                <div>
-                                    <label style="font-size: 8px; color: #2c3e50; display: block; margin-bottom: 3px;"><i class="fas fa-bell"></i> Notif.</label>
-                                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
-
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Colores principales</div>
-                                        <\!-- principales: Fondo, Primario, Secundario -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Botones</div>
-                                        <\!-- botones: Btn, Hover, Texto -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Encabezados</div>
-                                        <\!-- encabezados: Hdr, Hdr Txt -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Tablas y Estados</div>
-                                        <\!-- grid header + success/warn/danger/info -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Inputs</div>
-                                        <\!-- input: fondo/texto/borde -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Selects</div>
-                                        <\!-- select: fondo/texto/borde -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Disabled</div>
-                                        <\!-- disabled: fondo/texto -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Submenús</div>
-                                        <\!-- submenu: fondo/texto/hover -->
-                                        <div id="preview-notif-success" style="padding: 10px 4px; border-radius: 3px; font-size: 8px; border-left: 3px solid; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 3px;"><i class="fas fa-check-circle"></i><span>OK</span></div>
-                                        <div id="preview-notif-warning" style="padding: 10px 4px; border-radius: 3px; font-size: 8px; border-left: 3px solid; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 3px;"><i class="fas fa-exclamation-triangle"></i><span>Warn</span></div>
-                                        <div id="preview-notif-danger" style="padding: 10px 4px; border-radius: 3px; font-size: 8px; border-left: 3px solid; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 3px;"><i class="fas fa-times-circle"></i><span>Error</span></div>
-                                    </div>
-                                </div>
-                                
-                                <\!-- Fila 5: Tabla/Grid -->
-                                <div>
-                                    <label style="font-size: 8px; color: #2c3e50; display: block; margin-bottom: 3px;"><i class="fas fa-table"></i> Tabla</label>
-                                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
-
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Colores principales</div>
-                                        <\!-- principales: Fondo, Primario, Secundario -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Botones</div>
-                                        <\!-- botones: Btn, Hover, Texto -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Encabezados</div>
-                                        <\!-- encabezados: Hdr, Hdr Txt -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Tablas y Estados</div>
-                                        <\!-- grid header + success/warn/danger/info -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Inputs</div>
-                                        <\!-- input: fondo/texto/borde -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Selects</div>
-                                        <\!-- select: fondo/texto/borde -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Disabled</div>
-                                        <\!-- disabled: fondo/texto -->
-                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Submenús</div>
-                                        <\!-- submenu: fondo/texto/hover -->
-                                        <div id="preview-header" style="padding: 6px 4px; border-radius: 3px; font-size: 8px; font-weight: 700; text-align: center;"><i class="fas fa-heading"></i> Header</div>
-                                        <div id="preview-table-header" style="padding: 6px 4px; font-size: 8px; font-weight: 600; text-align: center;">Código</div>
-                                        <div style="padding: 6px 4px; font-size: 8px; text-align: center;">Nombre</div>
-                                        <div style="padding: 6px 4px; font-size: 8px; text-align: center;">Estado</div>
-                                        <div style="padding: 6px 4px; font-size: 8px; text-align: center;">Acción</div>
-                                        <div id="preview-row-hover" style="padding: 6px 4px; font-size: 8px; text-align: center; transition: background 0.2s;">001</div>
-                                        <div style="padding: 6px 4px; font-size: 8px; text-align: center;">Item 1</div>
-                                        <div style="padding: 6px 4px; font-size: 8px; text-align: center;">Activo</div>
-                                    </div>
-                                </div>
-                                
-                                <\!-- Fila 6: Modal Preview -->
-
-                                <div>
-                                    <label style="font-size: 8px; color: #2c3e50; display: block; margin-bottom: 3px;"><i class="fas fa-window-maximize"></i> Modal</label>
-                                    <div style="display: flex; gap: 8px; align-items: flex-start;">
-                                        <button id="preview-modal-open-btn" type="button" style="padding: 12px 16px; border-radius: 4px; font-size: 9px; border: none; cursor: pointer; background: #007bff; color: white; display: flex; align-items: center; gap: 6px;"><i class="fas fa-external-link-alt"></i> Abrir Modal</button>
-                                        <div style="border-radius: 3px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; max-width: 300px; flex-grow: 1;">
-                                            <div id="preview-modal-header" style="padding: 8px 12px; font-size: 9px; font-weight: 600; text-align: center;"><i class="fas fa-edit"></i> Título Modal</div>
-                                            <div style="padding: 8px; background: white; font-size: 8px; color: #495057;">Contenido del modal de ejemplo con texto más largo para mostrar cómo se verá el contenido dentro del modal.</div>
-                                            <div style="padding: 6px; background: #f8f9fa; display: flex; gap: 4px; justify-content: flex-end;">
-                                                <button id="preview-modal-btn-secondary" type="button" style="padding: 4px 10px; border-radius: 3px; font-size: 8px; border: none; background: #6c757d; color: white;">Cancelar</button>
-                                                <button id="preview-modal-btn-primary" type="button" style="padding: 4px 10px; border-radius: 3px; font-size: 8px; border: none;">Guardar</button>
+                                        <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Encabezado / Header</div>
+                                        <div class="preview-header" style="padding: 12px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
+                                            <div style="display: flex; align-items: center; gap: 10px;">
+                                                <i class="fas fa-bars" style="font-size: 16px;"></i>
+                                                <span style="font-weight: 600; font-size: 13px;">Mi Aplicación</span>
+                                            </div>
+                                            <div style="display: flex; gap: 8px;">
+                                                <i class="fas fa-bell" style="font-size: 14px;"></i>
+                                                <i class="fas fa-user-circle" style="font-size: 14px;"></i>
                                             </div>
                                         </div>
                                     </div>
+                                    
+                                    <!-- Colores Primario y Secundario -->
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Colores Principales</div>
+                                        <div style="display: flex; gap: 10px;">
+                                            <div class="preview-badge-primary" style="flex: 1; padding: 10px; border-radius: 4px; text-align: center; font-size: 11px; font-weight: 600;">
+                                                Primario
+                                            </div>
+                                            <div class="preview-badge-secondary" style="flex: 1; padding: 10px; border-radius: 4px; text-align: center; font-size: 11px; font-weight: 600;">
+                                                Secundario
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Botones -->
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Botones</div>
+                                        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                            <button class="preview-btn-primary" type="button" style="padding: 8px 14px; border-radius: 4px; border: none; font-size: 12px; cursor: pointer; transition: all 0.2s;">Primario</button>
+                                            <button class="preview-btn-secondary" type="button" style="padding: 8px 14px; border-radius: 4px; border: none; font-size: 12px; cursor: pointer; transition: all 0.2s;">Secundario</button>
+                                            <button class="preview-btn-success" type="button" style="padding: 8px 14px; border-radius: 4px; border: none; font-size: 12px; cursor: pointer;">Éxito</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Notificaciones -->
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Notificaciones</div>
+                                        <div style="display: grid; gap: 5px;">
+                                            <div class="preview-notif-success" style="padding: 8px 10px; border-radius: 4px; font-size: 11px; border-left: 3px solid; display: flex; align-items: center; gap: 6px;">
+                                                <i class="fas fa-check-circle"></i> Operación completada con éxito
+                                            </div>
+                                            <div class="preview-notif-warning" style="padding: 8px 10px; border-radius: 4px; font-size: 11px; border-left: 3px solid; display: flex; align-items: center; gap: 6px;">
+                                                <i class="fas fa-exclamation-triangle"></i> Advertencia importante
+                                            </div>
+                                            <div class="preview-notif-danger" style="padding: 8px 10px; border-radius: 4px; font-size: 11px; border-left: 3px solid; display: flex; align-items: center; gap: 6px;">
+                                                <i class="fas fa-times-circle"></i> Error en la operación
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Inputs y Selectores -->
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Inputs y Selectores</div>
+                                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
+                                            <input class="preview-input" type="text" value="Texto ejemplo" style="padding: 7px; border: 1px solid; border-radius: 3px; font-size: 12px;">
+                                            <select class="preview-select" style="padding: 7px; border: 1px solid; border-radius: 3px; font-size: 12px;">
+                                                <option>Opción 1</option>
+                                                <option>Opción 2</option>
+                                            </select>
+                                            <input class="preview-input" type="text" placeholder="Placeholder" style="padding: 7px; border: 1px solid; border-radius: 3px; font-size: 12px;">
+                                            <input class="preview-input-disabled" type="text" value="Deshabilitado" disabled style="padding: 7px; border: 1px solid; border-radius: 3px; font-size: 12px;">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Tabla -->
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Tabla</div>
+                                        <div style="border: 1px solid #dddddd; border-radius: 4px; overflow: hidden;">
+                                            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                                                <thead class="preview-table-header">
+                                                    <tr id="preview-table-header">
+                                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #dddddd;">ID</th>
+                                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #dddddd;">Nombre</th>
+                                                        <th style="padding: 8px; text-align: left; border-bottom: 2px solid #dddddd;">Estado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr class="preview-table-row" style="background: white;">
+                                                        <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">001</td>
+                                                        <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">Item ejemplo</td>
+                                                        <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">Activo</td>
+                                                    </tr>
+                                                    <tr id="preview-row-hover" class="preview-table-row-hover" style="background: white; transition: background 0.2s;">
+                                                        <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">002</td>
+                                                        <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">Segundo item</td>
+                                                        <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">Pendiente</td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Iconos -->
+                                    <div>
+                                        <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Iconos</div>
+                                        <div style="display: flex; gap: 10px; justify-content: center;">
+                                            <div class="preview-icon" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                                                <i class="fas fa-home"></i>
+                                            </div>
+                                            <div class="preview-icon" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <div class="preview-icon" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                                                <i class="fas fa-cog"></i>
+                                            </div>
+                                            <div class="preview-icon" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                                                <i class="fas fa-chart-bar"></i>
+                                            </div>
+                                            <div class="preview-icon" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">
+                                                <i class="fas fa-envelope"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                 </div>
-                            </div>
                         </div>
                         
+                        <style>
+                        /* CSS Variables para preview en tiempo real */
+                        :root {
+                            --preview-color-app-bg: #f8f9fa;
+                            --preview-color-primario: #3498db;
+                            --preview-color-primario-rgb: 52, 152, 219;
+                            --preview-color-secundario: #42a5f5;
+                            --preview-color-secundario-rgb: 66, 165, 245;
+                            --preview-color-success: #27ae60;
+                            --preview-color-success-rgb: 39, 174, 96;
+                            --preview-color-warning: #f39c12;
+                            --preview-color-warning-rgb: 243, 156, 18;
+                            --preview-color-danger: #e74c3c;
+                            --preview-color-danger-rgb: 231, 76, 60;
+                            --preview-color-info: #3498db;
+                            --preview-color-info-rgb: 52, 152, 219;
+                            --preview-color-button: #3498db;
+                            --preview-color-button-hover: #2980b9;
+                            --preview-color-button-text: #ffffff;
+                            --preview-color-header-bg: #2c3e50;
+                            --preview-color-header-text: #ffffff;
+                            --preview-color-grid-header: #2c3e50;
+                            --preview-color-input-bg: #ffffff;
+                            --preview-color-input-text: #495057;
+                            --preview-color-input-border: #ced4da;
+                            --preview-color-select-bg: #ffffff;
+                            --preview-color-select-text: #495057;
+                            --preview-color-select-border: #ced4da;
+                            --preview-color-disabled-bg: #e9ecef;
+                            --preview-color-disabled-text: #6c757d;
+                            --preview-color-submenu-bg: #34495e;
+                            --preview-color-submenu-text: #ffffff;
+                            --preview-color-submenu-hover: #2c3e50;
+                            --preview-color-grid-bg: #ffffff;
+                            --preview-color-grid-text: #333333;
+                            --preview-color-icon: #3498db;
+                            --preview-color-icon-rgb: 52, 152, 219;
+                        }
+                        
+                        .preview-header {
+                            background: var(--preview-color-header-bg) !important;
+                            color: var(--preview-color-header-text) !important;
+                        }
+                        
+                        .preview-badge-primary {
+                            background: var(--preview-color-primario) !important;
+                            color: white !important;
+                        }
+                        
+                        .preview-badge-secondary {
+                            background: var(--preview-color-secundario) !important;
+                            color: white !important;
+                        }
+                        
+                        .preview-btn-primary {
+                            background: var(--preview-color-button) !important;
+                            color: var(--preview-color-button-text) !important;
+                        }
+                        .preview-btn-primary:hover {
+                            filter: brightness(0.9);
+                        }
+                        
+                        .preview-btn-secondary {
+                            background: var(--preview-color-secundario) !important;
+                            color: white !important;
+                        }
+                        .preview-btn-secondary:hover {
+                            filter: brightness(0.9);
+                        }
+                        
+                        .preview-btn-success {
+                            background: var(--preview-color-success) !important;
+                            color: white !important;
+                        }
+                        .preview-btn-success:hover {
+                            filter: brightness(0.9);
+                        }
+                        
+                        .preview-notif-success {
+                            background: rgba(var(--preview-color-success-rgb), 0.1) !important;
+                            border-left-color: var(--preview-color-success) !important;
+                            color: var(--preview-color-success) !important;
+                        }
+                        .preview-notif-warning {
+                            background: rgba(var(--preview-color-warning-rgb), 0.1) !important;
+                            border-left-color: var(--preview-color-warning) !important;
+                            color: var(--preview-color-warning) !important;
+                        }
+                        .preview-notif-danger {
+                            background: rgba(var(--preview-color-danger-rgb), 0.1) !important;
+                            border-left-color: var(--preview-color-danger) !important;
+                            color: var(--preview-color-danger) !important;
+                        }
+                        
+                        .preview-input {
+                            background: var(--preview-color-input-bg) !important;
+                            color: var(--preview-color-input-text) !important;
+                            border-color: var(--preview-color-input-border) !important;
+                        }
+                        
+                        .preview-select {
+                            background: var(--preview-color-select-bg) !important;
+                            color: var(--preview-color-select-text) !important;
+                            border-color: var(--preview-color-select-border) !important;
+                        }
+                        .preview-input:focus {
+                            outline: 2px solid var(--preview-color-primario);
+                            outline-offset: 1px;
+                        }
+                        
+                        .preview-select:focus {
+                            outline: 2px solid var(--preview-color-secundario);
+                            outline-offset: 1px;
+                        }
+                        .preview-input-disabled {
+                            background: var(--preview-color-disabled-bg) !important;
+                            color: var(--preview-color-disabled-text) !important;
+                            border-color: var(--preview-color-input-border) !important;
+                        }
+                        
+                        .preview-table-header tr {
+                            background: var(--preview-color-grid-header) !important;
+                            color: var(--preview-color-header-text) !important;
+                        }
+                        .preview-table-row-hover:hover {
+                            background: rgba(var(--preview-color-secundario-rgb), 0.1) !important;
+                            cursor: pointer;
+                        }
+                        
+                        .preview-icon {
+                            background: var(--preview-color-icon) !important;
+                            color: white !important;
+                            transition: transform 0.2s;
+                        }
+                        .preview-icon:hover {
+                            transform: scale(1.1);
+                        }
+                        
+                        .preview-table-row {
+                            background: var(--preview-color-grid-bg) !important;
+                            color: var(--preview-color-grid-text) !important;
+                        }
+                        .preview-table-row td {
+                            color: var(--preview-color-grid-text) !important;
+                        }
+                        
+                        .plantilla-card {
+                            padding: 10px;
+                            border: 2px solid #dddddd;
+                            border-radius: 6px;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                            background: white;
+                        }
+                        .plantilla-card:hover {
+                            border-color: #3498db;
+                            box-shadow: 0 2px 8px rgba(52,152,219,0.2);
+                        }
+                        .plantilla-card.active {
+                            border-color: #3498db !important;
+                            background: #f0f8ff !important;
+                        }
+                        </style>
+                        
                         </div>
-                        
-                        
-                        
-                            <h4 style="margin: 0 0 10px 0; color: #2c3e50;">
                                 <i class="fas fa-palette"></i> Editor de Colores Individual
                             </h4>
                             <p style="margin: 0; font-size: 13px; color: #495057;">
@@ -1549,22 +1836,22 @@ async function guardarCambiosEmpresa(form) {
                 color_header_text: formData.get('color_header_text'),
                 color_grid_header: formData.get('color_grid_header'),
                 color_grid_hover: formData.get('color_grid_hover'),
+                color_input_bg: formData.get('color_input_bg'),
+                color_input_text: formData.get('color_input_text'),
+                color_input_border: formData.get('color_input_border'),
+                color_select_bg: formData.get('color_select_bg'),
+                color_select_text: formData.get('color_select_text'),
+                color_select_border: formData.get('color_select_border'),
+                color_disabled_bg: formData.get('color_disabled_bg'),
+                color_disabled_text: formData.get('color_disabled_text'),
+                color_submenu_bg: formData.get('color_submenu_bg'),
+                color_submenu_text: formData.get('color_submenu_text'),
+                color_submenu_hover: formData.get('color_submenu_hover'),
+                color_grid_bg: formData.get('color_grid_bg'),
+                color_grid_text: formData.get('color_grid_text'),
+                color_icon: formData.get('color_icon'),
                 activa: document.getElementById('edit_activa').checked ? 1 : 0
             };
-        // end sw object marker
-        // Añadir icono de copiar en cada swatch (sin cambiar altura)
-        const ensureCopyIcon = (el) => {
-            if (!el) return;
-            el.style.position = el.style.position || 'relative';
-            if (el.querySelector('.sw-copy-icon')) return;
-            const ic = document.createElement('i');
-            ic.className = 'fas fa-copy sw-copy-icon';
-            ic.style.cssText = 'position:absolute; top:2px; right:3px; font-size:9px; opacity:0.65; color:#000; pointer-events:none;';
-            el.appendChild(ic);
-        };
-        [sw.appBg, sw.prim, sw.sec, sw.btn, sw.btnH, sw.btnT, sw.hdr, sw.hdrT, sw.gridH,
-         sw.succ, sw.warn, sw.dang, sw.info, sw.inBg, sw.inTx, sw.inBo, sw.seBg, sw.seTx,
-         sw.seBo, sw.disBg, sw.disTx, sw.subBg, sw.subTx, sw.subHv].forEach(ensureCopyIcon);
             
             console.log('💾 Datos que se enviarán al servidor:', data);
             
@@ -1790,9 +2077,18 @@ function actualizarPreviewColores() {
             previewHeader.style.color = colorHeaderText;
         }
         
-        if (previewTableHeader) previewTableHeader.style.background = colorGridHeader;
+        if (previewTableHeader) {
+            previewTableHeader.style.background = colorGridHeader;
+            previewTableHeader.style.color = colorHeaderText;
+        }
         
         if (previewRowHover) {
+            // Convertir hex a rgba con opacidad para el hover
+            const r = parseInt(colorSecundario.slice(1, 3), 16);
+            const g = parseInt(colorSecundario.slice(3, 5), 16);
+            const b = parseInt(colorSecundario.slice(5, 7), 16);
+            previewRowHover.style.background = `rgba(${r}, ${g}, ${b}, 0.1)`;
+        }
 
         // Swatches compactos
         const sw = {
@@ -1843,6 +2139,12 @@ function actualizarPreviewColores() {
         const colorSelectBg = document.getElementById(prefijo + 'color_select_bg')?.value || '#ffffff';
         const colorSelectText = document.getElementById(prefijo + 'color_select_text')?.value || '#495057';
         const colorSelectBorder = document.getElementById(prefijo + 'color_select_border')?.value || '#dddddd';
+        const colorDisabledBg = document.getElementById(prefijo + 'color_disabled_bg')?.value || '#f0f0f0';
+        const colorDisabledText = document.getElementById(prefijo + 'color_disabled_text')?.value || '#999999';
+        const colorSubmenuBg = document.getElementById(prefijo + 'color_submenu_bg')?.value || '#34495e';
+        const colorSubmenuText = document.getElementById(prefijo + 'color_submenu_text')?.value || '#ecf0f1';
+        const colorSubmenuHover = document.getElementById(prefijo + 'color_submenu_hover')?.value || '#2c3e50';
+        
         if (sw.inBg) sw.inBg.style.background = colorInputBg;
         if (sw.inTx) { sw.inTx.style.background = colorInputText; sw.inTx.style.color = '#fff'; }
         if (sw.inBo) { sw.inBo.style.borderColor = colorInputBorder; sw.inBo.style.background = '#fff'; }
@@ -1853,7 +2155,6 @@ function actualizarPreviewColores() {
         if (sw.disTx) { sw.disTx.style.background = colorDisabledText; sw.disTx.style.color = '#fff'; }
         if (sw.subBg) sw.subBg.style.background = colorSubmenuBg;
         if (sw.subTx) { sw.subTx.style.background = colorSubmenuText; sw.subTx.style.color = '#fff'; }
-        const colorSubmenuHover = document.getElementById(prefijo + 'color_submenu_hover')?.value || '#2c3e50';
         if (sw.subHv) sw.subHv.style.background = colorSubmenuHover;
 
         // Tooltips HEX y botón copiar (click) en cada swatch
@@ -1909,13 +2210,6 @@ function actualizarPreviewColores() {
         [sw.appBg, sw.prim, sw.sec, sw.btn, sw.btnH, sw.btnT, sw.hdr, sw.hdrT, sw.gridH,
          sw.succ, sw.warn, sw.dang, sw.info, sw.inBg, sw.inTx, sw.inBo, sw.seBg, sw.seTx,
          sw.seBo, sw.disBg, sw.disTx, sw.subBg, sw.subTx, sw.subHv].forEach(bindCopy);
-    
-            // Convertir hex a rgba con opacidad
-            const r = parseInt(colorSecundario.slice(1, 3), 16);
-            const g = parseInt(colorSecundario.slice(3, 5), 16);
-            const b = parseInt(colorSecundario.slice(5, 7), 16);
-            previewRowHover.style.background = `rgba(${r}, ${g}, ${b}, 0.1)`;
-        }
         
         // Actualizar fondo del preview con el color de fondo de la app
         const colorPreview = document.getElementById('color-preview');
@@ -1932,12 +2226,6 @@ function actualizarPreviewColores() {
         const previewSubmenuBg = document.getElementById('preview-submenu-bg');
         const previewSubmenuText = document.getElementById('preview-submenu-text');
         const previewSubmenuText2 = document.getElementById('preview-submenu-text2');
-        
-        const colorDisabledBg = document.getElementById(prefijo + 'color_disabled_bg')?.value || '#f0f0f0';
-        const colorDisabledText = document.getElementById(prefijo + 'color_disabled_text')?.value || '#999999';
-        const colorInputBorder = document.getElementById(prefijo + 'color_input_border')?.value || '#dddddd';
-        const colorSubmenuBg = document.getElementById(prefijo + 'color_submenu_bg')?.value || '#34495e';
-        const colorSubmenuText = document.getElementById(prefijo + 'color_submenu_text')?.value || '#ecf0f1';
         
         // Iconos con color primario
         if (previewIconHome) {
@@ -2032,7 +2320,32 @@ function actualizarPreviewColores() {
 // Alias para compatibilidad con los inputs de color
 function actualizarVistaPrevia() {
     console.log('🎨 actualizarVistaPrevia() llamada');
-    actualizarPreviewColores();
+    
+    // Detectar prefijo (edit_ o vacío)
+    const prefijo = document.getElementById('edit_color_primario') ? 'edit_' : '';
+    
+    // Recoger todos los colores actuales de los inputs
+    const colores = {};
+    const campos = [
+        'color_primario', 'color_secundario', 'color_success', 'color_warning', 'color_danger', 'color_info',
+        'color_button', 'color_button_hover', 'color_button_text',
+        'color_app_bg', 'color_header_bg', 'color_header_text', 'color_grid_header',
+        'color_input_bg', 'color_input_text', 'color_input_border',
+        'color_select_bg', 'color_select_text', 'color_select_border',
+        'color_disabled_bg', 'color_disabled_text',
+        'color_submenu_bg', 'color_submenu_text', 'color_submenu_hover',
+        'color_grid_bg', 'color_grid_text', 'color_icon'
+    ];
+    
+    campos.forEach(campo => {
+        const input = document.getElementById(prefijo + campo);
+        if (input && input.value) {
+            colores[campo] = input.value;
+        }
+    });
+    
+    // Actualizar sistema de preview con CSS Variables
+    actualizarPreviewEnTiempoReal(colores);
 }
 
 // Plantillas de colores predefinidas - Basadas en temas profesionales populares
@@ -2053,7 +2366,18 @@ const plantillasColores = {
         color_header_bg: '#1976d2',
         color_header_text: '#ffffff',
         color_grid_header: '#1976d2',
-        color_grid_hover: 'rgba(25,118,210,0.1)'
+        color_grid_hover: 'rgba(25,118,210,0.1)',
+        color_input_bg: '#ffffff',
+        color_input_text: '#333333',
+        color_input_border: '#dddddd',
+        color_select_bg: '#ffffff',
+        color_select_text: '#333333',
+        color_select_border: '#dddddd',
+        color_disabled_bg: '#f5f5f5',
+        color_disabled_text: '#999999',
+        color_submenu_bg: '#f8f9fa',
+        color_submenu_text: '#333333',
+        color_submenu_hover: '#e9ecef'
     },
     oscuro: {
         nombre: 'Dracula',
@@ -2071,7 +2395,18 @@ const plantillasColores = {
         color_header_bg: '#282a36',
         color_header_text: '#f8f8f2',
         color_grid_header: '#44475a',
-        color_grid_hover: 'rgba(68,71,90,0.3)'
+        color_grid_hover: 'rgba(68,71,90,0.3)',
+        color_input_bg: '#2a2a2a',
+        color_input_text: '#e0e0e0',
+        color_input_border: '#444444',
+        color_select_bg: '#2a2a2a',
+        color_select_text: '#e0e0e0',
+        color_select_border: '#444444',
+        color_disabled_bg: '#1a1a1a',
+        color_disabled_text: '#666666',
+        color_submenu_bg: '#44475a',
+        color_submenu_text: '#e0e0e0',
+        color_submenu_hover: '#282a36'
     },
     verde: {
         nombre: 'Nord',
@@ -2089,7 +2424,18 @@ const plantillasColores = {
         color_header_bg: '#2e3440',
         color_header_text: '#eceff4',
         color_grid_header: '#3b4252',
-        color_grid_hover: 'rgba(59,66,82,0.2)'
+        color_grid_hover: 'rgba(59,66,82,0.2)',
+        color_input_bg: '#ffffff',
+        color_input_text: '#333333',
+        color_input_border: '#dddddd',
+        color_select_bg: '#ffffff',
+        color_select_text: '#333333',
+        color_select_border: '#dddddd',
+        color_disabled_bg: '#f5f5f5',
+        color_disabled_text: '#999999',
+        color_submenu_bg: '#f8f9fa',
+        color_submenu_text: '#333333',
+        color_submenu_hover: '#e9ecef'
     },
     morado: {
         nombre: 'One Dark',
@@ -2107,7 +2453,18 @@ const plantillasColores = {
         color_header_bg: '#282c34',
         color_header_text: '#abb2bf',
         color_grid_header: '#3e4451',
-        color_grid_hover: 'rgba(62,68,81,0.3)'
+        color_grid_hover: 'rgba(62,68,81,0.3)',
+        color_input_bg: '#2a2a2a',
+        color_input_text: '#e0e0e0',
+        color_input_border: '#444444',
+        color_select_bg: '#2a2a2a',
+        color_select_text: '#e0e0e0',
+        color_select_border: '#444444',
+        color_disabled_bg: '#1a1a1a',
+        color_disabled_text: '#666666',
+        color_submenu_bg: '#3e4451',
+        color_submenu_text: '#e0e0e0',
+        color_submenu_hover: '#282c34'
     },
     naranja: {
         nombre: 'Solarized Light',
@@ -2125,7 +2482,18 @@ const plantillasColores = {
         color_header_bg: '#268bd2',
         color_header_text: '#fdf6e3',
         color_grid_header: '#2aa198',
-        color_grid_hover: 'rgba(38,139,210,0.1)'
+        color_grid_hover: 'rgba(38,139,210,0.1)',
+        color_input_bg: '#ffffff',
+        color_input_text: '#333333',
+        color_input_border: '#dddddd',
+        color_select_bg: '#ffffff',
+        color_select_text: '#333333',
+        color_select_border: '#dddddd',
+        color_disabled_bg: '#f5f5f5',
+        color_disabled_text: '#999999',
+        color_submenu_bg: '#f8f9fa',
+        color_submenu_text: '#333333',
+        color_submenu_hover: '#e9ecef'
     },
     turquesa: {
         nombre: 'GitHub Dark',
@@ -2143,7 +2511,18 @@ const plantillasColores = {
         color_header_bg: '#161b22',
         color_header_text: '#c9d1d9',
         color_grid_header: '#21262d',
-        color_grid_hover: 'rgba(33,38,45,0.5)'
+        color_grid_hover: 'rgba(33,38,45,0.5)',
+        color_input_bg: '#2a2a2a',
+        color_input_text: '#e0e0e0',
+        color_input_border: '#444444',
+        color_select_bg: '#2a2a2a',
+        color_select_text: '#e0e0e0',
+        color_select_border: '#444444',
+        color_disabled_bg: '#1a1a1a',
+        color_disabled_text: '#666666',
+        color_submenu_bg: '#161b22',
+        color_submenu_text: '#e0e0e0',
+        color_submenu_hover: '#0d1117'
     },
     gris: {
         nombre: 'Monokai',
@@ -2161,7 +2540,18 @@ const plantillasColores = {
         color_header_bg: '#272822',
         color_header_text: '#f8f8f2',
         color_grid_header: '#3e3d32',
-        color_grid_hover: 'rgba(62,61,50,0.4)'
+        color_grid_hover: 'rgba(62,61,50,0.4)',
+        color_input_bg: '#2a2a2a',
+        color_input_text: '#e0e0e0',
+        color_input_border: '#444444',
+        color_select_bg: '#2a2a2a',
+        color_select_text: '#e0e0e0',
+        color_select_border: '#444444',
+        color_disabled_bg: '#1a1a1a',
+        color_disabled_text: '#666666',
+        color_submenu_bg: '#3e3d32',
+        color_submenu_text: '#e0e0e0',
+        color_submenu_hover: '#272822'
     },
     rojo: {
         nombre: 'Gruvbox',
@@ -2179,7 +2569,18 @@ const plantillasColores = {
         color_header_bg: '#282828',
         color_header_text: '#ebdbb2',
         color_grid_header: '#3c3836',
-        color_grid_hover: 'rgba(60,56,54,0.4)'
+        color_grid_hover: 'rgba(60,56,54,0.4)',
+        color_input_bg: '#2a2a2a',
+        color_input_text: '#e0e0e0',
+        color_input_border: '#444444',
+        color_select_bg: '#2a2a2a',
+        color_select_text: '#e0e0e0',
+        color_select_border: '#444444',
+        color_disabled_bg: '#1a1a1a',
+        color_disabled_text: '#666666',
+        color_submenu_bg: '#3c3836',
+        color_submenu_text: '#e0e0e0',
+        color_submenu_hover: '#282828'
     },
     glassmorphism: {
         nombre: 'Glassmorphism',
@@ -2197,7 +2598,18 @@ const plantillasColores = {
         color_header_bg: '#1a1a2e',
         color_header_text: '#ffffff',
         color_grid_header: '#1845ad',
-        color_grid_hover: 'rgba(35,162,246,0.2)'
+        color_grid_hover: 'rgba(35,162,246,0.2)',
+        color_input_bg: '#2a2a2a',
+        color_input_text: '#e0e0e0',
+        color_input_border: '#444444',
+        color_select_bg: '#2a2a2a',
+        color_select_text: '#e0e0e0',
+        color_select_border: '#444444',
+        color_disabled_bg: '#1a1a1a',
+        color_disabled_text: '#666666',
+        color_submenu_bg: '#1a1a2e',
+        color_submenu_text: '#e0e0e0',
+        color_submenu_hover: '#080710'
     },
     indigo: {
         nombre: 'Moderno Índigo',
@@ -2215,7 +2627,18 @@ const plantillasColores = {
         color_header_bg: '#6366f1',
         color_header_text: '#ffffff',
         color_grid_header: '#818cf8',
-        color_grid_hover: 'rgba(99,102,241,0.1)'
+        color_grid_hover: 'rgba(99,102,241,0.1)',
+        color_input_bg: '#ffffff',
+        color_input_text: '#333333',
+        color_input_border: '#dddddd',
+        color_select_bg: '#ffffff',
+        color_select_text: '#333333',
+        color_select_border: '#dddddd',
+        color_disabled_bg: '#f5f5f5',
+        color_disabled_text: '#999999',
+        color_submenu_bg: '#f8f9fa',
+        color_submenu_text: '#333333',
+        color_submenu_hover: '#e9ecef'
     },
     classic: {
         nombre: 'Classic Panel',
@@ -2233,7 +2656,18 @@ const plantillasColores = {
         color_header_bg: '#34495e',
         color_header_text: '#ecf0f1',
         color_grid_header: '#34495e',
-        color_grid_hover: 'rgba(52,73,94,0.3)'
+        color_grid_hover: 'rgba(52,73,94,0.3)',
+        color_input_bg: '#2a2a2a',
+        color_input_text: '#e0e0e0',
+        color_input_border: '#444444',
+        color_select_bg: '#2a2a2a',
+        color_select_text: '#e0e0e0',
+        color_select_border: '#444444',
+        color_disabled_bg: '#1a1a1a',
+        color_disabled_text: '#666666',
+        color_submenu_bg: '#34495e',
+        color_submenu_text: '#e0e0e0',
+        color_submenu_hover: '#2c3e50'
     },
     aleph70: {
         nombre: 'Aleph70',
@@ -2407,6 +2841,7 @@ async function cargarPlantillasPersonalizadas() {
             }
             if (document.getElementById('plantillas-container-editar')) {
                 regenerarBotonesPlantillas('edit_');
+                inicializarPreviewEnTiempoReal('edit_');
             }
         }
     } catch (error) {

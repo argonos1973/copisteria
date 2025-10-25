@@ -7,6 +7,7 @@
     <title>Panel de Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/colors.css">
     <link rel="stylesheet" href="/static/notificaciones.css">
     <link rel="stylesheet" href="/static/footer.css">
     <link rel="stylesheet" href="/static/page_header.css">
@@ -14,6 +15,16 @@
         :root {
             --color-primario: #2c3e50;
             --color-secundario: #3498db;
+            --color-success: #27ae60;
+            --color-warning: #f39c12;
+            --color-danger: #e74c3c;
+            --color-info: #3498db;
+            --color-button: #3498db;
+            --color-button-hover: #2980b9;
+            --color-header-bg: #2c3e50;
+            --color-header-text: #ffffff;
+            --color-grid-header: #2c3e50;
+            --color-grid-hover: rgba(52, 152, 219, 0.1);
         }
 
         body, html {
@@ -94,7 +105,7 @@
         .submenu-item {
             display: block;
             padding: 0.5rem 1rem;
-            color: white;
+            color: var(--color-header-text, white);
             text-decoration: none;
             transition: background-color 0.3s;
         }
@@ -617,7 +628,19 @@
     
     // Sistema Multiempresa - Carga dinámica del menú según permisos
     document.addEventListener('DOMContentLoaded', async () => {
+        console.log("[INIT] DOMContentLoaded - Iniciando carga...");
         await verificarSesionYCargarMenu();
+        // Forzar carga de colores después de todo
+        setTimeout(() => {
+            console.log("[INIT] Timeout - Forzando carga de colores...");
+            cargarColoresEmpresa();
+        }, 500);
+    });
+    
+    // También cargar colores cuando la página termine de cargar completamente
+    window.addEventListener('load', () => {
+        console.log("[INIT] Window load - Cargando colores...");
+        cargarColoresEmpresa();
     });
 
 
@@ -729,19 +752,408 @@
 
     async function cargarColoresEmpresa() {
         try {
+            console.log("[COLORES] Iniciando carga de colores...");
             const response = await fetch('/api/auth/branding');
+            console.log("[COLORES] Respuesta branding:", response.status, response.ok);
+            
             if (response.ok) {
                 const branding = await response.json();
+                console.log("[COLORES] Branding recibido:", branding);
                 
                 // Aplicar colores personalizados
                 if (branding.colores) {
+                    console.log("[COLORES] Colores detectados:", branding.colores);
+                    // Setear variables CSS
                     document.documentElement.style.setProperty('--color-primario', branding.colores.primario);
                     document.documentElement.style.setProperty('--color-secundario', branding.colores.secundario);
-                    console.log('[cargarColoresEmpresa] Colores aplicados:', branding.colores);
+                    document.documentElement.style.setProperty('--color-success', branding.colores.success);
+                    document.documentElement.style.setProperty('--color-warning', branding.colores.warning);
+                    document.documentElement.style.setProperty('--color-danger', branding.colores.danger);
+                    document.documentElement.style.setProperty('--color-info', branding.colores.info);
+                    document.documentElement.style.setProperty('--color-button', branding.colores.button);
+                    document.documentElement.style.setProperty('--color-button-hover', branding.colores.button_hover);
+                    document.documentElement.style.setProperty('--color-button-text', branding.colores.button_text || '#ffffff');
+                    document.documentElement.style.setProperty('--color-app-bg', branding.colores.app_bg || '#ffffff');
+                    document.documentElement.style.setProperty('--color-header-bg', branding.colores.header_bg);
+                    document.documentElement.style.setProperty('--color-header-text', branding.colores.header_text);
+                    document.documentElement.style.setProperty('--color-grid-header', branding.colores.grid_header);
+                    document.documentElement.style.setProperty('--color-grid-hover', branding.colores.grid_hover);
+                    document.documentElement.style.setProperty('--color-input-bg', branding.colores.input_bg || '#ffffff');
+                    document.documentElement.style.setProperty('--color-input-text', branding.colores.input_text || '#333333');
+                    document.documentElement.style.setProperty('--color-input-border', branding.colores.input_border || '#cccccc');
+                    document.documentElement.style.setProperty('--color-submenu-bg', branding.colores.submenu_bg || '#34495e');
+                    document.documentElement.style.setProperty('--color-submenu-text', branding.colores.submenu_text || '#ffffff');
+                    document.documentElement.style.setProperty('--color-submenu-hover', branding.colores.submenu_hover || '#2c3e50');
+                    document.documentElement.style.setProperty('--color-icon', branding.colores.icon || '#ffffff');
+                    document.documentElement.style.setProperty('--color-grid-bg', branding.colores.grid_bg || '#ffffff');
+                    document.documentElement.style.setProperty('--color-grid-text', branding.colores.grid_text || '#333333');
+                    document.documentElement.style.setProperty('--color-select-bg', branding.colores.select_bg || '#ffffff');
+                    document.documentElement.style.setProperty('--color-select-text', branding.colores.select_text || '#333333');
+                    document.documentElement.style.setProperty('--color-select-border', branding.colores.select_border || '#cccccc');
+                    
+                    // FUNCIÓN PARA CALCULAR LUMINOSIDAD Y DETERMINAR COLOR DE TEXTO
+                    function getTextColorForBackground(bgColor) {
+                        // Convertir hex/rgba a valores RGB
+                        let r, g, b;
+                        
+                        if (bgColor.startsWith('#')) {
+                            // Hex color
+                            const hex = bgColor.replace('#', '');
+                            r = parseInt(hex.substring(0, 2), 16);
+                            g = parseInt(hex.substring(2, 4), 16);
+                            b = parseInt(hex.substring(4, 6), 16);
+                        } else if (bgColor.startsWith('rgb')) {
+                            // RGB/RGBA color
+                            const match = bgColor.match(/\d+/g);
+                            r = parseInt(match[0]);
+                            g = parseInt(match[1]);
+                            b = parseInt(match[2]);
+                        } else {
+                            // Default
+                            return '#000000';
+                        }
+                        
+                        // Calcular luminosidad (fórmula estándar)
+                        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                        
+                        // Si luminosidad > 0.5, el fondo es claro, usar texto oscuro
+                        // Si luminosidad <= 0.5, el fondo es oscuro, usar texto claro
+                        return luminance > 0.5 ? '#000000' : '#ffffff';
+                    }
+                    
+                    // Determinar colores de texto basados en los fondos
+                    const textColorForCards = getTextColorForBackground(branding.colores.secundario || branding.colores.grid_header || '#ffffff');
+                    const textColorForBody = getTextColorForBackground(branding.colores.app_bg || '#ffffff');
+                    
+                    // INYECTAR CSS DINÁMICO CON !IMPORTANT
+                    let styleElement = document.getElementById('dynamic-branding-styles');
+                    if (!styleElement) {
+                        styleElement = document.createElement('style');
+                        styleElement.id = 'dynamic-branding-styles';
+                        document.head.appendChild(styleElement);
+                    }
+                    
+                    console.log('[COLORES] Texto para tarjetas:', textColorForCards, 'Texto para body:', textColorForBody);
+                    
+                    styleElement.textContent = `
+                        /* VARIABLES CSS - SOBRESCRIBIR VARIABLES GLOBALES */
+                        :root {
+                            --color-fondo: ${branding.colores.app_bg} !important;
+                            --color-primario: ${branding.colores.primario} !important;
+                            --color-secundario: ${branding.colores.secundario} !important;
+                            --color-texto: ${textColorForBody} !important;
+                            --color-borde: ${branding.colores.primario} !important;
+                        }
+                        
+                        /* COLORES DE FONDO */
+                        body {
+                            background-color: ${branding.colores.app_bg || '#ffffff'} !important;
+                            color: ${textColorForBody} !important;
+                        }
+                        
+                        /* MENÚ LATERAL - SIEMPRE TEXTO BLANCO */
+                        .menu-link, .menu-link span, .menu-link i {
+                            color: #ffffff !important;
+                        }
+                        
+                        /* SUBMENU - MISMO COLOR QUE MENÚ PRINCIPAL */
+                        .submenu, .menu-submenu {
+                            background-color: ${branding.colores.primario} !important;
+                        }
+                        
+                        .submenu-link, .submenu-link span, .submenu-link i {
+                            color: ${branding.colores.header_text || '#ffffff'} !important;
+                        }
+                        
+                        .submenu-link:hover {
+                            background-color: ${branding.colores.submenu_hover || branding.colores.secundario} !important;
+                        }
+                        
+                        /* ICONOS GLOBALES */
+                        i, .fa, .fas, .far, .fab {
+                            color: ${branding.colores.icon || '#ffffff'};
+                        }
+                        
+                        /* Iconos en menú siempre blancos */
+                        .sidebar i, .sidebar .fa, .sidebar .fas {
+                            color: #ffffff !important;
+                        }
+                        
+                        .menu-item.active > .menu-link {
+                            background-color: ${branding.colores.secundario} !important;
+                            color: #ffffff !important;
+                        }
+                        
+                        /* INFO DE USUARIO EN MENÚ */
+                        .user-info-bottom, .user-info-bottom * {
+                            color: #ffffff !important;
+                        }
+                        
+                        .sidebar {
+                            background-color: ${branding.colores.primario} !important;
+                        }
+                        
+                        /* BOTONES */
+                        button, .btn, .btn-primary, .btn-secondary, input[type="submit"], input[type="button"] {
+                            background-color: ${branding.colores.button} !important;
+                            color: ${branding.colores.button_text || '#ffffff'} !important;
+                        }
+                        
+                        button:hover, .btn:hover, .btn-primary:hover, .btn-secondary:hover {
+                            background-color: ${branding.colores.button_hover} !important;
+                        }
+                        
+                        /* BOTÓN DE LOGOUT - SIEMPRE ROJO CON TEXTO BLANCO (NO AFECTADO POR PLANTILLAS) */
+                        .btn-logout-compact,
+                        button.btn-logout-compact,
+                        .btn-logout-compact:hover,
+                        button.btn-logout-compact:hover {
+                            background-color: #e74c3c !important;
+                            color: #ffffff !important;
+                            border: none !important;
+                        }
+                        
+                        .btn-logout-compact:hover,
+                        button.btn-logout-compact:hover {
+                            background-color: #c0392b !important;
+                        }
+                        
+                        /* TABLAS Y GRIDS */
+                        table {
+                            background-color: ${branding.colores.app_bg} !important;
+                            color: ${textColorForBody} !important;
+                        }
+                        
+                        /* ENCABEZADOS DE TABLAS */
+                        thead, thead th, table thead {
+                            background-color: ${branding.colores.grid_header} !important;
+                            color: ${branding.colores.header_text || '#ffffff'} !important;
+                        }
+                        
+                        /* CUERPO DE TABLAS */
+                        tbody, tbody tr, tbody td {
+                            background-color: ${branding.colores.grid_bg || branding.colores.secundario || branding.colores.app_bg} !important;
+                            color: ${branding.colores.grid_text || textColorForCards} !important;
+                        }
+                        
+                        /* HOVER EN FILAS */
+                        tbody tr:hover {
+                            background-color: ${branding.colores.grid_hover} !important;
+                        }
+                        
+                        /* CELDAS DE TABLA */
+                        td, th {
+                            border-color: ${branding.colores.primario} !important;
+                            color: inherit !important;
+                        }
+                        
+                        /* BANDAS SUPERIORES (PAGE HEADERS) */
+                        .page-header {
+                            background: ${branding.colores.header_bg} !important;
+                            color: ${branding.colores.header_text || '#ffffff'} !important;
+                        }
+                        
+                        .page-header h1, .page-header h2, .page-header h3 {
+                            color: ${branding.colores.header_text || '#ffffff'} !important;
+                        }
+                        
+                        /* TARJETAS (STATS-CARD) */
+                        .stats-card, .card {
+                            background-color: ${branding.colores.secundario || branding.colores.grid_header} !important;
+                            color: ${textColorForCards} !important;
+                            border: 1px solid ${branding.colores.primario} !important;
+                        }
+                        
+                        .stats-card h3, .card h3, .stats-card h2, .card h2 {
+                            color: ${textColorForCards} !important;
+                            border-bottom-color: ${branding.colores.primario} !important;
+                        }
+                        
+                        .stats-label, .stats-card .stats-label, .card .stats-label {
+                            color: ${textColorForCards} !important;
+                            opacity: 0.9 !important;
+                        }
+                        
+                        .stats-value, .stats-card .stats-value, .card .stats-value {
+                            color: ${textColorForCards} !important;
+                            font-weight: bold !important;
+                        }
+                        
+                        .stats-card .stats-content, .card .stats-content {
+                            color: ${textColorForCards} !important;
+                        }
+                        
+                        .stats-card div, .card div {
+                            color: ${textColorForCards} !important;
+                        }
+                        
+                        /* CONTENEDORES Y ÁREAS DE CONTENIDO */
+                        .container, .content, .main-content, .page-content, 
+                        .content-area, .wrapper, .inner-content {
+                            background-color: ${branding.colores.app_bg} !important;
+                            color: ${textColorForBody} !important;
+                        }
+                        
+                        /* MODALES - Deben destacarse con color secundario */
+                        .modal-content, .modal, .dialog, .popup {
+                            background-color: ${branding.colores.secundario} !important;
+                            color: ${textColorForBody} !important;
+                            border: 2px solid ${branding.colores.primario} !important;
+                        }
+                        
+                        /* NOTIFICACIONES - Usan colores específicos según tipo */
+                        .notification.success, .notificacion.success, .alert-success, .toast-success,
+                        .notification.exito, .notificacion.exito {
+                            background-color: ${branding.colores.success || '#27ae60'} !important;
+                            color: #ffffff !important;
+                            border: 1px solid ${branding.colores.success || '#27ae60'} !important;
+                        }
+                        
+                        .notification.warning, .notificacion.warning, .alert-warning, .toast-warning,
+                        .notification.advertencia, .notificacion.advertencia {
+                            background-color: ${branding.colores.warning || '#f39c12'} !important;
+                            color: #ffffff !important;
+                            border: 1px solid ${branding.colores.warning || '#f39c12'} !important;
+                        }
+                        
+                        .notification.danger, .notificacion.danger, .alert-danger, .toast-danger, 
+                        .notification.error, .notificacion.error {
+                            background-color: ${branding.colores.danger || '#e74c3c'} !important;
+                            color: #ffffff !important;
+                            border: 1px solid ${branding.colores.danger || '#e74c3c'} !important;
+                        }
+                        
+                        .notification.info, .notificacion.info, .alert-info, .toast-info {
+                            background-color: ${branding.colores.info || '#3498db'} !important;
+                            color: #ffffff !important;
+                            border: 1px solid ${branding.colores.info || '#3498db'} !important;
+                        }
+                        
+                        /* Notificaciones genéricas sin clase específica */
+                        .notification:not(.success):not(.warning):not(.danger):not(.info):not(.exito):not(.advertencia):not(.error),
+                        .notificacion:not(.success):not(.warning):not(.danger):not(.info):not(.exito):not(.advertencia):not(.error),
+                        .alert:not(.alert-success):not(.alert-warning):not(.alert-danger):not(.alert-info),
+                        .toast:not(.toast-success):not(.toast-warning):not(.toast-danger):not(.toast-info) {
+                            background-color: ${branding.colores.secundario} !important;
+                            color: ${textColorForBody} !important;
+                            border: 1px solid ${branding.colores.primario} !important;
+                        }
+                        
+                        /* FORMULARIOS */
+                        form, .form, .form-container, .form-group, .form-section,
+                        .form-inline, .cabecera-ticket, .detalle-proforma-container,
+                        .detalle-proforma-item, .detalle-proforma-item-importe {
+                            background-color: ${branding.colores.app_bg} !important;
+                            color: ${textColorForBody} !important;
+                        }
+                        
+                        /* DIVS GENERALES */
+                        div:not(.stats-card):not(.card):not(.menu-link):not(.submenu) {
+                            background-color: inherit;
+                        }
+                        
+                        /* INPUTS */
+                        input[type="text"], input[type="number"], input[type="email"], 
+                        input[type="tel"], input[type="date"], input[type="password"],
+                        textarea {
+                            background-color: ${branding.colores.input_bg || '#ffffff'} !important;
+                            color: ${branding.colores.input_text || '#333333'} !important;
+                            border: 1px solid ${branding.colores.input_border || '#cccccc'} !important;
+                        }
+                        
+                        /* SELECTORES */
+                        select {
+                            background-color: ${branding.colores.select_bg || '#ffffff'} !important;
+                            color: ${branding.colores.select_text || '#333333'} !important;
+                            border: 1px solid ${branding.colores.select_border || '#cccccc'} !important;
+                        }
+                        
+                        /* INPUTS READONLY */
+                        input[readonly], input.readonly-field, .detalle-proforma-item-importe input[readonly] {
+                            background-color: ${branding.colores.secundario} !important;
+                            color: ${textColorForBody} !important;
+                            opacity: 0.8 !important;
+                        }
+                        
+                        input:focus, select:focus, textarea:focus {
+                            border-color: ${branding.colores.button} !important;
+                            outline-color: ${branding.colores.button} !important;
+                        }
+                        
+                        /* LABELS */
+                        label {
+                            color: ${textColorForBody} !important;
+                        }
+                        
+                        /* TABS */
+                        .tabs button {
+                            background-color: ${branding.colores.secundario} !important;
+                            color: ${branding.colores.header_text || '#ffffff'} !important;
+                        }
+                        
+                        .tabs button.active {
+                            background-color: ${branding.colores.button} !important;
+                            color: ${branding.colores.button_text || '#ffffff'} !important;
+                        }
+                        
+                        /* PAGINACIÓN */
+                        .pagination {
+                            background-color: ${branding.colores.app_bg} !important;
+                            color: ${textColorForBody} !important;
+                            border-color: ${branding.colores.primario} !important;
+                        }
+                        
+                        /* ENLACES */
+                        a {
+                            color: ${branding.colores.info || branding.colores.button} !important;
+                        }
+                        
+                        a:hover {
+                            color: ${branding.colores.button_hover} !important;
+                        }
+                    `;
+                    
+                    console.log('[COLORES] CSS dinámico creado. Contenido:', styleElement.textContent.substring(0, 200) + '...');
+                    console.log('[COLORES] Style element añadido al DOM:', document.getElementById('dynamic-branding-styles') !== null);
+                    console.log('[COLORES] Colores aplicados con CSS dinámico:', branding.colores);
+                    
+                    // Forzar reflow para asegurar que los estilos se apliquen
+                    document.body.offsetHeight;
+                    console.log('[COLORES] Reflow forzado completado');
+                    
+                    // *** APLICAR TAMBIÉN AL IFRAME ***
+                    const iframe = document.getElementById('content-frame');
+                    if (iframe) {
+                        console.log('[COLORES] Intentando aplicar colores al iframe...');
+                        try {
+                            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                            if (iframeDoc) {
+                                // Crear o actualizar style element en el iframe
+                                let iframeStyleElement = iframeDoc.getElementById('dynamic-branding-styles');
+                                if (!iframeStyleElement) {
+                                    iframeStyleElement = iframeDoc.createElement('style');
+                                    iframeStyleElement.id = 'dynamic-branding-styles';
+                                    iframeDoc.head.appendChild(iframeStyleElement);
+                                }
+                                iframeStyleElement.textContent = styleElement.textContent;
+                                console.log('[COLORES] Colores aplicados al iframe exitosamente');
+                            }
+                        } catch (e) {
+                            console.warn('[COLORES] No se pudo acceder al iframe (mismo origen):', e.message);
+                        }
+                    }
+                    
+                    // Guardar branding para reutilizar cuando se cargue una nueva página en el iframe
+                    window.__brandingColors = branding.colores;
+                    window.__brandingCSS = styleElement.textContent;
+                } else {
+                    console.warn('[COLORES] No se encontraron colores en branding');
                 }
+            } else {
+                console.error('[COLORES] Respuesta no OK del endpoint branding');
             }
         } catch (error) {
-            console.error('[cargarColoresEmpresa] Error cargando colores:', error);
+            console.error('[COLORES] Error cargando colores:', error);
         }
     }
 
@@ -871,6 +1283,63 @@
         return li;
     }
 
+    // Cargar página en el iframe con verificación de cambios
+    async function loadPage(url) {
+        const contentFrame = document.getElementById('content-frame');
+        if (!url || url === '#' || !contentFrame) return;
+        
+        try {
+            const iframeWindow = contentFrame.contentWindow;
+            
+            // Verificar si hay cambios sin guardar
+            if (iframeWindow && iframeWindow.__verificarCambiosGlobal) {
+                const hayCambios = iframeWindow.__verificarCambiosGlobal();
+                console.log('[Menu] Verificando cambios:', hayCambios);
+                
+                if (hayCambios) {
+                    // Usar mostrarConfirmacion global
+                    if (window.mostrarConfirmacion) {
+                        const guardar = await window.mostrarConfirmacion('Hay cambios sin guardar. ¿Desea guardarlos antes de salir?');
+                        console.log('[Menu] Usuario respondió:', guardar === true ? 'Guardar' : 'Cancelar');
+                        
+                        // Si el usuario canceló, no navegar
+                        if (!guardar) {
+                            console.log('[Menu] Usuario canceló, quedarse en la página');
+                            return;
+                        }
+                        
+                        // Si aceptó guardar, ejecutar callback
+                        const callbackGuardar = iframeWindow.__callbackGuardarGlobal;
+                        if (guardar && callbackGuardar) {
+                            try {
+                                console.log('[Menu] Ejecutando callback de guardar...');
+                                await callbackGuardar();
+                                console.log('[Menu] Guardado completado');
+                                // Esperar brevemente para mostrar la notificación
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                                console.log('[Menu] Navegando después de guardar a:', url);
+                                contentFrame.src = url;
+                                return;
+                            } catch (e) {
+                                console.log('[Menu] Usuario canceló modal de pagos o error al guardar:', e.message);
+                                // No navegar si el usuario canceló o si falló el guardado
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // No hay cambios o no hay verificación, navegar normalmente
+            console.log('[Menu] No hay cambios, navegando a:', url);
+            contentFrame.src = url;
+        } catch (e) {
+            console.error('[Menu] Error verificando cambios:', e);
+            // Si falla, navegar normalmente
+            contentFrame.src = url;
+        }
+    }
+
     function agregarEventListenersMenu() {
         const menuItems = document.querySelectorAll('.menu-item');
         const contentFrame = document.getElementById('content-frame');
@@ -882,7 +1351,7 @@
             if (menuLink) {
                 // Event listener para toggle del menú (SIEMPRE)
                 console.log("[MENU] Agregando event listener a:", menuLink.textContent.trim());
-                menuLink.addEventListener('click', function(e) {
+                menuLink.addEventListener('click', async function(e) {
                     e.preventDefault();
                     console.log("[MENU] Click en:", menuLink.textContent.trim(), "tiene submenu:", !!submenu);
                     
@@ -897,11 +1366,11 @@
                     item.classList.toggle('active');
                     
                     console.log("[MENU] Toggle active. Activo ahora:", item.classList.contains("active"));
-                    // Si NO tiene submenu, cargar la página
+                    // Si NO tiene submenu, cargar la página con verificación de cambios
                     if (!submenu) {
                         const target = menuLink.dataset.target;
                         if (target && target !== '#' && contentFrame) {
-                            contentFrame.src = target;
+                            await loadPage(target);
                         }
                     }
                 });
@@ -911,11 +1380,11 @@
             if (submenu) {
                 const submenuItems = submenu.querySelectorAll('.submenu-item');
                 submenuItems.forEach(subItem => {
-                    subItem.addEventListener('click', function(e) {
+                    subItem.addEventListener('click', async function(e) {
                         e.preventDefault();
                         const target = subItem.dataset.target;
                         if (target && target !== '#' && contentFrame) {
-                            contentFrame.src = target;
+                            await loadPage(target);
                         }
                     });
                 });
@@ -981,6 +1450,201 @@
                 } catch (_) {
                     /* Distinto origen: no hacemos nada para evitar SecurityError */
                 }
+                
+                // *** INYECTAR COLORES EN EL IFRAME CUANDO SE CARGA UNA NUEVA PÁGINA ***
+                // Usar setTimeout para asegurar que el DOM del iframe esté completamente listo
+                setTimeout(() => {
+                    try {
+                        if (window.__brandingCSS) {
+                            console.log('[IFRAME] Aplicando colores guardados al nuevo contenido del iframe...');
+                            const iframeURL = new URL(iframe.src, window.location.href);
+                            if (iframeURL.origin === window.location.origin) {
+                                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                                if (iframeDoc && iframeDoc.head) {
+                                    let iframeStyleElement = iframeDoc.getElementById('dynamic-branding-styles');
+                                    if (!iframeStyleElement) {
+                                        iframeStyleElement = iframeDoc.createElement('style');
+                                        iframeStyleElement.id = 'dynamic-branding-styles';
+                                        iframeDoc.head.appendChild(iframeStyleElement);
+                                        console.log('[IFRAME] Style element creado en iframe');
+                                    }
+                                    iframeStyleElement.textContent = window.__brandingCSS;
+                                    console.log('[IFRAME] CSS aplicado. Longitud:', window.__brandingCSS.length);
+                                    console.log('[IFRAME] Primeras 200 chars:', window.__brandingCSS.substring(0, 200));
+                                    
+                                    // Forzar reflow en el iframe
+                                    if (iframeDoc.body) {
+                                        iframeDoc.body.offsetHeight;
+                                        console.log('[IFRAME] Reflow forzado');
+                                    }
+                                    
+                                    // Verificar que se aplicó
+                                    const testCard = iframeDoc.querySelector('.stats-card');
+                                    if (testCard) {
+                                        const computed = iframe.contentWindow.getComputedStyle(testCard);
+                                        console.log('[IFRAME] Tarjeta encontrada. BG:', computed.backgroundColor, 'Color:', computed.color);
+                                    }
+                                    
+                                    // *** FORZAR COLORES DIRECTAMENTE EN EL DOM ***
+                                    if (window.__brandingColors) {
+                                        const colors = window.__brandingColors;
+                                        
+                                        // Función local para calcular color de texto
+                                        function calcTextColor(bgColor) {
+                                            let r, g, b;
+                                            if (bgColor.startsWith('#')) {
+                                                const hex = bgColor.replace('#', '');
+                                                r = parseInt(hex.substring(0, 2), 16);
+                                                g = parseInt(hex.substring(2, 4), 16);
+                                                b = parseInt(hex.substring(4, 6), 16);
+                                            } else if (bgColor.startsWith('rgb')) {
+                                                const match = bgColor.match(/\d+/g);
+                                                r = parseInt(match[0]);
+                                                g = parseInt(match[1]);
+                                                b = parseInt(match[2]);
+                                            } else {
+                                                return '#000000';
+                                            }
+                                            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                                            return luminance > 0.5 ? '#000000' : '#ffffff';
+                                        }
+                                        
+                                        const textForCards = calcTextColor(colors.secundario || colors.grid_header || '#ffffff');
+                                        const textForBody = calcTextColor(colors.app_bg || '#ffffff');
+                                        
+                                        console.log('[IFRAME] FORZANDO colores directamente en el DOM...');
+                                        
+                                        // Aplicar a body
+                                        if (iframeDoc.body) {
+                                            iframeDoc.body.style.backgroundColor = colors.app_bg || '#ffffff';
+                                            iframeDoc.body.style.color = textForBody;
+                                            console.log('[IFRAME] Body: BG=' + colors.app_bg + ' Color=' + textForBody);
+                                        }
+                                        
+                                        // Aplicar a todas las tarjetas
+                                        const allCards = iframeDoc.querySelectorAll('.stats-card, .card');
+                                        allCards.forEach((card, index) => {
+                                            card.style.backgroundColor = colors.secundario || colors.grid_header || '#44475a';
+                                            card.style.color = textForCards;
+                                            card.style.border = '1px solid ' + colors.primario;
+                                            
+                                            // Aplicar a todos los elementos dentro de la tarjeta
+                                            card.querySelectorAll('*').forEach(el => {
+                                                el.style.color = textForCards;
+                                            });
+                                        });
+                                        console.log('[IFRAME] Colores aplicados INLINE a', allCards.length, 'tarjetas');
+                                        
+                                        // Aplicar a todas las tablas
+                                        const allTables = iframeDoc.querySelectorAll('table');
+                                        allTables.forEach((table) => {
+                                            table.style.backgroundColor = colors.app_bg || '#ffffff';
+                                            table.style.color = textForBody;
+                                            
+                                            // Encabezados de tabla
+                                            table.querySelectorAll('thead, thead th').forEach(el => {
+                                                el.style.backgroundColor = colors.grid_header;
+                                                el.style.color = colors.header_text || '#ffffff';
+                                            });
+                                            
+                                            // Cuerpo de tabla
+                                            table.querySelectorAll('tbody, tbody tr, tbody td').forEach(el => {
+                                                el.style.backgroundColor = colors.secundario || colors.app_bg;
+                                                el.style.color = textForCards;
+                                            });
+                                            
+                                            // Bordes de celdas
+                                            table.querySelectorAll('td, th').forEach(el => {
+                                                el.style.borderColor = colors.primario;
+                                            });
+                                        });
+                                        console.log('[IFRAME] Colores aplicados INLINE a', allTables.length, 'tablas');
+                                        
+                                        // Aplicar a contenedores y áreas de contenido
+                                        const contenedores = iframeDoc.querySelectorAll('.container, .content, .main-content, .page-content, .content-area, .wrapper, .inner-content');
+                                        contenedores.forEach(cont => {
+                                            cont.style.backgroundColor = colors.app_bg || '#ffffff';
+                                            cont.style.color = textForBody;
+                                        });
+                                        
+                                        // Aplicar a formularios y secciones específicas de tickets/proformas
+                                        const formularios = iframeDoc.querySelectorAll('form, .form, .form-container, .form-group, .form-section, .form-inline, .cabecera-ticket, .detalle-proforma-container, .detalle-proforma-item, .detalle-proforma-item-importe');
+                                        formularios.forEach(form => {
+                                            form.style.backgroundColor = colors.app_bg || '#ffffff';
+                                            form.style.color = textForBody;
+                                        });
+                                        
+                                        // Aplicar a inputs y selects
+                                        const inputs = iframeDoc.querySelectorAll('input[type="text"], input[type="number"], input[type="email"], input[type="tel"], input[type="date"], input[type="password"], select, textarea');
+                                        inputs.forEach(input => {
+                                            input.style.backgroundColor = colors.secundario || colors.app_bg;
+                                            input.style.color = textForBody;
+                                            input.style.borderColor = colors.primario;
+                                        });
+                                        
+                                        // Aplicar a inputs readonly (sobrescribir #e9ecef hardcodeado)
+                                        const inputsReadonly = iframeDoc.querySelectorAll('input[readonly], input.readonly-field');
+                                        inputsReadonly.forEach(input => {
+                                            input.style.backgroundColor = colors.secundario || colors.app_bg;
+                                            input.style.color = textForBody;
+                                            input.style.opacity = '0.8';
+                                        });
+                                        
+                                        // Aplicar a labels
+                                        const labels = iframeDoc.querySelectorAll('label');
+                                        labels.forEach(label => {
+                                            label.style.color = textForBody;
+                                        });
+                                        
+                                        // Aplicar a modales (deben destacarse con color secundario)
+                                        const modales = iframeDoc.querySelectorAll('.modal-content, .modal, .dialog, .popup');
+                                        modales.forEach(modal => {
+                                            modal.style.backgroundColor = colors.secundario || colors.app_bg;
+                                            modal.style.color = textForBody;
+                                            modal.style.border = '2px solid ' + colors.primario;
+                                        });
+                                        
+                                        // Aplicar a notificaciones (usan colores específicos según tipo)
+                                        const notificaciones = iframeDoc.querySelectorAll('.notification, .notificacion, .alert, .toast');
+                                        notificaciones.forEach(notif => {
+                                            // Determinar tipo de notificación
+                                            if (notif.classList.contains('success') || notif.classList.contains('exito') || notif.classList.contains('alert-success') || notif.classList.contains('toast-success')) {
+                                                notif.style.backgroundColor = colors.success || '#27ae60';
+                                                notif.style.color = '#ffffff';
+                                                notif.style.border = '1px solid ' + (colors.success || '#27ae60');
+                                            } else if (notif.classList.contains('warning') || notif.classList.contains('advertencia') || notif.classList.contains('alert-warning') || notif.classList.contains('toast-warning')) {
+                                                notif.style.backgroundColor = colors.warning || '#f39c12';
+                                                notif.style.color = '#ffffff';
+                                                notif.style.border = '1px solid ' + (colors.warning || '#f39c12');
+                                            } else if (notif.classList.contains('danger') || notif.classList.contains('error') || notif.classList.contains('alert-danger') || notif.classList.contains('toast-danger')) {
+                                                notif.style.backgroundColor = colors.danger || '#e74c3c';
+                                                notif.style.color = '#ffffff';
+                                                notif.style.border = '1px solid ' + (colors.danger || '#e74c3c');
+                                            } else if (notif.classList.contains('info') || notif.classList.contains('alert-info') || notif.classList.contains('toast-info')) {
+                                                notif.style.backgroundColor = colors.info || '#3498db';
+                                                notif.style.color = '#ffffff';
+                                                notif.style.border = '1px solid ' + (colors.info || '#3498db');
+                                            } else {
+                                                // Notificaciones genéricas
+                                                notif.style.backgroundColor = colors.secundario || colors.app_bg;
+                                                notif.style.color = textForBody;
+                                                notif.style.border = '1px solid ' + colors.primario;
+                                            }
+                                        });
+                                        
+                                        console.log('[IFRAME] Colores aplicados a contenedores, forms, inputs, labels, modales y notificaciones');
+                                    }
+                                } else {
+                                    console.warn('[IFRAME] iframeDoc o iframeDoc.head no disponible');
+                                }
+                            }
+                        } else {
+                            console.warn('[IFRAME] window.__brandingCSS no está definido aún');
+                        }
+                    } catch (e) {
+                        console.error('[IFRAME] Error aplicando colores:', e);
+                    }
+                }, 100);  // Esperar 100ms para que el DOM esté listo
             });
             
             // Sistema de notificaciones de conciliación
