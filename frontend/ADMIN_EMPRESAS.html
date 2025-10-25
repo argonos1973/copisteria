@@ -19,16 +19,16 @@
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
         .modal.active { display: flex; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 30px; border-radius: 10px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background: white; padding: 12px; border-radius: 10px; max-width: 1100px; width: 95%; max-height: 98vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-header h2 { color: #2c3e50; }
         .close { font-size: 28px; cursor: pointer; color: #7f8c8d; }
         .close:hover { color: #2c3e50; }
         
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold; }
-        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
-        .form-group input[type="color"] { height: 45px; cursor: pointer; }
+        .form-group { margin-bottom: 3px; }
+        .form-group label { display: block; margin-bottom: 3px; color: #2c3e50; font-weight: bold; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #dddddd; border-radius: 5px; font-size: 14px; }
+        .form-group input[type="color"] { height: 30px; width: 35px; cursor: pointer; display: block; margin: 0 auto; }
         .form-group input[type="file"] { padding: 8px; }
         
         .empresas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px; }
@@ -37,11 +37,11 @@
         .empresa-header { display: flex; align-items: center; margin-bottom: 15px; }
         .empresa-logo { width: 60px; height: 60px; object-fit: contain; margin-right: 15px; border-radius: 5px; }
         .empresa-info h3 { color: #2c3e50; margin-bottom: 5px; }
-        .empresa-info .codigo { color: #7f8c8d; font-size: 12px; }
+        .empresa-info .codigo { color: #7f8c8d; font-size: 10px; }
         .empresa-details { color: #555; font-size: 14px; line-height: 1.6; }
         .empresa-details p { margin: 5px 0; }
         .empresa-details i { width: 20px; color: #3498db; }
-        .empresa-status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; margin-top: 10px; }
+        .empresa-status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 10px; margin-top: 10px; }
         .empresa-status.activo { background: #d4edda; color: #155724; }
         .empresa-status.inactivo { background: #f8d7da; color: #721c24; }
         
@@ -55,7 +55,38 @@
         .alert { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
         .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        
+        .btn-plantilla { padding: 10px 15px; border: 2px solid #dee2e6; background: white; border-radius: 8px; cursor: pointer; transition: all 0.3s; font-size: 10px; color: #495057; }
+        .btn-plantilla:hover { border-color: #3498db; background: #e3f2fd; color: #2980b9; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .btn-plantilla i { margin-right: 5px; }
+        .btn-plantilla.plantilla-personalizada { border: 2px solid #9c27b0; background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); }
+        .btn-plantilla.plantilla-personalizada:hover { border-color: #7b1fa2; background: linear-gradient(135deg, #e1bee7 0%, #ce93d8 100%); box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3); }
+        
+        details summary { 
+            user-select: none; 
+            cursor: pointer;
+            list-style: none;
+            position: relative;
+            padding-left: 25px;
+        }
+        details summary::-webkit-details-marker { display: none; }
+        details summary::before {
+            content: '▶';
+            position: absolute;
+            left: 5px;
+            color: #3498db;
+            font-size: 10px;
+            transition: transform 0.3s;
+        }
+        details[open] summary::before {
+            transform: rotate(90deg);
+        }
+        details[open] summary { margin-bottom: 15px; }
+        details summary:hover { color: #3498db; }
     </style>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 </head>
 <body>
     <div class="container">
@@ -120,22 +151,525 @@
                     <small style="color: #7f8c8d;">Formatos: PNG, JPG, SVG (máx. 2MB)</small>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group">
-                        <label for="color_primario">Color Primario</label>
-                        <input type="color" id="color_primario" name="color_primario" value="#2c3e50">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="color_secundario">Color Secundario</label>
-                        <input type="color" id="color_secundario" name="color_secundario" value="#3498db">
-                    </div>
+                <h4 style="margin: 20px 0 10px 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                    <i class="fas fa-palette"></i> Plantillas y Colores del Sistema
+                </h4>
+                
+                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #3498db;">
+                    <strong style="color: #2c3e50;"><i class="fas fa-info-circle"></i> Instrucciones:</strong>
+                    <ol style="margin: 8px 0 0 20px; color: #495057; font-size: 10px; line-height: 1.6;">
+                        <li>Selecciona una plantilla predefinida haciendo clic en los botones de abajo</li>
+                        <li>Luego, haz clic en las flechas <strong style="color: #3498db;">▶</strong> para expandir cada sección de colores</li>
+                        <li>Personaliza cada color haciendo clic en el cuadrado de color</li>
+                    </ol>
                 </div>
+                
+                <!-- Selector de Plantillas -->
+                <div class="form-group" style="background: #f8f9fa; padding: 6px; border-radius: 6px; margin-bottom: 6px;">
+                    <label><i class="fas fa-swatchbook"></i> Seleccionar Plantilla Predefinida</label>
+                    <div id="plantillas-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-top: 6px;">
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantilla('aleph70')">
+                            <i class="fas fa-star"></i> Aleph70
+                        </button>
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantilla('glassmorphism')">
+                            <i class="fas fa-moon"></i> Glassmorphism
+                        </button>
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantilla('cyber')">
+                            <i class="fas fa-rocket"></i> Cyber Night
+                        </button>
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantilla('darkmode')">
+                            <i class="fas fa-adjust"></i> Dark Mode
+                        </button>
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantilla('oceano')">
+                            <i class="fas fa-water"></i> Océano
+                        </button>
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantilla('default')">
+                            <i class="fas fa-redo"></i> Por Defecto
+                        </button>
+                    </div>
+                    <small style="color: #6c757d; display: block; margin-top: 6px;">
+                        <i class="fas fa-info-circle"></i> Puedes seleccionar una plantilla y luego personalizar cada color individualmente
+                    </small>
+                    <button type="button" class="btn btn-success" onclick="crearPlantillaPersonalizadaActual(''); mostrarAlerta('Plantilla personalizada guardada', 'success');" style="width: 100%; margin-top: 8px; font-size: 13px; padding: 8px;">
+                        <i class="fas fa-save"></i> Guardar Colores Actuales como Plantilla
+                    </button>
+                </div>
+                
+                <!-- Colores Principales -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-paint-brush"></i> Colores Principales
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="color_app_bg" style="font-size: 10px;">Fondo App</label>
+                            <input type="color" id="color_app_bg" name="color_app_bg" value="#ffffff" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="color_primario" style="font-size: 10px;">Menú Lateral</label>
+                            <input type="color" id="color_primario" name="color_primario" value="#2c3e50" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="color_secundario" style="font-size: 10px;">Tarjetas</label>
+                            <input type="color" id="color_secundario" name="color_secundario" value="#3498db" style="width: 35px; height: 28px;">
+                            </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Botones -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-hand-pointer"></i> Colores de Botones
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="color_button" style="font-size: 10px;">Botón</label>
+                            <input type="color" id="color_button" name="color_button" value="#3498db" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="color_button_hover" style="font-size: 10px;">Botón Hover</label>
+                            <input type="color" id="color_button_hover" name="color_button_hover" value="#2980b9" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="color_button_text" style="font-size: 10px;">Texto Botón</label>
+                            <input type="color" id="color_button_text" name="color_button_text" value="#ffffff" style="width: 35px; height: 28px;">
+                            </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Encabezados -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-heading"></i> Colores de Encabezados
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="color_header_bg"><i class="fas fa-circle"></i> Fondo de Encabezados</label>
+                            <input type="color" id="color_header_bg" name="color_header_bg" value="#2c3e50">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_header_text"><i class="fas fa-circle"></i> Texto de Encabezados</label>
+                            <input type="color" id="color_header_text" name="color_header_text" value="#ffffff">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Tablas -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-table"></i> Colores de Tablas
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="color_grid_header"><i class="fas fa-circle"></i> Encabezados de Tabla</label>
+                            <input type="color" id="color_grid_header" name="color_grid_header" value="#2c3e50">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_grid_hover"><i class="fas fa-circle"></i> Hover de Filas</label>
+                            <input type="color" id="color_grid_hover" name="color_grid_hover" value="rgba(52, 152, 219, 0.1)">
+                            <input type="text" id="color_grid_hover_text" placeholder="rgba(52, 152, 219, 0.1)" style="margin-top: 5px; font-size: 10px;">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Estado -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-exclamation-triangle"></i> Colores de Estado
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="color_success"><i class="fas fa-circle"></i> Color Éxito</label>
+                            <input type="color" id="color_success" name="color_success" value="#27ae60">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_warning"><i class="fas fa-circle"></i> Color Advertencia</label>
+                            <input type="color" id="color_warning" name="color_warning" value="#f39c12">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_danger"><i class="fas fa-circle"></i> Color Peligro</label>
+                            <input type="color" id="color_danger" name="color_danger" value="#e74c3c">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_info"><i class="fas fa-circle"></i> Color Información</label>
+                            <input type="color" id="color_info" name="color_info" value="#3498db">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Inputs -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-keyboard"></i> Colores de Inputs
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="color_input_bg"><i class="fas fa-circle"></i> Fondo de Inputs</label>
+                            <input type="color" id="color_input_bg" name="color_input_bg" value="#ffffff">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_input_text"><i class="fas fa-circle"></i> Texto de Inputs</label>
+                            <input type="color" id="color_input_text" name="color_input_text" value="#333333">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_input_border"><i class="fas fa-circle"></i> Borde de Inputs</label>
+                            <input type="color" id="color_input_border" name="color_input_border" value="#ddd">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Selects -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-caret-square-down"></i> Colores de Selects
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="color_select_bg"><i class="fas fa-circle"></i> Fondo de Selects</label>
+                            <input type="color" id="color_select_bg" name="color_select_bg" value="#ffffff">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_select_text"><i class="fas fa-circle"></i> Texto de Selects</label>
+                            <input type="color" id="color_select_text" name="color_select_text" value="#333333">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_select_border"><i class="fas fa-circle"></i> Borde de Selects</label>
+                            <input type="color" id="color_select_border" name="color_select_border" value="#ddd">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Submenús -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-bars"></i> Colores de Submenús
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="color_submenu_bg"><i class="fas fa-circle"></i> Fondo de Submenús</label>
+                            <input type="color" id="color_submenu_bg" name="color_submenu_bg" value="#243342">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_submenu_text"><i class="fas fa-circle"></i> Texto de Submenús</label>
+                            <input type="color" id="color_submenu_text" name="color_submenu_text" value="#ecf0f1">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_submenu_hover"><i class="fas fa-circle"></i> Hover de Submenús</label>
+                            <input type="color" id="color_submenu_hover" name="color_submenu_hover" value="#34495e">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Grids -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-th"></i> Colores de Grids
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="color_grid_bg"><i class="fas fa-circle"></i> Fondo de Grid</label>
+                            <input type="color" id="color_grid_bg" name="color_grid_bg" value="#ffffff">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_grid_text"><i class="fas fa-circle"></i> Texto de Grid</label>
+                            <input type="color" id="color_grid_text" name="color_grid_text" value="#333333">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores Adicionales -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-palette"></i> Colores Adicionales
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="color_icon"><i class="fas fa-circle"></i> Color de Iconos</label>
+                            <input type="color" id="color_icon" name="color_icon" value="#ecf0f1">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_disabled_bg"><i class="fas fa-circle"></i> Fondo Deshabilitado</label>
+                            <input type="color" id="color_disabled_bg" name="color_disabled_bg" value="#f5f5f5">
+                        </div>
+                        <div class="form-group">
+                            <label for="color_disabled_text"><i class="fas fa-circle"></i> Texto Deshabilitado</label>
+                            <input type="color" id="color_disabled_text" name="color_disabled_text" value="#999999">
+                        </div>
+                    </div>
+                </details>
                 
                 <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
                     <button type="button" class="btn" onclick="cerrarModal()">Cancelar</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> Crear Empresa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Modal Editar Empresa -->
+    <div id="modalEditar" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Editar Plantilla y Colores</h2>
+                <span class="close" onclick="cerrarModalEditar()">&times;</span>
+            </div>
+            
+            <form id="formEditarEmpresa">
+                <input type="hidden" id="edit_empresa_id" name="empresa_id">
+                
+                <div class="form-group" style="max-width: 150px;">
+                    <label><i class="fas fa-building"></i> Empresa</label>
+                    <input type="text" id="edit_nombre_empresa" disabled style="background: #f0f0f0; width: 100%;">
+                </div>
+                
+                <h4 style="margin: 20px 0 10px 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                    <i class="fas fa-palette"></i> Plantillas y Colores del Sistema
+                </h4>
+                
+                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #3498db;">
+                    <strong style="color: #2c3e50;"><i class="fas fa-info-circle"></i> Instrucciones:</strong>
+                    <ol style="margin: 8px 0 0 20px; color: #495057; font-size: 10px; line-height: 1.6;">
+                        <li>Selecciona una plantilla predefinida haciendo clic en los botones de abajo</li>
+                        <li>Luego, haz clic en las flechas <strong style="color: #3498db;">▶</strong> para expandir cada sección de colores</li>
+                        <li>Personaliza cada color haciendo clic en el cuadrado de color</li>
+                    </ol>
+                </div>
+                
+                <!-- Selector de Plantillas -->
+                <div class="form-group" style="background: #f8f9fa; padding: 6px; border-radius: 6px; margin-bottom: 6px;">
+                    <label><i class="fas fa-swatchbook"></i> Seleccionar Plantilla Predefinida</label>
+                    <div id="plantillas-container-editar" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-top: 6px;">
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantillaEditar('aleph70')">
+                            <i class="fas fa-star"></i> Aleph70
+                        </button>
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantillaEditar('glassmorphism')">
+                            <i class="fas fa-moon"></i> Glassmorphism
+                        </button>
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantillaEditar('cyber')">
+                            <i class="fas fa-rocket"></i> Cyber Night
+                        </button>
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantillaEditar('darkmode')">
+                            <i class="fas fa-adjust"></i> Dark Mode
+                        </button>
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantillaEditar('oceano')">
+                            <i class="fas fa-water"></i> Océano
+                        </button>
+                        <button type="button" class="btn-plantilla" onclick="aplicarPlantillaEditar('default')">
+                            <i class="fas fa-redo"></i> Por Defecto
+                        </button>
+                    </div>
+                    <small style="color: #6c757d; display: block; margin-top: 6px;">
+                        <i class="fas fa-info-circle"></i> Puedes seleccionar una plantilla y luego personalizar cada color individualmente
+                    </small>
+                    <button type="button" class="btn btn-success" onclick="crearPlantillaPersonalizadaActual('edit_'); mostrarAlerta('Plantilla personalizada guardada', 'success');" style="width: 100%; margin-top: 8px; font-size: 13px; padding: 8px;">
+                        <i class="fas fa-save"></i> Guardar Colores Actuales como Plantilla
+                    </button>
+                </div>
+                
+                <!-- Colores Principales -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-paint-brush"></i> Colores Principales
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="edit_color_app_bg" style="font-size: 10px;">Fondo App</label>
+                            <input type="color" id="edit_color_app_bg" name="color_app_bg" value="#ffffff" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="edit_color_primario" style="font-size: 10px;">Menú Lateral</label>
+                            <input type="color" id="edit_color_primario" name="color_primario" value="#2c3e50" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="edit_color_secundario" style="font-size: 10px;">Tarjetas</label>
+                            <input type="color" id="edit_color_secundario" name="color_secundario" value="#3498db" style="width: 35px; height: 28px;">
+                            </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Botones -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-hand-pointer"></i> Colores de Botones
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="edit_color_button" style="font-size: 10px;">Botón</label>
+                            <input type="color" id="edit_color_button" name="color_button" value="#3498db" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="edit_color_button_hover" style="font-size: 10px;">Botón Hover</label>
+                            <input type="color" id="edit_color_button_hover" name="color_button_hover" value="#2980b9" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="edit_color_button_text" style="font-size: 10px;">Texto Botón</label>
+                            <input type="color" id="edit_color_button_text" name="color_button_text" value="#ffffff" style="width: 35px; height: 28px;">
+                            </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Encabezados -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-heading"></i> Colores de Encabezados
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="edit_color_header_bg" style="font-size: 10px;">Encabezado</label>
+                            <input type="color" id="edit_color_header_bg" name="color_header_bg" value="#2c3e50" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="edit_color_header_text" style="font-size: 10px;">Texto Header</label>
+                            <input type="color" id="edit_color_header_text" name="color_header_text" value="#ffffff" style="width: 35px; height: 28px;">
+                            </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Tablas -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-table"></i> Colores de Tablas
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="edit_color_grid_header" style="font-size: 10px;">Cabecera Tabla</label>
+                            <input type="color" id="edit_color_grid_header" name="color_grid_header" value="#2c3e50" style="width: 35px; height: 28px;">
+                            </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Estado -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-exclamation-triangle"></i> Colores de Estado
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="edit_color_success" style="font-size: 10px;">Éxito</label>
+                            <input type="color" id="edit_color_success" name="color_success" value="#27ae60" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="edit_color_warning" style="font-size: 10px;">Advertencia</label>
+                            <input type="color" id="edit_color_warning" name="color_warning" value="#f39c12" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="edit_color_danger" style="font-size: 10px;">Peligro</label>
+                            <input type="color" id="edit_color_danger" name="color_danger" value="#e74c3c" style="width: 35px; height: 28px;">
+                            </div>
+                        <div class="form-group">
+                            <label for="edit_color_info" style="font-size: 10px;">Info</label>
+                            <input type="color" id="edit_color_info" name="color_info" value="#3498db" style="width: 35px; height: 28px;">
+                            </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Inputs -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-keyboard"></i> Colores de Inputs
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="edit_color_input_bg" style="font-size: 10px;">Fondo Input</label>
+                            <input type="color" id="edit_color_input_bg" style="width: 35px; height: 28px;" name="color_input_bg" value="#ffffff">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_color_input_text" style="font-size: 10px;">Texto Input</label>
+                            <input type="color" id="edit_color_input_text" style="width: 35px; height: 28px;" name="color_input_text" value="#333333">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_color_input_border" style="font-size: 10px;">Borde Input</label>
+                            <input type="color" id="edit_color_input_border" style="width: 35px; height: 28px;" name="color_input_border" value="#ddd">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Selects -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-caret-square-down"></i> Colores de Selects
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="edit_color_select_bg" style="font-size: 10px;">Fondo Select</label>
+                            <input type="color" id="edit_color_select_bg" style="width: 35px; height: 28px;" name="color_select_bg" value="#ffffff">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_color_select_text" style="font-size: 10px;">Texto Select</label>
+                            <input type="color" id="edit_color_select_text" style="width: 35px; height: 28px;" name="color_select_text" value="#333333">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_color_select_border" style="font-size: 10px;">Borde Select</label>
+                            <input type="color" id="edit_color_select_border" style="width: 35px; height: 28px;" name="color_select_border" value="#ddd">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Submenús -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-bars"></i> Colores de Submenús
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="edit_color_submenu_bg" style="font-size: 10px;">Fondo Submenu</label>
+                            <input type="color" id="edit_color_submenu_bg" style="width: 35px; height: 28px;" name="color_submenu_bg" value="#243342">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_color_submenu_text" style="font-size: 10px;">Texto Submenu</label>
+                            <input type="color" id="edit_color_submenu_text" style="width: 35px; height: 28px;" name="color_submenu_text" value="#ecf0f1">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_color_submenu_hover" style="font-size: 10px;">Hover Submenu</label>
+                            <input type="color" id="edit_color_submenu_hover" style="width: 35px; height: 28px;" name="color_submenu_hover" value="#34495e">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores de Grids -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-th"></i> Colores de Grids
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="edit_color_grid_bg" style="font-size: 10px;">Fondo Grid</label>
+                            <input type="color" id="edit_color_grid_bg" style="width: 35px; height: 28px;" name="color_grid_bg" value="#ffffff">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_color_grid_text" style="font-size: 10px;">Texto Grid</label>
+                            <input type="color" id="edit_color_grid_text" style="width: 35px; height: 28px;" name="color_grid_text" value="#333333">
+                        </div>
+                    </div>
+                </details>
+                
+                <!-- Colores Adicionales -->
+                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
+                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                        <i class="fas fa-palette"></i> Colores Adicionales
+                    </summary>
+                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                        <div class="form-group">
+                            <label for="edit_color_icon" style="font-size: 10px;">Iconos</label>
+                            <input type="color" id="edit_color_icon" style="width: 35px; height: 28px;" name="color_icon" value="#ecf0f1">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_color_disabled_bg" style="font-size: 10px;">Deshabilitado</label>
+                            <input type="color" id="edit_color_disabled_bg" style="width: 35px; height: 28px;" name="color_disabled_bg" value="#f5f5f5">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit_color_disabled_text" style="font-size: 10px;">Texto Desab</label>
+                            <input type="color" id="edit_color_disabled_text" style="width: 35px; height: 28px;" name="color_disabled_text" value="#999999">
+                        </div>
+                    </div>
+                </details>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button type="button" class="btn" onclick="cerrarModalEditar()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
                     </button>
                 </div>
             </form>
@@ -180,7 +714,7 @@
                     <div class="no-empresas">
                         <i class="fas fa-building"></i>
                         <p>No hay empresas registradas</p>
-                        <p style="font-size: 14px; margin-top: 10px;">Haz clic en "Nueva Empresa" para comenzar</p>
+                        <p style="font-size: 14px; margin-top: 6px;">Haz clic en "Nueva Empresa" para comenzar</p>
                     </div>
                 `;
                 return;
@@ -209,6 +743,9 @@
                         <span class="empresa-status ${emp.activo ? 'activo' : 'inactivo'}">
                             ${emp.activo ? '✓ Activa' : '✗ Inactiva'}
                         </span>
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick='abrirModalEditar(${JSON.stringify(emp)})'>
+                            <i class="fas fa-edit"></i> Editar Colores y Plantilla
+                        </button>
                     </div>
                 </div>
             `).join('');
@@ -217,10 +754,245 @@
         function abrirModalCrear() {
             document.getElementById('modalCrear').classList.add('active');
             document.getElementById('formCrearEmpresa').reset();
+            // Cargar plantillas personalizadas
+            if (typeof cargarPlantillasPersonalizadas === 'function') {
+                cargarPlantillasPersonalizadas();
+            }
         }
         
         function cerrarModal() {
             document.getElementById('modalCrear').classList.remove('active');
+        }
+        
+        // Función para aplicar plantillas predefinidas
+        function aplicarPlantilla(plantilla) {
+            const plantillas = {
+                'glassmorphism': {
+                    color_app_bg: '#080710',
+                    color_primario: '#080710',
+                    color_secundario: '#1a1a2e',
+                    color_button: '#23a2f6',
+                    color_button_hover: '#1845ad',
+                    color_button_text: '#ffffff',
+                    color_header_bg: '#1845ad',
+                    color_header_text: '#ffffff',
+                    color_grid_header: '#1845ad',
+                    color_grid_hover: 'rgba(35,162,246,0.2)',
+                    color_success: '#27ae60',
+                    color_warning: '#f39c12',
+                    color_danger: '#e74c3c',
+                    color_info: '#23a2f6'
+                },
+                'cyber': {
+                    color_app_bg: '#0a0e27',
+                    color_primario: '#0a0e27',
+                    color_secundario: '#1e2749',
+                    color_button: '#00d9ff',
+                    color_button_hover: '#00b8d4',
+                    color_button_text: '#000000',
+                    color_header_bg: '#6a00ff',
+                    color_header_text: '#ffffff',
+                    color_grid_header: '#6a00ff',
+                    color_grid_hover: 'rgba(106,0,255,0.2)',
+                    color_success: '#00ff88',
+                    color_warning: '#ffd600',
+                    color_danger: '#ff006e',
+                    color_info: '#00d9ff'
+                },
+                'darkmode': {
+                    color_app_bg: '#1e1e1e',
+                    color_primario: '#252525',
+                    color_secundario: '#2d2d2d',
+                    color_button: '#007acc',
+                    color_button_hover: '#005a9e',
+                    color_button_text: '#ffffff',
+                    color_header_bg: '#333333',
+                    color_header_text: '#ffffff',
+                    color_grid_header: '#404040',
+                    color_grid_hover: 'rgba(255,255,255,0.1)',
+                    color_success: '#4ec9b0',
+                    color_warning: '#ffb454',
+                    color_danger: '#f48771',
+                    color_info: '#9cdcfe'
+                },
+                'oceano': {
+                    color_app_bg: '#001f3f',
+                    color_primario: '#003366',
+                    color_secundario: '#004080',
+                    color_button: '#0074d9',
+                    color_button_hover: '#0056b3',
+                    color_button_text: '#ffffff',
+                    color_header_bg: '#005b9a',
+                    color_header_text: '#ffffff',
+                    color_grid_header: '#006bb3',
+                    color_grid_hover: 'rgba(0,116,217,0.2)',
+                    color_success: '#2ecc71',
+                    color_warning: '#f39c12',
+                    color_danger: '#e74c3c',
+                    color_info: '#3498db'
+                },
+                'default': {
+                    color_app_bg: '#ffffff',
+                    color_primario: '#2c3e50',
+                    color_secundario: '#3498db',
+                    color_button: '#3498db',
+                    color_button_hover: '#2980b9',
+                    color_button_text: '#ffffff',
+                    color_header_bg: '#2c3e50',
+                    color_header_text: '#ffffff',
+                    color_grid_header: '#2c3e50',
+                    color_grid_hover: 'rgba(52,152,219,0.1)',
+                    color_success: '#27ae60',
+                    color_warning: '#f39c12',
+                    color_danger: '#e74c3c',
+                    color_info: '#3498db'
+                }
+            };
+            
+            const colores = plantillas[plantilla];
+            if (!colores) return;
+            
+            // Aplicar colores a los inputs
+            Object.keys(colores).forEach(key => {
+                const input = document.getElementById(key);
+                if (input) {
+                    if (input.type === 'color') {
+                        input.value = colores[key];
+                    } else if (input.type === 'text' && key === 'color_grid_hover') {
+                        // Para el hover que usa rgba
+                        document.getElementById('color_grid_hover_text').value = colores[key];
+                    }
+                }
+            });
+            
+            // Mostrar mensaje de confirmación
+            mostrarAlerta(`Plantilla "${plantilla}" aplicada. Puedes ajustar cada color individualmente.`, 'success');
+        }
+        
+        // Función para aplicar plantillas en modo edición
+        function aplicarPlantillaEditar(plantilla) {
+            const plantillas = {
+                'glassmorphism': {
+                    color_app_bg: '#080710',
+                    color_primario: '#080710',
+                    color_secundario: '#1a1a2e',
+                    color_button: '#23a2f6',
+                    color_button_hover: '#1845ad',
+                    color_button_text: '#ffffff',
+                    color_header_bg: '#1845ad',
+                    color_header_text: '#ffffff',
+                    color_grid_header: '#1845ad',
+                    color_success: '#27ae60',
+                    color_warning: '#f39c12',
+                    color_danger: '#e74c3c',
+                    color_info: '#23a2f6'
+                },
+                'cyber': {
+                    color_app_bg: '#0a0e27',
+                    color_primario: '#0a0e27',
+                    color_secundario: '#1e2749',
+                    color_button: '#00d9ff',
+                    color_button_hover: '#00b8d4',
+                    color_button_text: '#000000',
+                    color_header_bg: '#6a00ff',
+                    color_header_text: '#ffffff',
+                    color_grid_header: '#6a00ff',
+                    color_success: '#00ff88',
+                    color_warning: '#ffd600',
+                    color_danger: '#ff006e',
+                    color_info: '#00d9ff'
+                },
+                'darkmode': {
+                    color_app_bg: '#1e1e1e',
+                    color_primario: '#252525',
+                    color_secundario: '#2d2d2d',
+                    color_button: '#007acc',
+                    color_button_hover: '#005a9e',
+                    color_button_text: '#ffffff',
+                    color_header_bg: '#333333',
+                    color_header_text: '#ffffff',
+                    color_grid_header: '#404040',
+                    color_success: '#4ec9b0',
+                    color_warning: '#ffb454',
+                    color_danger: '#f48771',
+                    color_info: '#9cdcfe'
+                },
+                'oceano': {
+                    color_app_bg: '#001f3f',
+                    color_primario: '#003366',
+                    color_secundario: '#004080',
+                    color_button: '#0074d9',
+                    color_button_hover: '#0056b3',
+                    color_button_text: '#ffffff',
+                    color_header_bg: '#005b9a',
+                    color_header_text: '#ffffff',
+                    color_grid_header: '#006bb3',
+                    color_success: '#2ecc71',
+                    color_warning: '#f39c12',
+                    color_danger: '#e74c3c',
+                    color_info: '#3498db'
+                },
+                'default': {
+                    color_app_bg: '#ffffff',
+                    color_primario: '#2c3e50',
+                    color_secundario: '#3498db',
+                    color_button: '#3498db',
+                    color_button_hover: '#2980b9',
+                    color_button_text: '#ffffff',
+                    color_header_bg: '#2c3e50',
+                    color_header_text: '#ffffff',
+                    color_grid_header: '#2c3e50',
+                    color_success: '#27ae60',
+                    color_warning: '#f39c12',
+                    color_danger: '#e74c3c',
+                    color_info: '#3498db'
+                }
+            };
+            
+            const colores = plantillas[plantilla];
+            if (!colores) return;
+            
+            // Aplicar colores a los inputs de edición (prefijo edit_)
+            Object.keys(colores).forEach(key => {
+                const input = document.getElementById('edit_' + key);
+                if (input && input.type === 'color') {
+                    input.value = colores[key];
+                }
+            });
+            
+            mostrarAlerta(`Plantilla "${plantilla}" aplicada. Puedes ajustar cada color individualmente.`, 'success');
+        }
+        
+        // Abrir modal de editar
+        function abrirModalEditar(empresa) {
+            document.getElementById('modalEditar').classList.add('active');
+            document.getElementById('edit_empresa_id').value = empresa.id;
+            document.getElementById('edit_nombre_empresa').value = empresa.nombre;
+            
+            // Cargar colores actuales
+            document.getElementById('edit_color_app_bg').value = empresa.color_app_bg || '#ffffff';
+            document.getElementById('edit_color_primario').value = empresa.color_primario || '#2c3e50';
+            document.getElementById('edit_color_secundario').value = empresa.color_secundario || '#3498db';
+            document.getElementById('edit_color_button').value = empresa.color_button || '#3498db';
+            document.getElementById('edit_color_button_hover').value = empresa.color_button_hover || '#2980b9';
+            document.getElementById('edit_color_button_text').value = empresa.color_button_text || '#ffffff';
+            document.getElementById('edit_color_header_bg').value = empresa.color_header_bg || '#2c3e50';
+            document.getElementById('edit_color_header_text').value = empresa.color_header_text || '#ffffff';
+            document.getElementById('edit_color_grid_header').value = empresa.color_grid_header || '#2c3e50';
+            document.getElementById('edit_color_success').value = empresa.color_success || '#27ae60';
+            document.getElementById('edit_color_warning').value = empresa.color_warning || '#f39c12';
+            document.getElementById('edit_color_danger').value = empresa.color_danger || '#e74c3c';
+            document.getElementById('edit_color_info').value = empresa.color_info || '#3498db';
+            
+            // Cargar plantillas personalizadas
+            if (typeof cargarPlantillasPersonalizadas === 'function') {
+                cargarPlantillasPersonalizadas();
+            }
+        }
+        
+        // Cerrar modal de editar
+        function cerrarModalEditar() {
+            document.getElementById('modalEditar').classList.remove('active');
         }
         
         function mostrarAlerta(mensaje, tipo) {
@@ -273,13 +1045,129 @@
             }
         });
         
+        // Enviar formulario de edición
+        document.getElementById('formEditarEmpresa').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const empresaId = document.getElementById('edit_empresa_id').value;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            
+            try {
+                const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        color_app_bg: document.getElementById('edit_color_app_bg').value,
+                        color_primario: document.getElementById('edit_color_primario').value,
+                        color_secundario: document.getElementById('edit_color_secundario').value,
+                        color_button: document.getElementById('edit_color_button').value,
+                        color_button_hover: document.getElementById('edit_color_button_hover').value,
+                        color_button_text: document.getElementById('edit_color_button_text').value,
+                        color_header_bg: document.getElementById('edit_color_header_bg').value,
+                        color_header_text: document.getElementById('edit_color_header_text').value,
+                        color_grid_header: document.getElementById('edit_color_grid_header').value,
+                        color_success: document.getElementById('edit_color_success').value,
+                        color_warning: document.getElementById('edit_color_warning').value,
+                        color_danger: document.getElementById('edit_color_danger').value,
+                        color_info: document.getElementById('edit_color_info').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    mostrarAlerta(data.mensaje || 'Colores actualizados exitosamente', 'success');
+                    cerrarModalEditar();
+                    cargarEmpresas();
+                } else {
+                    mostrarAlerta(data.error || 'Error actualizando colores', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error de conexión con el servidor', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        });
+        
         // Cerrar modal al hacer clic fuera
         window.onclick = function(event) {
-            const modal = document.getElementById('modalCrear');
-            if (event.target === modal) {
+            const modalCrear = document.getElementById('modalCrear');
+            const modalEditar = document.getElementById('modalEditar');
+            if (event.target === modalCrear) {
                 cerrarModal();
+            } else if (event.target === modalEditar) {
+                cerrarModalEditar();
             }
         }
     </script>
+
+        // Cargar plantillas personalizadas desde la BD
+        async function cargarPlantillasPersonalizadas() {
+            try {
+                const response = await fetch('/api/plantillas/personalizadas');
+                if (\!response.ok) {
+                    console.warn('No se pudieron cargar plantillas personalizadas');
+                    return;
+                }
+                
+                const data = await response.json();
+                if (\!data.success || \!data.plantillas || data.plantillas.length === 0) {
+                    return;
+                }
+                
+                agregarPlantillasPersonalizadas('plantillas-container', data.plantillas, 'crear');
+                agregarPlantillasPersonalizadas('plantillas-container-editar', data.plantillas, 'editar');
+                
+            } catch (error) {
+                console.error('Error cargando plantillas personalizadas:', error);
+            }
+        }
+        
+        function agregarPlantillasPersonalizadas(containerId, plantillas, modo) {
+            const container = document.getElementById(containerId);
+            if (\!container) return;
+            
+            plantillas.forEach(plantilla => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn-plantilla';
+                btn.style.background = plantilla.color_primario || '#6c5ce7';
+                btn.style.color = '#ffffff';
+                btn.onclick = () => aplicarPlantillaPersonalizadaCompleta(plantilla, modo);
+                btn.innerHTML = '<i class="fas fa-paint-brush"></i> ' + plantilla.nombre;
+                container.appendChild(btn);
+            });
+        }
+        
+        function aplicarPlantillaPersonalizadaCompleta(plantilla, modo) {
+            const prefijo = modo === 'editar' ? 'edit_' : '';
+            document.getElementById(prefijo + 'color_primario').value = plantilla.color_primario || '#2c3e50';
+            document.getElementById(prefijo + 'color_secundario').value = plantilla.color_secundario || '#34495e';
+            document.getElementById(prefijo + 'color_success').value = plantilla.color_success || '#27ae60';
+            document.getElementById(prefijo + 'color_warning').value = plantilla.color_warning || '#f39c12';
+            document.getElementById(prefijo + 'color_danger').value = plantilla.color_danger || '#e74c3c';
+            document.getElementById(prefijo + 'color_info').value = plantilla.color_info || '#3498db';
+            document.getElementById(prefijo + 'color_button').value = plantilla.color_button || '#3498db';
+            document.getElementById(prefijo + 'color_button_hover').value = plantilla.color_button_hover || '#2980b9';
+            document.getElementById(prefijo + 'color_button_text').value = plantilla.color_button_text || '#ffffff';
+            document.getElementById(prefijo + 'color_app_bg').value = plantilla.color_app_bg || '#ecf0f1';
+            document.getElementById(prefijo + 'color_header_bg').value = plantilla.color_header_bg || '#2c3e50';
+            document.getElementById(prefijo + 'color_header_text').value = plantilla.color_header_text || '#ffffff';
+            document.getElementById(prefijo + 'color_grid_header').value = plantilla.color_grid_header || '#34495e';
+            actualizarVistaPrevia();
+        }
+    <script src="../static/admin.js"></script>
 </body>
 </html>
+<\!-- Cache buster: 1761316483 -->
+<\!-- TEST TIMESTAMP: 1761325398 -->

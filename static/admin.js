@@ -523,7 +523,7 @@ async function actualizarPermiso(usuarioId, empresaId, moduloCodigo, campo, valo
             puede_anular: permisoActual.puede_anular || 0,
             puede_exportar: permisoActual.puede_exportar || 0
         };
-        
+        // end sw object marker
         data[campo] = valor ? 1 : 0;
         
         const updateResponse = await fetch(`/api/admin/usuarios/${usuarioId}/permisos`, {
@@ -1044,6 +1044,197 @@ async function editarEmpresa(empresaId) {
                                     <i class="fas fa-star"></i> Aleph70<br><small style="opacity: 0.8;">Tema original del sistema</small>
                                 </button>
                             </div>
+                        
+                        
+                        <\!-- Vista Previa Completa -->
+                        <div id="color-preview" style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin: 12px 0; border: 2px solid #3498db;">
+                            <h4 style="margin: 0 0 4px 0; color: #2c3e50; text-align: center; font-size: 9px; font-weight: 600;">
+                                <i class="fas fa-eye"></i> Vista Previa
+                            </h4>
+                            
+                            <div style="display: grid; gap: 10px;">
+                                <\!-- Fila 1: Icono con color primario (compacto) -->
+
+                                <\!-- Fila 1.1: Mapa de Colores (24) -->
+                                <div>
+                                    <label style="font-size: 8px; color: #2c3e50; display: block; margin-bottom: 3px;"><i class="fas fa-sitemap"></i> Mapa de colores</label>
+                                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Colores principales</div>
+                                        <\!-- principales: Fondo, Primario, Secundario -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Botones</div>
+                                        <\!-- botones: Btn, Hover, Texto -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Encabezados</div>
+                                        <\!-- encabezados: Hdr, Hdr Txt -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Tablas y Estados</div>
+                                        <\!-- grid header + success/warn/danger/info -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Inputs</div>
+                                        <\!-- input: fondo/texto/borde -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Selects</div>
+                                        <\!-- select: fondo/texto/borde -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Disabled</div>
+                                        <\!-- disabled: fondo/texto -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Submenús</div>
+                                        <\!-- submenu: fondo/texto/hover -->
+                                        <div id="sw-app-bg" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Fondo App</div>
+                                        <div id="sw-primario" style="height: 20px; border-radius: 3px; font-size: 7px; color:#fff; display:flex; align-items:center; justify-content:center;">Primario</div>
+                                        <div id="sw-secundario" style="height: 20px; border-radius: 3px; font-size: 7px; color:#fff; display:flex; align-items:center; justify-content:center;">Secundario</div>
+                                        <div id="sw-button" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Btn</div>
+                                        <div id="sw-button-hover" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Btn Hov</div>
+                                        <div id="sw-button-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Btn Txt</div>
+                                        <div id="sw-header-bg" style="height: 20px; border-radius: 3px; font-size: 7px; color:#fff; display:flex; align-items:center; justify-content:center;">Hdr</div>
+                                        <div id="sw-header-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Hdr Txt</div>
+
+                                        <div id="sw-grid-header" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Grid Hdr</div>
+                                        <div id="sw-success" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">OK</div>
+                                        <div id="sw-warning" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Warn</div>
+                                        <div id="sw-danger" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Error</div>
+                                        <div id="sw-info" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Info</div>
+                                        <div id="sw-input-bg" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Inp</div>
+                                        <div id="sw-input-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Inp Txt</div>
+                                        <div id="sw-input-border" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center; border:1px solid #ddd;">Inp Bor</div>
+
+                                        <div id="sw-select-bg" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Sel</div>
+                                        <div id="sw-select-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Sel Txt</div>
+                                        <div id="sw-select-border" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center; border:1px solid #ddd;">Sel Bor</div>
+                                        <div id="sw-disabled-bg" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Dis</div>
+                                        <div id="sw-disabled-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Dis Txt</div>
+                                        <div id="sw-submenu-bg" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Sub</div>
+                                        <div id="sw-submenu-text" style="height: 20px; border-radius: 3px; font-size: 7px; background:#fff; display:flex; align-items:center; justify-content:center;">Sub Txt</div>
+                                        <div id="sw-submenu-hover" style="height: 20px; border-radius: 3px; font-size: 7px; display:flex; align-items:center; justify-content:center;">Sub Hov</div>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; justify-content: flex-start; margin-bottom: 10px;">
+                                    <div id="preview-menu" style="padding: 12px 12px; border-radius: 6px; font-size: 9px; text-align: center; color: white; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 72px;"><i class="fas fa-palette" style="font-size: 14px;"></i> Icono</div>
+                                </div>
+                                
+                                <\!-- Fila 2: Inputs y Selectores -->
+                                <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                                    <div>
+                                        <label style="font-size: 7px; color: #2c3e50; display: block; margin-bottom: 2px;">Input</label>
+                                        <input type="text" value="Texto" style="width: 100%; padding: 8px 2px; border: 1px solid #ddd; border-radius: 2px; font-size: 8px; text-align: center;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 7px; color: #2c3e50; display: block; margin-bottom: 2px;">Select</label>
+                                        <select style="width: 100%; padding: 8px 2px; border: 1px solid #ddd; border-radius: 2px; font-size: 8px; text-align: center;"><option>Opt</option></select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 7px; color: #2c3e50; display: block; margin-bottom: 2px;">Input 2</label>
+                                        <input type="text" value="Texto" style="width: 100%; padding: 8px 2px; border: 1px solid #ddd; border-radius: 2px; font-size: 8px; text-align: center;">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 7px; color: #2c3e50; display: block; margin-bottom: 2px;">Select 2</label>
+                                        <select style="width: 100%; padding: 8px 2px; border: 1px solid #ddd; border-radius: 2px; font-size: 8px; text-align: center;"><option>Opt</option></select>
+                                    </div>
+                                </div>
+                                
+                                <\!-- Fila 3: Campos Disabled -->
+                                <div>
+                                    <label style="font-size: 8px; color: #2c3e50; display: block; margin-bottom: 2px;"><i class="fas fa-ban"></i> Disabled</label>
+                                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Colores principales</div>
+                                        <\!-- principales: Fondo, Primario, Secundario -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Botones</div>
+                                        <\!-- botones: Btn, Hover, Texto -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Encabezados</div>
+                                        <\!-- encabezados: Hdr, Hdr Txt -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Tablas y Estados</div>
+                                        <\!-- grid header + success/warn/danger/info -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Inputs</div>
+                                        <\!-- input: fondo/texto/borde -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Selects</div>
+                                        <\!-- select: fondo/texto/borde -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Disabled</div>
+                                        <\!-- disabled: fondo/texto -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Submenús</div>
+                                        <\!-- submenu: fondo/texto/hover -->
+                                        <input id="preview-disabled-input" type="text" value="Disabled" disabled style="width: 100%; padding: 8px 2px; border: 1px solid; border-radius: 2px; font-size: 8px; text-align: center;">
+                                        <select id="preview-disabled-select" disabled style="width: 100%; padding: 8px 2px; border: 1px solid; border-radius: 2px; font-size: 8px; text-align: center;"><option>Disabled</option></select>
+                                        <input type="text" value="Campo" disabled style="width: 100%; padding: 8px 2px; border: 1px solid; border-radius: 2px; font-size: 8px; text-align: center;">
+                                        <select disabled style="width: 100%; padding: 8px 2px; border: 1px solid; border-radius: 2px; font-size: 8px; text-align: center;"><option>Select</option></select>
+                                    </div>
+                                </div>
+                                
+                                <\!-- Fila 4: Notificaciones -->
+                                <div>
+                                    <label style="font-size: 8px; color: #2c3e50; display: block; margin-bottom: 3px;"><i class="fas fa-bell"></i> Notif.</label>
+                                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Colores principales</div>
+                                        <\!-- principales: Fondo, Primario, Secundario -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Botones</div>
+                                        <\!-- botones: Btn, Hover, Texto -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Encabezados</div>
+                                        <\!-- encabezados: Hdr, Hdr Txt -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Tablas y Estados</div>
+                                        <\!-- grid header + success/warn/danger/info -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Inputs</div>
+                                        <\!-- input: fondo/texto/borde -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Selects</div>
+                                        <\!-- select: fondo/texto/borde -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Disabled</div>
+                                        <\!-- disabled: fondo/texto -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Submenús</div>
+                                        <\!-- submenu: fondo/texto/hover -->
+                                        <div id="preview-notif-success" style="padding: 10px 4px; border-radius: 3px; font-size: 8px; border-left: 3px solid; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 3px;"><i class="fas fa-check-circle"></i><span>OK</span></div>
+                                        <div id="preview-notif-warning" style="padding: 10px 4px; border-radius: 3px; font-size: 8px; border-left: 3px solid; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 3px;"><i class="fas fa-exclamation-triangle"></i><span>Warn</span></div>
+                                        <div id="preview-notif-danger" style="padding: 10px 4px; border-radius: 3px; font-size: 8px; border-left: 3px solid; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 3px;"><i class="fas fa-times-circle"></i><span>Error</span></div>
+                                    </div>
+                                </div>
+                                
+                                <\!-- Fila 5: Tabla/Grid -->
+                                <div>
+                                    <label style="font-size: 8px; color: #2c3e50; display: block; margin-bottom: 3px;"><i class="fas fa-table"></i> Tabla</label>
+                                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Colores principales</div>
+                                        <\!-- principales: Fondo, Primario, Secundario -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Botones</div>
+                                        <\!-- botones: Btn, Hover, Texto -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Encabezados</div>
+                                        <\!-- encabezados: Hdr, Hdr Txt -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Tablas y Estados</div>
+                                        <\!-- grid header + success/warn/danger/info -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Inputs</div>
+                                        <\!-- input: fondo/texto/borde -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Selects</div>
+                                        <\!-- select: fondo/texto/borde -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Disabled</div>
+                                        <\!-- disabled: fondo/texto -->
+                                        <div style="grid-column: span 8; font-size: 7px; color:#57606a;">Submenús</div>
+                                        <\!-- submenu: fondo/texto/hover -->
+                                        <div id="preview-header" style="padding: 6px 4px; border-radius: 3px; font-size: 8px; font-weight: 700; text-align: center;"><i class="fas fa-heading"></i> Header</div>
+                                        <div id="preview-table-header" style="padding: 6px 4px; font-size: 8px; font-weight: 600; text-align: center;">Código</div>
+                                        <div style="padding: 6px 4px; font-size: 8px; text-align: center;">Nombre</div>
+                                        <div style="padding: 6px 4px; font-size: 8px; text-align: center;">Estado</div>
+                                        <div style="padding: 6px 4px; font-size: 8px; text-align: center;">Acción</div>
+                                        <div id="preview-row-hover" style="padding: 6px 4px; font-size: 8px; text-align: center; transition: background 0.2s;">001</div>
+                                        <div style="padding: 6px 4px; font-size: 8px; text-align: center;">Item 1</div>
+                                        <div style="padding: 6px 4px; font-size: 8px; text-align: center;">Activo</div>
+                                    </div>
+                                </div>
+                                
+                                <\!-- Fila 6: Modal Preview -->
+
+                                <div>
+                                    <label style="font-size: 8px; color: #2c3e50; display: block; margin-bottom: 3px;"><i class="fas fa-window-maximize"></i> Modal</label>
+                                    <div style="display: flex; gap: 8px; align-items: flex-start;">
+                                        <button id="preview-modal-open-btn" type="button" style="padding: 12px 16px; border-radius: 4px; font-size: 9px; border: none; cursor: pointer; background: #007bff; color: white; display: flex; align-items: center; gap: 6px;"><i class="fas fa-external-link-alt"></i> Abrir Modal</button>
+                                        <div style="border-radius: 3px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); display: flex; flex-direction: column; max-width: 300px; flex-grow: 1;">
+                                            <div id="preview-modal-header" style="padding: 8px 12px; font-size: 9px; font-weight: 600; text-align: center;"><i class="fas fa-edit"></i> Título Modal</div>
+                                            <div style="padding: 8px; background: white; font-size: 8px; color: #495057;">Contenido del modal de ejemplo con texto más largo para mostrar cómo se verá el contenido dentro del modal.</div>
+                                            <div style="padding: 6px; background: #f8f9fa; display: flex; gap: 4px; justify-content: flex-end;">
+                                                <button id="preview-modal-btn-secondary" type="button" style="padding: 4px 10px; border-radius: 3px; font-size: 8px; border: none; background: #6c757d; color: white;">Cancelar</button>
+                                                <button id="preview-modal-btn-primary" type="button" style="padding: 4px 10px; border-radius: 3px; font-size: 8px; border: none;">Guardar</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         </div>
                         
                         
@@ -1265,82 +1456,6 @@ async function editarEmpresa(empresaId) {
                                 Empresa Activa
                             </label>
                         </div>
-                        
-                        
-                        <\!-- Vista Previa Completa -->
-                        <div id="color-preview" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; border: 2px solid #3498db;">
-                            <h4 style="margin: 0 0 15px 0; color: #2c3e50; text-align: center; font-size: 14px; font-weight: 600;">
-                                <i class="fas fa-eye"></i> Vista Previa en Tiempo Real
-                            </h4>
-                            
-                            <div style="display: grid; gap: 15px;">
-                                <\!-- Fila 1: Menú y Estados -->
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-                                    <div id="preview-menu" style="padding: 8px 12px; border-radius: 4px; font-size: 11px; text-align: center; color: white;"><i class="fas fa-bars"></i> Menú</div>
-                                    <div id="preview-hover" style="padding: 8px 12px; border-radius: 4px; font-size: 11px; text-align: center; color: white;"><i class="fas fa-mouse-pointer"></i> Hover</div>
-                                    <div id="preview-button" style="padding: 8px 12px; border-radius: 4px; font-size: 11px; text-align: center; border: none; cursor: pointer;"><i class="fas fa-check"></i> Botón</div>
-                                    <div id="preview-success" style="padding: 8px 12px; border-radius: 4px; font-size: 11px; text-align: center; color: white;"><i class="fas fa-check-circle"></i> Éxito</div>
-                                    <div id="preview-warning" style="padding: 8px 12px; border-radius: 4px; font-size: 11px; text-align: center; color: white;"><i class="fas fa-exclamation-triangle"></i> Warning</div>
-                                    <div id="preview-danger" style="padding: 8px 12px; border-radius: 4px; font-size: 11px; text-align: center; color: white;"><i class="fas fa-times-circle"></i> Error</div>
-                                </div>
-                                
-                                <\!-- Fila 2: Inputs y Selectores -->
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                    <div>
-                                        <label style="font-size: 11px; color: #2c3e50; display: block; margin-bottom: 5px;">Campo de Texto</label>
-                                        <input type="text" value="Texto de ejemplo" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px;">
-                                    </div>
-                                    <div>
-                                        <label style="font-size: 11px; color: #2c3e50; display: block; margin-bottom: 5px;">Selector</label>
-                                        <select style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 11px;"><option>Opción 1</option><option>Opción 2</option></select>
-                                    </div>
-                                </div>
-                                
-                                <\!-- Fila 3: Campos Disabled -->
-                                <div>
-                                    <label style="font-size: 11px; color: #2c3e50; display: block; margin-bottom: 5px;"><i class="fas fa-ban"></i> Campos Deshabilitados</label>
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                                        <input id="preview-disabled-input" type="text" value="Campo disabled" disabled style="width: 100%; padding: 6px; border: 1px solid; border-radius: 4px; font-size: 11px;">
-                                        <select id="preview-disabled-select" disabled style="width: 100%; padding: 6px; border: 1px solid; border-radius: 4px; font-size: 11px;"><option>Select disabled</option></select>
-                                    </div>
-                                </div>
-                                
-                                <\!-- Fila 4: Notificaciones -->
-                                <div>
-                                    <label style="font-size: 11px; color: #2c3e50; display: block; margin-bottom: 5px;"><i class="fas fa-bell"></i> Notificaciones</label>
-                                    <div id="preview-notif-success" style="padding: 8px 10px; border-radius: 4px; font-size: 10px; border-left: 4px solid; margin-bottom: 5px;"><i class="fas fa-check-circle"></i> Operación exitosa</div>
-                                    <div id="preview-notif-warning" style="padding: 8px 10px; border-radius: 4px; font-size: 10px; border-left: 4px solid; margin-bottom: 5px;"><i class="fas fa-exclamation-triangle"></i> Atención requerida</div>
-                                    <div id="preview-notif-danger" style="padding: 8px 10px; border-radius: 4px; font-size: 10px; border-left: 4px solid;"><i class="fas fa-times-circle"></i> Error</div>
-                                </div>
-                                
-                                <\!-- Fila 5: Tabla/Grid -->
-                                <div>
-                                    <label style="font-size: 11px; color: #2c3e50; display: block; margin-bottom: 5px;"><i class="fas fa-table"></i> Tabla/Grid</label>
-                                    <div id="preview-header" style="padding: 8px 10px; border-radius: 4px 4px 0 0; font-size: 11px; font-weight: 600;"><i class="fas fa-heading"></i> Encabezado</div>
-                                    <table style="width: 100%; border-collapse: collapse; font-size: 10px; background: white;">
-                                        <thead><tr id="preview-table-header" style="text-align: left;"><th style="padding: 6px;">Código</th><th style="padding: 6px;">Nombre</th><th style="padding: 6px;">Estado</th></tr></thead>
-                                        <tbody>
-                                            <tr id="preview-row-hover" style="transition: background 0.2s;"><td style="padding: 6px;">001</td><td style="padding: 6px;">Item 1</td><td style="padding: 6px;">Activo</td></tr>
-                                            <tr style="background: white;"><td style="padding: 6px;">002</td><td style="padding: 6px;">Item 2</td><td style="padding: 6px;">Inactivo</td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                
-                                <\!-- Fila 6: Modal Preview -->
-                                <div>
-                                    <label style="font-size: 11px; color: #2c3e50; display: block; margin-bottom: 5px;"><i class="fas fa-window-maximize"></i> Modal</label>
-                                    <div style="border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                                        <div id="preview-modal-header" style="padding: 10px; font-size: 11px; font-weight: 600;"><i class="fas fa-edit"></i> Título Modal</div>
-                                        <div style="padding: 10px; background: white; font-size: 10px; color: #495057;">Contenido del modal...</div>
-                                        <div style="padding: 8px; background: #f8f9fa; display: flex; gap: 8px; justify-content: flex-end;">
-                                            <button id="preview-modal-btn-secondary" type="button" style="padding: 5px 10px; border-radius: 4px; font-size: 10px; border: none; background: #6c757d; color: white;">Cancelar</button>
-                                            <button id="preview-modal-btn-primary" type="button" style="padding: 5px 10px; border-radius: 4px; font-size: 10px; border: none;">Guardar</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
                         <div class="modal-actions">
                             <button type="button" class="btn" onclick="cerrarModalEditarEmpresa()">Cancelar</button>
                             <button type="submit" class="btn btn-primary">
@@ -1436,6 +1551,20 @@ async function guardarCambiosEmpresa(form) {
                 color_grid_hover: formData.get('color_grid_hover'),
                 activa: document.getElementById('edit_activa').checked ? 1 : 0
             };
+        // end sw object marker
+        // Añadir icono de copiar en cada swatch (sin cambiar altura)
+        const ensureCopyIcon = (el) => {
+            if (!el) return;
+            el.style.position = el.style.position || 'relative';
+            if (el.querySelector('.sw-copy-icon')) return;
+            const ic = document.createElement('i');
+            ic.className = 'fas fa-copy sw-copy-icon';
+            ic.style.cssText = 'position:absolute; top:2px; right:3px; font-size:9px; opacity:0.65; color:#000; pointer-events:none;';
+            el.appendChild(ic);
+        };
+        [sw.appBg, sw.prim, sw.sec, sw.btn, sw.btnH, sw.btnT, sw.hdr, sw.hdrT, sw.gridH,
+         sw.succ, sw.warn, sw.dang, sw.info, sw.inBg, sw.inTx, sw.inBo, sw.seBg, sw.seTx,
+         sw.seBo, sw.disBg, sw.disTx, sw.subBg, sw.subTx, sw.subHv].forEach(ensureCopyIcon);
             
             console.log('💾 Datos que se enviarán al servidor:', data);
             
@@ -1637,9 +1766,24 @@ function actualizarPreviewColores() {
             previewButton.style.color = colorButtonText;
         }
         
-        if (previewSuccess) previewSuccess.style.background = colorSuccess;
-        if (previewWarning) previewWarning.style.background = colorWarning;
-        if (previewDanger) previewDanger.style.background = colorDanger;
+        if (previewSuccess) {
+            const rs = parseInt(colorSuccess.slice(1,3),16); const gs = parseInt(colorSuccess.slice(3,5),16); const bs = parseInt(colorSuccess.slice(5,7),16);
+            previewSuccess.style.background = `rgba(${rs}, ${gs}, ${bs}, 0.15)`;
+            previewSuccess.style.borderLeftColor = colorSuccess;
+            previewSuccess.style.color = colorSuccess;
+        }
+        if (previewWarning) {
+            const rw = parseInt(colorWarning.slice(1,3),16); const gw = parseInt(colorWarning.slice(3,5),16); const bw = parseInt(colorWarning.slice(5,7),16);
+            previewWarning.style.background = `rgba(${rw}, ${gw}, ${bw}, 0.15)`;
+            previewWarning.style.borderLeftColor = colorWarning;
+            previewWarning.style.color = colorWarning;
+        }
+        if (previewDanger) {
+            const rd = parseInt(colorDanger.slice(1,3),16); const gd = parseInt(colorDanger.slice(3,5),16); const bd = parseInt(colorDanger.slice(5,7),16);
+            previewDanger.style.background = `rgba(${rd}, ${gd}, ${bd}, 0.15)`;
+            previewDanger.style.borderLeftColor = colorDanger;
+            previewDanger.style.color = colorDanger;
+        }
         
         if (previewHeader) {
             previewHeader.style.background = colorHeaderBg;
@@ -1649,6 +1793,123 @@ function actualizarPreviewColores() {
         if (previewTableHeader) previewTableHeader.style.background = colorGridHeader;
         
         if (previewRowHover) {
+
+        // Swatches compactos
+        const sw = {
+            appBg: document.getElementById('sw-app-bg'),
+            prim: document.getElementById('sw-primario'),
+            sec: document.getElementById('sw-secundario'),
+            btn: document.getElementById('sw-button'),
+            btnH: document.getElementById('sw-button-hover'),
+            btnT: document.getElementById('sw-button-text'),
+            hdr: document.getElementById('sw-header-bg'),
+            hdrT: document.getElementById('sw-header-text'),
+            gridH: document.getElementById('sw-grid-header'),
+            succ: document.getElementById('sw-success'),
+            warn: document.getElementById('sw-warning'),
+            dang: document.getElementById('sw-danger'),
+            info: document.getElementById('sw-info'),
+            inBg: document.getElementById('sw-input-bg'),
+            inTx: document.getElementById('sw-input-text'),
+            inBo: document.getElementById('sw-input-border'),
+            seBg: document.getElementById('sw-select-bg'),
+            seTx: document.getElementById('sw-select-text'),
+            seBo: document.getElementById('sw-select-border'),
+            disBg: document.getElementById('sw-disabled-bg'),
+            disTx: document.getElementById('sw-disabled-text'),
+            subBg: document.getElementById('sw-submenu-bg'),
+            subTx: document.getElementById('sw-submenu-text'),
+            subHv: document.getElementById('sw-submenu-hover'),
+        };
+        // end sw object marker
+        if (sw.appBg) sw.appBg.style.background = colorAppBg;
+        if (sw.prim) { sw.prim.style.background = colorPrimario; sw.prim.style.color = '#fff'; }
+        if (sw.sec) { sw.sec.style.background = colorSecundario; sw.sec.style.color = '#fff'; }
+        if (sw.btn) sw.btn.style.background = colorButton;
+        const colorButtonHover = document.getElementById(prefijo + 'color_button_hover')?.value || colorButton;
+        if (sw.btnH) sw.btnH.style.background = colorButtonHover;
+        if (sw.btnT) { sw.btnT.style.background = colorButton; sw.btnT.style.color = colorButtonText; }
+        if (sw.hdr) { sw.hdr.style.background = colorHeaderBg; sw.hdr.style.color = colorHeaderText; }
+        if (sw.hdrT) { sw.hdrT.style.background = colorHeaderText; sw.hdrT.style.color = colorHeaderBg; }
+        if (sw.gridH) sw.gridH.style.background = colorGridHeader;
+        const colorInfo = document.getElementById(prefijo + 'color_info')?.value || '#3498db';
+        if (sw.succ) sw.succ.style.background = colorSuccess;
+        if (sw.warn) sw.warn.style.background = colorWarning;
+        if (sw.dang) sw.dang.style.background = colorDanger;
+        if (sw.info) sw.info.style.background = colorInfo;
+        const colorInputBg = document.getElementById(prefijo + 'color_input_bg')?.value || '#ffffff';
+        const colorInputText = document.getElementById(prefijo + 'color_input_text')?.value || '#495057';
+        const colorInputBorder = document.getElementById(prefijo + 'color_input_border')?.value || '#dddddd';
+        const colorSelectBg = document.getElementById(prefijo + 'color_select_bg')?.value || '#ffffff';
+        const colorSelectText = document.getElementById(prefijo + 'color_select_text')?.value || '#495057';
+        const colorSelectBorder = document.getElementById(prefijo + 'color_select_border')?.value || '#dddddd';
+        if (sw.inBg) sw.inBg.style.background = colorInputBg;
+        if (sw.inTx) { sw.inTx.style.background = colorInputText; sw.inTx.style.color = '#fff'; }
+        if (sw.inBo) { sw.inBo.style.borderColor = colorInputBorder; sw.inBo.style.background = '#fff'; }
+        if (sw.seBg) sw.seBg.style.background = colorSelectBg;
+        if (sw.seTx) { sw.seTx.style.background = colorSelectText; sw.seTx.style.color = '#fff'; }
+        if (sw.seBo) { sw.seBo.style.borderColor = colorSelectBorder; sw.seBo.style.background = '#fff'; }
+        if (sw.disBg) sw.disBg.style.background = colorDisabledBg;
+        if (sw.disTx) { sw.disTx.style.background = colorDisabledText; sw.disTx.style.color = '#fff'; }
+        if (sw.subBg) sw.subBg.style.background = colorSubmenuBg;
+        if (sw.subTx) { sw.subTx.style.background = colorSubmenuText; sw.subTx.style.color = '#fff'; }
+        const colorSubmenuHover = document.getElementById(prefijo + 'color_submenu_hover')?.value || '#2c3e50';
+        if (sw.subHv) sw.subHv.style.background = colorSubmenuHover;
+
+        // Tooltips HEX y botón copiar (click) en cada swatch
+        const setTitle = (el, val) => { if (el && val) el.title = val; };
+
+        const titles = [
+            [sw.appBg, colorAppBg], [sw.prim, colorPrimario], [sw.sec, colorSecundario],
+            [sw.btn, colorButton], [sw.btnH, colorButtonHover], [sw.btnT, colorButtonText],
+            [sw.hdr, colorHeaderBg], [sw.hdrT, colorHeaderText], [sw.gridH, colorGridHeader],
+            [sw.succ, colorSuccess], [sw.warn, colorWarning], [sw.dang, colorDanger], [sw.info, colorInfo],
+            [sw.inBg, colorInputBg], [sw.inTx, colorInputText], [sw.inBo, colorInputBorder],
+            [sw.seBg, colorSelectBg], [sw.seTx, colorSelectText], [sw.seBo, colorSelectBorder],
+            [sw.disBg, colorDisabledBg], [sw.disTx, colorDisabledText],
+            [sw.subBg, colorSubmenuBg], [sw.subTx, colorSubmenuText], [sw.subHv, colorSubmenuHover]
+        ];
+        titles.forEach(([el,val]) => { if (el) el.title = val; });
+
+        const bindCopy = (el) => {
+    if (!el || el._copyBound) return;
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', async () => {
+        try {
+            const hex = el.title || '';
+            if (!hex) return;
+            await navigator.clipboard.writeText(hex);
+
+            const oldText = el.textContent;
+            const icon = el.querySelector('.sw-copy-icon');
+            const oldClass = icon ? icon.className : '';
+            const oldStyle = icon ? icon.getAttribute('style') : '';
+
+            // Feedback visual: texto + icono check temporal
+            el.textContent = 'Copiado';
+            if (icon) {
+                icon.className = 'fas fa-check sw-copy-icon';
+                icon.style.cssText = 'position:absolute; top:2px; right:3px; font-size:9px; opacity:0.9; color:#1f9d55; pointer-events:none;';
+                el.appendChild(icon);
+            }
+
+            setTimeout(() => {
+                el.textContent = oldText;
+                if (icon) {
+                    icon.className = oldClass;
+                    if (oldStyle) icon.setAttribute('style', oldStyle);
+                    el.appendChild(icon);
+                }
+            }, 700);
+        } catch (e) {}
+    });
+    el._copyBound = true;
+};
+        // end sw object marker
+        [sw.appBg, sw.prim, sw.sec, sw.btn, sw.btnH, sw.btnT, sw.hdr, sw.hdrT, sw.gridH,
+         sw.succ, sw.warn, sw.dang, sw.info, sw.inBg, sw.inTx, sw.inBo, sw.seBg, sw.seTx,
+         sw.seBo, sw.disBg, sw.disTx, sw.subBg, sw.subTx, sw.subHv].forEach(bindCopy);
+    
             // Convertir hex a rgba con opacidad
             const r = parseInt(colorSecundario.slice(1, 3), 16);
             const g = parseInt(colorSecundario.slice(3, 5), 16);
@@ -2137,7 +2398,7 @@ async function cargarPlantillasPersonalizadas() {
                     color_grid_bg: p.color_grid_bg,
                     color_grid_text: p.color_grid_text,
                     color_icon: p.color_icon
-                };
+                                };
             });
             
             // Regenerar botones si el contenedor existe
@@ -2187,7 +2448,7 @@ function aplicarPlantilla(nombrePlantilla) {
                 console.warn(`⚠️ No se encontró elemento: ${prefijo}${campo}`);
             }
         };
-        
+        // end sw object marker
         setColor('color_primario', plantilla.color_primario);
         setColor('color_secundario', plantilla.color_secundario);
         setColor('color_success', plantilla.color_success);
@@ -2366,7 +2627,7 @@ function guardarPlantillaPersonalizada(nombre, plantillaBase, colores) {
             descripcion: `Basada en ${plantillasColores[plantillaBase]?.nombre || plantillaBase}`,
             ...colores
         };
-        
+        // end sw object marker
         plantillas.push(nuevaPlantilla);
         localStorage.setItem('plantillas_personalizadas', JSON.stringify(plantillas));
         
@@ -2547,7 +2808,7 @@ function autoGuardarPlantillaModificada() {
             color_header_text: document.getElementById(prefijo + 'color_header_text')?.value,
             color_grid_header: document.getElementById(prefijo + 'color_grid_header')?.value
         };
-        
+        // end sw object marker
         // Comparar con originales
         let hayDiferencias = false;
         for (let key in coloresOriginales) {
