@@ -1,0 +1,398 @@
+/* Variables CSS por defecto - Se sobrescriben con branding.js */
+:root {
+    --color-primario: #2c3e50;
+    --color-secundario: #3498db;
+    --color-success: #27ae60;
+    --color-warning: #f39c12;
+    --color-danger: #e74c3c;
+    --color-info: #3498db;
+    --color-button: #3498db;
+    --color-button-hover: #2980b9;
+    --color-header-bg: #2c3e50;
+    --color-header-text: #ffffff;
+    --color-grid-header: #2c3e50;
+    --color-grid-hover: rgba(52, 152, 219, 0.1);
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+.layout-container {
+    display: flex;
+    height: 100vh;
+}
+
+.menu {
+    /* background removido - se aplica desde branding.js */
+    width: 250px;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 0;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+    position: relative;
+    padding-bottom: 140px; /* Espacio para user-info-bottom */
+}
+
+.menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.menu-item {
+    position: relative;
+    width: 100%;
+}
+
+.menu-link {
+    color: white;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    display: block;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+/* .menu-link:hover - se aplica desde branding.js */
+
+.menu-link i {
+    margin-right: 0.5rem;
+}
+
+/* Submenús SIEMPRE ocultos por defecto */
+.submenu {
+    display: none;
+    /* background removido - se aplica desde branding.js */
+    padding: 0.5rem 0;
+    margin-left: 1rem;
+}
+
+/* Solo mostrar el submenú del menú principal activo */
+.menu-item.active > .submenu {
+    display: block;
+}
+
+/* Submenús anidados (dentro de .submenu-block) también ocultos por defecto */
+.submenu-block > .submenu {
+    display: none;
+}
+
+.submenu-block.active > .submenu {
+    display: block;
+}
+
+.submenu-item {
+    display: block;
+    padding: 0.5rem 1rem;
+    color: var(--color-header-text, white);
+    text-decoration: none;
+    transition: background-color 0.3s;
+}
+
+.submenu-item i {
+    width: 20px;
+    margin-right: 0.5rem;
+    text-align: center;
+}
+
+/* .submenu-item:hover - se aplica desde branding.js */
+
+/* Info de usuario en menu inferior */
+.user-info-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.2);
+    padding: 10px 15px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.user-details-compact {
+    color: white;
+    font-size: 11px;
+    margin-bottom: 5px;
+}
+
+.user-details-compact div {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+}
+
+.user-details-compact i {
+    width: 12px;
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+.user-details-compact .user-time {
+    font-size: 10px;
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
+.btn-logout-compact {
+    width: 100%;
+    background: rgba(231,76,60,0.8);
+    border: none;
+    color: white;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-logout-compact:hover {
+    background: rgba(231,76,60,1);
+}
+
+/* Stats container */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.stats-card {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stats-card h3 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+}
+
+.stats-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2c3e50;
+    margin: 10px 0;
+}
+
+.stats-comparison {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.stats-percentage {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.stats-percentage.positive {
+    background-color: #e6ffe6;
+    color: #006600;
+}
+
+.stats-percentage.negative {
+    background-color: #ffe6e6;
+    color: #cc0000;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.stats-table th,
+.stats-table td {
+    padding: 12px;
+    text-align: right;
+    border-bottom: 1px solid #eee;
+}
+
+.stats-table th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    color: #495057;
+}
+
+.stats-table td:first-child,
+.stats-table th:first-child {
+    text-align: left;
+}
+
+.monthly-stats {
+    margin-top: 30px;
+}
+
+.monthly-stats h2 {
+    margin-bottom: 20px;
+}
+
+.stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.stats-header select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+
+/* Estilos para panel de notificaciones */
+#notificaciones-panel {
+    display: none;
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    width: 400px;
+    max-height: 500px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 9999;
+    overflow: hidden;
+}
+
+#notificaciones-panel.active {
+    display: flex;
+    flex-direction: column;
+}
+
+.notif-header {
+    background: #2c3e50;
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notif-header h3 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.notif-close {
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.notif-body {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+.notif-item {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 10px;
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    align-items: start;
+    transition: background 0.2s;
+}
+
+.notif-item:hover {
+    background: #f8f9fa;
+}
+
+.notif-checkbox {
+    margin-top: 3px;
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+}
+
+.notif-content {
+    flex: 1;
+}
+
+.notif-content.clickable {
+    cursor: pointer;
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-title {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.notif-desc {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 5px;
+}
+
+.notif-time {
+    font-size: 11px;
+    color: #999;
+}
+
+.notif-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #999;
+}
+
+.notif-footer {
+    padding: 10px 15px;
+    border-top: 1px solid #eee;
+    text-align: center;
+}
+
+.notif-footer button {
+    background: transparent;
+    border: none;
+    color: #2c3e50;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.notif-footer button:hover {
+    text-decoration: underline;
+}
+
+/* Estilos específicos para forzar el scroll vertical en el iframe */
+#content-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    overflow-y: scroll !important;
+}
+
+.content-container {
+    flex-grow: 1;
+    height: 100vh;
+    position: relative;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+}
