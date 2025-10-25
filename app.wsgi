@@ -78,12 +78,11 @@ try:
             logger.error(f"Ruta registrada: {rule}")
         logger.error(f"Rutas franjas_config encontradas: {franjas_routes}")
 
-        # Ajuste de PATH_INFO para compatibilidad con WSGIScriptAlias /api
+        # Middleware de prefijo /api para compatibilidad con WSGIScriptAlias /api
         def _add_prefix_middleware(app, prefix='/api'):
             def wrapper(environ, start_response):
                 path = environ.get('PATH_INFO', '')
-                # Si la app está montada bajo /api, Apache removerá /api de PATH_INFO.
-                # Volvemos a anteponerlo para que las rutas definidas como '/api/...' coincidan.
+                # WSGIScriptAlias /api elimina /api del PATH_INFO, lo restauramos
                 if not path.startswith(prefix):
                     environ['PATH_INFO'] = prefix + path
                 return app(environ, start_response)
@@ -96,3 +95,4 @@ try:
 except Exception as e:
     logger.error(f"Error al cargar la aplicación Flask: {e}")
     raise
+# Force reload mié 22 oct 2025 22:40:43 CEST

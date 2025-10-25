@@ -1,4 +1,6 @@
 venv/
+venv.old/
+
 # Bases de datos temporales SQLite
 *.db-shm
 *.db-wal
@@ -8,6 +10,7 @@ logs/*.log
 logs/*.html
 logs/*.png
 scraping_status.log
+*.log
 
 # Ignorar todos los XML generados
 *.xml
@@ -24,6 +27,7 @@ scraping_status.log
 # Cachés/compilados Python
 __pycache__/
 *.pyc
+
 # Perfiles/cachés locales del navegador (no versionar)
 .pw_profile_santander/
 
@@ -31,9 +35,28 @@ __pycache__/
 db/*.db
 db/*.bak*
 db/*.sqbpro
+*.db
+
+# Backups y archivos temporales
+*.backup
+*.backup2
+*.old
+*.old.html
+*.bak
+*_old.*
+
+# Exports temporales
+exports/
+
+# Facturas electrónicas (firma digital)
+factura_e/*/*.xsig
+
+# Scripts de prueba
+test_manual.sh
+test_*.sh
 
 # Temporales de QR
 static/tmp_qr/
 
-# Ignorar DB en raíz
-basedatos.db
+# HTML duplicados en raíz
+/index.html

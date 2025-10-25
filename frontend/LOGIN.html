@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Aleph70 Multiempresa</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="/static/favicon.png">
     <style>
         * {
             margin: 0;
@@ -13,7 +16,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #ffffff;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -23,31 +26,41 @@
         .login-container {
             background: white;
             border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            border: 2px solid #e0e0e0;
             overflow: hidden;
             width: 400px;
             max-width: 90%;
         }
 
         .login-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #ffffff;
+            color: #000000;
             padding: 30px;
             text-align: center;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .login-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 15px;
         }
 
         .login-header h1 {
             font-size: 28px;
             margin-bottom: 10px;
+            color: #000000;
         }
 
         .login-header p {
-            opacity: 0.9;
+            color: #333333;
             font-size: 14px;
         }
 
         .login-body {
             padding: 40px 30px;
+            background: #ffffff;
         }
 
         .form-group {
@@ -57,7 +70,7 @@
         .form-group label {
             display: block;
             margin-bottom: 8px;
-            color: #333;
+            color: #000000;
             font-weight: 500;
             font-size: 14px;
         }
@@ -66,25 +79,27 @@
         .form-group select {
             width: 100%;
             padding: 12px 15px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid #000000;
             border-radius: 8px;
             font-size: 15px;
             transition: all 0.3s;
+            background: #ffffff;
+            color: #000000;
         }
 
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #333333;
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
         }
 
         .btn-login {
             width: 100%;
             padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
+            background: #ffffff;
+            color: #000000;
+            border: 2px solid #000000;
             border-radius: 8px;
             font-size: 16px;
             font-weight: 600;
@@ -94,7 +109,8 @@
 
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+            background: #f5f5f5;
         }
 
         .btn-login:active {
@@ -112,18 +128,19 @@
             border-radius: 8px;
             margin-bottom: 20px;
             display: none;
+            border: 2px solid;
         }
 
         .alert-error {
-            background: #fee;
+            background: #fff;
             color: #c33;
-            border: 1px solid #fcc;
+            border-color: #c33;
         }
 
         .alert-success {
-            background: #efe;
+            background: #fff;
             color: #3c3;
-            border: 1px solid #cfc;
+            border-color: #3c3;
         }
 
         .loading-spinner {
@@ -134,7 +151,7 @@
 
         .spinner {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border-top: 3px solid #000000;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -150,7 +167,7 @@
         .version-info {
             text-align: center;
             margin-top: 20px;
-            color: #999;
+            color: #666;
             font-size: 12px;
         }
 
@@ -160,7 +177,7 @@
 
         .empresa-item {
             padding: 15px;
-            border: 2px solid #e0e0e0;
+            border: 2px solid #000000;
             border-radius: 8px;
             margin-bottom: 10px;
             cursor: pointer;
@@ -168,11 +185,12 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            background: #ffffff;
         }
 
         .empresa-item:hover {
-            border-color: #667eea;
-            background: #f8f9ff;
+            border-color: #333333;
+            background: #f5f5f5;
             transform: translateX(5px);
         }
 
@@ -185,14 +203,15 @@
 
         .empresa-nombre {
             font-weight: 500;
-            color: #333;
+            color: #000000;
         }
     </style>
 </head>
 <body>
     <div class="login-container">
         <div class="login-header">
-            <h1>🔐 Aleph70</h1>
+            <img src="/static/favicon.png" alt="Aleph70" class="login-logo">
+            <h1>Aleph70</h1>
             <p>Sistema Multiempresa</p>
         </div>
         
@@ -204,13 +223,15 @@
                 <div class="form-group">
                     <label for="username">Usuario</label>
                     <input type="text" id="username" name="username" 
-                           placeholder="Introduce tu usuario" required autofocus>
+                           placeholder="Introduce tu usuario" required autofocus
+                           autocomplete="username">
                 </div>
                 
                 <div class="form-group">
                     <label for="password">Contraseña</label>
                     <input type="password" id="password" name="password" 
-                           placeholder="Introduce tu contraseña" required>
+                           placeholder="Introduce tu contraseña" required
+                           autocomplete="current-password">
                 </div>
                 
                 <button type="submit" class="btn-login" id="btn-siguiente">
@@ -220,17 +241,17 @@
             
             <!-- Paso 2: Selector de empresa (oculto inicialmente) -->
             <div id="empresa-selector">
-                <h3 style="margin-bottom: 20px; color: #333;">Selecciona una empresa:</h3>
+                <h3 style="margin-bottom: 20px; color: #000000;">Selecciona una empresa:</h3>
                 <div id="empresas-lista"></div>
                 <button type="button" class="btn-login" onclick="volverLogin()" 
-                        style="margin-top: 10px; background: #999;">
+                        style="margin-top: 10px;">
                     ← Volver
                 </button>
             </div>
             
             <div class="loading-spinner" id="loading">
                 <div class="spinner"></div>
-                <p style="margin-top: 10px; color: #666;">Iniciando sesión...</p>
+                <p style="margin-top: 10px; color: #000000;">Iniciando sesión...</p>
             </div>
             
             <div class="version-info">
@@ -286,17 +307,34 @@
             }
         });
 
-        function mostrarSelectorEmpresas(empresas) {
+        async function mostrarSelectorEmpresas(empresas) {
             document.getElementById('login-form').style.display = 'none';
             document.getElementById('empresa-selector').style.display = 'block';
             
             const lista = document.getElementById('empresas-lista');
             lista.innerHTML = '';
             
-            empresas.forEach(empresa => {
+            // Cargar branding de cada empresa
+            for (const empresa of empresas) {
                 const item = document.createElement('div');
                 item.className = 'empresa-item';
+                item.dataset.empresaCodigo = empresa.codigo;
+                
+                // Obtener branding de la empresa
+                try {
+                    const brandingResponse = await fetch(`/api/auth/branding-preview/${empresa.codigo}`);
+                    if (brandingResponse.ok) {
+                        const branding = await brandingResponse.json();
+                        empresa.colores = branding.colores;
+                    }
+                } catch (error) {
+                    console.error(`Error cargando branding de ${empresa.codigo}:`, error);
+                }
+                
                 item.onclick = () => realizarLogin(empresa.codigo);
+                
+                // Al hacer hover, aplicar colores de la empresa
+                item.onmouseenter = () => aplicarColoresEmpresa(empresa);
                 
                 item.innerHTML = `
                     <img src="${empresa.logo}" class="empresa-logo" 
@@ -305,12 +343,70 @@
                 `;
                 
                 lista.appendChild(item);
+            }
+        }
+        
+        function aplicarColoresEmpresa(empresa) {
+            if (!empresa.colores) return;
+            
+            const container = document.querySelector('.login-container');
+            const header = document.querySelector('.login-header');
+            const body = document.querySelector('.login-body');
+            
+            // Aplicar colores de la empresa
+            container.style.background = empresa.colores.app_bg || '#ffffff';
+            container.style.borderColor = empresa.colores.primario || '#000000';
+            header.style.background = empresa.colores.header_bg || empresa.colores.primario || '#ffffff';
+            header.style.color = empresa.colores.header_text || '#000000';
+            header.querySelector('h1').style.color = empresa.colores.header_text || '#000000';
+            header.querySelector('p').style.color = empresa.colores.header_text || '#333333';
+            body.style.background = empresa.colores.secundario || empresa.colores.app_bg || '#ffffff';
+            
+            // Ajustar color de texto según luminosidad
+            const luminance = getLuminance(empresa.colores.app_bg || '#ffffff');
+            const textColor = luminance > 0.5 ? '#000000' : '#ffffff';
+            body.style.color = textColor;
+            
+            // Actualizar items de empresa
+            document.querySelectorAll('.empresa-item').forEach(item => {
+                item.style.borderColor = empresa.colores.primario || '#000000';
+                item.style.background = empresa.colores.secundario || '#ffffff';
+                item.style.color = textColor;
             });
+        }
+        
+        function getLuminance(color) {
+            // Convertir hex a RGB
+            let r, g, b;
+            if (color.startsWith('#')) {
+                const hex = color.replace('#', '');
+                r = parseInt(hex.substring(0, 2), 16);
+                g = parseInt(hex.substring(2, 4), 16);
+                b = parseInt(hex.substring(4, 6), 16);
+            } else {
+                return 0.5; // default
+            }
+            // Calcular luminosidad
+            return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         }
 
         async function realizarLogin(empresaCodigo) {
             mostrarCargando(true);
             ocultarAlerta();
+            
+            // DEBUG: Mostrar datos que se envían
+            const loginData = {
+                username: currentUsername,
+                password: currentPassword,
+                empresa: empresaCodigo
+            };
+            console.log('🔍 DEBUG - Datos de login:', {
+                username: loginData.username,
+                password: '***' + loginData.password.slice(-3),
+                empresa: loginData.empresa,
+                username_length: loginData.username.length,
+                password_length: loginData.password.length
+            });
             
             try {
                 const response = await fetch('/api/auth/login', {
@@ -318,11 +414,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        username: currentUsername,
-                        password: currentPassword,
-                        empresa: empresaCodigo
-                    })
+                    body: JSON.stringify(loginData)
                 });
                 
                 const data = await response.json();

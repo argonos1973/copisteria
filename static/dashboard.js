@@ -6,8 +6,6 @@ async function obtenerEstadisticas() {
     try {
         // Obtener estadísticas por documento
         const datosDocumentos = await fetchConManejadorErrores('/api/ventas/media_por_documento');
-        // Obtener estadísticas mensuales
-        const datosMensuales = await fetchConManejadorErrores('/api/ventas/media_por_mes');
         
         actualizarDashboard(datosDocumentos);
     } catch (error) {

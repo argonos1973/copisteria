@@ -183,6 +183,16 @@
         </div>
     </div>
 
-    <script src="/static/admin.js?v=20251025_1906"></script>
+    <!-- Cargar plantillas dinámicamente -->
+    <script src="/static/plantillas.js?v=1"></script>
+    <script src="/static/admin.js?v=PLANTILLAS_FIXED_V2"></script>
+    
+    <!-- Inicializar plantillas al cargar -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            await cargarPlantillas();
+            console.log('✅ Plantillas cargadas y disponibles en window.plantillasColores');
+        });
+    </script>
 </body>
 </html>

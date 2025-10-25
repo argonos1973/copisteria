@@ -5,6 +5,7 @@ import traceback
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from weasyprint import CSS, HTML
+from flask import session
 from db_utils import get_db_connection
 from verifactu_logger import logger  # Ajusta según tu sistema
 from verifactu.config import VERIFACTU_CONSTANTS  # Ruta corregida al módulo
@@ -293,7 +294,12 @@ def generar_factura_pdf(id_factura):
                 html_base = f.read()
 
             # Modificar la ruta del logo para usar ruta absoluta del sistema de archivos
-            html_base = html_base.replace('src="/static/img/logo.png"', 'src="file:///var/www/html/static/img/logo.png"')
+            # Obtener logo de la empresa desde la sesión
+            empresa_logo = session.get('empresa_logo', 'default_header.png')
+            logo_factura = f'/static/logos/{empresa_logo}'
+            # Convertir ruta web a ruta absoluta del sistema de archivos
+            logo_path = logo_factura.replace('/static/logos/', '/var/www/html/static/logos/')
+            html_base = html_base.replace('src="/static/img/logo.png"', f'src="file://{logo_path}"')
 
             # Generar el HTML con los datos ya insertados (igual que factura.py)
             def _fmt_euro(val):

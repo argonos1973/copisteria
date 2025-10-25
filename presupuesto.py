@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from format_utils import format_currency_es_two, format_total_es_two, format_number_es_max5, format_percentage
 
-from flask import Blueprint, Flask, jsonify, request, send_file
+from flask import Blueprint, Flask, jsonify, request, send_file, session
 import utilities
 from db_utils import (
     actualizar_numerador,
@@ -880,13 +880,23 @@ def generar_pdf_presupuesto(id):
         html_content = html_content.replace('{{TOTAL_FINAL}}', format_currency_es_two(total_final))
         
         # Modificar ruta del logo para usar ruta absoluta
-        html_content = html_content.replace('src="/static/img/logo.png"', 'src="file:///var/www/html/static/img/logo.png"')
+        # Obtener logo de la empresa desde la sesión
+        empresa_logo = session.get('empresa_logo', 'default_header.png')
+        logo_factura = f'/static/logos/{empresa_logo}'
+        # Convertir ruta web a ruta absoluta del sistema de archivos
+        logo_path = logo_factura.replace('/static/logos/', '/var/www/html/static/logos/')
+        html_content = html_content.replace('src="/static/img/logo.png"', f'src="file://{logo_path}"')
         
         # Asegurar ruta absoluta del logo y generar PDF
         pdf_filename = f"presupuesto_{presupuesto_dict['numero']}.pdf"
         temp_pdf_path = f"/tmp/{pdf_filename}"
         
-        html_content = html_content.replace('src="/static/img/logo.png"', 'src="file:///var/www/html/static/img/logo.png"')
+        # Obtener logo de la empresa desde la sesión
+        empresa_logo = session.get('empresa_logo', 'default_header.png')
+        logo_factura = f'/static/logos/{empresa_logo}'
+        # Convertir ruta web a ruta absoluta del sistema de archivos
+        logo_path = logo_factura.replace('/static/logos/', '/var/www/html/static/logos/')
+        html_content = html_content.replace('src="/static/img/logo.png"', f'src="file://{logo_path}"')
         HTML(string=html_content, base_url='/var/www/html').write_pdf(temp_pdf_path)
         
         # Enviar PDF como respuesta
@@ -1061,7 +1071,12 @@ def enviar_email_presupuesto(id):
         html_content = html_content.replace('{{TOTAL_FINAL}}', format_currency_es_two(total_final))
 
         # Asegurar ruta absoluta del logo
-        html_content = html_content.replace('src="/static/img/logo.png"', 'src="file:///var/www/html/static/img/logo.png"')
+        # Obtener logo de la empresa desde la sesión
+        empresa_logo = session.get('empresa_logo', 'default_header.png')
+        logo_factura = f'/static/logos/{empresa_logo}'
+        # Convertir ruta web a ruta absoluta del sistema de archivos
+        logo_path = logo_factura.replace('/static/logos/', '/var/www/html/static/logos/')
+        html_content = html_content.replace('src="/static/img/logo.png"', f'src="file://{logo_path}"')
 
         # Generar PDF temporal
         pdf_filename = f"presupuesto_{presupuesto_dict['numero']}.pdf"

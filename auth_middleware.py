@@ -34,7 +34,13 @@ def hash_password(password):
 def verificar_password(password, password_hash):
     """
     Verifica una contraseña contra su hash
+    Soporta tanto SHA256 (legacy) como Werkzeug scrypt (nuevo)
     """
+    # Si el hash empieza con scrypt: es un hash de Werkzeug
+    if password_hash.startswith('scrypt:') or password_hash.startswith('pbkdf2:'):
+        from werkzeug.security import check_password_hash
+        return check_password_hash(password_hash, password)
+    # Si no, es el hash SHA256 legacy
     return hash_password(password) == password_hash
 
 def es_ruta_publica(ruta):

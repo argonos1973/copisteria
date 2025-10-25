@@ -166,8 +166,9 @@
         }
         
         .tab.active {
-            background: white;
-            color: #2c3e50;
+            /* background: white; */  /* Comentado - permite adaptarse al tema */
+            background: rgba(255, 255, 255, 0.1);  /* Fondo semi-transparente que se adapta */
+            color: inherit;  /* Heredar color del tema */
             border-bottom: 2px solid #3498db;
             font-weight: 600;
         }
@@ -206,7 +207,7 @@
         }
         
         .stats-card {
-            background: white;
+            /* background: white; */  /* Comentado - se aplica desde branding dinámico */
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             padding: 1rem;
@@ -423,7 +424,7 @@
         }
         /* Modern card redesign */
         .stats-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+            /* background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%); */  /* Comentado - se aplica desde branding dinámico */
             border: 1px solid rgba(0, 0, 0, 0.05);
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);

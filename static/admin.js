@@ -136,8 +136,8 @@ function renderizarListaPlantillasPreview(prefijo = '') {
     if (!contenedor) return;
     
     let html = '';
-    Object.keys(plantillasColores).forEach(key => {
-        const plantilla = plantillasColores[key];
+    Object.keys(window.plantillasColores).forEach(key => {
+        const plantilla = window.plantillasColores[key];
         const isPersonalizada = key.startsWith('personalizada_');
         html += `<div class="plantilla-card" data-template="${key}" onclick="aplicarPlantillaConPreview('${key}', '${prefijo}')">
             <div style="font-weight: 600; font-size: 11px; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
@@ -157,7 +157,7 @@ function renderizarListaPlantillasPreview(prefijo = '') {
 }
 
 function aplicarPlantillaConPreview(nombrePlantilla, prefijo = '') {
-    const plantilla = plantillasColores[nombrePlantilla];
+    const plantilla = window.plantillasColores[nombrePlantilla];
     if (!plantilla) return;
     
     document.querySelectorAll('.plantilla-card').forEach(card => {
@@ -1188,47 +1188,17 @@ async function editarEmpresa(empresaId) {
                         
                         <!-- Los inputs de colores ahora están en el editor visual abajo, no se necesitan hidden inputs -->
                         
-                        <!-- Plantillas de Colores Predefinidas -->
-                        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #dee2e6;">
-                            <h4 style="margin: 0 0 15px 0; color: #2c3e50; text-align: center;">
+                        <!-- Plantillas Minimalistas -->
+                        <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #e5e7eb;">
+                            <h4 style="margin: 0 0 15px 0; color: #000000; text-align: center;">
                                 <i class="fas fa-swatchbook"></i> Plantillas de Colores
                             </h4>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
-                                <button type="button" data-plantilla="clasico" onclick="aplicarPlantillaConPreview('clasico', 'edit_'); marcarPlantillaActiva('clasico');" style="padding: 15px; border: 2px solid #1976d2; border-radius: 8px; background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%); color: white; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fab fa-google"></i> Material Design<br><small style="opacity: 0.8;">Limpio y profesional</small>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 600px; margin: 0 auto;">
+                                <button type="button" data-plantilla="minimal" onclick="aplicarPlantillaConPreview('minimal', 'edit_'); marcarPlantillaActiva('minimal');" style="padding: 20px; border: 3px solid #000000; border-radius: 8px; background: linear-gradient(135deg, #000000 0%, #374151 100%); color: white; cursor: pointer; font-weight: bold; font-size: 14px; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                    <i class="fas fa-palette"></i> Minimal<br><small style="opacity: 0.9; font-size: 11px;">Negro puro y grises</small>
                                 </button>
-                                <button type="button" data-plantilla="oscuro" onclick="aplicarPlantillaConPreview('oscuro', 'edit_'); marcarPlantillaActiva('oscuro');" style="padding: 15px; border: 2px solid #282a36; border-radius: 8px; background: linear-gradient(135deg, #282a36 0%, #44475a 100%); color: #f8f8f2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-moon"></i> Dracula<br><small style="opacity: 0.8;">Oscuro elegante</small>
-                                </button>
-                                <button type="button" data-plantilla="verde" onclick="aplicarPlantillaConPreview('verde', 'edit_'); marcarPlantillaActiva('verde');" style="padding: 15px; border: 2px solid #2e3440; border-radius: 8px; background: linear-gradient(135deg, #2e3440 0%, #3b4252 100%); color: #eceff4; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-mountain"></i> Nord<br><small style="opacity: 0.8;">Minimalista escandinavo</small>
-                                </button>
-                                <button type="button" data-plantilla="morado" onclick="aplicarPlantillaConPreview('morado', 'edit_'); marcarPlantillaActiva('morado');" style="padding: 15px; border: 2px solid #282c34; border-radius: 8px; background: linear-gradient(135deg, #282c34 0%, #3e4451 100%); color: #abb2bf; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-atom"></i> One Dark<br><small style="opacity: 0.8;">Atom Editor</small>
-                                </button>
-                                <button type="button" data-plantilla="naranja" onclick="aplicarPlantillaConPreview('naranja', 'edit_'); marcarPlantillaActiva('naranja');" style="padding: 15px; border: 2px solid #268bd2; border-radius: 8px; background: linear-gradient(135deg, #fdf6e3 0%, #eee8d5 100%); color: #268bd2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-sun"></i> Solarized Light<br><small style="opacity: 0.8;">Suave para ojos</small>
-                                </button>
-                                <button type="button" data-plantilla="turquesa" onclick="aplicarPlantillaConPreview('turquesa', 'edit_'); marcarPlantillaActiva('turquesa');" style="padding: 15px; border: 2px solid #0d1117; border-radius: 8px; background: linear-gradient(135deg, #0d1117 0%, #161b22 100%); color: #c9d1d9; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fab fa-github"></i> GitHub Dark<br><small style="opacity: 0.8;">Tema de GitHub</small>
-                                </button>
-                                <button type="button" data-plantilla="gris" onclick="aplicarPlantillaConPreview('gris', 'edit_'); marcarPlantillaActiva('gris');" style="padding: 15px; border: 2px solid #272822; border-radius: 8px; background: linear-gradient(135deg, #272822 0%, #3e3d32 100%); color: #f8f8f2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-code"></i> Monokai<br><small style="opacity: 0.8;">Sublime Text</small>
-                                </button>
-                                <button type="button" data-plantilla="rojo" onclick="aplicarPlantillaConPreview('rojo', 'edit_'); marcarPlantillaActiva('rojo');" style="padding: 15px; border: 2px solid #282828; border-radius: 8px; background: linear-gradient(135deg, #282828 0%, #3c3836 100%); color: #ebdbb2; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-tv"></i> Gruvbox<br><small style="opacity: 0.8;">Retro cálido</small>
-                                </button>
-                                <button type="button" data-plantilla="glassmorphism" onclick="aplicarPlantillaConPreview('glassmorphism', 'edit_'); marcarPlantillaActiva('glassmorphism');" style="padding: 15px; border: 2px solid #23a2f6; border-radius: 8px; background: linear-gradient(135deg, #080710 0%, #1845ad 50%, #ff512f 100%); color: #ffffff; cursor: pointer; font-weight: bold; transition: transform 0.2s; box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-glass-whiskey"></i> Glassmorphism<br><small style="opacity: 0.8;">Efectos de vidrio</small>
-                                </button>
-                                <button type="button" data-plantilla="indigo" onclick="aplicarPlantillaConPreview('indigo', 'edit_'); marcarPlantillaActiva('indigo');" style="padding: 15px; border: 2px solid #6366f1; border-radius: 8px; background: linear-gradient(135deg, #6366f1 0%, #818cf8 100%); color: #ffffff; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-paint-brush"></i> Moderno Índigo<br><small style="opacity: 0.8;">Limpio y profesional</small>
-                                </button>
-                                <button type="button" data-plantilla="classic" onclick="aplicarPlantillaConPreview('classic', 'edit_'); marcarPlantillaActiva('classic');" style="padding: 15px; border: 2px solid #34495e; border-radius: 8px; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: #ecf0f1; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-desktop"></i> Classic Panel<br><small style="opacity: 0.8;">Panel oscuro profesional</small>
-                                </button>
-                                <button type="button" data-plantilla="aleph70" onclick="aplicarPlantillaConPreview('aleph70', 'edit_'); marcarPlantillaActiva('aleph70');" style="padding: 15px; border: 2px solid #2d3339; border-radius: 8px; background: linear-gradient(135deg, #2d3339 0%, #34495e 100%); color: #ffffff; cursor: pointer; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-star"></i> Aleph70<br><small style="opacity: 0.8;">Tema original del sistema</small>
+                                <button type="button" data-plantilla="zen" onclick="aplicarPlantillaConPreview('zen', 'edit_'); marcarPlantillaActiva('zen');" style="padding: 20px; border: 3px solid #cccccc; border-radius: 8px; background: linear-gradient(135deg, #f8f8f8 0%, #eaeaea 100%); color: #111111; cursor: pointer; font-weight: bold; font-size: 14px; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.08);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                    <i class="fas fa-spa"></i> Zen<br><small style="opacity: 0.7; font-size: 11px;">Ultra sereno y suave</small>
                                 </button>
                             </div>
                         
@@ -1723,6 +1693,44 @@ async function editarEmpresa(empresaId) {
                             </div>
                         </details>
                         
+                        <!-- Sección: Colores de Modales y Spinner -->
+                        <details style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; border: 2px solid #dee2e6;">
+                            <summary style="cursor: pointer; font-weight: 600; color: #2c3e50; margin-bottom: 15px; user-select: none;">
+                                <i class="fas fa-window-restore"></i> Modales y Spinner (6 colores)
+                            </summary>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 12px; padding-top: 10px;">
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                                    <label for="edit_color_modal_bg" style="font-size: 11px; text-align: center; margin: 0; white-space: nowrap;"><i class="fas fa-square"></i> Fondo</label>
+                                    <input type="color" id="edit_color_modal_bg" name="color_modal_bg" value="${empresa.color_modal_bg || '#ffffff'}" oninput="actualizarVistaPrevia()" style="width: 40px; height: 35px; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                                    <label for="edit_color_modal_text" style="font-size: 11px; text-align: center; margin: 0; white-space: nowrap;"><i class="fas fa-font"></i> Texto</label>
+                                    <input type="color" id="edit_color_modal_text" name="color_modal_text" value="${empresa.color_modal_text || '#000000'}" oninput="actualizarVistaPrevia()" style="width: 40px; height: 35px; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                                    <label for="edit_color_modal_border" style="font-size: 11px; text-align: center; margin: 0; white-space: nowrap;"><i class="fas fa-border-style"></i> Borde</label>
+                                    <input type="color" id="edit_color_modal_border" name="color_modal_border" value="${empresa.color_modal_border || '#000000'}" oninput="actualizarVistaPrevia()" style="width: 40px; height: 35px; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer;">
+                                </div>
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                                    <label for="edit_color_spinner_border" style="font-size: 11px; text-align: center; margin: 0; white-space: nowrap;"><i class="fas fa-spinner"></i> Spinner</label>
+                                    <input type="color" id="edit_color_spinner_border" name="color_spinner_border" value="${empresa.color_spinner_border || '#cccccc'}" oninput="actualizarVistaPrevia()" style="width: 40px; height: 35px; border: 2px solid #dee2e6; border-radius: 6px; cursor: pointer;">
+                                </div>
+                            </div>
+                            <div style="margin-top: 12px; padding: 10px; background: white; border-radius: 4px; border-left: 3px solid #3498db;">
+                                <div style="font-size: 11px; color: #666; margin-bottom: 6px;"><strong>Nota:</strong> Overlay y Sombra usan transparencias (rgba)</div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px;">
+                                    <div>
+                                        <label for="edit_color_modal_overlay" style="margin-bottom: 2px; display: block;">Overlay (ej: rgba(0,0,0,0.6))</label>
+                                        <input type="text" id="edit_color_modal_overlay" name="color_modal_overlay" value="${empresa.color_modal_overlay || 'rgba(0,0,0,0.6)'}" oninput="actualizarVistaPrevia()" style="width: 100%; padding: 4px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px;">
+                                    </div>
+                                    <div>
+                                        <label for="edit_color_modal_shadow" style="margin-bottom: 2px; display: block;">Sombra (ej: rgba(0,0,0,0.4))</label>
+                                        <input type="text" id="edit_color_modal_shadow" name="color_modal_shadow" value="${empresa.color_modal_shadow || 'rgba(0,0,0,0.4)'}" oninput="actualizarVistaPrevia()" style="width: 100%; padding: 4px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px;">
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                        
                         <div class="form-group">
                             <label>Logo Actual</label>
                             ${empresa.logo_header && !empresa.logo_header.startsWith('default_') ? 
@@ -1850,6 +1858,12 @@ async function guardarCambiosEmpresa(form) {
                 color_grid_bg: formData.get('color_grid_bg'),
                 color_grid_text: formData.get('color_grid_text'),
                 color_icon: formData.get('color_icon'),
+                color_modal_bg: formData.get('color_modal_bg'),
+                color_modal_text: formData.get('color_modal_text'),
+                color_modal_border: formData.get('color_modal_border'),
+                color_modal_overlay: formData.get('color_modal_overlay'),
+                color_modal_shadow: formData.get('color_modal_shadow'),
+                color_spinner_border: formData.get('color_spinner_border'),
                 activa: document.getElementById('edit_activa').checked ? 1 : 0
             };
             
@@ -1869,6 +1883,24 @@ async function guardarCambiosEmpresa(form) {
             cerrarModalEditarEmpresa();
             cargarEmpresas();
             cargarEstadisticas();
+            
+            // Recargar branding si se editó la empresa activa del usuario
+            console.log('💡 Recargando branding para aplicar nuevos colores...');
+            if (window.parent && window.parent.cargarColoresEmpresa) {
+                // Si estamos en un iframe, llamar a la función del parent
+                window.parent.cargarColoresEmpresa();
+            } else if (typeof cargarColoresEmpresa === 'function') {
+                // Si la función está disponible localmente
+                cargarColoresEmpresa();
+            } else {
+                // Recargar la página principal para aplicar cambios
+                console.log('🔄 Recargando página principal...');
+                setTimeout(() => {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.location.reload();
+                    }
+                }, 1000);
+            }
         } else {
             mostrarNotificacion(result.error || 'Error actualizando empresa', 'error');
         }
@@ -2348,360 +2380,10 @@ function actualizarVistaPrevia() {
     actualizarPreviewEnTiempoReal(colores);
 }
 
-// Plantillas de colores predefinidas - Basadas en temas profesionales populares
-const plantillasColores = {
-    clasico: {
-        nombre: 'Material Design',
-        descripcion: 'Diseño limpio de Google',
-        color_primario: '#1976d2',
-        color_secundario: '#42a5f5',
-        color_success: '#4caf50',
-        color_warning: '#ff9800',
-        color_danger: '#f44336',
-        color_info: '#2196f3',
-        color_button: '#1976d2',
-        color_button_hover: '#1565c0',
-        color_button_text: '#ffffff',
-        color_app_bg: '#fafafa',
-        color_header_bg: '#1976d2',
-        color_header_text: '#ffffff',
-        color_grid_header: '#1976d2',
-        color_grid_hover: 'rgba(25,118,210,0.1)',
-        color_input_bg: '#ffffff',
-        color_input_text: '#333333',
-        color_input_border: '#dddddd',
-        color_select_bg: '#ffffff',
-        color_select_text: '#333333',
-        color_select_border: '#dddddd',
-        color_disabled_bg: '#f5f5f5',
-        color_disabled_text: '#999999',
-        color_submenu_bg: '#f8f9fa',
-        color_submenu_text: '#333333',
-        color_submenu_hover: '#e9ecef'
-    },
-    oscuro: {
-        nombre: 'Dracula',
-        descripcion: 'Tema oscuro elegante',
-        color_primario: '#282a36',
-        color_secundario: '#44475a',
-        color_success: '#50fa7b',
-        color_warning: '#f1fa8c',
-        color_danger: '#ff5555',
-        color_info: '#8be9fd',
-        color_button: '#bd93f9',
-        color_button_hover: '#9580d6',
-        color_button_text: '#f8f8f2',
-        color_app_bg: '#1e1f29',
-        color_header_bg: '#282a36',
-        color_header_text: '#f8f8f2',
-        color_grid_header: '#44475a',
-        color_grid_hover: 'rgba(68,71,90,0.3)',
-        color_input_bg: '#2a2a2a',
-        color_input_text: '#e0e0e0',
-        color_input_border: '#444444',
-        color_select_bg: '#2a2a2a',
-        color_select_text: '#e0e0e0',
-        color_select_border: '#444444',
-        color_disabled_bg: '#1a1a1a',
-        color_disabled_text: '#666666',
-        color_submenu_bg: '#44475a',
-        color_submenu_text: '#e0e0e0',
-        color_submenu_hover: '#282a36'
-    },
-    verde: {
-        nombre: 'Nord',
-        descripcion: 'Minimalista escandinavo',
-        color_primario: '#2e3440',
-        color_secundario: '#3b4252',
-        color_success: '#a3be8c',
-        color_warning: '#ebcb8b',
-        color_danger: '#bf616a',
-        color_info: '#88c0d0',
-        color_button: '#5e81ac',
-        color_button_hover: '#81a1c1',
-        color_button_text: '#eceff4',
-        color_app_bg: '#eceff4',
-        color_header_bg: '#2e3440',
-        color_header_text: '#eceff4',
-        color_grid_header: '#3b4252',
-        color_grid_hover: 'rgba(59,66,82,0.2)',
-        color_input_bg: '#ffffff',
-        color_input_text: '#333333',
-        color_input_border: '#dddddd',
-        color_select_bg: '#ffffff',
-        color_select_text: '#333333',
-        color_select_border: '#dddddd',
-        color_disabled_bg: '#f5f5f5',
-        color_disabled_text: '#999999',
-        color_submenu_bg: '#f8f9fa',
-        color_submenu_text: '#333333',
-        color_submenu_hover: '#e9ecef'
-    },
-    morado: {
-        nombre: 'One Dark',
-        descripcion: 'Tema de Atom Editor',
-        color_primario: '#282c34',
-        color_secundario: '#3e4451',
-        color_success: '#98c379',
-        color_warning: '#e5c07b',
-        color_danger: '#e06c75',
-        color_info: '#61afef',
-        color_button: '#c678dd',
-        color_button_hover: '#a353ba',
-        color_button_text: '#abb2bf',
-        color_app_bg: '#21252b',
-        color_header_bg: '#282c34',
-        color_header_text: '#abb2bf',
-        color_grid_header: '#3e4451',
-        color_grid_hover: 'rgba(62,68,81,0.3)',
-        color_input_bg: '#2a2a2a',
-        color_input_text: '#e0e0e0',
-        color_input_border: '#444444',
-        color_select_bg: '#2a2a2a',
-        color_select_text: '#e0e0e0',
-        color_select_border: '#444444',
-        color_disabled_bg: '#1a1a1a',
-        color_disabled_text: '#666666',
-        color_submenu_bg: '#3e4451',
-        color_submenu_text: '#e0e0e0',
-        color_submenu_hover: '#282c34'
-    },
-    naranja: {
-        nombre: 'Solarized Light',
-        descripcion: 'Suave para los ojos',
-        color_primario: '#268bd2',
-        color_secundario: '#2aa198',
-        color_success: '#859900',
-        color_warning: '#b58900',
-        color_danger: '#dc322f',
-        color_info: '#268bd2',
-        color_button: '#268bd2',
-        color_button_hover: '#2075c7',
-        color_button_text: '#fdf6e3',
-        color_app_bg: '#fdf6e3',
-        color_header_bg: '#268bd2',
-        color_header_text: '#fdf6e3',
-        color_grid_header: '#2aa198',
-        color_grid_hover: 'rgba(38,139,210,0.1)',
-        color_input_bg: '#ffffff',
-        color_input_text: '#333333',
-        color_input_border: '#dddddd',
-        color_select_bg: '#ffffff',
-        color_select_text: '#333333',
-        color_select_border: '#dddddd',
-        color_disabled_bg: '#f5f5f5',
-        color_disabled_text: '#999999',
-        color_submenu_bg: '#f8f9fa',
-        color_submenu_text: '#333333',
-        color_submenu_hover: '#e9ecef'
-    },
-    turquesa: {
-        nombre: 'GitHub Dark',
-        descripcion: 'Tema oscuro de GitHub',
-        color_primario: '#0d1117',
-        color_secundario: '#161b22',
-        color_success: '#238636',
-        color_warning: '#d29922',
-        color_danger: '#da3633',
-        color_info: '#58a6ff',
-        color_button: '#238636',
-        color_button_hover: '#2ea043',
-        color_button_text: '#c9d1d9',
-        color_app_bg: '#0d1117',
-        color_header_bg: '#161b22',
-        color_header_text: '#c9d1d9',
-        color_grid_header: '#21262d',
-        color_grid_hover: 'rgba(33,38,45,0.5)',
-        color_input_bg: '#2a2a2a',
-        color_input_text: '#e0e0e0',
-        color_input_border: '#444444',
-        color_select_bg: '#2a2a2a',
-        color_select_text: '#e0e0e0',
-        color_select_border: '#444444',
-        color_disabled_bg: '#1a1a1a',
-        color_disabled_text: '#666666',
-        color_submenu_bg: '#161b22',
-        color_submenu_text: '#e0e0e0',
-        color_submenu_hover: '#0d1117'
-    },
-    gris: {
-        nombre: 'Monokai',
-        descripcion: 'Clásico de Sublime Text',
-        color_primario: '#272822',
-        color_secundario: '#3e3d32',
-        color_success: '#a6e22e',
-        color_warning: '#e6db74',
-        color_danger: '#f92672',
-        color_info: '#66d9ef',
-        color_button: '#f92672',
-        color_button_hover: '#ae81ff',
-        color_button_text: '#f8f8f2',
-        color_app_bg: '#1e1f1c',
-        color_header_bg: '#272822',
-        color_header_text: '#f8f8f2',
-        color_grid_header: '#3e3d32',
-        color_grid_hover: 'rgba(62,61,50,0.4)',
-        color_input_bg: '#2a2a2a',
-        color_input_text: '#e0e0e0',
-        color_input_border: '#444444',
-        color_select_bg: '#2a2a2a',
-        color_select_text: '#e0e0e0',
-        color_select_border: '#444444',
-        color_disabled_bg: '#1a1a1a',
-        color_disabled_text: '#666666',
-        color_submenu_bg: '#3e3d32',
-        color_submenu_text: '#e0e0e0',
-        color_submenu_hover: '#272822'
-    },
-    rojo: {
-        nombre: 'Gruvbox',
-        descripcion: 'Retro cálido',
-        color_primario: '#282828',
-        color_secundario: '#3c3836',
-        color_success: '#b8bb26',
-        color_warning: '#fabd2f',
-        color_danger: '#fb4934',
-        color_info: '#83a598',
-        color_button: '#fe8019',
-        color_button_hover: '#d65d0e',
-        color_button_text: '#ebdbb2',
-        color_app_bg: '#1d2021',
-        color_header_bg: '#282828',
-        color_header_text: '#ebdbb2',
-        color_grid_header: '#3c3836',
-        color_grid_hover: 'rgba(60,56,54,0.4)',
-        color_input_bg: '#2a2a2a',
-        color_input_text: '#e0e0e0',
-        color_input_border: '#444444',
-        color_select_bg: '#2a2a2a',
-        color_select_text: '#e0e0e0',
-        color_select_border: '#444444',
-        color_disabled_bg: '#1a1a1a',
-        color_disabled_text: '#666666',
-        color_submenu_bg: '#3c3836',
-        color_submenu_text: '#e0e0e0',
-        color_submenu_hover: '#282828'
-    },
-    glassmorphism: {
-        nombre: 'Glassmorphism',
-        descripcion: 'Moderno con efectos de vidrio',
-        color_primario: '#080710',
-        color_secundario: '#1a1a2e',
-        color_success: '#23a2f6',
-        color_warning: '#f09819',
-        color_danger: '#ff512f',
-        color_info: '#23a2f6',
-        color_button: '#23a2f6',
-        color_button_hover: '#1845ad',
-        color_button_text: '#ffffff',
-        color_app_bg: '#080710',
-        color_header_bg: '#1a1a2e',
-        color_header_text: '#ffffff',
-        color_grid_header: '#1845ad',
-        color_grid_hover: 'rgba(35,162,246,0.2)',
-        color_input_bg: '#2a2a2a',
-        color_input_text: '#e0e0e0',
-        color_input_border: '#444444',
-        color_select_bg: '#2a2a2a',
-        color_select_text: '#e0e0e0',
-        color_select_border: '#444444',
-        color_disabled_bg: '#1a1a1a',
-        color_disabled_text: '#666666',
-        color_submenu_bg: '#1a1a2e',
-        color_submenu_text: '#e0e0e0',
-        color_submenu_hover: '#080710'
-    },
-    indigo: {
-        nombre: 'Moderno Índigo',
-        descripcion: 'Limpio y profesional con tonos morados',
-        color_primario: '#6366f1',
-        color_secundario: '#818cf8',
-        color_success: '#10b981',
-        color_warning: '#f59e0b',
-        color_danger: '#ef4444',
-        color_info: '#3b82f6',
-        color_button: '#6366f1',
-        color_button_hover: '#4f46e5',
-        color_button_text: '#ffffff',
-        color_app_bg: '#ffffff',
-        color_header_bg: '#6366f1',
-        color_header_text: '#ffffff',
-        color_grid_header: '#818cf8',
-        color_grid_hover: 'rgba(99,102,241,0.1)',
-        color_input_bg: '#ffffff',
-        color_input_text: '#333333',
-        color_input_border: '#dddddd',
-        color_select_bg: '#ffffff',
-        color_select_text: '#333333',
-        color_select_border: '#dddddd',
-        color_disabled_bg: '#f5f5f5',
-        color_disabled_text: '#999999',
-        color_submenu_bg: '#f8f9fa',
-        color_submenu_text: '#333333',
-        color_submenu_hover: '#e9ecef'
-    },
-    classic: {
-        nombre: 'Classic Panel',
-        descripcion: 'Panel oscuro profesional',
-        color_primario: '#2c3e50',
-        color_secundario: '#34495e',
-        color_success: '#27ae60',
-        color_warning: '#f39c12',
-        color_danger: '#e74c3c',
-        color_info: '#3498db',
-        color_button: '#3498db',
-        color_button_hover: '#2980b9',
-        color_button_text: '#ffffff',
-        color_app_bg: '#2c3e50',
-        color_header_bg: '#34495e',
-        color_header_text: '#ecf0f1',
-        color_grid_header: '#34495e',
-        color_grid_hover: 'rgba(52,73,94,0.3)',
-        color_input_bg: '#2a2a2a',
-        color_input_text: '#e0e0e0',
-        color_input_border: '#444444',
-        color_select_bg: '#2a2a2a',
-        color_select_text: '#e0e0e0',
-        color_select_border: '#444444',
-        color_disabled_bg: '#1a1a1a',
-        color_disabled_text: '#666666',
-        color_submenu_bg: '#34495e',
-        color_submenu_text: '#e0e0e0',
-        color_submenu_hover: '#2c3e50'
-    },
-    aleph70: {
-        nombre: 'Aleph70',
-        descripcion: 'Tema original del sistema',
-        color_primario: '#243342',
-        color_secundario: '#ffffff',
-        color_success: '#27ae60',
-        color_warning: '#f39c12',
-        color_danger: '#e74c3c',
-        color_info: '#3498db',
-        color_button: '#2c3e50',
-        color_button_hover: '#34495e',
-        color_button_text: '#ffffff',
-        color_app_bg: '#ffffff',
-        color_header_bg: '#2c3e50',
-        color_header_text: '#ffffff',
-        color_grid_header: '#2c3e50',
-        color_grid_hover: 'rgba(44,62,80,0.1)',
-        color_input_bg: '#ffffff',
-        color_input_text: '#333333',
-        color_input_border: '#dddddd',
-        color_select_bg: '#ffffff',
-        color_select_text: '#333333',
-        color_select_border: '#dddddd',
-        color_disabled_bg: '#f5f5f5',
-        color_disabled_text: '#999999',
-        color_submenu_bg: '#243342',
-        color_submenu_text: '#ecf0f1',
-        color_submenu_hover: '#34495e',
-        color_grid_bg: '#ffffff',
-        color_grid_text: '#333333',
-        color_icon: '#ecf0f1'
-    }
-};
+// Plantillas de colores - Cargadas dinámicamente desde /static/plantillas/
+// Ver plantillas.js para el cargador
+// IMPORTANTE: NO declarar plantillasColores aquí, ya está en plantillas.js
+// Usar directamente window.plantillasColores en todas las funciones
 
 // Función para detectar qué plantilla está activa
 function detectarPlantillaActiva(empresa) {
@@ -2715,7 +2397,7 @@ function detectarPlantillaActiva(empresa) {
         console.log(`  ${clave}: ${empresa[clave] || 'undefined'}`);
     });
     
-    for (const [nombre, plantilla] of Object.entries(plantillasColores)) {
+    for (const [nombre, plantilla] of Object.entries(window.plantillasColores)) {
         let coincidencias = 0;
         let detalles = [];
         
@@ -2800,7 +2482,7 @@ async function cargarPlantillasPersonalizadas() {
             const plantillas = JSON.parse(plantillasGuardadas);
             plantillas.forEach(p => {
                 const key = `personalizada_${p.id}`;
-                plantillasColores[key] = {
+                window.plantillasColores[key] = {
                     nombre: p.nombre,
                     descripcion: p.descripcion || `Basada en ${p.plantilla_base}`,
                     plantilla_base: p.plantilla_base,
@@ -2857,7 +2539,7 @@ if (typeof document !== 'undefined') {
 // Función para aplicar una plantilla de colores
 function aplicarPlantilla(nombrePlantilla) {
     try {
-        const plantilla = plantillasColores[nombrePlantilla];
+        const plantilla = window.plantillasColores[nombrePlantilla];
         if (!plantilla) {
             mostrarNotificacion('Plantilla no encontrada', 'error');
             return;
@@ -2972,7 +2654,7 @@ function detectarCambioManual(elemento, campo, prefijo) {
 
 // Crear plantilla personalizada basada en la plantilla actual
 async function crearPlantillaPersonalizada(prefijo = '') {
-    const plantillaBase = plantillasColores[plantillaBaseActual];
+    const plantillaBase = window.plantillasColores[plantillaBaseActual];
     if (!plantillaBase) return;
     
     // Obtener todos los valores actuales de los inputs
@@ -3059,7 +2741,7 @@ function guardarPlantillaPersonalizada(nombre, plantillaBase, colores) {
             id: id,
             nombre: nombre,
             plantilla_base: plantillaBase,
-            descripcion: `Basada en ${plantillasColores[plantillaBase]?.nombre || plantillaBase}`,
+            descripcion: `Basada en ${window.plantillasColores[plantillaBase]?.nombre || plantillaBase}`,
             ...colores
         };
         // end sw object marker
@@ -3126,8 +2808,8 @@ function regenerarBotonesPlantillas(prefijo = '') {
     };
     
     // Crear botones para cada plantilla
-    Object.keys(plantillasColores).forEach(key => {
-        const plantilla = plantillasColores[key];
+    Object.keys(window.plantillasColores).forEach(key => {
+        const plantilla = window.plantillasColores[key];
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'btn-plantilla';
@@ -3149,7 +2831,7 @@ function regenerarBotonesPlantillas(prefijo = '') {
         contenedor.appendChild(button);
     });
     
-    console.log(`✨ Plantillas regeneradas en ${contenedorId}: ${Object.keys(plantillasColores).length} plantillas`);
+    console.log(`✨ Plantillas regeneradas en ${contenedorId}: ${Object.keys(window.plantillasColores).length} plantillas`);
 }
 
 // Función para guardar plantilla personalizada

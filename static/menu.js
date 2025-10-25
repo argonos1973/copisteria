@@ -1,12 +1,6 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Eliminar cualquier estado guardado de menús activos
-    sessionStorage.removeItem('activeMenus');
-
+function inicializarEventosMenu() {
     const menuItems = document.querySelectorAll('.menu-item');
     const contentFrame = document.getElementById('content-frame');
-    
-    // NO restaurar el estado del menú de sessionStorage
-    // const activeMenus = JSON.parse(sessionStorage.getItem('activeMenus') || '[]');
     let activeMenus = [];
     
     // --- SUBMENÚS ANIDADOS ---
@@ -164,11 +158,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // NO abrir ningún menú por defecto
-    // if (menuItems.length > 0 && !activeMenus.length) {
-    //     const firstMenuItem = menuItems[0];
-    //     firstMenuItem.classList.add('active');
-    //     const menuTitle = firstMenuItem.querySelector('.menu-link').textContent;
-    //     activeMenus.push(menuTitle);
-    //     sessionStorage.setItem('activeMenus', JSON.stringify(activeMenus));
-    // }
-});
+}
+
+// Inicializar eventos cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', inicializarEventosMenu);
+
+// Reinicializar cuando se renderice el menú dinámicamente
+window.addEventListener('menuRendered', inicializarEventosMenu);

@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify, session
 from werkzeug.utils import secure_filename
 from auth_middleware import login_required, superadmin_required
 from logger_config import get_logger
+from color_generator import generate_palette
 
 logger = get_logger(__name__)
 
@@ -89,7 +90,8 @@ def listar_empresas():
         cursor.execute('''
             SELECT id, codigo, nombre, cif, direccion, telefono, email, web,
                    logo_header, logo_factura, color_primario, color_secundario,
-                   activa, fecha_alta
+                   color_success, color_warning, color_danger, color_info,
+                   color_button, color_button_hover, activa, fecha_alta
             FROM empresas
             ORDER BY nombre
         ''')
@@ -109,8 +111,14 @@ def listar_empresas():
                 'logo_factura': row[9],
                 'color_primario': row[10],
                 'color_secundario': row[11],
-                'activa': row[12],
-                'fecha_alta': row[13]
+                'color_success': row[12],
+                'color_warning': row[13],
+                'color_danger': row[14],
+                'color_info': row[15],
+                'color_button': row[16],
+                'color_button_hover': row[17],
+                'activa': row[18],
+                'fecha_alta': row[19]
             })
         
         conn.close()
@@ -265,7 +273,16 @@ def obtener_empresa(empresa_id):
         
         cursor.execute('''
             SELECT id, codigo, nombre, cif, direccion, telefono, email, web,
-                   logo_header, logo_factura, color_primario, color_secundario,
+                   logo_header, logo_factura,
+                   color_primario, color_secundario, color_success, color_warning, color_danger, color_info,
+                   color_button, color_button_hover, color_button_text,
+                   color_app_bg, color_header_bg, color_header_text,
+                   color_grid_header, color_grid_hover, color_grid_bg, color_grid_text,
+                   color_input_bg, color_input_text, color_input_border,
+                   color_select_bg, color_select_text, color_select_border,
+                   color_submenu_bg, color_submenu_text, color_submenu_hover,
+                   color_icon,
+                   color_disabled_bg, color_disabled_text,
                    activa, db_path
             FROM empresas
             WHERE id = ?
@@ -290,8 +307,34 @@ def obtener_empresa(empresa_id):
             'logo_factura': row[9],
             'color_primario': row[10],
             'color_secundario': row[11],
-            'activa': row[12],
-            'db_path': row[13]
+            'color_success': row[12],
+            'color_warning': row[13],
+            'color_danger': row[14],
+            'color_info': row[15],
+            'color_button': row[16],
+            'color_button_hover': row[17],
+            'color_button_text': row[18],
+            'color_app_bg': row[19],
+            'color_header_bg': row[20],
+            'color_header_text': row[21],
+            'color_grid_header': row[22],
+            'color_grid_hover': row[23],
+            'color_grid_bg': row[24],
+            'color_grid_text': row[25],
+            'color_input_bg': row[26],
+            'color_input_text': row[27],
+            'color_input_border': row[28],
+            'color_select_bg': row[29],
+            'color_select_text': row[30],
+            'color_select_border': row[31],
+            'color_submenu_bg': row[32],
+            'color_submenu_text': row[33],
+            'color_submenu_hover': row[34],
+            'color_icon': row[35],
+            'color_disabled_bg': row[36],
+            'color_disabled_text': row[37],
+            'activa': row[38],
+            'db_path': row[39]
         }), 200
         
     except Exception as e:
@@ -319,7 +362,16 @@ def actualizar_empresa(empresa_id):
         
         # Construir UPDATE dinámicamente
         campos_permitidos = ['nombre', 'cif', 'direccion', 'telefono', 'email', 'web', 
-                            'color_primario', 'color_secundario', 'activa']
+                            'color_primario', 'color_secundario', 'color_success', 'color_warning',
+                            'color_danger', 'color_info', 'color_button', 'color_button_hover',
+                            'color_button_text', 'color_app_bg',
+                            'color_header_bg', 'color_header_text', 'color_grid_header', 'color_grid_hover',
+                            'color_input_bg', 'color_input_text', 'color_input_border',
+                            'color_submenu_bg', 'color_submenu_text', 'color_submenu_hover',
+                            'color_icon', 'color_grid_bg', 'color_grid_text',
+                            'color_select_bg', 'color_select_text', 'color_select_border',
+                            'color_disabled_bg', 'color_disabled_text',
+                            'activa']
         
         campos_update = []
         valores = []
@@ -370,8 +422,18 @@ def actualizar_empresa(empresa_id):
         valores.append(empresa_id)
         sql = f"UPDATE empresas SET {', '.join(campos_update)} WHERE id = ?"
         
+        logger.info(f"🔧 UPDATE SQL: {sql}")
+        logger.info(f"🔧 Valores: {valores}")
+        logger.info(f"🔧 Datos recibidos: {data}")
+        
         cursor.execute(sql, valores)
         conn.commit()
+        
+        # Verificar que se guardó
+        cursor.execute('SELECT color_primario, color_button, color_success FROM empresas WHERE id = ?', (empresa_id,))
+        verificacion = cursor.fetchone()
+        logger.info(f"✅ Colores guardados en BD: primario={verificacion[0]}, button={verificacion[1]}, success={verificacion[2]}")
+        
         conn.close()
         
         logger.info(f"Empresa {empresa_id} actualizada")
@@ -381,6 +443,25 @@ def actualizar_empresa(empresa_id):
     except Exception as e:
         logger.error(f"Error actualizando empresa: {e}", exc_info=True)
         return jsonify({'error': 'Error actualizando empresa'}), 500
+
+@empresas_bp.route('/api/empresas/generar-colores', methods=['POST'])
+@login_required  # Cambiar temporalmente a login_required en lugar de superadmin_required
+def generar_colores_automaticos():
+    """Genera una paleta de colores armónica basada en el color primario"""
+    try:
+        data = request.get_json()
+        color_primario = data.get('color_primario', '#2c3e50')
+        
+        # Generar paleta armónica
+        palette = generate_palette(color_primario)
+        
+        logger.info(f"Paleta generada para color {color_primario}: {palette}")
+        
+        return jsonify(palette), 200
+        
+    except Exception as e:
+        logger.error(f"Error generando colores: {e}", exc_info=True)
+        return jsonify({'error': 'Error generando colores'}), 500
 
 
 @empresas_bp.route('/api/empresas/<int:empresa_id>', methods=['DELETE'])

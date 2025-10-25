@@ -298,6 +298,78 @@ def servir_aplicacion():
         logger.error(f"Error sirviendo aplicación: {e}", exc_info=True)
         return jsonify({'error': 'Error sirviendo aplicación'}), 500
 
+@auth_bp.route('/branding-preview/<empresa_codigo>', methods=['GET'])
+def obtener_branding_preview(empresa_codigo):
+    """
+    Retorna configuración visual de una empresa por su código (sin autenticación, solo para preview en login)
+    """
+    try:
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                logo_header, logo_factura,
+                color_primario, color_secundario, color_success, color_warning, 
+                color_danger, color_info, color_button, color_button_hover,
+                color_button_text, color_app_bg,
+                color_header_bg, color_header_text, color_grid_header, color_grid_hover,
+                color_input_bg, color_input_text, color_input_border,
+                color_submenu_bg, color_submenu_text, color_submenu_hover,
+                color_icon, color_grid_bg, color_grid_text,
+                color_select_bg, color_select_text, color_select_border,
+                color_disabled_bg, color_disabled_text,
+                nombre
+            FROM empresas
+            WHERE codigo = ?
+        ''', (empresa_codigo,))
+        
+        empresa = cursor.fetchone()
+        conn.close()
+        
+        if not empresa:
+            return jsonify({'error': 'Empresa no encontrada'}), 404
+        
+        return jsonify({
+            'logo_header': empresa[0],
+            'logo_factura': empresa[1],
+            'colores': {
+                'primario': empresa[2],
+                'secundario': empresa[3],
+                'success': empresa[4],
+                'warning': empresa[5],
+                'danger': empresa[6],
+                'info': empresa[7],
+                'button': empresa[8],
+                'button_hover': empresa[9],
+                'button_text': empresa[10],
+                'app_bg': empresa[11],
+                'header_bg': empresa[12],
+                'header_text': empresa[13],
+                'grid_header': empresa[14],
+                'grid_hover': empresa[15],
+                'input_bg': empresa[16],
+                'input_text': empresa[17],
+                'input_border': empresa[18],
+                'submenu_bg': empresa[19],
+                'submenu_text': empresa[20],
+                'submenu_hover': empresa[21],
+                'icon': empresa[22],
+                'grid_bg': empresa[23],
+                'grid_text': empresa[24],
+                'select_bg': empresa[25],
+                'select_text': empresa[26],
+                'select_border': empresa[27],
+                'disabled_bg': empresa[28],
+                'disabled_text': empresa[29]
+            },
+            'nombre': empresa[30]
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo branding preview: {e}", exc_info=True)
+        return jsonify({'error': 'Error obteniendo branding'}), 500
+
 @auth_bp.route('/branding', methods=['GET'])
 @login_required
 def obtener_branding():
@@ -313,7 +385,15 @@ def obtener_branding():
         cursor.execute('''
             SELECT 
                 logo_header, logo_factura,
-                color_primario, color_secundario,
+                color_primario, color_secundario, color_success, color_warning, 
+                color_danger, color_info, color_button, color_button_hover,
+                color_button_text, color_app_bg,
+                color_header_bg, color_header_text, color_grid_header, color_grid_hover,
+                color_input_bg, color_input_text, color_input_border,
+                color_submenu_bg, color_submenu_text, color_submenu_hover,
+                color_icon, color_grid_bg, color_grid_text,
+                color_select_bg, color_select_text, color_select_border,
+                color_disabled_bg, color_disabled_text,
                 nombre, cif, direccion, telefono, email, web
             FROM empresas
             WHERE id = ?
@@ -330,15 +410,41 @@ def obtener_branding():
             'logo_factura': empresa[1],
             'colores': {
                 'primario': empresa[2],
-                'secundario': empresa[3]
+                'secundario': empresa[3],
+                'success': empresa[4],
+                'warning': empresa[5],
+                'danger': empresa[6],
+                'info': empresa[7],
+                'button': empresa[8],
+                'button_hover': empresa[9],
+                'button_text': empresa[10],
+                'app_bg': empresa[11],
+                'header_bg': empresa[12],
+                'header_text': empresa[13],
+                'grid_header': empresa[14],
+                'grid_hover': empresa[15],
+                'input_bg': empresa[16],
+                'input_text': empresa[17],
+                'input_border': empresa[18],
+                'submenu_bg': empresa[19],
+                'submenu_text': empresa[20],
+                'submenu_hover': empresa[21],
+                'icon': empresa[22],
+                'grid_bg': empresa[23],
+                'grid_text': empresa[24],
+                'select_bg': empresa[25],
+                'select_text': empresa[26],
+                'select_border': empresa[27],
+                'disabled_bg': empresa[28],
+                'disabled_text': empresa[29]
             },
             'datos': {
-                'nombre': empresa[4],
-                'cif': empresa[5],
-                'direccion': empresa[6],
-                'telefono': empresa[7],
-                'email': empresa[8],
-                'web': empresa[9]
+                'nombre': empresa[30],
+                'cif': empresa[31],
+                'direccion': empresa[32],
+                'telefono': empresa[33],
+                'email': empresa[34],
+                'web': empresa[35]
             }
         }), 200
         

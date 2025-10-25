@@ -1,32 +1,18 @@
-<!-- Version: 1761152613 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Panel de Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="/static/styles.css">
-    <link rel="stylesheet" href="/static/colors.css">
-    <link rel="stylesheet" href="/static/notificaciones.css">
-    <link rel="stylesheet" href="/static/footer.css">
-    <link rel="stylesheet" href="/static/page_header.css">
+    <link rel="stylesheet" href="../static/styles.css">
+    <link rel="stylesheet" href="../static/notificaciones.css">
+    <link rel="stylesheet" href="../static/footer.css">
+    <link rel="stylesheet" href="../static/page_header.css">
     <style>
-        :root {
-            --color-primario: #2c3e50;
-            --color-secundario: #3498db;
-            --color-success: #27ae60;
-            --color-warning: #f39c12;
-            --color-danger: #e74c3c;
-            --color-info: #3498db;
-            --color-button: #3498db;
-            --color-button-hover: #2980b9;
-            --color-header-bg: #2c3e50;
-            --color-header-text: #ffffff;
-            --color-grid-header: #2c3e50;
-            --color-grid-hover: rgba(52, 152, 219, 0.1);
-        }
-
         body, html {
             margin: 0;
             padding: 0;
@@ -40,13 +26,37 @@
         }
 
         .menu {
-            background: var(--color-primario);
+            background: #243342;
             width: 250px;
             height: 100vh;
             overflow-y: auto;
             padding: 0;
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
             flex-shrink: 0;
+        }
+        
+        .logo-container {
+            background: #243342;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            border-bottom: 1px solid #34495e;
+        }
+        
+        .logo-container img {
+            max-width: 180px;
+            height: auto;
+            margin-bottom: 0.5rem;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .logo-container #nombre-empresa {
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 0.5rem;
         }
         
         .menu-list {
@@ -72,7 +82,7 @@
         }
         
         .menu-link:hover {
-            background: var(--color-secundario);
+            background: #34495e;
         }
         
         .menu-link i {
@@ -82,7 +92,7 @@
         /* Submenús SIEMPRE ocultos por defecto */
         .submenu {
             display: none;
-            background: var(--color-secundario);
+            background: #243342;
             padding: 0.5rem 0;
             margin-left: 1rem;
         }
@@ -105,7 +115,7 @@
         .submenu-item {
             display: block;
             padding: 0.5rem 1rem;
-            color: var(--color-header-text, white);
+            color: white;
             text-decoration: none;
             transition: background-color 0.3s;
         }
@@ -113,72 +123,48 @@
         .submenu-item i {
             width: 20px;
             margin-right: 0.5rem;
+        
+        .submenu-block {
+            margin-bottom: 0.25rem;
+        }
+        
+        .submenu-header {
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .submenu-nested {
+            padding-left: 3rem \!important;
+        
+        /* Flechas para items expandibles */
+        .menu-link:has(+ .submenu)::after {
+            content: '▼';
+            font-size: 10px;
+            margin-left: auto;
+            transition: transform 0.2s;
+        }
+        
+        .menu-item.active > .menu-link::after {
+            transform: rotate(180deg);
+        }
+        
+        .submenu-header::after {
+            content: '▼';
+            font-size: 10px;
+            margin-left: auto;
+            transition: transform 0.2s;
+        }
+        
+        .submenu-block.active > .submenu-header::after {
+            transform: rotate(180deg);
+        }
+            font-size: 12px;
+        }
             text-align: center;
         }
         
         .submenu-item:hover {
             background: #2c3e50;
-        }
-    
-        /* Info de usuario en menu inferior */
-        .user-info-bottom {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.2);
-            padding: 10px 15px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .user-details-compact {
-            color: white;
-            font-size: 11px;
-            margin-bottom: 5px;
-        }
-        
-        .user-details-compact div {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 3px;
-        }
-        
-        .user-details-compact i {
-            width: 12px;
-            font-size: 10px;
-            opacity: 0.7;
-        }
-        
-        .user-details-compact .user-time {
-            font-size: 10px;
-            opacity: 0.8;
-            margin-top: 2px;
-        }
-        
-        .btn-logout-compact {
-            width: 100%;
-            background: rgba(231,76,60,0.8);
-            border: none;
-            color: white;
-            padding: 6px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-        
-        .btn-logout-compact:hover {
-            background: rgba(231,76,60,1);
-        }
-        
-        .menu {
-            position: relative;
-            padding-bottom: 140px; /* Espacio para user-info-bottom */
         }
     </style>
     <style>
@@ -399,67 +385,6 @@
         .notif-footer button:hover {
             text-decoration: underline;
         }
-    
-        /* Info de usuario en menu inferior */
-        .user-info-bottom {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.2);
-            padding: 10px 15px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .user-details-compact {
-            color: white;
-            font-size: 11px;
-            margin-bottom: 5px;
-        }
-        
-        .user-details-compact div {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 3px;
-        }
-        
-        .user-details-compact i {
-            width: 12px;
-            font-size: 10px;
-            opacity: 0.7;
-        }
-        
-        .user-details-compact .user-time {
-            font-size: 10px;
-            opacity: 0.8;
-            margin-top: 2px;
-        }
-        
-        .btn-logout-compact {
-            width: 100%;
-            background: rgba(231,76,60,0.8);
-            border: none;
-            color: white;
-            padding: 6px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-        
-        .btn-logout-compact:hover {
-            background: rgba(231,76,60,1);
-        }
-        
-        .menu {
-            position: relative;
-            padding-bottom: 140px; /* Espacio para user-info-bottom */
-        }
     </style>
     <style>
         /* Estilos específicos para forzar el scroll vertical en el iframe */
@@ -479,75 +404,78 @@
             overflow: visible;
         }
 
-        /* No header superior - todo en sidebar */
-    
-        /* Info de usuario en menu inferior */
-        .user-info-bottom {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.2);
-            padding: 10px 15px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .user-details-compact {
+        /* Header superior */
+        .app-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            font-size: 11px;
-            margin-bottom: 5px;
+            padding: 12px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
         }
-        
-        .user-details-compact div {
+
+        .user-info-header {
             display: flex;
             align-items: center;
-            gap: 6px;
-            margin-bottom: 3px;
+            gap: 20px;
         }
-        
-        .user-details-compact i {
-            width: 12px;
-            font-size: 10px;
-            opacity: 0.7;
+
+        .user-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
-        
-        .user-details-compact .user-time {
-            font-size: 10px;
-            opacity: 0.8;
-            margin-top: 2px;
+
+        .user-name-header {
+            font-weight: 600;
+            font-size: 14px;
         }
-        
-        .btn-logout-compact {
-            width: 100%;
-            background: rgba(231,76,60,0.8);
-            border: none;
+
+        .user-empresa-header {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .header-time {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .btn-logout-header {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
             color: white;
-            padding: 6px;
-            border-radius: 4px;
+            padding: 8px 16px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 11px;
+            font-size: 13px;
             transition: all 0.3s;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
+            gap: 8px;
         }
-        
-        .btn-logout-compact:hover {
-            background: rgba(231,76,60,1);
+
+        .btn-logout-header:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
         }
-        
-        .menu {
-            position: relative;
-            padding-bottom: 140px; /* Espacio para user-info-bottom */
+
+        .content-wrapper {
+            height: calc(100vh - 48px);
+            overflow: hidden;
         }
     </style>
 </head>
 <body>
     <div class="layout-container">
         <nav class="menu">
-            <div class="logo-container" style="padding: 1rem; margin-bottom: 1rem; text-align: center;">
-                <img id="logo-empresa" src="/static/img/logo.png" alt="Logo" style="max-width: 200px; height: auto;">
+            <div class="logo-container">
+                <img id="logo-empresa" src="/static/logos/default_header.png" alt="Logo Empresa">
+                <div id="nombre-empresa"></div>
             </div>
             
             <!-- Icono de notificaciones -->
@@ -564,33 +492,35 @@
                     <i class="fas fa-spinner fa-spin"></i> Cargando menú...
                 </li>
             </ul>
+        </nav>
         
-            <!-- Info de usuario en parte inferior -->
-            <div class="user-info-bottom">
-                <div class="user-details-compact">
-                    <div>
-                        <i class="fas fa-user"></i>
-                        <span id="bottom-usuario">Usuario</span>
-                    </div>
-                    <div>
-                        <i class="fas fa-building"></i>
-                        <span id="bottom-empresa">Empresa</span>
-                    </div>
-                    <div class="user-time">
-                        <i class="fas fa-clock"></i>
-                        <span id="bottom-time">--:--:--</span>
+        <div class="content-container" style="flex-grow: 1; height: 100vh; overflow: hidden;">
+            <!-- Header Superior -->
+            <div class="app-header">
+                <div class="user-info-header">
+                    <div class="user-details">
+                        <div class="user-name-header">
+                            <i class="fas fa-user-circle"></i>
+                            <span id="header-usuario">Usuario</span>
+                        </div>
+                        <div class="user-empresa-header">
+                            <i class="fas fa-building"></i>
+                            <span id="header-empresa">Empresa</span>
+                        </div>
                     </div>
                 </div>
-                <button class="btn-logout-compact" onclick="cerrarSesion()">
+                <div class="header-time">
+                    <i class="fas fa-clock"></i>
+                    <span id="current-time">--:--:--</span>
+                </div>
+                <button class="btn-logout-header" onclick="cerrarSesion()">
                     <i class="fas fa-sign-out-alt"></i>
                     Cerrar Sesión
                 </button>
             </div>
-        </nav>
-        
-        <div class="content-container" style="flex-grow: 1; height: 100vh; overflow: hidden;">
-            <div style="height: 100%;">
-                <iframe id="content-frame" name="content-frame" src="/estadisticas.html" style="width: 100%; height: 100%; border: none;"></iframe>
+            <!-- Contenido Principal -->
+            <div class="content-wrapper">
+                <iframe id="content-frame" name="content-frame" src="estadisticas.html" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
         </div>
     </div>
@@ -618,27 +548,359 @@
         </div>
     </div>
 
-    <link rel="stylesheet" href="/static/notificaciones.css">
+    <link rel="stylesheet" href="../static/notificaciones.css">
     <script type="module">
-        import { mostrarConfirmacion } from '/static/notificaciones.js';
+        import { mostrarConfirmacion } from '../static/notificaciones.js';
         window.mostrarConfirmacion = mostrarConfirmacion;
     </script>
-    
-    <!-- Cargador de menú dinámico -->
-    <script src="/static/menu_loader.js?v=2"></script>
-    
-    <!-- Manejador de navegación del menú -->
-    <script src="/static/menu.js?v=1"></script>
-    
-    <!-- Branding y colores de empresa -->
-    <script src="/static/branding.js?v=1"></script>
+    <script src="../static/menu.js" defer></script>
+    <script>
+    // Sistema Multiempresa - Carga dinámica del menú según permisos
+    document.addEventListener('DOMContentLoaded', async () => {
+        await verificarSesionYCargarMenu();
+    });
+
+    async function cargarColoresBranding(empresaCodigo) {
+        try {
+            const response = await fetch(`/api/auth/branding-preview/${empresaCodigo}`);
+            if (!response.ok) {
+                console.error('Error cargando branding');
+                return;
+            }
+            
+            const data = await response.json();
+            const colores = data.colores;
+            
+            console.log('[BRANDING] Colores cargados:', colores);
+            
+            // Aplicar colores dinámicamente con !important
+            const style = document.createElement('style');
+            style.id = 'branding-dinamico';
+            style.innerHTML = `
+                /* Sidebar y logo */
+                .menu {
+                    background: ${colores.primario} !important;
+                }
+                .logo-container {
+                    background: ${colores.primario} !important;
+                }
+                
+                /* Submenus - fondo y estructura */
+                .submenu {
+                    background: ${colores.submenu_bg} !important;
+                }
+                .submenu-block {
+                    background: ${colores.submenu_bg} !important;
+                }
+                
+                /* Links del menú principal */
+                .menu-link {
+                    color: ${colores.submenu_text} !important;
+                }
+                .menu-link:hover {
+                    background: ${colores.submenu_hover} !important;
+                }
+                
+                /* Links dentro de submenus */
+                .submenu a,
+                .submenu .submenu-link,
+                .submenu-block a {
+                    color: ${colores.submenu_text} !important;
+                    background: transparent !important;
+                }
+                .submenu a:hover,
+                .submenu .submenu-link:hover,
+                .submenu-block a:hover {
+                    background: ${colores.submenu_hover} !important;
+                }
+                
+                /* Iconos en el menú */
+                .menu i,
+                .menu .fa,
+                .menu .fas,
+                .menu .far,
+                .menu-link i,
+                .submenu i {
+                    color: ${colores.icon} !important;
+                }
+                
+                /* Logo empresa y nombre */
+                #logo-empresa {
+                    filter: brightness(1) !important;
+                }
+                #nombre-empresa {
+                    color: ${colores.submenu_text} !important;
+                }
+            `;
+            
+            // Remover estilo previo si existe
+            const oldStyle = document.getElementById('branding-dinamico');
+            if (oldStyle) {
+                oldStyle.remove();
+            }
+            
+            document.head.appendChild(style);
+            console.log('[BRANDING] Estilos aplicados correctamente');
+            
+        } catch (error) {
+            console.error('[BRANDING] Error:', error);
+        }
+    }
+
+    async function verificarSesionYCargarMenu() {
+        try {
+            // Verificar sesión
+            const sessionResponse = await fetch('/api/auth/session');
+            if (!sessionResponse.ok) {
+                window.location.href = '/LOGIN.html';
+                return;
+            }
+
+            const sessionData = await sessionResponse.json();
+            console.log('Sesión válida:', sessionData);
+            
+            actualizarInfoUsuario(sessionData);
+            
+            // Cargar colores de branding
+            await cargarColoresBranding(sessionData.empresa);
+
+            // Cargar menú según permisos
+            const menuResponse = await fetch('/api/auth/menu');
+            if (!menuResponse.ok) {
+                throw new Error('Error cargando menú');
+            }
+
+            const modulos = await menuResponse.json();
+            console.log('Módulos disponibles:', modulos);
+            
+            renderizarMenuDinamico(modulos);
+            configurarEventosMenu();
+            
+        } catch (error) {
+            console.error('Error en verificación de sesión:', error);
+            window.location.href = '/LOGIN.html';
+        }
+    }
+
+    function actualizarInfoUsuario(sessionData) {
+        console.log('[actualizarInfoUsuario] sessionData:', sessionData);
+        console.log('[actualizarInfoUsuario] logo:', sessionData.logo);
+        const logoEmpresa = document.getElementById('logo-empresa');
+        const nombreEmpresa = document.getElementById('nombre-empresa');
+        const nombreUsuario = document.getElementById('nombre-usuario');
+                logoEmpresa.style.display = 'block';
+            } else {
+                console.warn('[actualizarInfoUsuario] No hay logo en sessionData');
+            }
+                console.log('[actualizarInfoUsuario] Logo cargado:', sessionData.logo);
+        
+        // Actualizar sidebar
+        if (logoEmpresa) {
+            if (sessionData.logo) {
+            logoEmpresa.src = sessionData.logo;
+        }
+        if (nombreEmpresa) {
+            nombreEmpresa.textContent = sessionData.empresa || 'Empresa';
+        }
+        if (nombreUsuario) {
+            nombreUsuario.textContent = sessionData.usuario || 'Usuario';
+        }
+
+        // Actualizar header superior
+        const headerUsuario = document.getElementById('header-usuario');
+        const headerEmpresa = document.getElementById('header-empresa');
+        if (headerUsuario) {
+            headerUsuario.textContent = sessionData.usuario || 'Usuario';
+        }
+        if (headerEmpresa) {
+            headerEmpresa.textContent = sessionData.empresa || 'Empresa';
+        }
+
+        // Iniciar reloj
+        actualizarReloj();
+        setInterval(actualizarReloj, 1000);
+    }
+
+    function actualizarReloj() {
+        const now = new Date();
+        const horas = String(now.getHours()).padStart(2, '0');
+        const minutos = String(now.getMinutes()).padStart(2, '0');
+        const segundos = String(now.getSeconds()).padStart(2, '0');
+        const timeElement = document.getElementById('current-time');
+        if (timeElement) {
+            timeElement.textContent = `${horas}:${minutos}:${segundos}`;
+        }
+    }
+
+    async function cerrarSesion() {
+        if (!confirm('¿Cerrar sesión?')) return;
+        try {
+            await fetch('/api/auth/logout', { method: 'POST' });
+        } catch (error) {
+            console.error('Error al cerrar sesión:', error);
+        }
+    function renderizarMenuDinamico(modulos) {
+        const menuList = document.querySelector('.menu-list');
+        if (\!menuList) return;
+
+        menuList.innerHTML = '';
+
+        // Agregar "Inicio" como primer elemento
+        const inicioItem = crearMenuItem('Inicio', 'fas fa-home', '/estadisticas.html', null);
+        menuList.appendChild(inicioItem);
+
+        // Renderizar módulos según permisos
+        modulos.forEach(modulo => {
+            console.log('[renderizarMenuDinamico] Módulo:', modulo.nombre, '- estructura:', modulo);
+            console.log('[renderizarMenuDinamico] Campos:', Object.keys(modulo).join(', '));
+            const menuItem = crearMenuItem(
+                modulo.nombre, 
+                modulo.icono || 'fas fa-folder', 
+                modulo.ruta, 
+                modulo.submodulos
+            );
+            menuList.appendChild(menuItem);
+    function crearMenuItem(nombre, icono, ruta, submodulos) {
+        const li = document.createElement('li');
+        li.className = 'menu-item';
+
+        const link = document.createElement('a');
+        link.href = '#';
+        link.className = 'menu-link';
+        if (ruta && ruta \!== '#') {
+            link.dataset.target = ruta;
+        }
+        link.innerHTML = `<i class="${icono}"></i>${nombre}`;
+
+        li.appendChild(link);
+
+        if (submodulos && submodulos.length > 0) {
+            const submenu = document.createElement('div');
+            submenu.className = 'submenu';
+
+            submodulos.forEach(sub => {
+                // Si el submódulo tiene sus propios submódulos (anidados)
+                if (sub.submodulos && sub.submodulos.length > 0) {
+                    const subBlock = document.createElement('div');
+                    subBlock.className = 'submenu-block';
+                    
+                    const subHeader = document.createElement('a');
+                    subHeader.href = '#';
+                    subHeader.className = 'submenu-item submenu-header';
+                    subHeader.innerHTML = `<i class="${sub.icono || 'fas fa-circle'}"></i> ${sub.nombre}`;
+                    subBlock.appendChild(subHeader);
+                    
+                    // Crear sub-submenu
+                    const subSubmenu = document.createElement('div');
+                    subSubmenu.className = 'submenu';
+                    
+                    sub.submodulos.forEach(subSub => {
+                        const subSubLink = document.createElement('a');
+                        subSubLink.href = '#';
+                        subSubLink.className = 'submenu-item submenu-nested';
+                        if (subSub.ruta && subSub.ruta \!== '#') {
+                            subSubLink.dataset.target = subSub.ruta;
+                        }
+                        subSubLink.innerHTML = `<i class="${subSub.icono || 'fas fa-circle'}"></i> ${subSub.nombre}`;
+                        subSubmenu.appendChild(subSubLink);
+                    });
+                    
+                    subBlock.appendChild(subSubmenu);
+                    submenu.appendChild(subBlock);
+                } else {
+                    // Submódulo simple sin anidamiento
+                    const subLink = document.createElement('a');
+                    subLink.href = '#';
+                    subLink.className = 'submenu-item';
+                    if (sub.ruta && sub.ruta \!== '#') {
+                        subLink.dataset.target = sub.ruta;
+                    }
+                    subLink.innerHTML = `<i class="${sub.icono || 'fas fa-circle'}"></i> ${sub.nombre}`;
+                    submenu.appendChild(subLink);
+                }
+            });
+
+            li.appendChild(submenu);
+        }
+
+        return li;
+
+    function configurarEventosMenu() {
+        console.log('[configurarEventosMenu] Configurando eventos del menú');
+        
+        // Manejar clics en menu-link para expandir/contraer submódulos
+        document.querySelectorAll('.menu-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const menuItem = e.currentTarget.closest('.menu-item');
+                const hasSubmenu = menuItem.querySelector('.submenu');
+                
+                if (hasSubmenu) {
+                    e.preventDefault();
+                    menuItem.classList.toggle('active');
+                    console.log('[menu-link click] Toggled menu item:', menuItem);
+                } else if (e.currentTarget.dataset.target) {
+                    e.preventDefault();
+                    cargarPagina(e.currentTarget.dataset.target);
+                }
+            });
+        });
+        
+        
+        // Manejar clics en submenu-header para expandir/contraer sub-submódulos
+        document.querySelectorAll('.submenu-header').forEach(header => {
+            console.log('[configurarEventosMenu] Configurando submenu-header:', header);
+            header.addEventListener('click', (e) => {
+                console.log('[submenu-header click] Click detectado');
+                e.preventDefault();
+                e.stopPropagation();
+                const submenuBlock = e.currentTarget.closest('.submenu-block');
+                console.log('[submenu-header click] submenuBlock encontrado:', submenuBlock);
+                
+                if (submenuBlock) {
+                    submenuBlock.classList.toggle('active');
+                    console.log('[submenu-header click] Clase active toggled. Ahora tiene active:', submenuBlock.classList.contains('active'));
+                    
+                    // Verificar si el submenu está visible
+                    const submenu = submenuBlock.querySelector('.submenu');
+                    if (submenu) {
+                        const style = window.getComputedStyle(submenu);
+                        console.log('[submenu-header click] Display del submenu:', style.display);
+                    }
+                } else {
+                    console.error('[submenu-header click] No se encontró submenu-block');
+                }
+            });
+        });
+        
+        // Manejar clics en submenu-item (simple y nested)
+        document.querySelectorAll('.submenu-item').forEach(item => {
+            if (\!item.classList.contains('submenu-header')) {
+                item.addEventListener('click', (e) => {
+                    if (e.currentTarget.dataset.target) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        cargarPagina(e.currentTarget.dataset.target);
+                    }
+                });
+            }
+        });
+        
+        console.log('[configurarEventosMenu] Eventos configurados');
+    }
+
+    function cargarPagina(ruta) {
+        console.log('[cargarPagina] Cargando:', ruta);
+        const iframe = document.getElementById('content-frame');
+        if (iframe) {
+            iframe.src = ruta;
+        }
+    }
+    }
+    </script>
 
     <script>
-        // Cargar menú al iniciar
-        document.addEventListener('DOMContentLoaded', async () => {
-            console.log('[INIT] Iniciando aplicación...');
-            await verificarSesionYCargarMenu();
-            
+        // Asegurar scroll en el iframe y evitar errores de política Same-Origin
+        document.addEventListener('DOMContentLoaded', () => {
             const iframe = document.getElementById('content-frame');
             iframe.addEventListener('load', () => {
                 // Scroll en el propio iframe
@@ -693,7 +955,6 @@
                 } catch (_) {
                     /* Distinto origen: no hacemos nada para evitar SecurityError */
                 }
-                
             });
             
             // Sistema de notificaciones de conciliación
@@ -708,15 +969,6 @@
         let notificacionesActuales = [];
         
         async function inicializarNotificaciones() {
-            // Verificar que los elementos existan
-            const notifIcon = document.getElementById('notificaciones-icon');
-            const notifPanel = document.getElementById('notificaciones-panel');
-            
-            if (!notifIcon || !notifPanel) {
-                console.warn('[NOTIF] Elementos de notificaciones no encontrados');
-                return;
-            }
-            
             // Cargar notificaciones al iniciar
             await cargarNotificaciones();
             
@@ -724,13 +976,16 @@
             setInterval(cargarNotificaciones, 30000);
             
             // Click en el icono
-            notifIcon.addEventListener('click', toggleNotificaciones);
+            document.getElementById('notificaciones-icon').addEventListener('click', toggleNotificaciones);
             
             // Cerrar al hacer click fuera
             document.addEventListener('click', (e) => {
-                if (notifPanel.classList.contains('active') && 
-                    !notifPanel.contains(e.target) && 
-                    !notifIcon.contains(e.target)) {
+                const panel = document.getElementById('notificaciones-panel');
+                const icon = document.getElementById('notificaciones-icon');
+                
+                if (panel.classList.contains('active') && 
+                    !panel.contains(e.target) && 
+                    !icon.contains(e.target)) {
                     cerrarNotificaciones();
                 }
             });
@@ -752,11 +1007,6 @@
         
         function actualizarBadge(total) {
             const badge = document.getElementById('notificaciones-badge');
-            
-            if (!badge) {
-                console.warn('[NOTIF] Badge de notificaciones no encontrado');
-                return;
-            }
             
             if (total > 0) {
                 badge.textContent = total > 99 ? '99+' : total;
@@ -1013,8 +1263,9 @@
     </script>
 </body>
 </html>
-<!-- Version: 20251022135727 -->
-<!-- Version: 20251022140124 -->
-<!-- Version: 20251022140846 -->
-<!-- Version: 20251022141346 -->
-<!-- Version: 20251022141807 -->
+<!-- Version: 20251022120448 -->
+<!-- Version: 20251022121600 -->
+<!-- Version: 20251022122055 -->
+<!-- Version: 20251022131633 -->
+<!-- Version: 20251022132004 -->
+<!-- Version: 20251022135253 -->
