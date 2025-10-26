@@ -77,16 +77,28 @@ function renderizarContentPanel(empresa) {
     
     panel.innerHTML = `
         <div class="empresa-header">
-            <img id="empresa-logo" src="${empresa.logo_url || "/static/img/logo.png"}" alt="Logo" class="empresa-logo">
-            <div class="empresa-info">
-                <h2>${empresa.nombre}</h2>
-                <div class="meta">
-                    ${empresa.razon_social ? `<div><i class="fas fa-building"></i> ${empresa.razon_social}</div>` : ''}
-                    ${empresa.cif ? `<div><i class="fas fa-id-card"></i> ${empresa.cif}</div>` : ""}
-                    ${empresa.email ? `<div><i class="fas fa-envelope"></i> ${empresa.email}</div>` : ""}
-                    ${empresa.telefono ? `<div><i class="fas fa-phone"></i> ${empresa.telefono}</div>` : ""}
-                    ${empresa.direccion ? `<div><i class="fas fa-map-marker-alt"></i> ${empresa.direccion}</div>` : ""}
-                    <div><i class="fas fa-code"></i> Código: ${empresa.codigo}</div>
+            <img id="empresa-logo" src="${empresa.logo_url || '/static/img/logo.png'}" alt="Logo" class="empresa-logo">
+            <div class="empresa-info" style="flex: 1;">
+                <div style="display: grid; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label style="min-width: 100px; font-weight: 600; color: #2c3e50;">Nombre:</label>
+                        <input type="text" id="empresa-nombre" value="${empresa.nombre}" style="flex: 1; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 1rem;">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label style="min-width: 100px; font-weight: 600; color: #2c3e50;">Razón Social:</label>
+                        <input type="text" id="empresa-razon-social" value="${empresa.razon_social || ''}" style="flex: 1; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 1rem;">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label style="min-width: 100px; font-weight: 600; color: #2c3e50;">Código:</label>
+                        <input type="text" id="empresa-codigo" value="${empresa.codigo}" style="flex: 1; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 1rem;">
+                    </div>
+                </div>
+                <div class="meta" style="margin-top: 0.75rem;">
+                    ${empresa.cif ? `<div><i class="fas fa-id-card"></i> ${empresa.cif}</div>` : ''}
+                    ${empresa.email ? `<div><i class="fas fa-envelope"></i> ${empresa.email}</div>` : ''}
+                    ${empresa.telefono ? `<div><i class="fas fa-phone"></i> ${empresa.telefono}</div>` : ''}
+                    ${empresa.direccion ? `<div><i class="fas fa-map-marker-alt"></i> ${empresa.direccion}</div>` : ''}
+                    ${empresa.web ? `<div><i class="fas fa-globe"></i> ${empresa.web}</div>` : ''}
                 </div>
             </div>
         </div>
@@ -239,7 +251,25 @@ function hexToRgb(hex) {
 }
 
 async function guardarColores() {
-    const colores = {
+    const nombre = document.getElementById('empresa-nombre').value.trim();
+    const razonSocial = document.getElementById('empresa-razon-social').value.trim();
+    const codigo = document.getElementById('empresa-codigo').value.trim();
+    
+    if (!nombre) {
+        alert('❌ El nombre es obligatorio');
+        return;
+    }
+    
+    if (!codigo) {
+        alert('❌ El código es obligatorio');
+        return;
+    }
+    
+    const datos = {
+        nombre: nombre,
+        razon_social: razonSocial,
+        codigo: codigo,
+        activo: true,
         color_app_bg: document.getElementById('color_app_bg').value,
         color_primario: document.getElementById('color_primario').value,
         color_secundario: document.getElementById('color_secundario').value,
@@ -259,15 +289,15 @@ async function guardarColores() {
         const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(colores)
+            body: JSON.stringify(datos)
         });
         
         if (response.ok) {
-            alert('✅ Colores guardados exitosamente');
+            alert('✅ Cambios guardados exitosamente');
             setTimeout(() => window.location.href = 'ADMIN_EMPRESAS.html', 1500);
         } else {
             const data = await response.json();
-            alert('❌ Error: ' + (data.error || 'Error al guardar colores'));
+            alert('❌ Error: ' + (data.error || 'Error al guardar cambios'));
         }
     } catch (error) {
         console.error('Error:', error);
