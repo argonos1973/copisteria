@@ -15,7 +15,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     empresaId = params.get('id');
     
-    if (\!empresaId) {
+    if (!empresaId) {
         alert('No se especificó ID de empresa');
         window.location.href = 'ADMIN_EMPRESAS.html';
         return;
@@ -196,7 +196,7 @@ function seleccionarPlantilla(nombre) {
 function aplicarPlantilla(nombre) {
     const plantilla = PLANTILLAS[nombre];
     Object.keys(plantilla).forEach(key => {
-        if (key \!== 'nombre' && key \!== 'desc' && key \!== 'icon') {
+        if (key !== 'nombre' && key !== 'desc' && key !== 'icon') {
             const input = document.getElementById(key);
             if (input) {
                 input.value = plantilla[key];
