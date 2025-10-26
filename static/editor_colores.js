@@ -15,7 +15,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     empresaId = params.get('id');
     
-    if (\!empresaId) {
+    if (!empresaId) {
         alert('No se especificó ID de empresa');
         window.location.href = 'ADMIN_EMPRESAS.html';
         return;
