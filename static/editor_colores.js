@@ -82,13 +82,11 @@ function renderizarContentPanel(empresa) {
                 <h2>${empresa.nombre}</h2>
                 <div class="meta">
                     ${empresa.razon_social ? `<div><i class="fas fa-building"></i> ${empresa.razon_social}</div>` : ''}
-                    ${empresa.razon_social ? `<div><i class="fas fa-building"></i> ${empresa.razon_social}</div>` : ""}
                     ${empresa.cif ? `<div><i class="fas fa-id-card"></i> ${empresa.cif}</div>` : ""}
                     ${empresa.email ? `<div><i class="fas fa-envelope"></i> ${empresa.email}</div>` : ""}
                     ${empresa.telefono ? `<div><i class="fas fa-phone"></i> ${empresa.telefono}</div>` : ""}
                     ${empresa.direccion ? `<div><i class="fas fa-map-marker-alt"></i> ${empresa.direccion}</div>` : ""}
                     <div><i class="fas fa-code"></i> Código: ${empresa.codigo}</div>
-                    ${empresa.web ? `<div><i class="fas fa-globe"></i> ${empresa.web}</div>` : ""}
                     <div><i class="fas fa-code"></i> Código: ${empresa.codigo}</div>
                 </div>
             </div>
