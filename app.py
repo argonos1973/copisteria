@@ -3149,6 +3149,70 @@ def enviar_email_presupuesto_endpoint(id):
 
 # ================== RUTAS HTML FRONTEND ================== #
 
+# Endpoint para obtener branding de la empresa
+@app.route('/api/auth/branding', methods=['GET'])
+def get_branding():
+    """Obtener logo y colores de la empresa del usuario logueado"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'No autorizado'}), 401
+    
+    try:
+        empresa_id = session.get('empresa_id')
+        if not empresa_id:
+            logger.warning(f"Usuario {session.get('username')} sin empresa_id en sesión")
+            return jsonify({'error': 'No hay empresa asociada'}), 400
+        
+        # Obtener datos de la empresa
+        conn = get_db_connection('aleph70.db')
+        empresa = conn.execute('''
+            SELECT nombre, logo_header, logo_url,
+                   color_primario, color_secundario, color_success, color_warning, 
+                   color_danger, color_info, color_button, color_button_hover,
+                   color_button_text, color_app_bg, color_header_bg, color_header_text,
+                   color_grid_header, color_grid_hover
+            FROM empresas 
+            WHERE id = ?
+        ''', (empresa_id,)).fetchone()
+        conn.close()
+        
+        if not empresa:
+            return jsonify({'error': 'Empresa no encontrada'}), 404
+        
+        # Construir logo URL
+        logo_url = None
+        if empresa['logo_header']:
+            logo_url = f"/static/logos/{empresa['logo_header']}"
+        elif empresa['logo_url']:
+            logo_url = empresa['logo_url']
+        
+        # Construir objeto de colores
+        colores = {
+            'primario': empresa['color_primario'] or '#2c3e50',
+            'secundario': empresa['color_secundario'] or '#3498db',
+            'success': empresa['color_success'] or '#27ae60',
+            'warning': empresa['color_warning'] or '#f39c12',
+            'danger': empresa['color_danger'] or '#e74c3c',
+            'info': empresa['color_info'] or '#3498db',
+            'button': empresa['color_button'] or '#3498db',
+            'button_hover': empresa['color_button_hover'] or '#2980b9',
+            'button_text': empresa['color_button_text'] or '#ffffff',
+            'app_bg': empresa['color_app_bg'] or '#ffffff',
+            'header_bg': empresa['color_header_bg'] or '#2c3e50',
+            'header_text': empresa['color_header_text'] or '#ffffff',
+            'grid_header': empresa['color_grid_header'] or '#2c3e50',
+            'grid_hover': empresa['color_grid_hover'] or 'rgba(52, 152, 219, 0.1)'
+        }
+        
+        return jsonify({
+            'nombre_empresa': empresa['nombre'],
+            'logo_url': logo_url,
+            'colores': colores
+        })
+        
+    except Exception as e:
+        logger.error(f"Error en /api/auth/branding: {str(e)}")
+        return jsonify({'error': 'Error interno del servidor'}), 500
+
 # Ruta raíz e index - debe estar ANTES de la ruta genérica
 @app.route('/')
 def ruta_raiz():
