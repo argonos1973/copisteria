@@ -3162,8 +3162,10 @@ def get_branding():
             logger.warning(f"Usuario {session.get('username')} sin empresa_id en sesión")
             return jsonify({'error': 'No hay empresa asociada'}), 400
         
-        # Obtener datos de la empresa (BD usuarios.db contiene tabla empresas)
-        conn = get_db_connection('usuarios.db')
+        # Obtener datos de la empresa (BD usuarios_sistema.db)
+        from multiempresa_config import DB_USUARIOS_PATH
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        conn.row_factory = sqlite3.Row
         empresa = conn.execute('''
             SELECT nombre, logo_header, logo_url,
                    color_primario, color_secundario, color_success, color_warning, 
