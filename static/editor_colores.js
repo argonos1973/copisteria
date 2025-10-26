@@ -264,7 +264,7 @@ function seleccionarPlantilla(nombre) {
 function aplicarPlantilla(nombre) {
     const plantilla = PLANTILLAS[nombre];
     Object.keys(plantilla).forEach(key => {
-        if (key \!== 'nombre' && key \!== 'desc' && key \!== 'icon') {
+        if (key !== 'nombre' && key !== 'desc' && key !== 'icon') {
             const input = document.getElementById(key);
             if (input) {
                 input.value = plantilla[key];
