@@ -2044,6 +2044,7 @@ function actualizarPreviewColores() {
             
         // Obtener elementos del preview
         const previewMenu = document.getElementById('preview-menu');
+        const previewMenuEditar = document.getElementById("preview-menu-bg-editar");
         const previewHover = document.getElementById('preview-hover');
         const previewButton = document.getElementById('preview-button');
         const previewSuccess = document.getElementById('preview-success');
@@ -2076,6 +2077,23 @@ function actualizarPreviewColores() {
         // Actualizar elementos del preview si existen - Usar background (shorthand) directamente
         if (previewMenu) {
             previewMenu.style.background = colorPrimario;
+        
+        if (previewMenuEditar) {
+            previewMenuEditar.style.backgroundColor = colorPrimario;
+            console.log("✅ preview-menu-bg-editar actualizado:", colorPrimario);
+        
+        // Actualizar items del menú en modal editar
+        document.querySelectorAll(".preview-menu-item-editar").forEach(item => {
+            item.style.color = colorHeaderText;
+        });
+        document.querySelectorAll(".preview-submenu-item-editar").forEach(item => {
+            const r = parseInt(colorHeaderText.slice(1,3), 16);
+            const g = parseInt(colorHeaderText.slice(3,5), 16);
+            const b = parseInt(colorHeaderText.slice(5,7), 16);
+            item.style.color = `rgba(${r}, ${g}, ${b}, 0.8)`;
+        });
+        console.log("✅ Texto del menú actualizado");
+        }
             console.log('✅ preview-menu actualizado:', colorPrimario);
         }
         
