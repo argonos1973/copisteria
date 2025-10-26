@@ -3162,8 +3162,8 @@ def get_branding():
             logger.warning(f"Usuario {session.get('username')} sin empresa_id en sesión")
             return jsonify({'error': 'No hay empresa asociada'}), 400
         
-        # Obtener datos de la empresa
-        conn = get_db_connection('aleph70.db')
+        # Obtener datos de la empresa (BD usuarios.db contiene tabla empresas)
+        conn = get_db_connection('usuarios.db')
         empresa = conn.execute('''
             SELECT nombre, logo_header, logo_url,
                    color_primario, color_secundario, color_success, color_warning, 
