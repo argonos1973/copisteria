@@ -49,8 +49,14 @@ async function cargarColoresEmpresa() {
     }
 }
 
+// Variable global para guardar colores y reutilizarlos
+let coloresEmpresa = null;
+
 // Aplicar colores al DOM
 function aplicarColores(colores) {
+    // Guardar colores globalmente para aplicarlos al iframe después
+    coloresEmpresa = colores;
+    
     // Calcular colores de texto
     const textForBody = getTextColorForBackground(colores.app_bg || '#ffffff');
     const textForCards = getTextColorForBackground(colores.secundario || colores.grid_header || '#ffffff');
