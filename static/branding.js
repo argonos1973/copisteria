@@ -85,7 +85,8 @@ function aplicarColores(colores) {
     console.log('========================================');
     console.log('🎨 APLICANDO COLORES DE PLANTILLA');
     console.log('========================================');
-    console.log('Color primario (menú):', colores.header_bg);
+    console.log('Color primario (menú lateral):', colores.primario);
+    console.log('Color header (panel contenido):', colores.header_bg);
     console.log('Color botón:', colores.button, '→ Texto calculado:', textForButton);
     console.log('========================================');
     
@@ -107,7 +108,7 @@ function aplicarColores(colores) {
             color: ${textForBody} !important;
         }
         
-        /* Menú - Especificidad ABSOLUTA */
+        /* MENÚ LATERAL - USA COLOR PRIMARIO */
         html body .layout-container nav.menu,
         html body .layout-container .menu,
         html body nav.menu,
@@ -117,8 +118,8 @@ function aplicarColores(colores) {
         nav.menu,
         .sidebar,
         .menu {
-            background-color: ${colores.header_bg || '#ffffff'} !important;
-            background: ${colores.header_bg || '#ffffff'} !important;
+            background-color: ${colores.primario || '#2c3e50'} !important;
+            background: ${colores.primario || '#2c3e50'} !important;
         }
         
         /* Textos del menú - TODOS los elementos */
@@ -142,9 +143,9 @@ function aplicarColores(colores) {
             color: ${colores.header_text || '#ffffff'} !important;
         }
         
-        /* Submenú */
+        /* Submenú - USA COLOR PRIMARIO */
         .submenu {
-            background-color: ${colores.header_bg || colores.submenu_bg} !important;
+            background-color: ${colores.primario || colores.submenu_bg} !important;
         }
         
         .submenu-item {
@@ -290,22 +291,77 @@ function aplicarColores(colores) {
             background-color: ${colores.disabled_bg || '#f5f5f5'} !important;
             color: ${colores.disabled_text || '#666666'} !important;
         }
+        
+        /* NOTIFICACIONES - Usar colores de plantilla */
+        .notificacion.success {
+            background-color: ${colores.success || '#4CAF50'} !important;
+            border-left-color: ${colores.success || '#4CAF50'} !important;
+        }
+        
+        .notificacion.error {
+            background-color: ${colores.danger || '#f44336'} !important;
+            border-left-color: ${colores.danger || '#f44336'} !important;
+        }
+        
+        .notificacion.warning {
+            background-color: ${colores.warning || '#ff9800'} !important;
+            border-left-color: ${colores.warning || '#ff9800'} !important;
+        }
+        
+        .notificacion.info {
+            background-color: ${colores.info || '#2196F3'} !important;
+            border-left-color: ${colores.info || '#2196F3'} !important;
+        }
+        
+        /* Botones de confirmación en diálogos */
+        .btn-confirmar, .confirmacion-btn-aceptar {
+            background-color: ${colores.success || '#4CAF50'} !important;
+            color: #ffffff !important;
+        }
+        
+        .btn-confirmar:hover, .confirmacion-btn-aceptar:hover {
+            background-color: ${colores.success || '#388E3C'} !important;
+        }
+        
+        .btn-cancelar, .confirmacion-btn-cancelar {
+            background-color: ${colores.danger || '#9e9e9e'} !important;
+            color: #ffffff !important;
+        }
+        
+        .btn-cancelar:hover, .confirmacion-btn-cancelar:hover {
+            background-color: ${colores.danger || '#757575'} !important;
+        }
+        
+        /* Diálogo de confirmación */
+        .confirmacion-dialog {
+            background-color: ${colores.modal_bg || '#ffffff'} !important;
+            border-left-color: ${colores.warning || '#ff9800'} !important;
+        }
+        
+        .confirmacion-dialog p {
+            color: ${colores.modal_text || '#333333'} !important;
+        }
+        
+        .confirmacion-dialog p::before {
+            color: ${colores.warning || '#ff9800'} !important;
+        }
     `;
     
-    console.log("[BRANDING] Colores aplicados correctamente");
+    console.log("[BRANDING] Colores aplicados correctamente (incluye notificaciones)");
     
     // APLICAR ESTILOS DIRECTAMENTE A LOS ELEMENTOS (fuerza bruta)
     console.log('[BRANDING] Aplicando estilos directamente a elementos...');
     
-    // Menú lateral
-    console.log('[BRANDING] 🔍 Valor de colores.header_bg:', colores.header_bg);
+    // Menú lateral - USA COLOR PRIMARIO
+    console.log('[BRANDING] 🔍 Valor de colores.primario (menú):', colores.primario);
+    console.log('[BRANDING] 🔍 Valor de colores.header_bg (panel):', colores.header_bg);
     console.log('[BRANDING] 🔍 Todos los colores:', colores);
     const menus = document.querySelectorAll('.menu, .sidebar, nav.menu');
     console.log('[BRANDING] 🔍 Menús encontrados:', menus.length);
     menus.forEach(menu => {
-        console.log('[BRANDING] ⚙️ Aplicando a:', menu.className, '→ Color:', colores.header_bg);
-        menu.style.setProperty('background-color', colores.header_bg, 'important');
-        menu.style.setProperty('background', colores.header_bg, 'important');
+        console.log('[BRANDING] ⚙️ Aplicando a menú lateral:', menu.className, '→ Color:', colores.primario);
+        menu.style.setProperty('background-color', colores.primario, 'important');
+        menu.style.setProperty('background', colores.primario, 'important');
         console.log('[BRANDING] ✓ Aplicado. Verificar computed:', window.getComputedStyle(menu).backgroundColor);
     });
     
@@ -422,17 +478,25 @@ function aplicarEstilosAlIframe() {
         
         iframeStyleElement = iframeDoc.createElement('style');
         iframeStyleElement.id = 'dynamic-branding-styles';
-        
+
         const textForBody = getTextColorForBackground(colores.app_bg || '#ffffff');
-        
-        // Generar CSS para el iframe
+
+        // Generar CSS COMPLETO para el iframe (incluyendo tarjetas y cards)
         iframeStyleElement.textContent = `
             /* Fondo y texto del body en iframe */
             body {
                 background-color: ${colores.app_bg || '#ffffff'} !important;
                 color: ${textForBody} !important;
             }
-            
+
+            /* TARJETAS Y CARDS - IMPORTANTE */
+            .card, .info-card, .stat-card, .summary-card,
+            .card-header, .card-body, .card-footer,
+            .dashboard-card, .metric-card, .stats-card {
+                background-color: ${colores.secundario || '#ececec'} !important;
+                border-color: ${colores.secundario || '#ececec'} !important;
+            }
+
             /* Botones en iframe */
             button, .btn, input[type="button"], input[type="submit"] {
                 background-color: ${colores.button} !important;
@@ -440,19 +504,39 @@ function aplicarEstilosAlIframe() {
                 color: ${textForButton} !important;
                 border-color: ${colores.button} !important;
             }
-            
-            button:hover, .btn:hover {
+
+            button:hover, .btn:hover, input[type="button"]:hover, input[type="submit"]:hover {
                 background-color: ${colores.button_hover || colores.button} !important;
+                background: ${colores.button_hover || colores.button} !important;
+            }
+
+            /* Headers de tablas */
+            table thead, table thead th, .grid-header, .table-header {
+                background-color: ${colores.grid_header || colores.primario} !important;
+                color: white !important;
+            }
+
+            /* Variables CSS para el iframe */
+            :root {
+                --color-primario: ${colores.primario} !important;
+                --color-secundario: ${colores.secundario} !important;
+                --color-success: ${colores.success} !important;
+                --color-warning: ${colores.warning} !important;
+                --color-danger: ${colores.danger} !important;
+                --color-info: ${colores.info} !important;
+                --color-button: ${colores.button} !important;
+                --color-button-hover: ${colores.button_hover} !important;
+                --color-grid-header: ${colores.grid_header} !important;
             }
         `;
-        
+
         iframeDoc.head.appendChild(iframeStyleElement);
-        
+
         // Aplicar fondo directamente al body del iframe
         if (iframeDoc.body) {
             iframeDoc.body.style.setProperty('background-color', colores.app_bg || '#ffffff', 'important');
             iframeDoc.body.style.setProperty('color', textForBody, 'important');
-            console.log('[BRANDING] ✓ Fondo aplicado al body del iframe:', colores.app_bg);
+            console.log('[BRANDING] Fondo aplicado al body del iframe:', colores.app_bg);
         }
         
         // Aplicar estilos directamente a botones
@@ -520,22 +604,9 @@ function configurarObserverDeModales(doc, colores, textForButton) {
 window.cargarColoresEmpresa = cargarColoresEmpresa;
 window.getTextColorForBackground = getTextColorForBackground;
 window.aplicarEstilosAlIframe = aplicarEstilosAlIframe;
-window.aplicarColoresAlIframe = aplicarColoresAlIframe;
 
 // NO cargar automáticamente - se llama desde menu_loader.js DESPUÉS de renderizar el menú
 // document.addEventListener('DOMContentLoaded', cargarColoresEmpresa);
-
-// Configurar listener para re-aplicar colores cuando el iframe carga nueva página
-document.addEventListener('DOMContentLoaded', () => {
-    const iframe = document.getElementById('contenido-iframe');
-    if (iframe) {
-        console.log('[BRANDING] Configurando listener del iframe');
-        iframe.addEventListener('load', () => {
-            console.log('[BRANDING] Iframe cargado, aplicando colores...');
-            aplicarColoresAlIframe();
-        });
-    }
-});
 
 // Configurar listener para re-aplicar estilos cuando el iframe carga nueva página
 document.addEventListener('DOMContentLoaded', () => {

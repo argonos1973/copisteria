@@ -3,12 +3,12 @@ let empresaId = null;
 let plantillaActual = null;
 
 const PLANTILLAS = {
-    minimal: { nombre: 'Minimal', desc: 'Negro y blanco', icon: '✨', color_primario: '#ffffff', color_secundario: '#f5f5f5', color_button: '#000000', color_button_hover: '#333333', color_header_text: '#000000', color_app_bg: '#ffffff', color_success: '#000000', color_warning: '#666666', color_danger: '#000000', color_info: '#333333', color_header_bg: '#ffffff', color_grid_header: '#f5f5f5', color_button_text: '#ffffff', color_grid_text: '#000000', color_icon: '#000000', color_label: '#000000', color_input_bg: '#ffffff', color_input_text: '#000000', color_input_border: '#cccccc', color_select_bg: '#ffffff', color_select_text: '#000000', color_select_border: '#cccccc', color_grid_bg: '#ffffff', color_grid_hover: 'rgba(0,0,0,0.05)', color_modal_bg: '#ffffff', color_modal_text: '#000000', color_modal_border: '#cccccc', grid_cell_borders: 'true' },
-    zen: { nombre: 'Zen', desc: 'Ultra minimalista', icon: '🧘', color_primario: '#f8f8f8', color_secundario: '#ececec', color_button: '#cccccc', color_button_hover: '#aaaaaa', color_header_text: '#111111', color_app_bg: '#ffffff', color_success: '#999999', color_warning: '#777777', color_danger: '#555555', color_info: '#888888', color_header_bg: '#f8f8f8', color_grid_header: '#ececec', color_button_text: '#111111', color_grid_text: '#111111', color_icon: '#111111', color_label: '#111111', color_input_bg: '#ffffff', color_input_text: '#111111', color_input_border: '#dddddd', color_select_bg: '#ffffff', color_select_text: '#111111', color_select_border: '#dddddd', color_grid_bg: '#ffffff', color_grid_hover: 'rgba(0,0,0,0.03)', color_modal_bg: '#fafafa', color_modal_text: '#111111', color_modal_border: '#dddddd', grid_cell_borders: 'false' },
-    dark: { nombre: 'Dark Mode', desc: 'Modo oscuro moderno', icon: '🌙', color_primario: '#1a1a1a', color_secundario: '#2a2a2a', color_button: '#4a4a4a', color_button_hover: '#5a5a5a', color_header_text: '#ffffff', color_app_bg: '#0f0f0f', color_success: '#4caf50', color_warning: '#ff9800', color_danger: '#f44336', color_info: '#2196f3', color_header_bg: '#1a1a1a', color_grid_header: '#2a2a2a', color_button_text: '#ffffff', color_grid_text: '#e0e0e0', color_icon: '#e0e0e0', color_label: '#e0e0e0', color_input_bg: '#2a2a2a', color_input_text: '#ffffff', color_input_border: '#3a3a3a', color_select_bg: '#2a2a2a', color_select_text: '#ffffff', color_select_border: '#3a3a3a', color_grid_bg: '#1a1a1a', color_grid_hover: 'rgba(255,255,255,0.05)', color_modal_bg: '#2a2a2a', color_modal_text: '#e0e0e0', color_modal_border: '#3a3a3a', grid_cell_borders: 'true' },
-    glassmorphism: { nombre: 'Glassmorphism', desc: 'Efecto cristal', icon: '💎', color_primario: '#1a1a2e', color_secundario: '#16213e', color_button: '#0f3460', color_button_hover: '#533483', color_header_text: '#e94560', color_app_bg: '#0a0a14', color_success: '#00d9ff', color_warning: '#ff6b6b', color_danger: '#ee5a6f', color_info: '#4ecdc4', color_header_bg: '#1a1a2e', color_grid_header: '#16213e', color_button_text: '#ffffff', color_grid_text: '#ffffff', color_icon: '#ffffff', color_label: '#ffffff', color_input_bg: '#16213e', color_input_text: '#ffffff', color_input_border: '#0f3460', color_select_bg: '#16213e', color_select_text: '#ffffff', color_select_border: '#0f3460', color_grid_bg: '#0a0a14', color_grid_hover: 'rgba(255,255,255,0.05)', color_modal_bg: '#16213e', color_modal_text: '#ffffff', color_modal_border: '#0f3460', grid_cell_borders: 'false' },
-    oceano: { nombre: 'Océano', desc: 'Azules profundos', icon: '🌊', color_primario: '#006994', color_secundario: '#13678A', color_button: '#012A4A', color_button_hover: '#013A63', color_header_text: '#A9D6E5', color_app_bg: '#E8F4F8', color_success: '#2A9D8F', color_warning: '#F4A261', color_danger: '#E76F51', color_info: '#89C2D9', color_header_bg: '#006994', color_grid_header: '#13678A', color_button_text: '#ffffff', color_grid_text: '#012A4A', color_icon: '#012A4A', color_label: '#012A4A', color_input_bg: '#ffffff', color_input_text: '#012A4A', color_input_border: '#A9D6E5', color_select_bg: '#ffffff', color_select_text: '#012A4A', color_select_border: '#A9D6E5', color_grid_bg: '#ffffff', color_grid_hover: 'rgba(0,105,148,0.1)', color_modal_bg: '#ffffff', color_modal_text: '#012A4A', color_modal_border: '#A9D6E5', grid_cell_borders: 'true' },
-    default: { nombre: 'Por Defecto', desc: 'Clásico', icon: '🎨', color_primario: '#2c3e50', color_secundario: '#3498db', color_button: '#3498db', color_button_hover: '#2980b9', color_header_text: '#ffffff', color_app_bg: '#ffffff', color_success: '#27ae60', color_warning: '#f39c12', color_danger: '#e74c3c', color_info: '#3498db', color_header_bg: '#2c3e50', color_grid_header: '#34495e', color_button_text: '#ffffff', color_grid_text: '#333333', color_icon: '#333333', color_label: '#333333', color_input_bg: '#ffffff', color_input_text: '#333333', color_input_border: '#cccccc', color_select_bg: '#ffffff', color_select_text: '#333333', color_select_border: '#cccccc', color_grid_bg: '#ffffff', color_grid_hover: 'rgba(52,152,219,0.1)', color_modal_bg: '#ffffff', color_modal_text: '#333333', color_modal_border: '#cccccc', grid_cell_borders: 'true' }
+    minimal: { nombre: 'Minimal', desc: 'Negro y blanco', icon: '✨', color_primario: '#ffffff', color_secundario: '#f5f5f5', color_button: '#000000', color_button_hover: '#333333', color_header_text: '#000000', color_app_bg: '#ffffff', color_success: '#000000', color_warning: '#666666', color_danger: '#000000', color_info: '#333333', color_header_bg: '#ffffff', color_grid_header: '#f5f5f5', color_button_text: '#ffffff', color_grid_text: '#000000', color_icon: '#000000' },
+    zen: { nombre: 'Zen', desc: 'Ultra minimalista', icon: '🧘', color_primario: '#f8f8f8', color_secundario: '#ececec', color_button: '#cccccc', color_button_hover: '#aaaaaa', color_header_text: '#111111', color_app_bg: '#ffffff', color_success: '#999999', color_warning: '#777777', color_danger: '#555555', color_info: '#888888', color_header_bg: '#f8f8f8', color_grid_header: '#ececec', color_button_text: '#111111', color_grid_text: '#111111', color_icon: '#666666' },
+    dark: { nombre: 'Dark Mode', desc: 'Modo oscuro moderno', icon: '🌙', color_primario: '#1a1a1a', color_secundario: '#2a2a2a', color_button: '#4a4a4a', color_button_hover: '#5a5a5a', color_header_text: '#ffffff', color_app_bg: '#0f0f0f', color_success: '#4caf50', color_warning: '#ff9800', color_danger: '#f44336', color_info: '#2196f3', color_header_bg: '#1a1a1a', color_grid_header: '#2a2a2a', color_button_text: '#ffffff', color_grid_text: '#e0e0e0', color_icon: '#b0b0b0' },
+    glassmorphism: { nombre: 'Glassmorphism', desc: 'Efecto cristal', icon: '💎', color_primario: '#1a1a2e', color_secundario: '#16213e', color_button: '#0f3460', color_button_hover: '#533483', color_header_text: '#e94560', color_app_bg: '#0a0a14', color_success: '#00d9ff', color_warning: '#ff6b6b', color_danger: '#ee5a6f', color_info: '#4ecdc4', color_header_bg: '#1a1a2e', color_grid_header: '#16213e', color_button_text: '#ffffff', color_grid_text: '#ffffff', color_icon: '#e94560' },
+    oceano: { nombre: 'Océano', desc: 'Azules profundos', icon: '🌊', color_primario: '#006994', color_secundario: '#13678A', color_button: '#012A4A', color_button_hover: '#013A63', color_header_text: '#A9D6E5', color_app_bg: '#E8F4F8', color_success: '#2A9D8F', color_warning: '#F4A261', color_danger: '#E76F51', color_info: '#89C2D9', color_header_bg: '#006994', color_grid_header: '#13678A', color_button_text: '#ffffff', color_grid_text: '#012A4A', color_icon: '#012A4A' },
+    default: { nombre: 'Por Defecto', desc: 'Clásico', icon: '🎨', color_primario: '#2c3e50', color_secundario: '#3498db', color_button: '#3498db', color_button_hover: '#2980b9', color_header_text: '#ffffff', color_app_bg: '#ffffff', color_success: '#27ae60', color_warning: '#f39c12', color_danger: '#e74c3c', color_info: '#3498db', color_header_bg: '#2c3e50', color_grid_header: '#34495e', color_button_text: '#ffffff', color_grid_text: '#333333', color_icon: '#666666' }
 };
 
 let plantillaOriginal = null;
@@ -26,7 +26,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     renderizarSidebar();
     await cargarEmpresa();
-    inicializarAcordeones();
 });
 
 function renderizarSidebar() {
@@ -183,159 +182,68 @@ function renderizarContentPanel(empresa) {
                     </div>
                 </div>
             </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-icons"></i> Iconos</h3>
-                <div class="icon-preview" id="icon-preview-container">
-                    <i class="fas fa-home" id="icon-1"></i>
-                    <i class="fas fa-user" id="icon-2"></i>
-                    <i class="fas fa-cog" id="icon-3"></i>
-                    <i class="fas fa-chart-bar" id="icon-4"></i>
-                    <i class="fas fa-file" id="icon-5"></i>
-                    <i class="fas fa-bell" id="icon-6"></i>
-                </div>
-            </div>
         </div>
         
         <div class="color-editors">
             <h3><i class="fas fa-paint-brush"></i> Personalizar Colores</h3>
-            <p><i class="fas fa-info-circle"></i> Haz clic en cada categoría para expandir/contraer</p>
             
-            <!-- Acordeón 1: Colores Principales -->
-            <div class="accordion-section active">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-palette"></i> Colores Principales</span>
-                    <i class="fas fa-chevron-up"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_app_bg', 'Fondo App', '#ffffff')}
-                        ${crearInputColor('color_primario', 'Menú Lateral', '#2c3e50')}
-                        ${crearInputColor('color_secundario', 'Tarjetas', '#3498db')}
-                        ${crearInputColor('color_header_text', 'Texto Menú', '#ffffff')}
-                        ${crearInputColor('color_header_bg', 'Header Panel', '#2c3e50')}
-                    </div>
+            <div class="color-section">
+                <h4>🎨 Colores Principales</h4>
+                <div class="color-grid">
+                    ${crearInputColor('color_app_bg', 'Fondo App', '#ffffff')}
+                    ${crearInputColor('color_primario', 'Menú Lateral', '#2c3e50')}
+                    ${crearInputColor('color_secundario', 'Tarjetas', '#3498db')}
+                    ${crearInputColor('color_header_text', 'Texto Menú', '#ffffff')}
+                    ${crearInputColor('color_header_bg', 'Header', '#2c3e50')}
                 </div>
             </div>
             
-            <!-- Acordeón 2: Botones -->
-            <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-square"></i> Botones</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_button', 'Botón Normal', '#3498db')}
-                        ${crearInputColor('color_button_hover', 'Botón Hover', '#2980b9')}
-                        ${crearInputColor('color_button_text', 'Texto Botón', '#ffffff')}
-                    </div>
+            <div class="color-section">
+                <h4>🔘 Botones</h4>
+                <div class="color-grid">
+                    ${crearInputColor('color_button', 'Botón Normal', '#3498db')}
+                    ${crearInputColor('color_button_hover', 'Botón Hover', '#2980b9')}
+                    ${crearInputColor('color_button_text', 'Texto Botón', '#ffffff')}
                 </div>
             </div>
             
-            <!-- Acordeón 3: Notificaciones -->
-            <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-bell"></i> Notificaciones y Alertas</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_success', 'Éxito', '#27ae60')}
-                        ${crearInputColor('color_warning', 'Advertencia', '#f39c12')}
-                        ${crearInputColor('color_danger', 'Peligro', '#e74c3c')}
-                        ${crearInputColor('color_info', 'Info', '#3498db')}
-                    </div>
+            <div class="color-section">
+                <h4>✅ Estados y Alertas</h4>
+                <div class="color-grid">
+                    ${crearInputColor('color_success', 'Éxito', '#27ae60')}
+                    ${crearInputColor('color_warning', 'Advertencia', '#f39c12')}
+                    ${crearInputColor('color_danger', 'Peligro', '#e74c3c')}
+                    ${crearInputColor('color_info', 'Info', '#3498db')}
                 </div>
             </div>
             
-            <!-- Acordeón 4: Tablas y Grids -->
-            <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-table"></i> Tablas y Grids</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_grid_header', 'Encabezado Grid', '#34495e')}
-                        ${crearInputColor('color_grid_text', 'Texto Grid', '#333333')}
-                        ${crearInputColor('color_grid_bg', 'Fondo Grid', '#ffffff')}
-                    </div>
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Hover Fila</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_grid_hover', 'Color Hover', 'rgba(0,0,0,0.05)')}
-                    </div>
+            <div class="color-section">
+                <h4>📊 Tablas y Grids</h4>
+                <div class="color-grid">
+                    ${crearInputColor('color_grid_header', 'Encabezado Grid', '#34495e')}
                 </div>
             </div>
             
-            <!-- Acordeón 5: Formularios -->
-            <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-edit"></i> Formularios</span>
-                    <i class="fas fa-chevron-down"></i>
+            <div class="color-section">
+                <h4>📝 Tarjetas y Texto</h4>
+                <div class="color-grid">
+                    ${crearInputColor('color_grid_text', 'Texto Tarjetas', '#333333')}
+                    ${crearInputColor('color_icon', 'Color Iconos', '#666666')}
                 </div>
-                <div class="accordion-content">
-                    <h5 style="margin: 0 0 1rem 0; color: #667eea; font-size: 0.9rem;">Labels</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_label', 'Color Labels', '#333333')}
-                    </div>
-                    
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Inputs de Texto</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_input_bg', 'Fondo Input', '#ffffff')}
-                        ${crearInputColor('color_input_text', 'Texto Input', '#333333')}
-                        ${crearInputColor('color_input_border', 'Borde Input', '#cccccc')}
-                    </div>
-                    
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Selects / Desplegables</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_select_bg', 'Fondo Select', '#ffffff')}
-                        ${crearInputColor('color_select_text', 'Texto Select', '#333333')}
-                        ${crearInputColor('color_select_border', 'Borde Select', '#cccccc')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Acordeón 6: Iconos -->
-            <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-icons"></i> Iconos</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_icon', 'Color Iconos', '#666666')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Acordeón 7: Modales -->
-            <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-window-restore"></i> Modales y Diálogos</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_modal_bg', 'Fondo Modal', '#ffffff')}
-                        ${crearInputColor('color_modal_text', 'Texto Modal', '#333333')}
-                        ${crearInputColor('color_modal_border', 'Borde Modal', '#cccccc')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Acordeón 8: Opciones Avanzadas -->
-            <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <span><i class="fas fa-cog"></i> Opciones Avanzadas</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div style="padding: 1rem 0;">
-                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
-                            <input type="checkbox" id="grid_cell_borders" checked style="width: 20px; height: 20px; cursor: pointer;">
-                            <span style="font-size: 1rem; color: #333;">Mostrar bordes en celdas de tabla</span>
-                        </label>
+                <div class="preview-text-cards" style="margin-top: 1rem;">
+                    <div class="tarjeta-preview-texto" id="tarjeta-preview-texto" style="background: #f5f5f5; padding: 1rem; border-radius: 8px;">
+                        <h4 style="margin: 0 0 0.5rem 0;">
+                            <i class="fas fa-chart-line" id="icon-preview"></i> Vista Previa Tarjeta
+                        </h4>
+                        <p style="margin: 0;" id="texto-preview">
+                            Este es el texto que aparecerá en las tarjetas. 
+                            <i class="fas fa-info-circle"></i>
+                        </p>
+                        <div style="margin-top: 0.5rem;">
+                            <i class="fas fa-check"></i> 
+                            <i class="fas fa-star"></i> 
+                            <i class="fas fa-heart"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -477,15 +385,6 @@ function actualizarPreview() {
         }
     });
     
-    // Iconos
-    const iconColor = document.getElementById('color_icon')?.value || '#666666';
-    const iconPreviewContainer = document.getElementById('icon-preview-container');
-    if (iconPreviewContainer) {
-        iconPreviewContainer.querySelectorAll('i').forEach(icon => {
-            icon.style.color = iconColor;
-        });
-    }
-    
     // Modal header
     const modalHeader = document.getElementById('modal-header-preview');
     if (modalHeader) {
@@ -493,7 +392,30 @@ function actualizarPreview() {
         modalHeader.style.color = headerBg;
     }
     
-    console.log('[EDITOR] Preview actualizado correctamente');
+    // PREVIEW TARJETAS Y TEXTO
+    const gridText = document.getElementById('color_grid_text')?.value || '#333333';
+    const colorIcon = document.getElementById('color_icon')?.value || '#666666';
+    
+    // Tarjeta preview con fondo secundario
+    const tarjetaPreview = document.getElementById('tarjeta-preview-texto');
+    if (tarjetaPreview) {
+        tarjetaPreview.style.background = secundario;
+        tarjetaPreview.style.color = gridText;
+    }
+    
+    // Texto dentro de tarjeta
+    const textoPreview = document.getElementById('texto-preview');
+    if (textoPreview) {
+        textoPreview.style.color = gridText;
+    }
+    
+    // Iconos
+    const iconosPreview = document.querySelectorAll('#tarjeta-preview-texto i, #icon-preview');
+    iconosPreview.forEach(icon => {
+        icon.style.color = colorIcon;
+    });
+    
+    console.log('[EDITOR] Preview actualizado - Texto:', gridText, 'Iconos:', colorIcon);
 }
 
 function hexToRgb(hex) {
@@ -505,67 +427,69 @@ function hexToRgb(hex) {
     } : { r: 0, g: 0, b: 0 };
 }
 
-
-// ===== FUNCIÓN ACORDEONES =====
-
-function inicializarAcordeones() {
-    setTimeout(() => {
-        const primeraSeccion = document.querySelector('.accordion-section.active');
-        if (primeraSeccion) {
-            const content = primeraSeccion.querySelector('.accordion-content');
-            if (content) {
-                content.style.maxHeight = content.scrollHeight + 50 + 'px';
-            }
+async function guardarColores() {
+    // Recoger TODOS los colores del formulario
+    const colores = {
+        color_app_bg: document.getElementById('color_app_bg').value,
+        color_primario: document.getElementById('color_primario').value,
+        color_secundario: document.getElementById('color_secundario').value,
+        color_header_text: document.getElementById('color_header_text').value,
+        color_header_bg: document.getElementById('color_header_bg').value,
+        color_button: document.getElementById('color_button').value,
+        color_button_hover: document.getElementById('color_button_hover').value,
+        color_button_text: document.getElementById('color_button_text').value,
+        color_success: document.getElementById('color_success').value,
+        color_warning: document.getElementById('color_warning').value,
+        color_danger: document.getElementById('color_danger').value,
+        color_info: document.getElementById('color_info').value,
+        color_grid_header: document.getElementById('color_grid_header').value,
+        color_grid_text: document.getElementById('color_grid_text').value,
+        color_icon: document.getElementById('color_icon').value
+    };
+    
+    console.log('[EDITOR] Guardando colores:', colores);
+    
+    try {
+        const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(colores)
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log('[EDITOR] Colores guardados correctamente:', data);
+            alert(' Colores guardados exitosamente\n\nHaz LOGOUT y LOGIN para ver los cambios aplicados');
+            // Redirigir después de 2 segundos
+            setTimeout(() => {
+                window.location.href = 'ADMIN_EMPRESAS.html';
+            }, 2000);
+        } else {
+            console.error('[EDITOR] Error al guardar:', data);
+            alert(' Error al guardar los colores: ' + (data.error || 'Error desconocido'));
         }
-    }, 300);
-}
-
-
-function toggleAccordion(header) {
-    const section = header.parentElement;
-    const content = section.querySelector('.accordion-content');
-    const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
-    
-    // Cerrar otros acordeones (opcional - comentar si quieres múltiples abiertos)
-    // document.querySelectorAll('.accordion-section.active').forEach(s => {
-    //     if (s !== section) {
-    //         s.classList.remove('active');
-    //         const otherContent = s.querySelector('.accordion-content');
-    //         const otherIcon = s.querySelector('.fa-chevron-down, .fa-chevron-up');
-    //         otherContent.style.maxHeight = '0';
-    //         otherIcon.classList.remove('fa-chevron-up');
-    //         otherIcon.classList.add('fa-chevron-down');
-    //     }
-    // });
-    
-    // Toggle actual
-    section.classList.toggle('active');
-    
-    if (section.classList.contains('active')) {
-        content.style.maxHeight = content.scrollHeight + 50 + 'px';
-        icon.classList.remove('fa-chevron-down');
-        icon.classList.add('fa-chevron-up');
-    } else {
-        content.style.maxHeight = '0';
-        icon.classList.remove('fa-chevron-up');
-        icon.classList.add('fa-chevron-down');
+    } catch (error) {
+        console.error('[EDITOR] Error de conexión:', error);
+        alert(' Error de conexión al servidor');
     }
 }
 
-
-// ===== FUNCIONES V2 MEJORADAS =====
+// ====== FUNCIONES V2 MEJORADAS ======
 
 function detectarCambiosPlantilla() {
     if (plantillaOriginal === 'custom') return false;
     
     const plantilla = PLANTILLAS[plantillaOriginal];
-    if (!plantilla) return false;
+    if (\!plantilla) return false;
     
     const campos = Object.keys(plantilla).filter(k => k.startsWith('color_'));
     
     return campos.some(campo => {
         const input = document.getElementById(campo);
-        return input && input.value.toUpperCase() !== plantilla[campo].toUpperCase();
+        return input && input.value.toUpperCase() \!== plantilla[campo].toUpperCase();
     });
 }
 
@@ -574,7 +498,7 @@ async function guardarColores() {
         const huboChange = detectarCambiosPlantilla();
         let nombrePersonalizado = null;
         
-        if (huboChange && plantillaOriginal !== 'custom') {
+        if (huboChange && plantillaOriginal \!== 'custom') {
             const crear = confirm(`Has modificado los colores de la plantilla "${PLANTILLAS[plantillaOriginal].nombre}".\n\n¿Deseas guardar como plantilla personalizada?`);
             
             if (crear) {
@@ -583,7 +507,7 @@ async function guardarColores() {
                     `${PLANTILLAS[plantillaOriginal].nombre} Personalizado`
                 );
                 
-                if (!nombrePersonalizado) {
+                if (\!nombrePersonalizado) {
                     return;
                 }
             }
@@ -604,20 +528,7 @@ async function guardarColores() {
             color_info: document.getElementById('color_info').value,
             color_grid_header: document.getElementById('color_grid_header').value,
             color_grid_text: document.getElementById('color_grid_text').value,
-            color_grid_bg: document.getElementById('color_grid_bg').value,
-            color_grid_hover: document.getElementById('color_grid_hover').value,
             color_icon: document.getElementById('color_icon').value,
-            color_label: document.getElementById('color_label').value,
-            color_input_bg: document.getElementById('color_input_bg').value,
-            color_input_text: document.getElementById('color_input_text').value,
-            color_input_border: document.getElementById('color_input_border').value,
-            color_select_bg: document.getElementById('color_select_bg').value,
-            color_select_text: document.getElementById('color_select_text').value,
-            color_select_border: document.getElementById('color_select_border').value,
-            color_modal_bg: document.getElementById('color_modal_bg').value,
-            color_modal_text: document.getElementById('color_modal_text').value,
-            color_modal_border: document.getElementById('color_modal_border').value,
-            grid_cell_borders: document.getElementById('grid_cell_borders').checked ? 'true' : 'false',
             plantilla_personalizada: nombrePersonalizado
         };
         

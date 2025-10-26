@@ -1,0 +1,139 @@
+═══════════════════════════════════════════════════════════════
+  🔧 SOLUCIÓN FINAL - ESTILOS QUE SE PIERDEN AL NAVEGAR
+═══════════════════════════════════════════════════════════════
+
+PROBLEMA IDENTIFICADO:
+====================
+El script auto_branding.js estaba al FINAL del <head> en estadisticas.html,
+ejecutándose MUY TARDE. Esto causaba que los estilos se aplicaran después
+de que otros scripts ya hubieran cargado el DOM.
+
+SOLUCIÓN APLICADA:
+==================
+1. auto_branding.js movido al INICIO del <head> ✅
+2. branding.js versión incrementada: v13 → v14 ✅
+3. Listener del iframe corregido ✅
+4. Apache reiniciado ✅
+
+═══════════════════════════════════════════════════════════════
+  📋 INSTRUCCIONES PARA PROBAR (MODO INCÓGNITO)
+═══════════════════════════════════════════════════════════════
+
+1. CERRAR COMPLETAMENTE EL NAVEGADOR
+   - Cerrar TODAS las ventanas
+   - Incluyendo las de modo incógnito
+
+2. ABRIR NUEVO MODO INCÓGNITO
+   Ctrl + Shift + N (Chrome)
+   Ctrl + Shift + P (Firefox)
+
+3. ABRIR DEVTOOLS **ANTES** DE CARGAR LA PÁGINA
+   F12 o Ctrl + Shift + I
+   → Tab "Console"
+
+4. IR A LA URL
+   http://localhost:5001
+
+5. HACER LOGIN
+   Usuario: admin
+   Password: admin123
+
+═══════════════════════════════════════════════════════════════
+  🔍 QUÉ VERIFICAR EN LA CONSOLA
+═══════════════════════════════════════════════════════════════
+
+AL CARGAR EL LOGIN/DASHBOARD (parent):
+======================================
+[MENU] Menú renderizado correctamente
+[MENU] Cargando colores de empresa...
+[BRANDING] Cargando colores...
+[BRANDING] Color primario (menú): #ffffff
+[BRANDING] ✅ Estilos aplicados directamente a 1 menús
+[BRANDING] ✓ Iframe encontrado, aplicando estilos dentro...
+[BRANDING] ✓ Listener configurado para detectar navegación
+
+AL CARGAR ESTADISTICAS (iframe):
+================================
+[AUTO-BRANDING v2.0] 🎨 Iniciando carga de estilos...
+[AUTO-BRANDING] URL actual: http://localhost:5001/estadisticas.html
+[AUTO-BRANDING] 📦 Branding recibido: {...}
+[AUTO-BRANDING] 🎨 Colores a aplicar: {primario: "#ffffff", ...}
+[AUTO-BRANDING] ✅ Estilos aplicados correctamente
+[AUTO-BRANDING] 📋 Resumen de estilos aplicados:
+  • Menú lateral (primario): #ffffff
+  • Texto menú: #000000
+  ...
+[AUTO-BRANDING] ✨ Página lista con branding aplicado
+
+AL HACER CLIC EN OTRO MÓDULO (Facturas, Productos, etc.):
+=========================================================
+[BRANDING] 📄 Iframe cargó nueva página, re-aplicando estilos...
+[AUTO-BRANDING v2.0] 🎨 Iniciando carga de estilos...
+[AUTO-BRANDING] ✅ Estilos aplicados correctamente
+...
+
+═══════════════════════════════════════════════════════════════
+  ✅ SI VES TODOS ESOS LOGS
+═══════════════════════════════════════════════════════════════
+
+Los estilos DEBEN mantenerse al navegar. Si no:
+- Verifica que no hay errores 404 en el tab "Network"
+- Busca auto_branding.js?v=2 en Network → debe ser 200 OK
+- Busca /api/auth/branding en Network → debe ser 200 OK
+
+═══════════════════════════════════════════════════════════════
+  ❌ SI NO VES LOS LOGS DE [AUTO-BRANDING]
+═══════════════════════════════════════════════════════════════
+
+1. Ve al tab "Network" de DevTools
+2. Filtra por "auto_branding"
+3. Recarga la página
+4. ¿Aparece auto_branding.js?v=2?
+   - NO aparece → El archivo no se está cargando
+   - Aparece con 304 → Está en caché (presiona Ctrl+Shift+R)
+   - Aparece con 404 → Archivo no existe
+   - Aparece con 200 → OK, pero el script tiene un error
+
+5. Si aparece con 200, clic en el archivo
+6. Ve al tab "Response"
+7. ¿Ves el código del script?
+   - NO → Problema del servidor
+   - SÍ → Ve al tab "Console" y busca errores en rojo
+
+═══════════════════════════════════════════════════════════════
+  🔄 SI SIGUE SIN FUNCIONAR
+═══════════════════════════════════════════════════════════════
+
+Ejecuta este comando en el servidor:
+====================================
+cd /var/www/html
+head -10 frontend/estadisticas.html
+
+DEBE MOSTRAR (línea 7):
+<script src="/static/auto_branding.js?v=2"></script>
+
+Si NO está en línea 7, ejecuta:
+./verificar_estilos.sh
+
+Luego:
+sudo systemctl restart apache2
+
+Y vuelve a probar en modo incógnito.
+
+═══════════════════════════════════════════════════════════════
+  📞 INFORMACIÓN DE DEBUGGING
+═══════════════════════════════════════════════════════════════
+
+Si después de seguir TODOS estos pasos sigue sin funcionar,
+captura pantallas de:
+
+1. Console completa (con todos los logs)
+2. Network tab (filtrado por "branding")
+3. Resultado de: head -10 /var/www/html/frontend/estadisticas.html
+
+═══════════════════════════════════════════════════════════════
+
+Fecha: 26 Oct 2025, 17:23
+Versión branding.js: v14
+Versión auto_branding.js: v2
+Estado: ✅ DESPLEGADO

@@ -538,6 +538,46 @@ def eliminar_empresa(empresa_id):
         return jsonify({'error': 'Error eliminando empresa'}), 500
 
 @empresas_bp.route('/api/empresas/<int:empresa_id>/emisor', methods=['PUT'])
+
+@empresas_bp.route('/api/empresas/<int:empresa_id>/colores', methods=['PUT'])
+@superadmin_required
+def actualizar_colores_empresa(empresa_id):
+    """Actualiza solo los colores de una empresa"""
+    try:
+        data = request.get_json()
+        
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        
+        campos_colores = ['color_primario', 'color_secundario', 'color_success', 'color_warning',
+                         'color_danger', 'color_info', 'color_button', 'color_button_hover',
+                         'color_button_text', 'color_app_bg', 'color_header_bg', 'color_header_text',
+                         'color_grid_header', 'color_grid_text', 'color_grid_bg', 'color_grid_hover', 'color_icon', 'color_label', 'color_input_bg', 'color_input_text', 'color_input_border', 'color_select_bg', 'color_select_text', 'color_select_border', 'color_modal_bg', 'color_modal_text', 'color_modal_border', 'grid_cell_borders', 'plantilla_personalizada']
+        
+        campos_update = []
+        valores = []
+        
+        for campo in campos_colores:
+            if campo in data:
+                campos_update.append(f"{campo} = ?")
+                valores.append(data[campo])
+        
+        if not campos_update:
+            return jsonify({'error': 'No hay campos para actualizar'}), 400
+        
+        valores.append(empresa_id)
+        query = f"UPDATE empresas SET {', '.join(campos_update)} WHERE id = ?"
+        cursor.execute(query, valores)
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'message': 'Colores actualizados correctamente'}), 200
+        
+    except Exception as e:
+        logger.error(f"Error actualizando colores: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@empresas_bp.route('/api/empresas/<int:empresa_id>/emisor', methods=['PUT'])
 @superadmin_required
 def actualizar_emisor(empresa_id):
     """Actualiza el archivo emisor.json de una empresa"""
