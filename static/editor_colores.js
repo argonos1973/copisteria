@@ -1,4 +1,4 @@
-const API_URL = 'http://192.168.1.2:5001/api';
+const API_URL = 'http://192.168.1.23:5001/api';
 let empresaId = null;
 let plantillaActual = null;
 
