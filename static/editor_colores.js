@@ -79,7 +79,18 @@ function renderizarContentPanel(empresa) {
         <div class="empresa-header">
             <img id="empresa-logo" src="${empresa.logo_url || '/static/img/logo.png'}" alt="Logo" class="empresa-logo">
             <div class="empresa-info" style="flex: 1;">
-                <div style="display: grid; gap: 0.5rem;">
+                <div style="margin-bottom: 0.5rem;">
+                    <label style="font-weight: 600; color: #2c3e50; display: block; margin-bottom: 0.25rem;">Nombre:</label>
+                    <input type="text" id="empresa-nombre" value="${empresa.nombre}" style="width: 100%; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 1.1rem; font-weight: 600;">
+                </div>
+                <div style="margin-bottom: 0.5rem;">
+                    <label style="font-weight: 600; color: #2c3e50; display: block; margin-bottom: 0.25rem;">Razón Social:</label>
+                    <input type="text" id="empresa-razon-social" value="${empresa.razon_social || ''}" style="width: 100%; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 0.95rem;">
+                </div>
+                <div style="margin-bottom: 0.5rem;">
+                    <label style="font-weight: 600; color: #2c3e50; display: block; margin-bottom: 0.25rem;">Código:</label>
+                    <input type="text" id="empresa-codigo" value="${empresa.codigo}" style="width: 100%; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 0.95rem;">
+                </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <label style="min-width: 100px; font-weight: 600; color: #2c3e50;">Nombre:</label>
                         <input type="text" id="empresa-nombre" value="${empresa.nombre}" style="flex: 1; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 1rem;">
