@@ -73,38 +73,14 @@ async function cargarEmpresa() {
 }
 
 function renderizarContentPanel(empresa) {
-    const panel = document.getElementById("content-panel");
+    const panel = document.getElementById('content-panel');
     
     panel.innerHTML = `
         <div class="empresa-header">
             <img id="empresa-logo" src="${empresa.logo_url || '/static/img/logo.png'}" alt="Logo" class="empresa-logo">
-            <div class="empresa-info" style="flex: 1;">
-                <div style="margin-bottom: 0.5rem;">
-                    <label style="font-weight: 600; color: #2c3e50; display: block; margin-bottom: 0.25rem;">Nombre:</label>
-                    <input type="text" id="empresa-nombre" value="${empresa.nombre}" style="width: 100%; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 1.1rem; font-weight: 600;">
-                </div>
-                <div style="margin-bottom: 0.5rem;">
-                    <label style="font-weight: 600; color: #2c3e50; display: block; margin-bottom: 0.25rem;">Razón Social:</label>
-                    <input type="text" id="empresa-razon-social" value="${empresa.razon_social || ''}" style="width: 100%; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 0.95rem;">
-                </div>
-                <div style="margin-bottom: 0.5rem;">
-                    <label style="font-weight: 600; color: #2c3e50; display: block; margin-bottom: 0.25rem;">Código:</label>
-                    <input type="text" id="empresa-codigo" value="${empresa.codigo}" style="width: 100%; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 0.95rem;">
-                </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <label style="min-width: 100px; font-weight: 600; color: #2c3e50;">Nombre:</label>
-                        <input type="text" id="empresa-nombre" value="${empresa.nombre}" style="flex: 1; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 1rem;">
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <label style="min-width: 100px; font-weight: 600; color: #2c3e50;">Razón Social:</label>
-                        <input type="text" id="empresa-razon-social" value="${empresa.razon_social || ''}" style="flex: 1; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 1rem;">
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <label style="min-width: 100px; font-weight: 600; color: #2c3e50;">Código:</label>
-                        <input type="text" id="empresa-codigo" value="${empresa.codigo}" style="flex: 1; padding: 0.5rem; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 1rem;">
-                    </div>
-                </div>
-                <div class="meta" style="margin-top: 0.75rem;">
+            <div class="empresa-info">
+                <h2>${empresa.nombre}</h2>
+                <div class="meta">
                     ${empresa.cif ? `<div><i class="fas fa-id-card"></i> ${empresa.cif}</div>` : ''}
                     ${empresa.email ? `<div><i class="fas fa-envelope"></i> ${empresa.email}</div>` : ''}
                     ${empresa.telefono ? `<div><i class="fas fa-phone"></i> ${empresa.telefono}</div>` : ''}
@@ -113,6 +89,144 @@ function renderizarContentPanel(empresa) {
                 </div>
             </div>
         </div>
+        
+        <div class="preview-grid">
+            <div class="preview-card">
+                <h3><i class="fas fa-bars"></i> Menú Lateral</h3>
+                <div class="menu-preview" id="menu-preview">
+                    <div class="menu-item"><i class="fas fa-home"></i> Dashboard</div>
+                    <div class="menu-item"><i class="fas fa-shopping-cart"></i> Ventas</div>
+                    <div class="submenu">
+                        <div class="submenu-item"><i class="fas fa-file-invoice"></i> Facturas</div>
+                        <div class="submenu-item"><i class="fas fa-receipt"></i> Tickets</div>
+                    </div>
+                    <div class="menu-item"><i class="fas fa-users"></i> Clientes</div>
+                </div>
+            </div>
+            
+            <div class="preview-card">
+                <h3><i class="fas fa-desktop"></i> Simulación App</h3>
+                <div class="app-simulation">
+                    <div class="app-header-sim" id="app-header-sim">
+                        <span><i class="fas fa-th-large"></i> Panel</span>
+                        <span><i class="fas fa-user-circle"></i></span>
+                    </div>
+                    <div class="app-content-sim" id="app-content-sim">
+                        <div class="sim-card" id="sim-card">
+                            <h4>Tarjeta</h4>
+                            <p>Color secundario</p>
+                        </div>
+                        <button class="sim-button" id="sim-button">
+                            <i class="fas fa-save"></i> Acción
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="preview-card">
+                <h3><i class="fas fa-exclamation-triangle"></i> Alertas</h3>
+                <div class="alert-preview" id="alert-success" style="background: rgba(39, 174, 96, 0.1); border-color: #27ae60; color: #27ae60;">
+                    <i class="fas fa-check-circle"></i> Operación exitosa
+                </div>
+                <div class="alert-preview" id="alert-warning" style="background: rgba(243, 156, 18, 0.1); border-color: #f39c12; color: #f39c12;">
+                    <i class="fas fa-exclamation-triangle"></i> Advertencia
+                </div>
+                <div class="alert-preview" id="alert-danger" style="background: rgba(231, 76, 60, 0.1); border-color: #e74c3c; color: #e74c3c;">
+                    <i class="fas fa-times-circle"></i> Error
+                </div>
+            </div>
+            
+            <div class="preview-card">
+                <h3><i class="fas fa-table"></i> Tabla</h3>
+                <table class="table-preview">
+                    <thead>
+                        <tr id="table-header-preview">
+                            <th>Producto</th>
+                            <th>Precio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Item 1</td>
+                            <td>10.00€</td>
+                        </tr>
+                        <tr>
+                            <td>Item 2</td>
+                            <td>20.00€</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="preview-card">
+                <h3><i class="fas fa-th"></i> Grid</h3>
+                <div class="grid-preview">
+                    <div class="grid-item" id="grid-item-1">Item 1</div>
+                    <div class="grid-item" id="grid-item-2">Item 2</div>
+                    <div class="grid-item" id="grid-item-3">Item 3</div>
+                    <div class="grid-item" id="grid-item-4">Item 4</div>
+                </div>
+            </div>
+            
+            <div class="preview-card">
+                <h3><i class="fas fa-window-maximize"></i> Modal</h3>
+                <div class="modal-preview">
+                    <div class="modal-preview-header" id="modal-header-preview">
+                        <i class="fas fa-info-circle"></i> Título del Modal
+                    </div>
+                    <div style="padding: 0.5rem 0;">
+                        Contenido del modal aquí
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="color-editors">
+            <h3><i class="fas fa-paint-brush"></i> Personalizar Colores</h3>
+            
+            <div class="color-section">
+                <h4>🎨 Colores Principales</h4>
+                <div class="color-grid">
+                    ${crearInputColor('color_app_bg', 'Fondo App', '#ffffff')}
+                    ${crearInputColor('color_primario', 'Menú Lateral', '#2c3e50')}
+                    ${crearInputColor('color_secundario', 'Tarjetas', '#3498db')}
+                    ${crearInputColor('color_header_text', 'Texto Menú', '#ffffff')}
+                    ${crearInputColor('color_header_bg', 'Header', '#2c3e50')}
+                </div>
+            </div>
+            
+            <div class="color-section">
+                <h4>🔘 Botones</h4>
+                <div class="color-grid">
+                    ${crearInputColor('color_button', 'Botón Normal', '#3498db')}
+                    ${crearInputColor('color_button_hover', 'Botón Hover', '#2980b9')}
+                    ${crearInputColor('color_button_text', 'Texto Botón', '#ffffff')}
+                </div>
+            </div>
+            
+            <div class="color-section">
+                <h4>✅ Estados y Alertas</h4>
+                <div class="color-grid">
+                    ${crearInputColor('color_success', 'Éxito', '#27ae60')}
+                    ${crearInputColor('color_warning', 'Advertencia', '#f39c12')}
+                    ${crearInputColor('color_danger', 'Peligro', '#e74c3c')}
+                    ${crearInputColor('color_info', 'Info', '#3498db')}
+                </div>
+            </div>
+            
+            <div class="color-section">
+                <h4>📊 Tablas y Grids</h4>
+                <div class="color-grid">
+                    ${crearInputColor('color_grid_header', 'Encabezado Grid', '#34495e')}
+                </div>
+            </div>
+            
+            <button class="save-button" onclick="guardarColores()">
+                <i class="fas fa-save"></i> Guardar Cambios
+            </button>
+        </div>
+    `;
+}
 
 function crearInputColor(id, label, defaultValue) {
     return `
@@ -262,25 +376,7 @@ function hexToRgb(hex) {
 }
 
 async function guardarColores() {
-    const nombre = document.getElementById('empresa-nombre').value.trim();
-    const razonSocial = document.getElementById('empresa-razon-social').value.trim();
-    const codigo = document.getElementById('empresa-codigo').value.trim();
-    
-    if (!nombre) {
-        alert('❌ El nombre es obligatorio');
-        return;
-    }
-    
-    if (!codigo) {
-        alert('❌ El código es obligatorio');
-        return;
-    }
-    
-    const datos = {
-        nombre: nombre,
-        razon_social: razonSocial,
-        codigo: codigo,
-        activo: true,
+    const colores = {
         color_app_bg: document.getElementById('color_app_bg').value,
         color_primario: document.getElementById('color_primario').value,
         color_secundario: document.getElementById('color_secundario').value,
@@ -300,15 +396,15 @@ async function guardarColores() {
         const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datos)
+            body: JSON.stringify(colores)
         });
         
         if (response.ok) {
-            alert('✅ Cambios guardados exitosamente');
+            alert('✅ Colores guardados exitosamente');
             setTimeout(() => window.location.href = 'ADMIN_EMPRESAS.html', 1500);
         } else {
             const data = await response.json();
-            alert('❌ Error: ' + (data.error || 'Error al guardar cambios'));
+            alert('❌ Error: ' + (data.error || 'Error al guardar colores'));
         }
     } catch (error) {
         console.error('Error:', error);
