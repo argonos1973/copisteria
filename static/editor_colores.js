@@ -376,6 +376,7 @@ function hexToRgb(hex) {
 }
 
 async function guardarColores() {
+    // Recoger TODOS los colores del formulario
     const colores = {
         color_app_bg: document.getElementById('color_app_bg').value,
         color_primario: document.getElementById('color_primario').value,
@@ -392,22 +393,32 @@ async function guardarColores() {
         color_grid_header: document.getElementById('color_grid_header').value
     };
     
+    console.log('[EDITOR] Guardando colores:', colores);
+    
     try {
         const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(colores)
         });
         
+        const data = await response.json();
+        
         if (response.ok) {
-            alert('✅ Colores guardados exitosamente');
-            setTimeout(() => window.location.href = 'ADMIN_EMPRESAS.html', 1500);
+            console.log('[EDITOR] Colores guardados correctamente:', data);
+            alert(' Colores guardados exitosamente\n\nHaz LOGOUT y LOGIN para ver los cambios aplicados');
+            // Redirigir después de 2 segundos
+            setTimeout(() => {
+                window.location.href = 'ADMIN_EMPRESAS.html';
+            }, 2000);
         } else {
-            const data = await response.json();
-            alert('❌ Error: ' + (data.error || 'Error al guardar colores'));
+            console.error('[EDITOR] Error al guardar:', data);
+            alert(' Error al guardar los colores: ' + (data.error || 'Error desconocido'));
         }
     } catch (error) {
-        console.error('Error:', error);
-        alert('❌ Error de conexión al servidor');
+        console.error('[EDITOR] Error de conexión:', error);
+        alert(' Error de conexión al servidor');
     }
 }
