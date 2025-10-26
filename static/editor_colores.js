@@ -87,7 +87,6 @@ function renderizarContentPanel(empresa) {
                     ${empresa.telefono ? `<div><i class="fas fa-phone"></i> ${empresa.telefono}</div>` : ""}
                     ${empresa.direccion ? `<div><i class="fas fa-map-marker-alt"></i> ${empresa.direccion}</div>` : ""}
                     <div><i class="fas fa-code"></i> Código: ${empresa.codigo}</div>
-                    <div><i class="fas fa-code"></i> Código: ${empresa.codigo}</div>
                 </div>
             </div>
         </div>
