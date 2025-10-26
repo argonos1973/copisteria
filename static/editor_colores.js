@@ -73,160 +73,26 @@ async function cargarEmpresa() {
 }
 
 function renderizarContentPanel(empresa) {
-    const panel = document.getElementById('content-panel');
+    const panel = document.getElementById("content-panel");
     
     panel.innerHTML = `
         <div class="empresa-header">
-            <img id="empresa-logo" src="${empresa.logo_url || '/static/img/logo.png'}" alt="Logo" class="empresa-logo">
+            <img id="empresa-logo" src="${empresa.logo_url || "/static/img/logo.png"}" alt="Logo" class="empresa-logo">
             <div class="empresa-info">
                 <h2>${empresa.nombre}</h2>
                 <div class="meta">
-                    ${empresa.cif ? `<div><i class="fas fa-id-card"></i> ${empresa.cif}</div>` : ''}
-                    ${empresa.email ? `<div><i class="fas fa-envelope"></i> ${empresa.email}</div>` : ''}
-                    ${empresa.telefono ? `<div><i class="fas fa-phone"></i> ${empresa.telefono}</div>` : ''}
-                    ${empresa.direccion ? `<div><i class="fas fa-map-marker-alt"></i> ${empresa.direccion}</div>` : ''}
-                    ${empresa.web ? `<div><i class="fas fa-globe"></i> ${empresa.web}</div>` : ''}
+                    ${empresa.razon_social ? `<div><i class="fas fa-building"></i> ${empresa.razon_social}</div>` : ''}
+                    ${empresa.razon_social ? `<div><i class="fas fa-building"></i> ${empresa.razon_social}</div>` : ""}
+                    ${empresa.cif ? `<div><i class="fas fa-id-card"></i> ${empresa.cif}</div>` : ""}
+                    ${empresa.email ? `<div><i class="fas fa-envelope"></i> ${empresa.email}</div>` : ""}
+                    ${empresa.telefono ? `<div><i class="fas fa-phone"></i> ${empresa.telefono}</div>` : ""}
+                    ${empresa.direccion ? `<div><i class="fas fa-map-marker-alt"></i> ${empresa.direccion}</div>` : ""}
+                    <div><i class="fas fa-code"></i> Código: ${empresa.codigo}</div>
+                    ${empresa.web ? `<div><i class="fas fa-globe"></i> ${empresa.web}</div>` : ""}
+                    <div><i class="fas fa-code"></i> Código: ${empresa.codigo}</div>
                 </div>
             </div>
         </div>
-        
-        <div class="preview-grid">
-            <div class="preview-card">
-                <h3><i class="fas fa-bars"></i> Menú Lateral</h3>
-                <div class="menu-preview" id="menu-preview">
-                    <div class="menu-item"><i class="fas fa-home"></i> Dashboard</div>
-                    <div class="menu-item"><i class="fas fa-shopping-cart"></i> Ventas</div>
-                    <div class="submenu">
-                        <div class="submenu-item"><i class="fas fa-file-invoice"></i> Facturas</div>
-                        <div class="submenu-item"><i class="fas fa-receipt"></i> Tickets</div>
-                    </div>
-                    <div class="menu-item"><i class="fas fa-users"></i> Clientes</div>
-                </div>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-desktop"></i> Simulación App</h3>
-                <div class="app-simulation">
-                    <div class="app-header-sim" id="app-header-sim">
-                        <span><i class="fas fa-th-large"></i> Panel</span>
-                        <span><i class="fas fa-user-circle"></i></span>
-                    </div>
-                    <div class="app-content-sim" id="app-content-sim">
-                        <div class="sim-card" id="sim-card">
-                            <h4>Tarjeta</h4>
-                            <p>Color secundario</p>
-                        </div>
-                        <button class="sim-button" id="sim-button">
-                            <i class="fas fa-save"></i> Acción
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-exclamation-triangle"></i> Alertas</h3>
-                <div class="alert-preview" id="alert-success" style="background: rgba(39, 174, 96, 0.1); border-color: #27ae60; color: #27ae60;">
-                    <i class="fas fa-check-circle"></i> Operación exitosa
-                </div>
-                <div class="alert-preview" id="alert-warning" style="background: rgba(243, 156, 18, 0.1); border-color: #f39c12; color: #f39c12;">
-                    <i class="fas fa-exclamation-triangle"></i> Advertencia
-                </div>
-                <div class="alert-preview" id="alert-danger" style="background: rgba(231, 76, 60, 0.1); border-color: #e74c3c; color: #e74c3c;">
-                    <i class="fas fa-times-circle"></i> Error
-                </div>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-table"></i> Tabla</h3>
-                <table class="table-preview">
-                    <thead>
-                        <tr id="table-header-preview">
-                            <th>Producto</th>
-                            <th>Precio</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Item 1</td>
-                            <td>10.00€</td>
-                        </tr>
-                        <tr>
-                            <td>Item 2</td>
-                            <td>20.00€</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-th"></i> Grid</h3>
-                <div class="grid-preview">
-                    <div class="grid-item" id="grid-item-1">Item 1</div>
-                    <div class="grid-item" id="grid-item-2">Item 2</div>
-                    <div class="grid-item" id="grid-item-3">Item 3</div>
-                    <div class="grid-item" id="grid-item-4">Item 4</div>
-                </div>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-window-maximize"></i> Modal</h3>
-                <div class="modal-preview">
-                    <div class="modal-preview-header" id="modal-header-preview">
-                        <i class="fas fa-info-circle"></i> Título del Modal
-                    </div>
-                    <div style="padding: 0.5rem 0;">
-                        Contenido del modal aquí
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="color-editors">
-            <h3><i class="fas fa-paint-brush"></i> Personalizar Colores</h3>
-            
-            <div class="color-section">
-                <h4>🎨 Colores Principales</h4>
-                <div class="color-grid">
-                    ${crearInputColor('color_app_bg', 'Fondo App', '#ffffff')}
-                    ${crearInputColor('color_primario', 'Menú Lateral', '#2c3e50')}
-                    ${crearInputColor('color_secundario', 'Tarjetas', '#3498db')}
-                    ${crearInputColor('color_header_text', 'Texto Menú', '#ffffff')}
-                    ${crearInputColor('color_header_bg', 'Header', '#2c3e50')}
-                </div>
-            </div>
-            
-            <div class="color-section">
-                <h4>🔘 Botones</h4>
-                <div class="color-grid">
-                    ${crearInputColor('color_button', 'Botón Normal', '#3498db')}
-                    ${crearInputColor('color_button_hover', 'Botón Hover', '#2980b9')}
-                    ${crearInputColor('color_button_text', 'Texto Botón', '#ffffff')}
-                </div>
-            </div>
-            
-            <div class="color-section">
-                <h4>✅ Estados y Alertas</h4>
-                <div class="color-grid">
-                    ${crearInputColor('color_success', 'Éxito', '#27ae60')}
-                    ${crearInputColor('color_warning', 'Advertencia', '#f39c12')}
-                    ${crearInputColor('color_danger', 'Peligro', '#e74c3c')}
-                    ${crearInputColor('color_info', 'Info', '#3498db')}
-                </div>
-            </div>
-            
-            <div class="color-section">
-                <h4>📊 Tablas y Grids</h4>
-                <div class="color-grid">
-                    ${crearInputColor('color_grid_header', 'Encabezado Grid', '#34495e')}
-                </div>
-            </div>
-            
-            <button class="save-button" onclick="guardarColores()">
-                <i class="fas fa-save"></i> Guardar Cambios
-            </button>
-        </div>
-    `;
-}
 
 function crearInputColor(id, label, defaultValue) {
     return `
