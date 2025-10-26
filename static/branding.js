@@ -520,9 +520,22 @@ function configurarObserverDeModales(doc, colores, textForButton) {
 window.cargarColoresEmpresa = cargarColoresEmpresa;
 window.getTextColorForBackground = getTextColorForBackground;
 window.aplicarEstilosAlIframe = aplicarEstilosAlIframe;
+window.aplicarColoresAlIframe = aplicarColoresAlIframe;
 
 // NO cargar automáticamente - se llama desde menu_loader.js DESPUÉS de renderizar el menú
 // document.addEventListener('DOMContentLoaded', cargarColoresEmpresa);
+
+// Configurar listener para re-aplicar colores cuando el iframe carga nueva página
+document.addEventListener('DOMContentLoaded', () => {
+    const iframe = document.getElementById('contenido-iframe');
+    if (iframe) {
+        console.log('[BRANDING] Configurando listener del iframe');
+        iframe.addEventListener('load', () => {
+            console.log('[BRANDING] Iframe cargado, aplicando colores...');
+            aplicarColoresAlIframe();
+        });
+    }
+});
 
 // Configurar listener para re-aplicar estilos cuando el iframe carga nueva página
 document.addEventListener('DOMContentLoaded', () => {
