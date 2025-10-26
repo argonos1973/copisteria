@@ -506,6 +506,39 @@
                     </button>
                 </div>
                 
+                <!-- PREVIEW DEL MENÚ (EDITAR) -->
+                <div style="background: white; border: 2px solid #dee2e6; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                    <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 14px;">
+                        <i class="fas fa-eye"></i> Vista Previa del Menú
+                    </h4>
+                    <div id="menu-preview-editar" style="width: 100%; border-radius: 5px; overflow: hidden;">
+                        <div id="preview-menu-bg-editar" style="background-color: #2c3e50; padding: 15px; border-radius: 5px;">
+                            <div style="padding: 10px; color: #ffffff; border-radius: 4px; margin-bottom: 5px; cursor: pointer;" class="preview-menu-item-editar">
+                                <i class="fas fa-home"></i> Dashboard
+                            </div>
+                            <div style="margin-bottom: 5px;">
+                                <div style="padding: 10px; color: #ffffff; border-radius: 4px; cursor: pointer;" class="preview-menu-item-editar">
+                                    <i class="fas fa-shopping-cart"></i> Ventas ▼
+                                </div>
+                                <div id="preview-submenu-container-editar" style="padding-left: 20px; margin-top: 3px; background: rgba(0,0,0,0.2); border-radius: 4px; padding: 5px;">
+                                    <div style="padding: 8px; color: rgba(255,255,255,0.8); border-radius: 3px; font-size: 13px; cursor: pointer;" class="preview-submenu-item-editar">
+                                        <i class="fas fa-file-invoice"></i> Facturas
+                                    </div>
+                                    <div style="padding: 8px; color: rgba(255,255,255,0.8); border-radius: 3px; font-size: 13px; cursor: pointer;" class="preview-submenu-item-editar">
+                                        <i class="fas fa-receipt"></i> Tickets
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="padding: 10px; color: #ffffff; border-radius: 4px; cursor: pointer;" class="preview-menu-item-editar">
+                                <i class="fas fa-users"></i> Clientes
+                            </div>
+                        </div>
+                    </div>
+                    <small style="color: #6c757d; display: block; margin-top: 8px;">
+                        <i class="fas fa-info-circle"></i> Los cambios se reflejan en tiempo real
+                    </small>
+                </div>
+                
                 <!-- Colores Principales -->
                 <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
                     <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
@@ -517,8 +550,8 @@
                             <input type="color" id="edit_color_app_bg" name="color_app_bg" value="#ffffff" style="width: 35px; height: 28px;">
                             </div>
                         <div class="form-group">
-                            <label for="edit_color_primario" style="font-size: 10px;">Menú Lateral</label>
-                            <input type="color" id="edit_color_primario" name="color_primario" value="#2c3e50" style="width: 35px; height: 28px;">
+                            <label for="edit_color_primario" style="font-size: 10px;">🎨 Fondo Menú Lateral</label>
+                            <input type="color" id="edit_color_primario" name="color_primario" value="#2c3e50" style="width: 35px; height: 28px;" onchange="actualizarPreviewEditar()">
                             </div>
                         <div class="form-group">
                             <label for="edit_color_secundario" style="font-size: 10px;">Tarjetas</label>
@@ -560,7 +593,7 @@
                             </div>
                         <div class="form-group">
                             <label for="edit_color_header_text" style="font-size: 10px;">Texto Header</label>
-                            <input type="color" id="edit_color_header_text" name="color_header_text" value="#ffffff" style="width: 35px; height: 28px;">
+                            <input type="color" id="edit_color_header_text" name="color_header_text" value="#ffffff" style="width: 35px; height: 28px;" onchange="actualizarPreviewEditar()">
                             </div>
                     </div>
                 </details>
@@ -1136,6 +1169,28 @@
                 submitBtn.innerHTML = originalText;
             }
         });
+        
+        function actualizarPreviewEditar() {
+            const menuBg = document.getElementById("edit_color_primario")?.value || "#2c3e50";
+            const menuText = document.getElementById("edit_color_header_text")?.value || "#ffffff";
+            
+            const previewBg = document.getElementById("preview-menu-bg-editar");
+            if (previewBg) previewBg.style.backgroundColor = menuBg;
+            
+            document.querySelectorAll(".preview-menu-item-editar").forEach(item => {
+                item.style.color = menuText;
+            });
+            
+            const rgb = hexToRgb(menuBg);
+            const submenu = document.getElementById("preview-submenu-container-editar");
+            if (submenu) submenu.style.background = `rgba(${Math.floor(rgb.r * 0.8)}, ${Math.floor(rgb.g * 0.8)}, ${Math.floor(rgb.b * 0.8)}, 0.5)`;
+            
+            document.querySelectorAll(".preview-submenu-item-editar").forEach(item => {
+                const rgbText = hexToRgb(menuText);
+                item.style.color = `rgba(${rgbText.r}, ${rgbText.g}, ${rgbText.b}, 0.8)`;
+            });
+        }
+        
         
         // Cerrar modal al hacer clic fuera
         window.onclick = function(event) {
