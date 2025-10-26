@@ -1,4 +1,4 @@
-<\!DOCTYPE html>
+<!DOCTYPE html>
 <!-- Version: EDITOR_NUEVA_PAGINA_v1 -->
 <html lang="es">
 <head>
@@ -106,7 +106,7 @@
         </div>
     </div>
     
-    <\!-- Modal Crear Empresa -->
+    <!-- Modal Crear Empresa -->
     <div id="modalCrear" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -496,7 +496,7 @@
                     <small style="color: #6c757d; display: block; margin-top: 6px;">
                         <i class="fas fa-info-circle"></i> Puedes seleccionar una plantilla y luego personalizar cada color individualmente
                     </small>                
-                <\!-- PREVIEW DEL MENÚ (EDITAR) -->
+                <!-- PREVIEW DEL MENÚ (EDITAR) -->
                 <div style="background: white; border: 2px solid #dee2e6; border-radius: 8px; padding: 15px; margin: 15px 0;">
                     <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 14px;">
                         <i class="fas fa-eye"></i> Vista Previa del Menú
@@ -752,7 +752,7 @@
             try {
                 const response = await fetch(`${API_URL}/empresas`);
                 
-                if (\!response.ok) {
+                if (!response.ok) {
                     throw new Error('Error cargando empresas');
                 }
                 
@@ -1206,13 +1206,13 @@
         async function cargarPlantillasPersonalizadas() {
             try {
                 const response = await fetch('/api/plantillas/personalizadas');
-                if (\!response.ok) {
+                if (!response.ok) {
                     console.warn('No se pudieron cargar plantillas personalizadas');
                     return;
                 }
                 
                 const data = await response.json();
-                if (\!data.success || \!data.plantillas || data.plantillas.length === 0) {
+                if (!data.success || !data.plantillas || data.plantillas.length === 0) {
                     return;
                 }
                 
@@ -1226,7 +1226,7 @@
         
         function agregarPlantillasPersonalizadas(containerId, plantillas, modo) {
             const container = document.getElementById(containerId);
-            if (\!container) return;
+            if (!container) return;
             
             plantillas.forEach(plantilla => {
                 const btn = document.createElement('button');
@@ -1260,5 +1260,5 @@
     
 </body>
 </html>
-<\!-- Cache buster: 1761316483 -->
-<\!-- TEST TIMESTAMP: 1761325398 -->
+<!-- Cache buster: 1761316483 -->
+<!-- TEST TIMESTAMP: 1761325398 -->
