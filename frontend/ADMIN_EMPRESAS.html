@@ -806,7 +806,7 @@
                         <span class="empresa-status ${emp.activo ? 'activo' : 'inactivo'}">
                             ${emp.activo ? '✓ Activa' : '✗ Inactiva'}
                         </span>
-                        <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick='abrirModalEditar(${JSON.stringify(emp)})'>
+                        <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick='window.location.href="EDITAR_EMPRESA_COLORES.html?id=" + ${emp.id}'>
                             <i class="fas fa-edit"></i> Editar Colores y Plantilla
                         </button>
                     </div>
