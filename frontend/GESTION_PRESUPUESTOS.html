@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Presupuestos</title>
-    <script src="/static/auto_branding.js?v=9"></script>
+    <script src="/static/auto_branding.js?v=12"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
     <link rel="stylesheet" href="../static/page_header.css">
@@ -62,11 +62,11 @@
                 <input type="text" id="estado" value="Borrador" readonly class="readonly-field">
             </div>
             <div class="detalle-proforma-item">
-                <label for="total-presupuesto" style="text-align: right;">Total (€)</label>
+                <label for="total-presupuesto" class="label-align-right">Total (€)</label>
                 <input type="text" id="total-presupuesto" value="0,00" readonly class="total-proforma-display">
             </div>
             <div class="detalle-proforma-item">
-                <input type="text" id="idpresupuesto" required readonly class="hidden-field" style="display: none;">
+                <input type="text" id="idpresupuesto" required readonly class="hidden-field">
                 <input type="hidden" id="tipo-presupuesto" value="N">
             </div>
         </div>
@@ -90,7 +90,7 @@
                     </div>
                     <div class="contact-field">
                         <label>CP y localidad</label>
-                        <p id="cp-localidad" style="margin-bottom:0; font-weight:600; color:#2c3e50;"></p>
+                        <p id="cp-localidad" class="cp-localidad-text"></p>
                     </div>
                     <div class="contact-field">
                         <label for="provincia">Provincia</label>
@@ -103,28 +103,28 @@
 
         <form id="form-detalle-presupuesto">
             <div class="detalle-proforma-container">
-                <div class="detalle-proforma-item" style="flex: 2">
+                <div class="detalle-proforma-item flex-2">
                     <label for="busqueda-producto">Producto</label>
-                    <input type="text" id="busqueda-producto" placeholder="Buscar producto..." style="width: 100%;">
+                    <input type="text" id="busqueda-producto" placeholder="Buscar producto..." class="width-full">
                 </div>
-                <div class="detalle-proforma-item" style="flex: 2">
-                    <select id="concepto-detalle" style="width: 100%;" required>
+                <div class="detalle-proforma-item flex-2">
+                    <select id="concepto-detalle" class="width-full" required>
                         <option value="">Seleccione un producto...</option>
                     </select>
                 </div>
-                <div id="campo-concepto-personalizado" style="display: none;">
+                <div id="campo-concepto-personalizado" class="hidden">
                     <label for="concepto-input">Concepto:</label>
-                    <input type="text" id="concepto-input" placeholder="Ingrese el concepto" style="width: 200px;" />
+                    <input type="text" id="concepto-input" placeholder="Ingrese el concepto" class="col-w-200" />
                 </div>
-                <div class="detalle-proforma-item" style="flex: 3">
+                <div class="detalle-proforma-item flex-3">
                     <label for="descripcion-detalle">Descripción</label>
-                    <input type="text" id="descripcion-detalle" style="width: 100%;">
+                    <input type="text" id="descripcion-detalle" class="width-full">
                 </div>
-                <div class="detalle-proforma-item-importe" style="flex: 1">
+                <div class="detalle-proforma-item-importe flex-1">
                     <label for="cantidad-detalle">Cantidad</label>
                     <input type="number" id="cantidad-detalle" value="1" required min="0" step="1">
                 </div>
-                <div class="detalle-proforma-item-importe precio-info-container" style="flex: 1">
+                <div class="detalle-proforma-item-importe precio-info-container flex-1">
                     <input type="hidden" id="precio-detalle-orig" value="0">
                     <div class="precio-label-row">
                         <label for="precio-detalle">Precio</label>
@@ -144,32 +144,32 @@
                         <div class="info-precio-contenido"></div>
                     </div>
                 </div>
-                <div class="detalle-proforma-item-importe" style="flex: 1">
+                <div class="detalle-proforma-item-importe flex-1">
                     <label for="impuesto-detalle">IVA (%)</label>
                     <input type="number" id="impuesto-detalle" value="21" readonly class="readonly-field">
                 </div>
-                <div class="detalle-proforma-item-importe" style="flex: 1">
+                <div class="detalle-proforma-item-importe flex-1">
                     <label for="total-detalle">Total</label>
                     <input type="number" id="total-detalle" value="0" readonly class="readonly-field">
                 </div>
-                <div class="detalle-proforma-item boton-alineado" style="flex: 1">
+                <div class="detalle-proforma-item boton-alineado flex-1">
                     <button type="button" id="btn-agregar-detalle">Añadir</button>
                 </div>
             </div>
         </form>
 
         <div id="detalle-presupuesto-grid">
-            <div style="max-height: 350px; overflow-y: auto;">
+            <div class="table-scroll-container">
                 <table id="tabla-detalle-presupuesto">
                     <thead>
                         <tr>
-                            <th class="columna-fija" style="width: 300px;">Concepto</th>
-                            <th class="columna-fija-descripcion" style="width: 200px;">Descripción</th>
-                            <th class="columna-fija-cantidad" style="width: 80px; text-align: right;">Cantidad</th>
-                            <th class="columna-fija-precio" style="width: 100px; text-align: right;">Precio</th>
-                            <th class="columna-fija-iva" style="width: 80px; text-align: right;">% IVA</th>
-                            <th class="columna-fija-total" style="width: 100px; text-align: right;">Total</th>
-                                                        <th class="columna-eliminar" style="width: 40px; text-align: center;">✕</th>
+                            <th class="columna-fija col-w-300">Concepto</th>
+                            <th class="columna-fija-descripcion col-w-200">Descripción</th>
+                            <th class="columna-fija-cantidad col-w-80 text-right">Cantidad</th>
+                            <th class="columna-fija-precio col-w-100 text-right">Precio</th>
+                            <th class="columna-fija-iva col-w-80 text-right">% IVA</th>
+                            <th class="columna-fija-total col-w-100 text-right">Total</th>
+                                                        <th class="columna-eliminar col-w-40 text-center">✕</th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -185,29 +185,29 @@
     </div>
 
     <!-- Modal para seleccionar contacto -->
-    <div id="modalContactos" class="modal" style="display: none;">
+    <div id="modalContactos" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Asignar contacto</h2>
                 <span class="close" id="closeModalContactos">&times;</span>
             </div>
             <div class="modal-body">
-                <div class="filtros-contactos" style="margin-top: 10px;">
-                    <input type="text" id="filtroRazonSocial" placeholder="Filtrar por razón social..." style="width: 45%; margin-right: 10px;">
-                    <input type="text" id="filtroNIF" placeholder="Filtrar por NIF..." style="width: 45%;">
+                <div class="filtros-contactos margin-top-10">
+                    <input type="text" id="filtroRazonSocial" placeholder="Filtrar por razón social..." class="width-45 margin-right-10">
+                    <input type="text" id="filtroNIF" placeholder="Filtrar por NIF..." class="width-45">
                 </div>
-                <div id="tablaContactosContainer" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                <div id="tablaContactosContainer" class="modal-table-container">
                     <table id="tablaContactos" class="tabla-consulta">
                         <thead>
                             <tr>
                                 <th>Razón Social</th>
-                                <th style="text-align: center;">NIF</th>
+                                <th class="text-center">NIF</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
                     </table>
                 </div>
-                <div class="paginacion-contactos" style="margin-top: 15px; text-align: center;">
+                <div class="paginacion-contactos margin-top-15 text-center">
                     <button id="btnAnteriorContactos" disabled>⟨</button>
                     <span id="infoPageContactos">Página 1 de 1</span>
                     <button id="btnSiguienteContactos" disabled>⟩</button>

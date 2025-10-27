@@ -517,10 +517,116 @@
                 background-color: ${colores.icon_cell_bg || colores.secundario || colores.app_bg} !important;
                 padding: 0.5rem !important;
             }
+            
+            /* ===== PÁGINAS GESTIÓN - Sobrescribir estilos inline ===== */
+            /* Inputs readonly en gestión */
+            .readonly-field,
+            input[readonly],
+            .total-proforma-display,
+            .hidden-field {
+                background-color: ${colores.input_bg || colores.app_bg} !important;
+                color: ${colores.input_text || textForBody} !important;
+                border-color: ${colores.input_border || '#cccccc'} !important;
+            }
+            
+            /* Labels en gestión */
+            .detalle-proforma-item label,
+            .contact-field label,
+            .contact-main .contact-field label {
+                color: ${colores.label || textForBody} !important;
+            }
+            
+            /* Cabecera de gestión */
+            .cabecera-ticket,
+            .page-header {
+                background-color: ${colores.secundario || colores.app_bg} !important;
+                color: ${textForCards} !important;
+            }
+            
+            /* Modal content en gestión */
+            .modal-content {
+                background-color: ${colores.modal_bg || colores.app_bg} !important;
+                color: ${colores.modal_text || textForBody} !important;
+            }
+            
+            /* Inputs específicos de gestión */
+            .contact-main .contact-field input {
+                background-color: ${colores.input_bg || colores.app_bg} !important;
+                color: ${colores.input_text || textForBody} !important;
+                border-color: ${colores.input_border || '#cccccc'} !important;
+            }
+            
+            /* Forzar sobrescritura de colores hardcoded en gestión */
+            .contact-main .contact-field label[style*="color: #7f8c8d"],
+            label[style*="color: #7f8c8d"] {
+                color: ${colores.label || textForBody} !important;
+            }
+            
+            input[style*="background: #fafbfc"],
+            input[style*="background:#fafbfc"] {
+                background-color: ${colores.input_bg || colores.app_bg} !important;
+            }
         `;
         
         // Añadir al final del head para máxima prioridad
         document.head.appendChild(styleElement);
+        
+        // ===== LIMPIEZA FORZADA DE ESTILOS INLINE EN GESTIÓN =====
+        function limpiarEstilosGestion() {
+            const inputBg = colores.input_bg || colores.app_bg || '#ffffff';
+            const inputText = colores.input_text || textForBody || '#333333';
+            const inputBorder = colores.input_border || '#cccccc';
+            const labelColor = colores.label || textForBody || '#333333';
+            
+            // Limpiar inputs con estilos inline
+            const inputsConEstilos = document.querySelectorAll('input[style*="background"]');
+            inputsConEstilos.forEach(input => {
+                input.style.setProperty('background-color', inputBg, 'important');
+                input.style.setProperty('background', inputBg, 'important');
+                input.style.setProperty('color', inputText, 'important');
+                input.style.setProperty('border-color', inputBorder, 'important');
+            });
+            
+            // Limpiar labels con color hardcoded
+            const labelsConEstilos = document.querySelectorAll('label[style*="color"]');
+            labelsConEstilos.forEach(label => {
+                label.style.setProperty('color', labelColor, 'important');
+            });
+            
+            // Limpiar todos los inputs readonly
+            const inputsReadonly = document.querySelectorAll('input[readonly], .readonly-field, .total-proforma-display');
+            inputsReadonly.forEach(input => {
+                input.style.setProperty('background-color', inputBg, 'important');
+                input.style.setProperty('background', inputBg, 'important');
+                input.style.setProperty('color', inputText, 'important');
+            });
+            
+            // Limpiar modal-content
+            const modales = document.querySelectorAll('.modal-content');
+            modales.forEach(modal => {
+                modal.style.setProperty('background-color', colores.modal_bg || colores.app_bg, 'important');
+                modal.style.setProperty('color', colores.modal_text || textForBody, 'important');
+            });
+            
+            console.log('[AUTO-BRANDING] 🧹 Limpiados estilos inline en GESTIÓN');
+        }
+        
+        // Ejecutar limpieza al cargar y cuando el DOM esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', limpiarEstilosGestion);
+        } else {
+            limpiarEstilosGestion();
+        }
+        
+        // Observar cambios en el DOM para re-aplicar estilos
+        const observer = new MutationObserver(() => {
+            limpiarEstilosGestion();
+        });
+        
+        observer.observe(document.documentElement, {
+            childList: true,
+            subtree: true
+        });
         
         console.log('[AUTO-BRANDING] ✅ Estilos aplicados correctamente');
         console.log('[AUTO-BRANDING] 📋 Resumen de estilos aplicados:');

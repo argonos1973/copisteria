@@ -2569,3 +2569,57 @@ textarea:disabled {
     color: var(--color-info, #3498db);
 }
 
+/* ===== UTILITY CLASSES - Sin estilos hardcoded ===== */
+
+/* Flex */
+.flex-1 { flex: 1; }
+.flex-2 { flex: 2; }
+.flex-3 { flex: 3; }
+
+/* Width */
+.width-full { width: 100%; }
+
+/* Column Widths */
+.col-w-40 { width: 40px; }
+.col-w-80 { width: 80px; }
+.col-w-100 { width: 100px; }
+.col-w-200 { width: 200px; }
+.col-w-300 { width: 300px; }
+
+/* Text Alignment */
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.label-align-right { text-align: right; }
+
+/* Display */
+.hidden { display: none; }
+
+/* Scroll Container */
+.table-scroll-container {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+/* Modal Table Container */
+.modal-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 15px;
+}
+
+/* Margins */
+.no-margin { margin: 0; }
+.margin-top-10 { margin-top: 10px; }
+.margin-top-15 { margin-top: 15px; }
+.margin-right-10 { margin-right: 10px; }
+
+/* Widths */
+.width-45 { width: 45%; }
+
+/* CP Localidad Text */
+.cp-localidad-text {
+    margin-bottom: 0;
+    font-weight: 600;
+}
+

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Proformas</title>
-    <script src="/static/auto_branding.js?v=9"></script>
+    <script src="/static/auto_branding.js?v=12"></script>
 
     <!-- Enlace a Font Awesome (iconos) -->
     <link
@@ -149,11 +149,11 @@
                     </select>
                 </div>
                 <div class="detalle-proforma-item">
-                    <label for="total-proforma" style="text-align: right;">Total (€)</label>
+                    <label for="total-proforma" class="label-align-right">Total (€)</label>
                     <input type="text" id="total-proforma" value="0.00" readonly class="total-proforma-display">
                 </div>
                 <div class="detalle-proforma-item">
-                    <input type="text" id="idproforma" required readonly class="hidden-field" style="display: none;">
+                    <input type="text" id="idproforma" required readonly class="hidden-field">
                     <input type="hidden" id="tipo-proforma" value="N">
                 </div>
             </div>
@@ -178,7 +178,7 @@
                     </div>
                     <div class="contact-field">
                         <label>CP y localidad</label>
-                        <p id="cp-localidad" style="margin-bottom:0; font-weight:600; color:#2c3e50;"></p>
+                        <p id="cp-localidad" class="cp-localidad-text"></p>
                     </div>
                     <div class="contact-field">
                         <label for="provincia">Provincia</label>
@@ -191,28 +191,28 @@
     <form id="form-detalle-proforma">
       
         <div class="detalle-proforma-container">
-            <div class="detalle-proforma-item" style="flex: 2">
+            <div class="detalle-proforma-item flex-2">
                 <label for="busqueda-producto">Producto</label>
-                <input type="text" id="busqueda-producto" placeholder="Buscar producto..." style="width: 100%;">
+                <input type="text" id="busqueda-producto" placeholder="Buscar producto..." class="width-full">
               </div>
-            <div class="detalle-proforma-item" style="flex: 2">
-                <select id="concepto-detalle" style="width: 100%;" required>
+            <div class="detalle-proforma-item flex-2">
+                <select id="concepto-detalle" class="width-full" required>
                   <option value="">Seleccione un producto...</option>
                 </select>
               </div>
-            <div id="campo-concepto-personalizado" style="display: none;">
+            <div id="campo-concepto-personalizado" class="hidden">
                 <label for="concepto-input">Concepto:</label>
-                <input type="text" id="concepto-input" placeholder="Ingrese el concepto" style="width: 200px;" />
+                <input type="text" id="concepto-input" placeholder="Ingrese el concepto" class="col-w-200" />
             </div>
-            <div class="detalle-proforma-item" style="flex: 3">
+            <div class="detalle-proforma-item flex-3">
                 <label for="descripcion-detalle">Descripción</label>
-                <input type="text" id="descripcion-detalle" style="width: 100%;">
+                <input type="text" id="descripcion-detalle" class="width-full">
               </div>
-            <div class="detalle-proforma-item-importe" style="flex: 1">
+            <div class="detalle-proforma-item-importe flex-1">
                 <label for="cantidad-detalle">Cantidad</label>
                 <input type="number" id="cantidad-detalle" value="1" required min="0" step="1">
               </div>
-            <div class="detalle-proforma-item-importe precio-info-container" style="flex: 1">
+            <div class="detalle-proforma-item-importe precio-info-container flex-1">
                 <input type="hidden" id="precio-detalle-orig" value="0">
                 <div class="precio-label-row">
                   <label for="precio-detalle">Precio</label>
@@ -232,33 +232,33 @@
                   <div class="info-precio-contenido"></div>
                 </div>
               </div>
-            <div class="detalle-proforma-item-importe" style="flex: 1">
+            <div class="detalle-proforma-item-importe flex-1">
                 <label for="impuesto-detalle">IVA (%)</label>
                 <input type="number" id="impuesto-detalle" value="21" readonly class="readonly-field">
               </div>
-            <div class="detalle-proforma-item-importe" style="flex: 1">
+            <div class="detalle-proforma-item-importe flex-1">
                 <label for="total-detalle">Total</label>
                 <input type="number" id="total-detalle" value="0" readonly class="readonly-field">
               </div>
-            <div class="detalle-proforma-item boton-alineado" style="flex: 1">
+            <div class="detalle-proforma-item boton-alineado flex-1">
                 <button type="button" id="btn-agregar-detalle">Añadir</button>
             </div>
         </div>
     </form>
 
     <div id="detalle-proforma-grid">
-        <div style="max-height: 350px; overflow-y: auto;">
+        <div class="table-scroll-container">
             <table id="tabla-detalle-proforma">
                 <thead>
                     <tr>
-                        <th class="columna-fija" style="width: 300px;">Concepto</th>
-                        <th class="columna-fija-descripcion" style="width: 200px;">Descripción</th>
-                        <th class="columna-fija-cantidad" style="width: 80px; text-align: right;">Cantidad</th>
-                        <th class="columna-fija-precio" style="width: 100px; text-align: right;">Precio</th>
-                        <th class="columna-fija-iva" style="width: 80px; text-align: right;">% IVA</th>
-                        <th class="columna-fija-total" style="width: 100px; text-align: right;">Total</th>
-                        <th class="columna-fija-pago" style="width: 80px; text-align: center;">Pago</th>
-                        <th class="columna-eliminar" style="width: 40px; text-align: center;">✕</th>
+                        <th class="columna-fija col-w-300">Concepto</th>
+                        <th class="columna-fija-descripcion col-w-200">Descripción</th>
+                        <th class="columna-fija-cantidad col-w-80 text-right">Cantidad</th>
+                        <th class="columna-fija-precio col-w-100 text-right">Precio</th>
+                        <th class="columna-fija-iva col-w-80 text-right">% IVA</th>
+                        <th class="columna-fija-total col-w-100 text-right">Total</th>
+                        <th class="columna-fija-pago col-w-80 text-center">Pago</th>
+                        <th class="columna-eliminar col-w-40 text-center">✕</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
