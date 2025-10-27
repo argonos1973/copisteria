@@ -428,6 +428,95 @@
             .dialog span {
                 color: ${colores.modal_text || textForBody} !important;
             }
+            
+            /* Botón cerrar modal (.cerrar-modal) */
+            .cerrar-modal,
+            .close,
+            button.close {
+                color: ${colores.modal_text || textForBody} !important;
+                opacity: 0.7;
+            }
+            
+            .cerrar-modal:hover,
+            .close:hover {
+                color: ${colores.modal_text || textForBody} !important;
+                opacity: 1;
+            }
+            
+            /* Todos los h2, h3, h4 dentro de modales */
+            .modal h2,
+            .modal h3,
+            .modal h4,
+            .modal-content h2,
+            .modal-content h3 {
+                color: ${colores.modal_text || textForBody} !important;
+            }
+            
+            /* Elementos específicos de estadisticas.html con estilos inline */
+            .modal div[style*="background: #f5f5f5"],
+            .modal div[style*="background:#f5f5f5"],
+            .modal div[style*="color: #666"],
+            .modal div[style*="color:#666"] {
+                background: ${colores.secundario || colores.app_bg} !important;
+                color: ${colores.modal_text || textForBody} !important;
+            }
+            
+            /* ===== IMPORTES - Colores FIJOS (no dependen de plantilla) ===== */
+            .importe-negativo,
+            .negativo,
+            .deuda,
+            .rojo,
+            span.negativo,
+            td.negativo,
+            div.negativo,
+            .text-danger,
+            span[style*="color: red"],
+            td[style*="color: red"],
+            [class*="negative"],
+            [data-amount*="-"] {
+                color: #dc3545 !important;
+            }
+            
+            .importe-positivo,
+            .positivo,
+            .credito,
+            .pagado,
+            .verde,
+            span.positivo,
+            td.positivo,
+            div.positivo,
+            .text-success,
+            span[style*="color: green"],
+            td[style*="color: green"],
+            [class*="positive"] {
+                color: #28a745 !important;
+            }
+            
+            /* ===== HOVER SUBMENÚS Y MODALES (igual que menú principal) ===== */
+            .modal tbody tr:hover,
+            .modal table tr:hover,
+            .dialog tbody tr:hover,
+            .popup tbody tr:hover,
+            .submenu li:hover,
+            .dropdown-item:hover,
+            .menu-item:hover,
+            ul li:hover {
+                background-color: ${colores.menu_hover || colores.grid_hover || 'rgba(255,255,255,0.1)'} !important;
+            }
+            
+            /* ===== CELDAS CON ICONOS - Background configurable ===== */
+            td.celda-icono,
+            td.icon-cell,
+            td[data-icon],
+            .celda-con-icono,
+            td:has(i.fas),
+            td:has(i.fa),
+            td:has(span.emoji),
+            td > i.fas,
+            td > i.fa {
+                background-color: ${colores.icon_cell_bg || colores.secundario || colores.app_bg} !important;
+                padding: 0.5rem !important;
+            }
         `;
         
         // Añadir al final del head para máxima prioridad
