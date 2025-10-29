@@ -4,6 +4,8 @@ Rutas API para gestión de plantillas personalizadas de colores
 from flask import Blueprint, request, jsonify
 from functools import wraps
 import sqlite3
+import os
+import json
 from logger_config import get_logger
 
 logger = get_logger(__name__)
@@ -257,3 +259,69 @@ def eliminar_plantilla_personalizada(plantilla_id):
     except Exception as e:
         logger.error(f"Error eliminando plantilla personalizada: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@plantillas_bp.route('/listar', methods=['GET'])
+def listar_todas_plantillas():
+    """
+    Lista todas las plantillas (predefinidas JSON + personalizadas BD)
+    """
+    try:
+        import os
+        import json
+        
+        plantillas = []
+        
+        # 1. Cargar plantillas predefinidas desde archivos JSON
+        ruta_plantillas = '/var/www/html/static/plantillas'
+        if os.path.exists(ruta_plantillas):
+            for archivo in os.listdir(ruta_plantillas):
+                if archivo.endswith('.json'):
+                    try:
+                        ruta_completa = os.path.join(ruta_plantillas, archivo)
+                        with open(ruta_completa, 'r', encoding='utf-8') as f:
+                            plantilla_data = json.load(f)
+                            plantillas.append({
+                                'archivo': archivo.replace('.json', ''),
+                                'nombre': plantilla_data.get('nombre', archivo.replace('.json', '')),
+                                'descripcion': plantilla_data.get('descripcion', ''),
+                                'icon': plantilla_data.get('icon', '📄'),
+                                'personalizada': plantilla_data.get('personalizada', False),
+                                'basada_en': plantilla_data.get('basada_en', '')
+                            })
+                    except Exception as e:
+                        logger.error(f"Error cargando plantilla {archivo}: {e}")
+        
+        # 2. Cargar plantillas personalizadas desde BD
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT nombre, descripcion, plantilla_base, fecha_creacion
+                FROM plantillas_personalizadas
+                ORDER BY fecha_creacion DESC
+            ''')
+            
+            rows = cursor.fetchall()
+            for row in rows:
+                plantillas.append({
+                    'archivo': f"custom_{row['nombre'].replace(' ', '_')}",
+                    'nombre': row['nombre'],
+                    'descripcion': row['descripcion'] or f"Basada en {row['plantilla_base']}",
+                    'icon': '🎨',
+                    'personalizada': True,
+                    'basada_en': row['plantilla_base']
+                })
+            
+            conn.close()
+        except Exception as e:
+            logger.error(f"Error cargando plantillas personalizadas de BD: {e}")
+        
+        logger.info(f"Total plantillas listadas: {len(plantillas)}")
+        return jsonify({'plantillas': plantillas})
+        
+    except Exception as e:
+        logger.error(f"Error listando plantillas: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+

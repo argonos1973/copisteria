@@ -424,14 +424,8 @@
                     
                     // Esperar 1 segundo para que la cookie se establezca
                     setTimeout(() => {
-                        // Admin va a administración
-                        if (data.es_admin) {
-                            window.location.href = '/ADMIN_PERMISOS.html';
-                        } 
-                        // Usuario normal va a la aplicación principal
-                        else {
-                            window.location.href = '/api/auth/app';
-                        }
+                        // Todos los usuarios van a la aplicación principal
+                        window.location.href = "/api/auth/app";
                     }, 1500);
                 } else {
                     mostrarAlerta(data.error || 'Error en el login', 'error');

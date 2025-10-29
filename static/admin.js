@@ -1188,18 +1188,75 @@ async function editarEmpresa(empresaId) {
                         
                         <!-- Los inputs de colores ahora están en el editor visual abajo, no se necesitan hidden inputs -->
                         
-                        <!-- Plantillas Minimalistas -->
+                        <!-- Plantillas Dinámicas -->
                         <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #e5e7eb;">
                             <h4 style="margin: 0 0 15px 0; color: #000000; text-align: center;">
                                 <i class="fas fa-swatchbook"></i> Plantillas de Colores
                             </h4>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 600px; margin: 0 auto;">
-                                <button type="button" data-plantilla="minimal" onclick="aplicarPlantillaConPreview('minimal', 'edit_'); marcarPlantillaActiva('minimal');" style="padding: 20px; border: 3px solid #000000; border-radius: 8px; background: linear-gradient(135deg, #000000 0%, #374151 100%); color: white; cursor: pointer; font-weight: bold; font-size: 14px; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-palette"></i> Minimal<br><small style="opacity: 0.9; font-size: 11px;">Negro puro y grises</small>
-                                </button>
-                                <button type="button" data-plantilla="zen" onclick="aplicarPlantillaConPreview('zen', 'edit_'); marcarPlantillaActiva('zen');" style="padding: 20px; border: 3px solid #cccccc; border-radius: 8px; background: linear-gradient(135deg, #f8f8f8 0%, #eaeaea 100%); color: #111111; cursor: pointer; font-weight: bold; font-size: 14px; transition: transform 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.08);" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                                    <i class="fas fa-spa"></i> Zen<br><small style="opacity: 0.7; font-size: 11px;">Ultra sereno y suave</small>
-                                </button>
+                            <div id="plantillas-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 600px; margin: 0 auto;">
+                                <!-- Las plantillas se cargarán dinámicamente desde plantillas.js -->
+                            </div>
+                            <script>
+                                // Cargar plantillas dinámicamente desde archivos JSON
+                                async function cargarPlantillasEnModal() {
+                                    const container = document.getElementById('plantillas-container');
+                                    if (!container) {
+                                        console.warn('❌ Contenedor plantillas-container no encontrado');
+                                        return;
+                                    }
+                                    
+                                    console.log('📦 Iniciando carga de plantillas...');
+                                    container.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">Cargando plantillas...</p>';
+                                    
+                                    try {
+                                        // SIEMPRE recargar plantillas desde archivos JSON
+                                        window.plantillasColores = {};
+                                        await window.cargarPlantillas();
+                                        
+                                        console.log('✅ Plantillas cargadas:', Object.keys(window.plantillasColores));
+                                        
+                                        if (Object.keys(window.plantillasColores).length === 0) {
+                                            container.innerHTML = '<p style="text-align: center; padding: 20px; color: #e74c3c;">⚠️ No se encontraron plantillas</p>';
+                                            return;
+                                        }
+                                        
+                                        let html = '';
+                                        Object.keys(window.plantillasColores).forEach(key => {
+                                            const plantilla = window.plantillasColores[key];
+                                            const bgColor = plantilla.color_app_bg || '#ffffff';
+                                            const textColor = plantilla.color_header_text || '#000000';
+                                            const borderColor = plantilla.color_primario || '#000000';
+                                            
+                                            const icon = key === 'minimal' ? 'fas fa-palette' : 'fas fa-moon';
+                                            const desc = plantilla.descripcion || '';
+                                            
+                                            html += \`
+                                                <button type="button" data-plantilla="\${key}" 
+                                                    onclick="aplicarPlantillaConPreview('\${key}', 'edit_'); marcarPlantillaActiva('\${key}');" 
+                                                    style="padding: 20px; border: 3px solid \${borderColor}; border-radius: 8px; 
+                                                    background: \${bgColor}; color: \${textColor}; cursor: pointer; 
+                                                    font-weight: bold; font-size: 14px; transition: transform 0.2s; 
+                                                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);" 
+                                                    onmouseover="this.style.transform='scale(1.05)'" 
+                                                    onmouseout="this.style.transform='scale(1)'">
+                                                    <i class="\${icon}"></i> \${plantilla.nombre}<br>
+                                                    <small style="opacity: 0.9; font-size: 11px;">\${desc}</small>
+                                                </button>
+                                            \`;
+                                        });
+                                        
+                                        container.innerHTML = html;
+                                        console.log('✅ Plantillas renderizadas en el DOM');
+                                        
+                                    } catch (error) {
+                                        console.error('❌ Error cargando plantillas:', error);
+                                        container.innerHTML = '<p style="text-align: center; padding: 20px; color: #e74c3c;">⚠️ Error cargando plantillas</p>';
+                                    }
+                                }
+                                
+                                // Ejecutar cuando se cargue el modal
+                                setTimeout(cargarPlantillasEnModal, 500);
+                            </script>
                             </div>
                         
                         
@@ -1799,6 +1856,61 @@ function cerrarModalEditarEmpresa() {
     if (modal) modal.remove();
 }
 
+// Función para calcular luminosidad relativa de un color
+function getLuminance(hexColor) {
+    // Convertir hex a RGB
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16) / 255;
+    const g = parseInt(hex.substr(2, 2), 16) / 255;
+    const b = parseInt(hex.substr(4, 2), 16) / 255;
+    
+    // Aplicar corrección gamma
+    const rsRGB = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+    const gsRGB = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+    const bsRGB = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+    
+    return 0.2126 * rsRGB + 0.7152 * gsRGB + 0.0722 * bsRGB;
+}
+
+// Función para calcular ratio de contraste entre dos colores
+function getContrastRatio(color1, color2) {
+    const lum1 = getLuminance(color1);
+    const lum2 = getLuminance(color2);
+    const lighter = Math.max(lum1, lum2);
+    const darker = Math.min(lum1, lum2);
+    return (lighter + 0.05) / (darker + 0.05);
+}
+
+// Función para validar contraste de colores
+function validarContrastesColores(data) {
+    const errores = [];
+    const MIN_CONTRAST_RATIO = 3.0; // Mínimo recomendado para textos grandes
+    const MIN_CONTRAST_RATIO_TEXT = 4.5; // Mínimo recomendado para textos normales
+    
+    // Validaciones críticas (texto sobre fondo)
+    const validaciones = [
+        { text: data.color_header_text, bg: data.color_header_bg, nombre: 'Header (texto/fondo)', minRatio: MIN_CONTRAST_RATIO },
+        { text: data.color_button_text, bg: data.color_button, nombre: 'Botones (texto/fondo)', minRatio: MIN_CONTRAST_RATIO },
+        { text: data.color_grid_text, bg: data.color_grid_bg, nombre: 'Grid (texto/fondo)', minRatio: MIN_CONTRAST_RATIO_TEXT },
+        { text: data.color_input_text, bg: data.color_input_bg, nombre: 'Inputs (texto/fondo)', minRatio: MIN_CONTRAST_RATIO_TEXT },
+        { text: data.color_select_text, bg: data.color_select_bg, nombre: 'Selects (texto/fondo)', minRatio: MIN_CONTRAST_RATIO_TEXT },
+        { text: data.color_modal_text, bg: data.color_modal_bg, nombre: 'Modal (texto/fondo)', minRatio: MIN_CONTRAST_RATIO_TEXT },
+        { text: data.color_submenu_text, bg: data.color_submenu_bg, nombre: 'Submenú (texto/fondo)', minRatio: MIN_CONTRAST_RATIO_TEXT },
+        { text: data.color_disabled_text, bg: data.color_disabled_bg, nombre: 'Deshabilitados (texto/fondo)', minRatio: MIN_CONTRAST_RATIO }
+    ];
+    
+    validaciones.forEach(val => {
+        if (val.text && val.bg) {
+            const ratio = getContrastRatio(val.text, val.bg);
+            if (ratio < val.minRatio) {
+                errores.push(`⚠️ ${val.nombre}: Contraste insuficiente (${ratio.toFixed(2)}:1, mínimo ${val.minRatio}:1)`);
+            }
+        }
+    });
+    
+    return errores;
+}
+
 async function guardarCambiosEmpresa(form) {
     const empresaId = new FormData(form).get('empresa_id');
     const logoFile = document.getElementById('edit_logo').files[0];
@@ -1807,66 +1919,85 @@ async function guardarCambiosEmpresa(form) {
     const originalText = submitBtn.innerHTML;
     
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Validando...';
     
     try {
+        // Construir datos SIEMPRE (para validación)
+        const formData = new FormData(form);
+        const data = {
+            nombre: formData.get('nombre'),
+            cif: formData.get('cif'),
+            direccion: formData.get('direccion'),
+            telefono: formData.get('telefono'),
+            email: formData.get('email'),
+            web: formData.get('web'),
+            color_primario: formData.get('color_primario'),
+            color_secundario: formData.get('color_secundario'),
+            color_success: formData.get('color_success'),
+            color_warning: formData.get('color_warning'),
+            color_danger: formData.get('color_danger'),
+            color_info: formData.get('color_info'),
+            color_button: formData.get('color_button'),
+            color_button_hover: formData.get('color_button_hover'),
+            color_button_text: formData.get('color_button_text'),
+            color_app_bg: formData.get('color_app_bg'),
+            color_header_bg: formData.get('color_header_bg'),
+            color_header_text: formData.get('color_header_text'),
+            color_grid_header: formData.get('color_grid_header'),
+            color_grid_hover: formData.get('color_grid_hover'),
+            color_input_bg: formData.get('color_input_bg'),
+            color_input_text: formData.get('color_input_text'),
+            color_input_border: formData.get('color_input_border'),
+            color_select_bg: formData.get('color_select_bg'),
+            color_select_text: formData.get('color_select_text'),
+            color_select_border: formData.get('color_select_border'),
+            color_disabled_bg: formData.get('color_disabled_bg'),
+            color_disabled_text: formData.get('color_disabled_text'),
+            color_submenu_bg: formData.get('color_submenu_bg'),
+            color_submenu_text: formData.get('color_submenu_text'),
+            color_submenu_hover: formData.get('color_submenu_hover'),
+            color_grid_bg: formData.get('color_grid_bg'),
+            color_grid_text: formData.get('color_grid_text'),
+            color_icon: formData.get('color_icon'),
+            color_modal_bg: formData.get('color_modal_bg'),
+            color_modal_text: formData.get('color_modal_text'),
+            color_modal_border: formData.get('color_modal_border'),
+            color_modal_overlay: formData.get('color_modal_overlay'),
+            color_modal_shadow: formData.get('color_modal_shadow'),
+            color_spinner_border: formData.get('color_spinner_border'),
+            activa: document.getElementById('edit_activa').checked ? 1 : 0
+        };
+        
+        // Validar contrastes de colores SIEMPRE
+        const erroresContraste = validarContrastesColores(data);
+        if (erroresContraste.length > 0) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            
+            const mensajeError = '❌ Problemas de contraste detectados:\n\n' + 
+                erroresContraste.join('\n') + 
+                '\n\n⚠️ Los colores claros sobre fondos claros (o viceversa) dificultan la lectura.\n' +
+                '\n¿Deseas guardar de todas formas?';
+            
+            if (!confirm(mensajeError)) {
+                return;
+            }
+        }
+        
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        
         let response;
         
         // Si hay archivo de logo, usar FormData
         if (logoFile) {
-            const formData = new FormData(form);
+            const formDataWithFile = new FormData(form);
             
             response = await fetch(`/api/empresas/${empresaId}`, {
                 method: 'PUT',
-                body: formData
+                body: formDataWithFile
             });
         } else {
-            // Si no hay archivo, usar JSON
-            const formData = new FormData(form);
-            const data = {
-                nombre: formData.get('nombre'),
-                cif: formData.get('cif'),
-                direccion: formData.get('direccion'),
-                telefono: formData.get('telefono'),
-                email: formData.get('email'),
-                web: formData.get('web'),
-                color_primario: formData.get('color_primario'),
-                color_secundario: formData.get('color_secundario'),
-                color_success: formData.get('color_success'),
-                color_warning: formData.get('color_warning'),
-                color_danger: formData.get('color_danger'),
-                color_info: formData.get('color_info'),
-                color_button: formData.get('color_button'),
-                color_button_hover: formData.get('color_button_hover'),
-                color_button_text: formData.get('color_button_text'),
-                color_app_bg: formData.get('color_app_bg'),
-                color_header_bg: formData.get('color_header_bg'),
-                color_header_text: formData.get('color_header_text'),
-                color_grid_header: formData.get('color_grid_header'),
-                color_grid_hover: formData.get('color_grid_hover'),
-                color_input_bg: formData.get('color_input_bg'),
-                color_input_text: formData.get('color_input_text'),
-                color_input_border: formData.get('color_input_border'),
-                color_select_bg: formData.get('color_select_bg'),
-                color_select_text: formData.get('color_select_text'),
-                color_select_border: formData.get('color_select_border'),
-                color_disabled_bg: formData.get('color_disabled_bg'),
-                color_disabled_text: formData.get('color_disabled_text'),
-                color_submenu_bg: formData.get('color_submenu_bg'),
-                color_submenu_text: formData.get('color_submenu_text'),
-                color_submenu_hover: formData.get('color_submenu_hover'),
-                color_grid_bg: formData.get('color_grid_bg'),
-                color_grid_text: formData.get('color_grid_text'),
-                color_icon: formData.get('color_icon'),
-                color_modal_bg: formData.get('color_modal_bg'),
-                color_modal_text: formData.get('color_modal_text'),
-                color_modal_border: formData.get('color_modal_border'),
-                color_modal_overlay: formData.get('color_modal_overlay'),
-                color_modal_shadow: formData.get('color_modal_shadow'),
-                color_spinner_border: formData.get('color_spinner_border'),
-                activa: document.getElementById('edit_activa').checked ? 1 : 0
-            };
-            
+            // Si no hay archivo, usar JSON (data ya está construido y validado arriba)
             console.log('💾 Datos que se enviarán al servidor:', data);
             
             response = await fetch(`/api/empresas/${empresaId}`, {

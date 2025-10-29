@@ -278,6 +278,10 @@ def autenticar_usuario(username, password, empresa_codigo):
         
         rol, es_admin_empresa, empresa_id, empresa_nombre, db_path, logo_header = empresa
         
+        # Obtener último acceso antes de actualizarlo
+        cursor.execute('SELECT ultimo_acceso FROM usuarios WHERE id = ?', (user_id,))
+        ultimo_acceso_anterior = cursor.fetchone()[0]
+        
         # Reset intentos fallidos y actualizar último acceso
         cursor.execute('''
             UPDATE usuarios 
@@ -303,6 +307,7 @@ def autenticar_usuario(username, password, empresa_codigo):
         session['rol'] = rol
         session['es_admin_empresa'] = bool(es_admin_empresa)
         session['es_superadmin'] = bool(es_superadmin)
+        session['ultimo_acceso'] = ultimo_acceso_anterior  # Último acceso previo
         session.modified = True  # FORZAR guardado de sesión
         
         registrar_auditoria('login_exitoso', descripcion=f'Login a empresa {empresa_nombre}')
@@ -381,6 +386,9 @@ def superadmin_required(f):
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             logger.warning(f"Acceso no autenticado a: {request.path}")
+            # Si es una petición API, devolver JSON en lugar de redirect
+            if request.path.startswith('/api/'):
+                return jsonify({'error': 'No autenticado'}), 401
             return redirect(url_for('auth.login'))
         
         if not session.get('es_superadmin'):

@@ -277,7 +277,7 @@ def obtener_empresa(empresa_id):
                    color_primario, color_secundario, color_success, color_warning, color_danger, color_info,
                    color_button, color_button_hover, color_button_text,
                    color_app_bg, color_header_bg, color_header_text,
-                   color_grid_header, color_grid_hover, color_grid_bg, color_grid_text,
+                   color_grid_header, color_grid_header_text, color_grid_hover, color_grid_bg, color_grid_text,
                    color_input_bg, color_input_text, color_input_border,
                    color_select_bg, color_select_text, color_select_border,
                    color_submenu_bg, color_submenu_text, color_submenu_hover,
@@ -318,6 +318,7 @@ def obtener_empresa(empresa_id):
             'color_header_bg': row[20],
             'color_header_text': row[21],
             'color_grid_header': row[22],
+            'color_grid_header_text': row[58],
             'color_grid_hover': row[23],
             'color_grid_bg': row[24],
             'color_grid_text': row[25],
@@ -552,7 +553,7 @@ def actualizar_colores_empresa(empresa_id):
         campos_colores = ['color_primario', 'color_secundario', 'color_success', 'color_warning',
                          'color_danger', 'color_info', 'color_button', 'color_button_hover',
                          'color_button_text', 'color_app_bg', 'color_header_bg', 'color_header_text',
-                         'color_grid_header', 'color_grid_text', 'color_grid_bg', 'color_grid_hover', 'color_icon', 'color_label', 'color_input_bg', 'color_input_text', 'color_input_border', 'color_select_bg', 'color_select_text', 'color_select_border', 'color_modal_bg', 'color_modal_text', 'color_modal_border', 'grid_cell_borders', 'plantilla_personalizada']
+                         'color_grid_header', 'color_grid_text', 'color_grid_bg', 'color_grid_hover', 'color_icon', 'color_label', 'color_input_bg', 'color_input_text', 'color_input_border', 'color_select_bg', 'color_select_text', 'color_select_border', 'color_submenu_bg', 'color_submenu_text', 'color_submenu_hover', 'color_disabled_bg', 'color_disabled_text', 'color_modal_bg', 'color_modal_text', 'color_modal_border', 'color_modal_overlay', 'color_modal_shadow', 'color_spinner_border', 'color_modal_text', 'color_modal_border', 'grid_cell_borders', 'plantilla_personalizada']
         
         campos_update = []
         valores = []

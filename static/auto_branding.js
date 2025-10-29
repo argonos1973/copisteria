@@ -11,19 +11,8 @@
         console.log('[AUTO-BRANDING] URL actual:', window.location.href);
         
         // Excluir páginas de admin
-        const urlPath = window.location.pathname;
-        const paginasExcluidas = [
-            '/ADMIN_EMPRESAS.html',
-            '/EDITAR_EMPRESA.html',
-            '/EDITAR_EMPRESA_COLORES.html',
-            '/ADMIN_USUARIOS.html',
-            '/ADMIN_MODULOS.html'
-        ];
-        
-        if (paginasExcluidas.some(pagina => urlPath.includes(pagina))) {
-            console.log('[AUTO-BRANDING] ⏭️ Página de admin excluida, no se aplica branding');
-            return;
-        }
+        // Aplicar branding a TODAS las páginas, incluyendo admin
+        console.log('[AUTO-BRANDING] 🎨 Aplicando branding a:', window.location.pathname);
         
         // Obtener branding desde API
         const response = await fetch('/api/auth/branding', {
@@ -45,6 +34,11 @@
         }
         
         const colores = branding.colores;
+        
+        // DESACTIVADO: Corrección automática de colores
+        // Ahora se respetan los colores de la plantilla tal como están configurados
+        // La plantilla Minimal REQUIERE blanco y negro, no es un error
+        
         console.log('[AUTO-BRANDING] 🎨 Colores a aplicar:', {
             primario: colores.primario,
             header_text: colores.header_text,
@@ -101,9 +95,26 @@
                 --color-secundario: ${colores.secundario} !important;
                 --color-button: ${colores.button} !important;
                 --color-button-hover: ${colores.button_hover || colores.button} !important;
-                --color-app-bg: ${colores.app_bg || '#ffffff'} !important;
+                --color-app-bg: ${colores.app_bg || '#0f0f0f'} !important;
                 --color-grid-text: ${textForCards} !important;
                 --color-icon: ${colorIconos} !important;
+                --color-grid-header: ${colores.grid_header || colores.primario} !important;
+                --color-header-text: ${colores.header_text || '#ffffff'} !important;
+                --color-header-bg: ${colores.primario} !important;
+                --color-button-text: ${textForButton} !important;
+                --color-input-border: ${colores.input_border || '#000000'} !important;
+                --color-submenu-bg: ${colores.submenu_bg || colores.primario || '#ffffff'} !important;
+                --color-submenu-text: ${colores.submenu_text || colores.header_text || '#000000'} !important;
+                --color-submenu-hover: ${colores.submenu_hover || 'rgba(0,0,0,0.05)'} !important;
+                --color-success: ${colores.success || '#27ae60'} !important;
+                --color-danger: ${colores.danger || '#e74c3c'} !important;
+                --color-warning: ${colores.warning || '#f39c12'} !important;
+                --color-info: ${colores.info || '#3498db'} !important;
+                --color-text: ${textForBody} !important;
+                --color-text-light: ${colores.grid_text || '#7f8c8d'} !important;
+                --color-border: ${colores.input_border || '#dee2e6'} !important;
+                --color-card-bg: ${colores.modal_bg || '#ffffff'} !important;
+                --color-hover-bg: ${colores.grid_hover || 'rgba(0,0,0,0.05)'} !important;
             }
             
             /* Fondo del body y elementos principales */
@@ -113,7 +124,7 @@
             .app-container,
             .main-wrapper,
             .page-wrapper {
-                background-color: ${colores.app_bg || '#ffffff'} !important;
+                background-color: ${colores.app_bg || '#0f0f0f'} !important;
                 color: ${textForBody} !important;
             }
             
@@ -123,7 +134,26 @@
             .content-area,
             .page-content,
             main {
-                background-color: ${colores.app_bg || '#ffffff'} !important;
+                background-color: ${colores.app_bg || '#0f0f0f'} !important;
+                color: ${textForBody} !important;
+            }
+            
+            /* Contenedores de formularios - Mayor especificidad para sobrescribir body > div */
+            body .detalle-proforma-container,
+            body .detalle-ticket-container,
+            body .detalle-factura-container,
+            body .detalle-presupuesto-container,
+            body .form-inline,
+            body .form-group,
+            body .cabecera-ticket,
+            body .cabecera-proforma,
+            body .cabecera-factura,
+            body .cabecera-presupuesto,
+            body div.detalle-proforma-container,
+            body div.detalle-ticket-container,
+            body div.detalle-factura-container,
+            body div.detalle-presupuesto-container {
+                background-color: ${colores.app_bg || '#0f0f0f'} !important;
                 color: ${textForBody} !important;
             }
             
@@ -137,7 +167,7 @@
                 background-color: ${colores.button} !important;
                 background: ${colores.button} !important;
                 color: ${textForButton} !important;
-                border-color: ${colores.button} !important;
+                border: 1px solid ${colores.button === '#ffffff' ? '#000000' : colores.button} !important;
             }
             
             /* Botones hover */
@@ -148,6 +178,7 @@
             .tab:hover {
                 background-color: ${colores.button_hover || colores.button} !important;
                 background: ${colores.button_hover || colores.button} !important;
+                border: 1px solid ${colores.button === '#ffffff' ? '#000000' : colores.button_hover || colores.button} !important;
             }
             
             /* Botones activos (IMPORTANTE para los tabs) */
@@ -272,17 +303,22 @@
             
             /* SELECTS - desplegables */
             select,
-            .select,
-            select.form-control {
-                background-color: ${colores.select_bg || '#ffffff'} !important;
-                color: ${colores.select_text || '#333333'} !important;
-                border-color: ${colores.select_border || '#cccccc'} !important;
+            body select,
+            select.width-full,
+            select#concepto-detalle,
+            select#estado-detalle {
+                background-color: ${colores.select_bg || '#2a2a2a'} !important;
+                background: ${colores.select_bg || '#2a2a2a'} !important;
+                color: ${colores.select_text || '#e0e0e0'} !important;
+                border-color: ${colores.select_border || '#4a4a4a'} !important;
             }
             
-            /* Options dentro de select */
-            select option {
-                background-color: ${colores.select_bg || '#ffffff'} !important;
-                color: ${colores.select_text || '#333333'} !important;
+            /* Opciones de los selects */
+            select option,
+            body select option {
+                background-color: ${colores.select_bg || '#2a2a2a'} !important;
+                background: ${colores.select_bg || '#2a2a2a'} !important;
+                color: ${colores.select_text || '#e0e0e0'} !important;
             }
             
             /* Contenedores de formularios y zonas en blanco */
@@ -492,7 +528,40 @@
                 color: #28a745 !important;
             }
             
-            /* ===== HOVER SUBMENÚS Y MODALES (igual que menú principal) ===== */
+            /* ===== MENÚ LATERAL - Background y texto ===== */
+            .menu,
+            nav.menu,
+            .sidebar,
+            aside.menu {
+                background-color: ${colores.submenu_bg || colores.primario || '#ffffff'} !important;
+            }
+            
+            .menu *,
+            nav.menu *,
+            .sidebar *,
+            .menu-list *,
+            .menu-link,
+            .menu-item,
+            .menu-label {
+                color: ${colores.submenu_text || colores.header_text || '#000000'} !important;
+            }
+            
+            .menu-link i,
+            .menu-item i {
+                color: ${colores.submenu_text || colores.header_text || '#000000'} !important;
+            }
+            
+            .submenu,
+            .menu .submenu {
+                background-color: ${colores.submenu_bg || colores.primario || '#ffffff'} !important;
+            }
+            
+            .submenu-item,
+            .submenu a {
+                color: ${colores.submenu_text || colores.header_text || '#000000'} !important;
+            }
+            
+            /* ===== HOVER SUBMENÚS Y MODALES ===== */
             .modal tbody tr:hover,
             .modal table tr:hover,
             .dialog tbody tr:hover,
@@ -500,8 +569,9 @@
             .submenu li:hover,
             .dropdown-item:hover,
             .menu-item:hover,
+            .menu-link:hover,
             ul li:hover {
-                background-color: ${colores.menu_hover || colores.grid_hover || 'rgba(255,255,255,0.1)'} !important;
+                background-color: ${colores.submenu_hover || colores.menu_hover || colores.grid_hover || 'rgba(0,0,0,0.05)'} !important;
             }
             
             /* ===== CELDAS CON ICONOS - Background configurable ===== */
@@ -566,67 +636,252 @@
             input[style*="background:#fafbfc"] {
                 background-color: ${colores.input_bg || colores.app_bg} !important;
             }
+            
+            /* ===== PÁGINA CONTACTOS - Sobrescribir estilos inline del <style> ===== */
+            /* Contenedores de tabs y secciones */
+            .tabs-container,
+            .tab-content,
+            .tab-section,
+            .tabs-header {
+                background-color: ${colores.app_bg || '#ffffff'} !important;
+                color: ${textForBody} !important;
+            }
+            
+            /* Sugerencias de dirección - sobrescribir background: white */
+            .sugerencias-lista {
+                background-color: ${colores.modal_bg || colores.app_bg || '#ffffff'} !important;
+                border-color: ${colores.input_border || '#cccccc'} !important;
+            }
+            
+            /* Items de sugerencias - sobrescribir var(--color-fondo) y hover */
+            .sugerencia-item {
+                background-color: ${colores.modal_bg || colores.app_bg || '#ffffff'} !important;
+                color: ${colores.modal_text || textForBody} !important;
+                border-color: ${colores.input_border || '#cccccc'} !important;
+            }
+            
+            .sugerencia-item:hover {
+                background-color: ${colores.grid_hover || 'rgba(0,0,0,0.1)'} !important;
+                color: ${colores.modal_text || textForBody} !important;
+            }
+            
+            /* Botones de tabs */
+            .tab-button,
+            button.tab-button {
+                background-color: ${colores.button} !important;
+                color: ${textForButton} !important;
+                border-color: ${colores.button} !important;
+            }
+            
+            .tab-button:hover,
+            button.tab-button:hover {
+                background-color: ${colores.button_hover || colores.button} !important;
+            }
+            
+            .tab-button.active,
+            button.tab-button.active {
+                background-color: ${colores.button} !important;
+                color: ${textForButton} !important;
+                opacity: 1 !important;
+            }
+            
+            /* Filas y campos del formulario */
+            .field-row,
+            .field-item,
+            .form-row,
+            .form-column {
+                background-color: transparent !important;
+                color: ${textForBody} !important;
+            }
+            
+            /* Input containers */
+            .input-container {
+                background-color: transparent !important;
+            }
+            
+            /* ===== ESTADÍSTICAS - Sobrescribir estilos inline ===== */
+            /* Contenedores principales */
+            .stats-container,
+            .stats-card,
+            .stats-content,
+            .tab-content {
+                background-color: ${colores.secundario || colores.app_bg} !important;
+                background-image: none !important;
+                color: ${textForBody} !important;
+            }
+            
+            /* Sobrescribir estados especiales */
+            .stats-card.stats-superado,
+            .stats-superado {
+                background: ${colores.secundario || colores.app_bg} !important;
+                background-image: none !important;
+                border-color: ${colores.success || '#27ae60'} !important;
+            }
+            
+            /* Títulos con color hardcoded */
+            .stats-header h1,
+            .stats-card h3,
+            h1[style*="color"],
+            h2[style*="color"],
+            h3[style*="color"],
+            .modal h2[style*="color"] {
+                color: ${textForBody} !important;
+            }
+            
+            /* Filas de estadísticas */
+            .stats-row {
+                background-color: transparent !important;
+                color: ${textForBody} !important;
+            }
+            
+            /* Valores y labels de estadísticas */
+            .stats-value,
+            .stats-value[style*="color"],
+            .stats-label,
+            .stats-comparison,
+            .stats-percentage,
+            .stats-previous,
+            #ig-ultima-actualizacion {
+                color: ${textForBody} !important;
+            }
+            
+            /* Modales de estadísticas */
+            .modal-content[style],
+            div[style*="background: #f5f5f5"],
+            div[style*="background:#f5f5f5"] {
+                background-color: ${colores.modal_bg || colores.app_bg} !important;
+                color: ${colores.modal_text || textForBody} !important;
+            }
+            
+            /* Tablas en modales */
+            thead[style*="background"],
+            thead {
+                background-color: ${colores.grid_header || colores.primario} !important;
+                color: ${colores.header_text} !important;
+            }
+            
+            /* Celdas de tabla con estilos inline */
+            td[style*="color"],
+            th[style*="color"] {
+                color: ${textForBody} !important;
+            }
+            
+            /* Botones con estilos inline */
+            button[style*="background"],
+            .btn-descargar[style*="background"] {
+                background-color: ${colores.button} !important;
+                color: ${textForButton} !important;
+            }
+            
+            /* Labels y textos pequeños */
+            div[style*="font-size: 0.75rem"],
+            small[style*="color"] {
+                color: ${textForBody} !important;
+                opacity: 0.7;
+            }
+            
+            /* ===== PÁGINAS ADMIN - Sobrescribir estilos hardcoded ===== */
+            /* Body y contenedores principales */
+            body {
+                background: ${colores.app_bg || '#f0f2f5'} !important;
+            }
+            
+            .container,
+            .main-container {
+                background-color: transparent !important;
+            }
+            
+            /* Títulos */
+            h1, h2, h3, h4, h5, h6 {
+                color: ${textForBody} !important;
+            }
+            
+            /* Tarjetas de empresas */
+            .empresa-card,
+            .card {
+                background-color: ${colores.secundario || '#ffffff'} !important;
+                color: ${textForBody} !important;
+            }
+            
+            .empresa-info h3,
+            .card-title {
+                color: ${textForBody} !important;
+            }
+            
+            .empresa-details,
+            .card-text {
+                color: ${textForBody} !important;
+            }
+            
+            /* Modales */
+            .modal {
+                background-color: rgba(0, 0, 0, 0.7) !important;
+            }
+            
+            .modal-content {
+                background-color: ${colores.modal_bg || colores.app_bg || '#ffffff'} !important;
+                color: ${colores.modal_text || textForBody} !important;
+            }
+            
+            .modal-header h2 {
+                color: ${textForBody} !important;
+            }
+            
+            /* Formularios */
+            .form-group label {
+                color: ${colores.label || textForBody} !important;
+            }
+            
+            .form-group input,
+            .form-group textarea,
+            .form-group select {
+                background-color: ${colores.input_bg || '#ffffff'} !important;
+                color: ${colores.input_text || textForBody} !important;
+                border-color: ${colores.input_border || '#dddddd'} !important;
+            }
+            
+            /* Botones */
+            .btn-primary {
+                background: ${colores.button || '#3498db'} !important;
+                color: ${textForButton} !important;
+            }
+            
+            .btn-primary:hover {
+                background: ${colores.button_hover || colores.button || '#2980b9'} !important;
+            }
+            
+            .btn-success {
+                background: ${colores.success || '#27ae60'} !important;
+                color: #ffffff !important;
+            }
+            
+            /* Loading y estados */
+            .loading,
+            .no-empresas {
+                color: ${textForBody} !important;
+            }
+            
+            /* Detalles/accordion */
+            details summary {
+                color: ${textForBody} !important;
+            }
+            
+            details summary:hover {
+                color: ${colores.primario || '#3498db'} !important;
+            }
+            
+            /* Iconos */
+            .empresa-details i,
+            .fas, .far, .fab {
+                color: ${colorIconos} !important;
+            }
         `;
         
         // Añadir al final del head para máxima prioridad
         document.head.appendChild(styleElement);
         
-        // ===== LIMPIEZA FORZADA DE ESTILOS INLINE EN GESTIÓN =====
-        function limpiarEstilosGestion() {
-            const inputBg = colores.input_bg || colores.app_bg || '#ffffff';
-            const inputText = colores.input_text || textForBody || '#333333';
-            const inputBorder = colores.input_border || '#cccccc';
-            const labelColor = colores.label || textForBody || '#333333';
-            
-            // Limpiar inputs con estilos inline
-            const inputsConEstilos = document.querySelectorAll('input[style*="background"]');
-            inputsConEstilos.forEach(input => {
-                input.style.setProperty('background-color', inputBg, 'important');
-                input.style.setProperty('background', inputBg, 'important');
-                input.style.setProperty('color', inputText, 'important');
-                input.style.setProperty('border-color', inputBorder, 'important');
-            });
-            
-            // Limpiar labels con color hardcoded
-            const labelsConEstilos = document.querySelectorAll('label[style*="color"]');
-            labelsConEstilos.forEach(label => {
-                label.style.setProperty('color', labelColor, 'important');
-            });
-            
-            // Limpiar todos los inputs readonly
-            const inputsReadonly = document.querySelectorAll('input[readonly], .readonly-field, .total-proforma-display');
-            inputsReadonly.forEach(input => {
-                input.style.setProperty('background-color', inputBg, 'important');
-                input.style.setProperty('background', inputBg, 'important');
-                input.style.setProperty('color', inputText, 'important');
-            });
-            
-            // Limpiar modal-content
-            const modales = document.querySelectorAll('.modal-content');
-            modales.forEach(modal => {
-                modal.style.setProperty('background-color', colores.modal_bg || colores.app_bg, 'important');
-                modal.style.setProperty('color', colores.modal_text || textForBody, 'important');
-            });
-            
-            console.log('[AUTO-BRANDING] 🧹 Limpiados estilos inline en GESTIÓN');
-        }
-        
-        // Ejecutar limpieza al cargar y cuando el DOM esté listo
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', limpiarEstilosGestion);
-        } else {
-            limpiarEstilosGestion();
-        }
-        
-        // Observar cambios en el DOM para re-aplicar estilos
-        const observer = new MutationObserver(() => {
-            limpiarEstilosGestion();
-        });
-        
-        observer.observe(document.documentElement, {
-            childList: true,
-            subtree: true
-        });
+        // Estilos inline deshabilitados en Gestión para respetar la plantilla.
+        // Se aplican únicamente estilos vía CSS inyectado arriba y hojas de estilo.
         
         console.log('[AUTO-BRANDING] ✅ Estilos aplicados correctamente');
         console.log('[AUTO-BRANDING] 📋 Resumen de estilos aplicados:');

@@ -107,29 +107,23 @@ async function seleccionarProducto() {
   if (productoId === PRODUCTO_ID_LIBRE) {
     formElements.precioDetalle.readOnly = false;
     formElements.precioDetalle.classList.remove('readonly-field');
-    formElements.precioDetalle.style.backgroundColor = '';
 
     formElements.totalDetalle.readOnly = false;
     formElements.totalDetalle.classList.remove('readonly-field');
-    formElements.totalDetalle.style.backgroundColor = '';
 
     formElements.impuestoDetalle.value = 21;
     formElements.impuestoDetalle.readOnly = true;
     formElements.impuestoDetalle.classList.add('readonly-field');
-    formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
   } else {
     formElements.precioDetalle.readOnly = true;
     formElements.precioDetalle.classList.add('readonly-field');
-    formElements.precioDetalle.style.backgroundColor = '#e9ecef';
 
     formElements.totalDetalle.readOnly = true;
     formElements.totalDetalle.classList.add('readonly-field');
-    formElements.totalDetalle.style.backgroundColor = '#e9ecef';
 
     formElements.impuestoDetalle.value = 21;
     formElements.impuestoDetalle.readOnly = true;
     formElements.impuestoDetalle.classList.add('readonly-field');
-    formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
   }
 }
 
@@ -167,7 +161,7 @@ function manejarProductoSinDescuentos(formElements) {
 
   // Configurar el campo de impuesto como readonly
   impuestoDetalle.readOnly = true;
-  impuestoDetalle.style.backgroundColor = '#e9ecef';
+  impuestoDetalle.classList.add('readonly-field');
 
   // Calcular el total con REGLA UNIFICADA (IVA redondeado por línea)
   const cantidad = parseFloat(cantidadDetalle.value) || 0;
@@ -186,9 +180,9 @@ function manejarProductoSinDescuentos(formElements) {
   if (productoId === PRODUCTO_ID_LIBRE) {
     // Para productos libres, permitir edición del precio
     precioDetalle.readOnly = false;
-    precioDetalle.style.backgroundColor = '';
+    precioDetalle.classList.remove('readonly-field');
     totalDetalle.readOnly = false;
-    totalDetalle.style.backgroundColor = '';
+    totalDetalle.classList.remove('readonly-field');
 
     // Agregar listeners para productos libres
     precioDetalle.addEventListener('input', calcularTotalDetalle);
@@ -209,7 +203,7 @@ function manejarProductoSinDescuentos(formElements) {
   } else {
     // Para productos normales
     precioDetalle.readOnly = true;
-    precioDetalle.style.backgroundColor = '#e9ecef';
+    precioDetalle.classList.add('readonly-field');
     
     // Ocultar campo de concepto libre si existe
     if (conceptoInput) {
@@ -493,7 +487,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const impuestoDetalle = document.getElementById('impuesto-detalle');
     if (impuestoDetalle) {
       impuestoDetalle.readOnly = true;
-      impuestoDetalle.style.backgroundColor = '#e9ecef';
+      impuestoDetalle.classList.add('readonly-field');
     }
 
     // Obtener parámetros de la URL

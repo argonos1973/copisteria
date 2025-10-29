@@ -66,17 +66,14 @@ export function limpiarCamposDetalle(formElements) {
   if (precioDetalle) {
     precioDetalle.value = Number(0).toFixed(5);
     precioDetalle.readOnly = true;
-    precioDetalle.style.backgroundColor = '#e9ecef';
   }
   if (impuestoDetalle) {
     impuestoDetalle.value = '21';
     impuestoDetalle.readOnly = true;
-    impuestoDetalle.style.backgroundColor = '#e9ecef';
   }
   if (totalDetalle) {
     totalDetalle.value = Number(0).toFixed(2);
     totalDetalle.readOnly = true;
-    totalDetalle.style.backgroundColor = '#e9ecef';
   }
   if (conceptoInput) {
     conceptoInput.style.display = 'none';
@@ -132,7 +129,6 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
 
   // Configurar el campo de impuesto como readonly siempre
   impuestoDetalle.readOnly = true;
-  impuestoDetalle.style.backgroundColor = '#e9ecef';
 
   // Primero removemos todos los event listeners anteriores
   precioDetalle.removeEventListener('input', calcularTotalDetalle);
@@ -141,9 +137,7 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
 
   if (productoId === PRODUCTO_ID_LIBRE) {
     precioDetalle.readOnly = false;
-    precioDetalle.style.backgroundColor = '';
     totalDetalle.readOnly = false;
-    totalDetalle.style.backgroundColor = '';
 
     // Añadimos los event listeners para el producto libre
     precioDetalle.addEventListener('input', calcularTotalDetalle);
@@ -164,9 +158,7 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
     }
   } else {
     precioDetalle.readOnly = true;
-    precioDetalle.style.backgroundColor = '#e9ecef';
     totalDetalle.readOnly = true;
-    totalDetalle.style.backgroundColor = '#e9ecef';
 
     // Para productos normales, añadir listener solo en cantidad para calcular franjas
     cantidadDetalle.addEventListener('input', calcularTotalDetalle);

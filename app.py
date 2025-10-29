@@ -3171,7 +3171,15 @@ def get_branding():
                    color_primario, color_secundario, color_success, color_warning, 
                    color_danger, color_info, color_button, color_button_hover,
                    color_button_text, color_app_bg, color_header_bg, color_header_text,
-                   color_grid_header, color_grid_hover
+                   color_grid_header, color_grid_hover, color_grid_bg, color_grid_text,
+                   color_grid_border, grid_border_width,
+                   color_input_bg, color_input_text, color_input_border,
+                   color_select_bg, color_select_text, color_select_border,
+                   color_modal_bg, color_modal_text, color_modal_border,
+                   color_modal_border_width, color_modal_overlay, color_modal_shadow,
+                   color_submenu_bg, color_submenu_text, color_submenu_hover,
+                   color_disabled_bg, color_disabled_text, color_icon,
+                   color_spinner_border
             FROM empresas 
             WHERE id = ?
         ''', (empresa_id,)).fetchone()
@@ -3202,7 +3210,30 @@ def get_branding():
             'header_bg': empresa['color_header_bg'] or '#2c3e50',
             'header_text': empresa['color_header_text'] or '#ffffff',
             'grid_header': empresa['color_grid_header'] or '#2c3e50',
-            'grid_hover': empresa['color_grid_hover'] or 'rgba(52, 152, 219, 0.1)'
+            'grid_hover': empresa['color_grid_hover'] or 'rgba(52, 152, 219, 0.1)',
+            'grid_bg': empresa['color_grid_bg'] or '#ffffff',
+            'grid_text': empresa['color_grid_text'] or '#333333',
+            'grid_border': empresa['color_grid_border'] or '#e5e5e5',
+            'grid_border_width': empresa['grid_border_width'] or '0.5px',
+            'input_bg': empresa['color_input_bg'] or '#ffffff',
+            'input_text': empresa['color_input_text'] or '#333333',
+            'input_border': empresa['color_input_border'] or '#cccccc',
+            'select_bg': empresa['color_select_bg'] or '#ffffff',
+            'select_text': empresa['color_select_text'] or '#333333',
+            'select_border': empresa['color_select_border'] or '#cccccc',
+            'modal_bg': empresa['color_modal_bg'] or '#ffffff',
+            'modal_text': empresa['color_modal_text'] or '#333333',
+            'modal_border': empresa['color_modal_border'] or '#cccccc',
+            'modal_border_width': empresa['color_modal_border_width'] or '1px',
+            'modal_overlay': empresa['color_modal_overlay'] or 'rgba(0,0,0,0.5)',
+            'modal_shadow': empresa['color_modal_shadow'] or 'rgba(0,0,0,0.3)',
+            'submenu_bg': empresa['color_submenu_bg'] or '#ffffff',
+            'submenu_text': empresa['color_submenu_text'] or '#000000',
+            'submenu_hover': empresa['color_submenu_hover'] or '#f5f5f5',
+            'disabled_bg': empresa['color_disabled_bg'] or '#f5f5f5',
+            'disabled_text': empresa['color_disabled_text'] or '#999999',
+            'icon': empresa['color_icon'] or '#000000',
+            'spinner_border': empresa['color_spinner_border'] or '#3498db'
         }
         
         return jsonify({
@@ -3302,14 +3333,11 @@ def servir_admin_permisos():
     try:
         with open(os.path.join(BASE_DIR, 'frontend', 'ADMIN_PERMISOS.html'), 'r', encoding='utf-8') as f:
             content = f.read()
-        return Response(content, mimetype='text/html')
+
+        return content
     except Exception as e:
-        logger.error(f"Error sirviendo ADMIN_PERMISOS.html: {e}", exc_info=True)
-        return Response(f'Error sirviendo ADMIN_PERMISOS.html: {e}', status=500)
+        logger.error(f"Error sirviendo ADMIN_PERMISOS.html: {e}")
+        return "Error cargando página", 500
 
-
-if __name__ == '__main__':
-    # Permite ejecutar la app directamente (modo desarrollo/standalone)
-    # Escucha en 0.0.0.0:5001 para que sea accesible desde la red local
-    app.run(host='0.0.0.0', port=5001)
-
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5002, debug=False)

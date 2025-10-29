@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Empresas</title>
-    <script src="/static/auto_branding.js?v=3"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -86,13 +86,15 @@
         details[open] summary { margin-bottom: 15px; }
         details summary:hover { color: #3498db; }
     </style>
+    <link rel="stylesheet" href="/static/admin-branded-override.css?v=1761677893">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+    <link rel="stylesheet" href="/static/iframe-adapter.css?v=1761677893">
 </head>
 <body>
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
             <h1><i class="fas fa-building"></i> Gestión de Empresas</h1>
             <button class="btn btn-success" onclick="abrirModalCrear()">
                 <i class="fas fa-plus"></i> Nueva Empresa
@@ -119,7 +121,7 @@
                 <div class="form-group">
                     <label for="nombre">Nombre de la Empresa *</label>
                     <input type="text" id="nombre" name="nombre" required>
-                    <small style="color: #7f8c8d;">El código se generará automáticamente (primeros 5 caracteres)</small>
+                    <small>El código se generará automáticamente (primeros 5 caracteres)</small>
                 </div>
                 
                 <div class="form-group">
@@ -150,26 +152,26 @@
                 <div class="form-group">
                     <label for="logo">Logo de la Empresa</label>
                     <input type="file" id="logo" name="logo" accept="image/*">
-                    <small style="color: #7f8c8d;">Formatos: PNG, JPG, SVG (máx. 2MB)</small>
+                    <small>Formatos: PNG, JPG, SVG (máx. 2MB)</small>
                 </div>
                 
-                <h4 style="margin: 20px 0 10px 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                <h4>
                     <i class="fas fa-palette"></i> Plantillas y Colores del Sistema
                 </h4>
                 
-                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #3498db;">
-                    <strong style="color: #2c3e50;"><i class="fas fa-info-circle"></i> Instrucciones:</strong>
-                    <ol style="margin: 8px 0 0 20px; color: #495057; font-size: 10px; line-height: 1.6;">
+                <div>
+                    <strong><i class="fas fa-info-circle"></i> Instrucciones:</strong>
+                    <ol>
                         <li>Selecciona una plantilla predefinida haciendo clic en los botones de abajo</li>
-                        <li>Luego, haz clic en las flechas <strong style="color: #3498db;">▶</strong> para expandir cada sección de colores</li>
+                        <li>Luego, haz clic en las flechas <strong>▶</strong> para expandir cada sección de colores</li>
                         <li>Personaliza cada color haciendo clic en el cuadrado de color</li>
                     </ol>
                 </div>
                 
                 <!-- Selector de Plantillas -->
-                <div class="form-group" style="background: #f8f9fa; padding: 6px; border-radius: 6px; margin-bottom: 6px;">
+                <div class="form-group">
                     <label><i class="fas fa-swatchbook"></i> Seleccionar Plantilla Predefinida</label>
-                    <div id="plantillas-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-top: 6px;">
+                    <div id="plantillas-container">
                         <button type="button" class="btn-plantilla" onclick="aplicarPlantilla('aleph70')">
                             <i class="fas fa-star"></i> Aleph70
                         </button>
@@ -189,111 +191,111 @@
                             <i class="fas fa-redo"></i> Por Defecto
                         </button>
                     </div>
-                    <small style="color: #6c757d; display: block; margin-top: 6px;">
+                    <small>
                         <i class="fas fa-info-circle"></i> Puedes seleccionar una plantilla y luego personalizar cada color individualmente
                     </small>                
-                <div style="background: white; border: 2px solid #dee2e6; border-radius: 8px; padding: 15px; margin: 15px 0;">
-                    <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 14px;">
+                <div>
+                    <h4>
                         <i class="fas fa-eye"></i> Vista Previa del Menú
                     </h4>
-                    <div id="menu-preview" style="width: 100%; border-radius: 5px; overflow: hidden;">
-                        <div id="preview-menu-bg" style="background-color: #2c3e50; padding: 15px; border-radius: 5px;">
-                            <div style="padding: 10px; color: #ffffff; border-radius: 4px; margin-bottom: 5px; cursor: pointer;" 
+                    <div id="menu-preview">
+                        <div id="preview-menu-bg">
+                            <div 
                                  class="preview-menu-item" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 <i class="fas fa-home"></i> Dashboard
                             </div>
-                            <div style="margin-bottom: 5px;">
-                                <div style="padding: 10px; color: #ffffff; border-radius: 4px; cursor: pointer;" 
+                            <div>
+                                <div 
                                      class="preview-menu-item" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                     <i class="fas fa-shopping-cart"></i> Ventas ▼
                                 </div>
-                                <div id="preview-submenu-container" style="padding-left: 20px; margin-top: 3px; background: rgba(0,0,0,0.2); border-radius: 4px; padding: 5px;">
-                                    <div style="padding: 8px; color: rgba(255,255,255,0.8); border-radius: 3px; font-size: 13px; cursor: pointer;" 
+                                <div id="preview-submenu-container">
+                                    <div 
                                          class="preview-submenu-item" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                         <i class="fas fa-file-invoice"></i> Facturas
                                     </div>
-                                    <div style="padding: 8px; color: rgba(255,255,255,0.8); border-radius: 3px; font-size: 13px; cursor: pointer;" 
+                                    <div 
                                          class="preview-submenu-item" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                         <i class="fas fa-receipt"></i> Tickets
                                     </div>
                                 </div>
                             </div>
-                            <div style="padding: 10px; color: #ffffff; border-radius: 4px; cursor: pointer;" 
+                            <div 
                                  class="preview-menu-item" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
                                 <i class="fas fa-users"></i> Clientes
                             </div>
                         </div>
                     </div>
-                    <small style="color: #6c757d; display: block; margin-top: 8px;">
+                    <small>
                         <i class="fas fa-info-circle"></i> Los cambios se reflejan en tiempo real
                     </small>
                 </div>
                 
                 <!-- Colores Principales -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-paint-brush"></i> Colores Principales
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="color_app_bg" style="font-size: 10px;">Fondo App</label>
-                            <input type="color" id="color_app_bg" name="color_app_bg" value="#ffffff" style="width: 35px; height: 28px;">
+                            <label for="color_app_bg">Fondo App</label>
+                            <input type="color" id="color_app_bg" name="color_app_bg" value="#ffffff">
                             </div>
                         <div class="form-group">
-                            <label for="color_primario" style="font-size: 10px;">🎨 Fondo Menú Lateral</label>
-                            <input type="color" id="color_primario" name="color_primario" value="#2c3e50" style="width: 35px; height: 28px;" onchange="actualizarPreview()">
+                            <label for="color_primario">🎨 Fondo Menú Lateral</label>
+                            <input type="color" id="color_primario" name="color_primario" value="#2c3e50" onchange="actualizarPreview()">
                             </div>
                         <div class="form-group">
-                            <label for="color_secundario" style="font-size: 10px;">Tarjetas</label>
-                            <input type="color" id="color_secundario" name="color_secundario" value="#3498db" style="width: 35px; height: 28px;">
+                            <label for="color_secundario">Tarjetas</label>
+                            <input type="color" id="color_secundario" name="color_secundario" value="#3498db">
                             </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Botones -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-hand-pointer"></i> Colores de Botones
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="color_button" style="font-size: 10px;">Botón</label>
-                            <input type="color" id="color_button" name="color_button" value="#3498db" style="width: 35px; height: 28px;">
+                            <label for="color_button">Botón</label>
+                            <input type="color" id="color_button" name="color_button" value="#3498db">
                             </div>
                         <div class="form-group">
-                            <label for="color_button_hover" style="font-size: 10px;">Botón Hover</label>
-                            <input type="color" id="color_button_hover" name="color_button_hover" value="#2980b9" style="width: 35px; height: 28px;">
+                            <label for="color_button_hover">Botón Hover</label>
+                            <input type="color" id="color_button_hover" name="color_button_hover" value="#2980b9">
                             </div>
                         <div class="form-group">
-                            <label for="color_button_text" style="font-size: 10px;">Texto Botón</label>
-                            <input type="color" id="color_button_text" name="color_button_text" value="#ffffff" style="width: 35px; height: 28px;">
+                            <label for="color_button_text">Texto Botón</label>
+                            <input type="color" id="color_button_text" name="color_button_text" value="#ffffff">
                             </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Encabezados -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-heading"></i> Colores de Encabezados
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
                             <label for="color_header_bg"><i class="fas fa-circle"></i> Fondo de Encabezados</label>
                             <input type="color" id="color_header_bg" name="color_header_bg" value="#2c3e50">
                         </div>
                         <div class="form-group">
-                            <label for="color_header_text" style="font-size: 10px;">📝 Texto Opciones Menú</label>
-                            <input type="color" id="color_header_text" name="color_header_text" value="#ffffff" style="width: 35px; height: 28px;" onchange="actualizarPreview()">
+                            <label for="color_header_text">📝 Texto Opciones Menú</label>
+                            <input type="color" id="color_header_text" name="color_header_text" value="#ffffff" onchange="actualizarPreview()">
                         </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Tablas -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-table"></i> Colores de Tablas
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
                             <label for="color_grid_header"><i class="fas fa-circle"></i> Encabezados de Tabla</label>
                             <input type="color" id="color_grid_header" name="color_grid_header" value="#2c3e50">
@@ -301,17 +303,17 @@
                         <div class="form-group">
                             <label for="color_grid_hover"><i class="fas fa-circle"></i> Hover de Filas</label>
                             <input type="color" id="color_grid_hover" name="color_grid_hover" >
-                            <input type="text" id="color_grid_hover_text" placeholder="rgba(52, 152, 219, 0.1)" style="margin-top: 5px; font-size: 10px;">
+                            <input type="text" id="color_grid_hover_text" placeholder="rgba(52, 152, 219, 0.1)">
                         </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Estado -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-exclamation-triangle"></i> Colores de Estado
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
                             <label for="color_success"><i class="fas fa-circle"></i> Color Éxito</label>
                             <input type="color" id="color_success" name="color_success" value="#27ae60">
@@ -332,11 +334,11 @@
                 </details>
                 
                 <!-- Colores de Inputs -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-keyboard"></i> Colores de Inputs
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
                             <label for="color_input_bg"><i class="fas fa-circle"></i> Fondo de Inputs</label>
                             <input type="color" id="color_input_bg" name="color_input_bg" value="#ffffff">
@@ -353,11 +355,11 @@
                 </details>
                 
                 <!-- Colores de Selects -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-caret-square-down"></i> Colores de Selects
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
                             <label for="color_select_bg"><i class="fas fa-circle"></i> Fondo de Selects</label>
                             <input type="color" id="color_select_bg" name="color_select_bg" value="#ffffff">
@@ -374,11 +376,11 @@
                 </details>
                 
                 <!-- Colores de Submenús -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-bars"></i> Colores de Submenús
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
                             <label for="color_submenu_bg"><i class="fas fa-circle"></i> Fondo de Submenús</label>
                             <input type="color" id="color_submenu_bg" name="color_submenu_bg" value="#243342">
@@ -395,11 +397,11 @@
                 </details>
                 
                 <!-- Colores de Grids -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-th"></i> Colores de Grids
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
                             <label for="color_grid_bg"><i class="fas fa-circle"></i> Fondo de Grid</label>
                             <input type="color" id="color_grid_bg" name="color_grid_bg" value="#ffffff">
@@ -412,11 +414,11 @@
                 </details>
                 
                 <!-- Colores Adicionales -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-palette"></i> Colores Adicionales
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
                             <label for="color_icon"><i class="fas fa-circle"></i> Color de Iconos</label>
                             <input type="color" id="color_icon" name="color_icon" value="#ecf0f1">
@@ -432,7 +434,7 @@
                     </div>
                 </details>
                 
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <div>
                     <button type="button" class="btn" onclick="cerrarModal()">Cancelar</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> Crear Empresa
@@ -453,28 +455,28 @@
             <form id="formEditarEmpresa">
                 <input type="hidden" id="edit_empresa_id" name="empresa_id">
                 
-                <div class="form-group" style="max-width: 150px;">
+                <div class="form-group">
                     <label><i class="fas fa-building"></i> Empresa</label>
-                    <input type="text" id="edit_nombre_empresa" disabled style="background: #f0f0f0; width: 100%;">
+                    <input type="text" id="edit_nombre_empresa" disabled>
                 </div>
                 
-                <h4 style="margin: 20px 0 10px 0; color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px;">
+                <h4>
                     <i class="fas fa-palette"></i> Plantillas y Colores del Sistema
                 </h4>
                 
-                <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #3498db;">
-                    <strong style="color: #2c3e50;"><i class="fas fa-info-circle"></i> Instrucciones:</strong>
-                    <ol style="margin: 8px 0 0 20px; color: #495057; font-size: 10px; line-height: 1.6;">
+                <div>
+                    <strong><i class="fas fa-info-circle"></i> Instrucciones:</strong>
+                    <ol>
                         <li>Selecciona una plantilla predefinida haciendo clic en los botones de abajo</li>
-                        <li>Luego, haz clic en las flechas <strong style="color: #3498db;">▶</strong> para expandir cada sección de colores</li>
+                        <li>Luego, haz clic en las flechas <strong>▶</strong> para expandir cada sección de colores</li>
                         <li>Personaliza cada color haciendo clic en el cuadrado de color</li>
                     </ol>
                 </div>
                 
                 <!-- Selector de Plantillas -->
-                <div class="form-group" style="background: #f8f9fa; padding: 6px; border-radius: 6px; margin-bottom: 6px;">
+                <div class="form-group">
                     <label><i class="fas fa-swatchbook"></i> Seleccionar Plantilla Predefinida</label>
-                    <div id="plantillas-container-editar" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; margin-top: 6px;">
+                    <div id="plantillas-container-editar">
                         <button type="button" class="btn-plantilla" onclick="aplicarPlantillaEditar('aleph70')">
                             <i class="fas fa-star"></i> Aleph70
                         </button>
@@ -494,244 +496,244 @@
                             <i class="fas fa-redo"></i> Por Defecto
                         </button>
                     </div>
-                    <small style="color: #6c757d; display: block; margin-top: 6px;">
+                    <small>
                         <i class="fas fa-info-circle"></i> Puedes seleccionar una plantilla y luego personalizar cada color individualmente
                     </small>                
                 <!-- PREVIEW DEL MENÚ (EDITAR) -->
-                <div style="background: white; border: 2px solid #dee2e6; border-radius: 8px; padding: 15px; margin: 15px 0;">
-                    <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 14px;">
+                <div>
+                    <h4>
                         <i class="fas fa-eye"></i> Vista Previa del Menú
                     </h4>
-                    <div id="menu-preview-editar" style="width: 100%; border-radius: 5px; overflow: hidden;">
-                        <div id="preview-menu-bg-editar" style="background-color: #2c3e50; padding: 15px; border-radius: 5px;">
-                            <div style="padding: 10px; color: #ffffff; border-radius: 4px; margin-bottom: 5px; cursor: pointer;" class="preview-menu-item-editar">
+                    <div id="menu-preview-editar">
+                        <div id="preview-menu-bg-editar">
+                            <div class="preview-menu-item-editar">
                                 <i class="fas fa-home"></i> Dashboard
                             </div>
-                            <div style="margin-bottom: 5px;">
-                                <div style="padding: 10px; color: #ffffff; border-radius: 4px; cursor: pointer;" class="preview-menu-item-editar">
+                            <div>
+                                <div class="preview-menu-item-editar">
                                     <i class="fas fa-shopping-cart"></i> Ventas ▼
                                 </div>
-                                <div id="preview-submenu-container-editar" style="padding-left: 20px; margin-top: 3px; background: rgba(0,0,0,0.2); border-radius: 4px; padding: 5px;">
-                                    <div style="padding: 8px; color: rgba(255,255,255,0.8); border-radius: 3px; font-size: 13px; cursor: pointer;" class="preview-submenu-item-editar">
+                                <div id="preview-submenu-container-editar">
+                                    <div class="preview-submenu-item-editar">
                                         <i class="fas fa-file-invoice"></i> Facturas
                                     </div>
-                                    <div style="padding: 8px; color: rgba(255,255,255,0.8); border-radius: 3px; font-size: 13px; cursor: pointer;" class="preview-submenu-item-editar">
+                                    <div class="preview-submenu-item-editar">
                                         <i class="fas fa-receipt"></i> Tickets
                                     </div>
                                 </div>
                             </div>
-                            <div style="padding: 10px; color: #ffffff; border-radius: 4px; cursor: pointer;" class="preview-menu-item-editar">
+                            <div class="preview-menu-item-editar">
                                 <i class="fas fa-users"></i> Clientes
                             </div>
                         </div>
                     </div>
-                    <small style="color: #6c757d; display: block; margin-top: 8px;">
+                    <small>
                         <i class="fas fa-info-circle"></i> Los cambios se reflejan en tiempo real
                     </small>
                 </div>
-                    <button type="button" class="btn btn-success" onclick="guardarPlantillaPersonalizada()" style="width: 100%; margin-top: 8px; font-size: 13px; padding: 8px;">
+                    <button type="button" class="btn btn-success" onclick="guardarPlantillaPersonalizada()">
                         <i class="fas fa-save"></i> Guardar Colores Actuales como Plantilla
                     </button>
                 </div>
                 <!-- Colores Principales -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-paint-brush"></i> Colores Principales
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="edit_color_app_bg" style="font-size: 10px;">Fondo App</label>
-                            <input type="color" id="edit_color_app_bg" name="color_app_bg" value="#ffffff" style="width: 35px; height: 28px;">
+                            <label for="edit_color_app_bg">Fondo App</label>
+                            <input type="color" id="edit_color_app_bg" name="color_app_bg" value="#ffffff">
                             </div>
                         <div class="form-group">
-                            <label for="edit_color_primario" style="font-size: 10px;">🎨 Fondo Menú Lateral</label>
-                            <input type="color" id="edit_color_primario" name="color_primario" value="#2c3e50" style="width: 35px; height: 28px;" onchange="actualizarPreviewEditar()">
+                            <label for="edit_color_primario">🎨 Fondo Menú Lateral</label>
+                            <input type="color" id="edit_color_primario" name="color_primario" value="#2c3e50" onchange="actualizarPreviewEditar()">
                             </div>
                         <div class="form-group">
-                            <label for="edit_color_secundario" style="font-size: 10px;">Tarjetas</label>
-                            <input type="color" id="edit_color_secundario" name="color_secundario" value="#3498db" style="width: 35px; height: 28px;">
+                            <label for="edit_color_secundario">Tarjetas</label>
+                            <input type="color" id="edit_color_secundario" name="color_secundario" value="#3498db">
                             </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Botones -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-hand-pointer"></i> Colores de Botones
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="edit_color_button" style="font-size: 10px;">Botón</label>
-                            <input type="color" id="edit_color_button" name="color_button" value="#3498db" style="width: 35px; height: 28px;">
+                            <label for="edit_color_button">Botón</label>
+                            <input type="color" id="edit_color_button" name="color_button" value="#3498db">
                             </div>
                         <div class="form-group">
-                            <label for="edit_color_button_hover" style="font-size: 10px;">Botón Hover</label>
-                            <input type="color" id="edit_color_button_hover" name="color_button_hover" value="#2980b9" style="width: 35px; height: 28px;">
+                            <label for="edit_color_button_hover">Botón Hover</label>
+                            <input type="color" id="edit_color_button_hover" name="color_button_hover" value="#2980b9">
                             </div>
                         <div class="form-group">
-                            <label for="edit_color_button_text" style="font-size: 10px;">Texto Botón</label>
-                            <input type="color" id="edit_color_button_text" name="color_button_text" value="#ffffff" style="width: 35px; height: 28px;">
+                            <label for="edit_color_button_text">Texto Botón</label>
+                            <input type="color" id="edit_color_button_text" name="color_button_text" value="#ffffff">
                             </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Encabezados -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-heading"></i> Colores de Encabezados
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="edit_color_header_bg" style="font-size: 10px;">Encabezado</label>
-                            <input type="color" id="edit_color_header_bg" name="color_header_bg" value="#2c3e50" style="width: 35px; height: 28px;">
+                            <label for="edit_color_header_bg">Encabezado</label>
+                            <input type="color" id="edit_color_header_bg" name="color_header_bg" value="#2c3e50">
                             </div>
                         <div class="form-group">
-                            <label for="edit_color_header_text" style="font-size: 10px;">Texto Header</label>
-                            <input type="color" id="edit_color_header_text" name="color_header_text" value="#ffffff" style="width: 35px; height: 28px;" onchange="actualizarPreviewEditar()">
+                            <label for="edit_color_header_text">Texto Header</label>
+                            <input type="color" id="edit_color_header_text" name="color_header_text" value="#ffffff" onchange="actualizarPreviewEditar()">
                             </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Tablas -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-table"></i> Colores de Tablas
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="edit_color_grid_header" style="font-size: 10px;">Cabecera Tabla</label>
-                            <input type="color" id="edit_color_grid_header" name="color_grid_header" value="#2c3e50" style="width: 35px; height: 28px;">
+                            <label for="edit_color_grid_header">Cabecera Tabla</label>
+                            <input type="color" id="edit_color_grid_header" name="color_grid_header" value="#2c3e50">
                             </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Estado -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-exclamation-triangle"></i> Colores de Estado
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="edit_color_success" style="font-size: 10px;">Éxito</label>
-                            <input type="color" id="edit_color_success" name="color_success" value="#27ae60" style="width: 35px; height: 28px;">
+                            <label for="edit_color_success">Éxito</label>
+                            <input type="color" id="edit_color_success" name="color_success" value="#27ae60">
                             </div>
                         <div class="form-group">
-                            <label for="edit_color_warning" style="font-size: 10px;">Advertencia</label>
-                            <input type="color" id="edit_color_warning" name="color_warning" value="#f39c12" style="width: 35px; height: 28px;">
+                            <label for="edit_color_warning">Advertencia</label>
+                            <input type="color" id="edit_color_warning" name="color_warning" value="#f39c12">
                             </div>
                         <div class="form-group">
-                            <label for="edit_color_danger" style="font-size: 10px;">Peligro</label>
-                            <input type="color" id="edit_color_danger" name="color_danger" value="#e74c3c" style="width: 35px; height: 28px;">
+                            <label for="edit_color_danger">Peligro</label>
+                            <input type="color" id="edit_color_danger" name="color_danger" value="#e74c3c">
                             </div>
                         <div class="form-group">
-                            <label for="edit_color_info" style="font-size: 10px;">Info</label>
-                            <input type="color" id="edit_color_info" name="color_info" value="#3498db" style="width: 35px; height: 28px;">
+                            <label for="edit_color_info">Info</label>
+                            <input type="color" id="edit_color_info" name="color_info" value="#3498db">
                             </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Inputs -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-keyboard"></i> Colores de Inputs
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="edit_color_input_bg" style="font-size: 10px;">Fondo Input</label>
-                            <input type="color" id="edit_color_input_bg" style="width: 35px; height: 28px;" name="color_input_bg" value="#ffffff">
+                            <label for="edit_color_input_bg">Fondo Input</label>
+                            <input type="color" id="edit_color_input_bg" name="color_input_bg" value="#ffffff">
                         </div>
                         <div class="form-group">
-                            <label for="edit_color_input_text" style="font-size: 10px;">Texto Input</label>
-                            <input type="color" id="edit_color_input_text" style="width: 35px; height: 28px;" name="color_input_text" value="#333333">
+                            <label for="edit_color_input_text">Texto Input</label>
+                            <input type="color" id="edit_color_input_text" name="color_input_text" value="#333333">
                         </div>
                         <div class="form-group">
-                            <label for="edit_color_input_border" style="font-size: 10px;">Borde Input</label>
-                            <input type="color" id="edit_color_input_border" style="width: 35px; height: 28px;" name="color_input_border" value="#dddddd">
+                            <label for="edit_color_input_border">Borde Input</label>
+                            <input type="color" id="edit_color_input_border" name="color_input_border" value="#dddddd">
                         </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Selects -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-caret-square-down"></i> Colores de Selects
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="edit_color_select_bg" style="font-size: 10px;">Fondo Select</label>
-                            <input type="color" id="edit_color_select_bg" style="width: 35px; height: 28px;" name="color_select_bg" value="#ffffff">
+                            <label for="edit_color_select_bg">Fondo Select</label>
+                            <input type="color" id="edit_color_select_bg" name="color_select_bg" value="#ffffff">
                         </div>
                         <div class="form-group">
-                            <label for="edit_color_select_text" style="font-size: 10px;">Texto Select</label>
-                            <input type="color" id="edit_color_select_text" style="width: 35px; height: 28px;" name="color_select_text" value="#333333">
+                            <label for="edit_color_select_text">Texto Select</label>
+                            <input type="color" id="edit_color_select_text" name="color_select_text" value="#333333">
                         </div>
                         <div class="form-group">
-                            <label for="edit_color_select_border" style="font-size: 10px;">Borde Select</label>
-                            <input type="color" id="edit_color_select_border" style="width: 35px; height: 28px;" name="color_select_border" value="#dddddd">
+                            <label for="edit_color_select_border">Borde Select</label>
+                            <input type="color" id="edit_color_select_border" name="color_select_border" value="#dddddd">
                         </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Submenús -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-bars"></i> Colores de Submenús
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="edit_color_submenu_bg" style="font-size: 10px;">Fondo Submenu</label>
-                            <input type="color" id="edit_color_submenu_bg" style="width: 35px; height: 28px;" name="color_submenu_bg" value="#243342">
+                            <label for="edit_color_submenu_bg">Fondo Submenu</label>
+                            <input type="color" id="edit_color_submenu_bg" name="color_submenu_bg" value="#243342">
                         </div>
                         <div class="form-group">
-                            <label for="edit_color_submenu_text" style="font-size: 10px;">Texto Submenu</label>
-                            <input type="color" id="edit_color_submenu_text" style="width: 35px; height: 28px;" name="color_submenu_text" value="#ecf0f1">
+                            <label for="edit_color_submenu_text">Texto Submenu</label>
+                            <input type="color" id="edit_color_submenu_text" name="color_submenu_text" value="#ecf0f1">
                         </div>
                         <div class="form-group">
-                            <label for="edit_color_submenu_hover" style="font-size: 10px;">Hover Submenu</label>
-                            <input type="color" id="edit_color_submenu_hover" style="width: 35px; height: 28px;" name="color_submenu_hover" value="#34495e">
+                            <label for="edit_color_submenu_hover">Hover Submenu</label>
+                            <input type="color" id="edit_color_submenu_hover" name="color_submenu_hover" value="#34495e">
                         </div>
                     </div>
                 </details>
                 
                 <!-- Colores de Grids -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-th"></i> Colores de Grids
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="edit_color_grid_bg" style="font-size: 10px;">Fondo Grid</label>
-                            <input type="color" id="edit_color_grid_bg" style="width: 35px; height: 28px;" name="color_grid_bg" value="#ffffff">
+                            <label for="edit_color_grid_bg">Fondo Grid</label>
+                            <input type="color" id="edit_color_grid_bg" name="color_grid_bg" value="#ffffff">
                         </div>
                         <div class="form-group">
-                            <label for="edit_color_grid_text" style="font-size: 10px;">Texto Grid</label>
-                            <input type="color" id="edit_color_grid_text" style="width: 35px; height: 28px;" name="color_grid_text" value="#333333">
+                            <label for="edit_color_grid_text">Texto Grid</label>
+                            <input type="color" id="edit_color_grid_text" name="color_grid_text" value="#333333">
                         </div>
                     </div>
                 </details>
                 
                 <!-- Colores Adicionales -->
-                <details style="margin-bottom: 4px; border: 1px solid #dee2e6; border-radius: 8px; padding: 3px;">
-                    <summary style="cursor: pointer; font-weight: bold; color: #2c3e50; margin-bottom: 6px;">
+                <details>
+                    <summary>
                         <i class="fas fa-palette"></i> Colores Adicionales
                     </summary>
-                    <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+                    <div>
                         <div class="form-group">
-                            <label for="edit_color_icon" style="font-size: 10px;">Iconos</label>
-                            <input type="color" id="edit_color_icon" style="width: 35px; height: 28px;" name="color_icon" value="#ecf0f1">
+                            <label for="edit_color_icon">Iconos</label>
+                            <input type="color" id="edit_color_icon" name="color_icon" value="#ecf0f1">
                         </div>
                         <div class="form-group">
-                            <label for="edit_color_disabled_bg" style="font-size: 10px;">Deshabilitado</label>
-                            <input type="color" id="edit_color_disabled_bg" style="width: 35px; height: 28px;" name="color_disabled_bg" value="#f5f5f5">
+                            <label for="edit_color_disabled_bg">Deshabilitado</label>
+                            <input type="color" id="edit_color_disabled_bg" name="color_disabled_bg" value="#f5f5f5">
                         </div>
                         <div class="form-group">
-                            <label for="edit_color_disabled_text" style="font-size: 10px;">Texto Desab</label>
-                            <input type="color" id="edit_color_disabled_text" style="width: 35px; height: 28px;" name="color_disabled_text" value="#999999">
+                            <label for="edit_color_disabled_text">Texto Desab</label>
+                            <input type="color" id="edit_color_disabled_text" name="color_disabled_text" value="#999999">
                         </div>
                     </div>
                 </details>
                 
-                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <div>
                     <button type="button" class="btn" onclick="cerrarModalEditar()">Cancelar</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-save"></i> Guardar Cambios
@@ -779,7 +781,7 @@
                     <div class="no-empresas">
                         <i class="fas fa-building"></i>
                         <p>No hay empresas registradas</p>
-                        <p style="font-size: 14px; margin-top: 6px;">Haz clic en "Nueva Empresa" para comenzar</p>
+                        <p>Haz clic en "Nueva Empresa" para comenzar</p>
                     </div>
                 `;
                 return;
@@ -791,7 +793,7 @@
                     <div class="empresa-header">
                         ${emp.logo_header ? 
                             `<img src="/static/logos/${emp.logo_header}" class="empresa-logo" alt="Logo">` : 
-                            `<div class="empresa-logo" style="background: ${emp.color_primario}; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;">${emp.nombre.charAt(0)}</div>`
+                            `<div class="empresa-logo">${emp.nombre.charAt(0)}</div>`
                         }
                         <div class="empresa-info">
                             <h3>${emp.nombre}</h3>
@@ -808,7 +810,7 @@
                         <span class="empresa-status ${emp.activo ? 'activo' : 'inactivo'}">
                             ${emp.activo ? '✓ Activa' : '✗ Inactiva'}
                         </span>
-                        <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick='window.location.href="EDITAR_EMPRESA_COLORES.html?id=" + ${emp.id}'>
+                        <button class="btn btn-primary" onclick='window.location.href="EDITAR_EMPRESA_COLORES.html?id=" + ${emp.id}'>
                             <i class="fas fa-edit"></i> Editar Colores y Plantilla
                         </button>
                     </div>
@@ -1259,6 +1261,8 @@
             actualizarVistaPrevia();
         }
     
+    <script src="/static/auto_branding.js?v=1761688751"></script>
+    <script src="/static/plantilla_sync.js?v=1761684810"></script>
 </body>
 </html>
 <!-- Cache buster: 1761316483 -->

@@ -41,8 +41,58 @@ async function cargarColoresEmpresa() {
             console.warn("[BRANDING] Sin colores personalizados");
             return;
         }
+        // DESACTIVADO: Override de tema oscuro para usuario específico
+        // Ahora se respeta la plantilla configurada en la empresa
+        // let username = null;
+        // try {
+        //     const s = await fetch('/api/auth/session', { credentials: 'include', cache: 'no-cache' });
+        //     if (s.ok) {
+        //         const js = await s.json();
+        //         username = js?.username || js?.user || null;
+        //     }
+        // } catch (_) {}
+
+        let coloresAplicar = { ...branding.colores };
         
-        aplicarColores(branding.colores);
+        // DEBUG: Verificar colores recibidos
+        console.log('[BRANDING] ========== DEBUG ==========');
+        console.log('[BRANDING] submenu_bg:', coloresAplicar.submenu_bg);
+        console.log('[BRANDING] submenu_text:', coloresAplicar.submenu_text);
+        console.log('[BRANDING] app_bg:', coloresAplicar.app_bg);
+        console.log('[BRANDING] primario:', coloresAplicar.primario);
+        console.log('[BRANDING] ==========================');
+        
+        // if (String(username).toLowerCase() === 'sami') {
+        //     console.log('[BRANDING] Aplicando plantilla oscura basada en colores de empresa para usuario sami');
+        //     coloresAplicar = {
+        //         ...coloresAplicar,
+        //         // Mantener corporativos
+        //         primario: coloresAplicar.primario,
+        //         secundario: coloresAplicar.secundario,
+        //         button: coloresAplicar.button,
+        //         button_hover: coloresAplicar.button_hover || coloresAplicar.button,
+        //         // Oscurecer fondos y textos para modo dark
+        //         app_bg: '#121212',
+        //         header_bg: '#1f1f1f',
+        //         header_text: '#e6e6e6',
+        //         grid_bg: '#1b1b1b',
+        //         grid_text: '#e0e0e0',
+        //         grid_header: coloresAplicar.grid_header || coloresAplicar.primario,
+        //         grid_hover: 'rgba(255,255,255,0.06)',
+        //         input_bg: '#2a2a2a',
+        //         input_text: '#e0e0e0',
+        //         input_border: '#4a4a4a',
+        //         select_bg: '#2a2a2a',
+        //         select_text: '#e0e0e0',
+        //         select_border: '#4a4a4a',
+        //         modal_bg: '#1e1e1e',
+        //         modal_text: '#f0f0f0',
+        //         modal_border: '#ffffff',
+        //         modal_shadow: 'rgba(0,0,0,0.6)'
+        //     };
+        // }
+
+        aplicarColores(coloresAplicar);
         
     } catch (error) {
         console.error("[BRANDING] Error cargando colores:", error);
@@ -108,7 +158,7 @@ function aplicarColores(colores) {
             color: ${textForBody} !important;
         }
         
-        /* MENÚ LATERAL - USA COLOR PRIMARIO */
+        /* MENÚ LATERAL - USA COLOR SUBMENU */
         html body .layout-container nav.menu,
         html body .layout-container .menu,
         html body nav.menu,
@@ -118,8 +168,8 @@ function aplicarColores(colores) {
         nav.menu,
         .sidebar,
         .menu {
-            background-color: ${colores.primario || '#2c3e50'} !important;
-            background: ${colores.primario || '#2c3e50'} !important;
+            background-color: ${colores.submenu_bg || colores.primario || '#ffffff'} !important;
+            background: ${colores.submenu_bg || colores.primario || '#ffffff'} !important;
         }
         
         /* Textos del menú - TODOS los elementos */
@@ -133,23 +183,23 @@ function aplicarColores(colores) {
         html body .menu *,
         html body .menu-link,
         html body .menu-item * {
-            color: ${colores.header_text || '#ffffff'} !important;
+            color: ${colores.submenu_text || colores.header_text || '#000000'} !important;
         }
         
         /* Iconos del menú */
         .menu-link i,
         .menu-item i,
         .menu i {
-            color: ${colores.header_text || '#ffffff'} !important;
+            color: ${colores.submenu_text || colores.header_text || '#000000'} !important;
         }
         
-        /* Submenú - USA COLOR PRIMARIO */
+        /* Submenú - USA COLOR SUBMENU */
         .submenu {
-            background-color: ${colores.primario || colores.submenu_bg} !important;
+            background-color: ${colores.submenu_bg || colores.primario || '#ffffff'} !important;
         }
         
         .submenu-item {
-            color: ${colores.header_text || '#000000'} !important;
+            color: ${colores.submenu_text || colores.header_text || '#000000'} !important;
         }
         
         .submenu-item:hover {
@@ -359,17 +409,17 @@ function aplicarColores(colores) {
     const menus = document.querySelectorAll('.menu, .sidebar, nav.menu');
     console.log('[BRANDING] 🔍 Menús encontrados:', menus.length);
     menus.forEach(menu => {
-        console.log('[BRANDING] ⚙️ Aplicando a menú lateral:', menu.className, '→ Color:', colores.primario);
-        menu.style.setProperty('background-color', colores.primario, 'important');
-        menu.style.setProperty('background', colores.primario, 'important');
+        console.log('[BRANDING] ⚙️ Aplicando a menú lateral:', menu.className, '→ Color:', colores.submenu_bg || colores.primario);
+        menu.style.setProperty('background-color', colores.submenu_bg || colores.primario, 'important');
+        menu.style.setProperty('background', colores.submenu_bg || colores.primario, 'important');
         console.log('[BRANDING] ✓ Aplicado. Verificar computed:', window.getComputedStyle(menu).backgroundColor);
     });
     
     // Enlaces del menú
     const menuLinks = document.querySelectorAll('.menu-link, .menu-item .menu-link');
-    console.log('[BRANDING] 🔍 Menu links encontrados:', menuLinks.length, '→ Color texto:', colores.header_text);
+    console.log('[BRANDING] 🔍 Menu links encontrados:', menuLinks.length, '→ Color texto:', colores.submenu_text || colores.header_text);
     menuLinks.forEach(link => {
-        link.style.setProperty('color', colores.header_text, 'important');
+        link.style.setProperty('color', colores.submenu_text || colores.header_text, 'important');
         console.log('[BRANDING] ✓ Link actualizado:', link.textContent.substring(0, 20), '→', window.getComputedStyle(link).color);
     });
     
@@ -377,31 +427,19 @@ function aplicarColores(colores) {
     const menuIcons = document.querySelectorAll('.menu-link i, .menu-item i');
     console.log('[BRANDING] 🔍 Iconos encontrados:', menuIcons.length);
     menuIcons.forEach(icon => {
-        icon.style.setProperty('color', colores.header_text, 'important');
+        icon.style.setProperty('color', colores.submenu_text || colores.header_text, 'important');
     });
     
     // Submenús
     const submenuItems = document.querySelectorAll('.submenu-item');
     submenuItems.forEach(item => {
-        item.style.setProperty('color', colores.header_text, 'important');
+        item.style.setProperty('color', colores.submenu_text || colores.header_text, 'important');
     });
     
-    // Botones - TODOS los tipos
-    const buttons = document.querySelectorAll('button, .btn, input[type="button"], input[type="submit"]');
-    console.log('[BRANDING] 🔍 Botones encontrados:', buttons.length);
-    console.log('[BRANDING] 🔍 Color botón:', colores.button, '→ Texto:', textForButton);
+    // Botones: estilos aplicados vía auto_branding.js (CSS inyectado), no inline
+    console.log('[BRANDING] ℹ️ Estilos de botones delegados a auto_branding.js');
     
-    buttons.forEach(button => {
-        button.style.setProperty('background-color', colores.button, 'important');
-        button.style.setProperty('background', colores.button, 'important');
-        button.style.setProperty('color', textForButton, 'important');
-        button.style.setProperty('border-color', colores.button, 'important');
-        console.log('[BRANDING] ✓ Botón actualizado:', button.textContent?.substring(0, 15) || button.value, 
-                    '→ BG:', window.getComputedStyle(button).backgroundColor,
-                    'Color:', window.getComputedStyle(button).color);
-    });
-    
-    console.log('[BRANDING] ✅ Estilos aplicados directamente a', menus.length, 'menús,', menuLinks.length, 'links y', buttons.length, 'botones');
+    console.log('[BRANDING] ✅ Estilos aplicados directamente a', menus.length, 'menús y', menuLinks.length, 'links');
     
     // APLICAR TAMBIÉN DENTRO DEL IFRAME
     console.log('[BRANDING] 🔍 Buscando iframe para aplicar estilos...');
@@ -430,17 +468,8 @@ function aplicarColores(colores) {
                     console.log('[BRANDING] ✓ Fondo aplicado al body del iframe:', colores.app_bg);
                 }
                 
-                // Aplicar estilos directamente a botones del iframe
-                const iframeButtons = iframeDoc.querySelectorAll('button, .btn, input[type="button"], input[type="submit"]');
-                console.log('[BRANDING] 🔍 Botones en iframe:', iframeButtons.length);
-                iframeButtons.forEach(button => {
-                    button.style.setProperty('background-color', colores.button, 'important');
-                    button.style.setProperty('background', colores.button, 'important');
-                    button.style.setProperty('color', textForButton, 'important');
-                    button.style.setProperty('border-color', colores.button, 'important');
-                });
-                
-                console.log('[BRANDING] ✅ Estilos aplicados dentro del iframe a', iframeButtons.length, 'botones');
+                // Botones del iframe: estilos aplicados vía auto_branding.js que se ejecuta dentro del iframe
+                console.log('[BRANDING] ℹ️ Estilos de botones en iframe delegados a auto_branding.js');
             }
         } catch (e) {
             console.log('[BRANDING] ⚠️ No se pudo acceder al iframe (cross-origin):', e.message);
@@ -539,17 +568,8 @@ function aplicarEstilosAlIframe() {
             console.log('[BRANDING] Fondo aplicado al body del iframe:', colores.app_bg);
         }
         
-        // Aplicar estilos directamente a botones
-        const iframeButtons = iframeDoc.querySelectorAll('button, .btn, input[type="button"], input[type="submit"]');
-        console.log('[BRANDING] 🔍 Botones en iframe:', iframeButtons.length);
-        iframeButtons.forEach(button => {
-            button.style.setProperty('background-color', colores.button, 'important');
-            button.style.setProperty('background', colores.button, 'important');
-            button.style.setProperty('color', textForButton, 'important');
-            button.style.setProperty('border-color', colores.button, 'important');
-        });
-        
-        console.log('[BRANDING] ✅ Estilos re-aplicados al iframe:', iframeButtons.length, 'botones');
+        // Botones: estilos aplicados vía auto_branding.js dentro del iframe
+        console.log('[BRANDING] ℹ️ Estilos de botones delegados a auto_branding.js en iframe');
         
         // Configurar observer para detectar modales dinámicas
         configurarObserverDeModales(iframeDoc, colores, textForButton);
@@ -579,13 +599,8 @@ function configurarObserverDeModales(doc, colores, textForButton) {
                     }
                     
                     if (buttons.length > 0) {
-                        console.log('[BRANDING] 🆕 Detectados', buttons.length, 'botones nuevos (modal), aplicando estilos...');
-                        buttons.forEach(button => {
-                            button.style.setProperty('background-color', colores.button, 'important');
-                            button.style.setProperty('background', colores.button, 'important');
-                            button.style.setProperty('color', textForButton, 'important');
-                            button.style.setProperty('border-color', colores.button, 'important');
-                        });
+                        console.log('[BRANDING] 🆕 Detectados', buttons.length, 'botones nuevos (modal), estilos vía CSS');
+                        // Estilos aplicados por auto_branding.js via CSS inyectado
                     }
                 }
             });

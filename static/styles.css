@@ -1,3 +1,8 @@
+/* ================================= */
+/* SELECTOR: 70px - FORZADO TRIPLE */
+/* TIMESTAMP: 1761595767 */
+/* overflow: hidden + ellipsis */
+/* ================================= */
 /* -------------------------------------------------------------------------
    1. VARIABLES GLOBALES (ROOT)
    ------------------------------------------------------------------------- */
@@ -9,6 +14,12 @@
 .importe-negativo {
     color: var(--color-rojo) !important;
     font-weight: bold;
+}
+
+/* Asegurar separación homogénea: sin márgenes extras en items */
+.detalle-proforma-container .detalle-proforma-item,
+.detalle-proforma-container .detalle-proforma-item-importe {
+    margin: 0 !important;
 }
 
 
@@ -270,14 +281,14 @@
 .header-container {
   position: relative;
   background: linear-gradient(to right, var(--color-primario, #243342) 0%, rgba(36,51,66,0.85) 30%, rgba(36,51,66,0.3) 70%, transparent 100%);
-  color: #ffffff;
+  color: var(--color-header-text, #ffffff);
   padding: 15px 20px;
   margin: 0 0 20px 0;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   border-radius: 8px;
 }
 .header-container h1 {
-  color: #ffffff !important;
+  color: var(--color-header-text, #ffffff) !important;
   margin: 0;
 }
 
@@ -327,8 +338,8 @@
     border-radius: 5px;
     transition: border-color 0.3s;
     font-size: 14px;
-    color: #212529;
-    background-color: #fff;
+    color: var(--color-input-text, var(--color-texto, #ecf0f1));
+    background-color: var(--color-input-bg, var(--color-app-bg, #1f1f1f));
   }
   .filters-container input:focus,
   .filters-container select:focus {
@@ -433,7 +444,7 @@
     border-collapse: separate;
     border-spacing: 0;
     margin-bottom: 20px;
-    border: 1px solid #dddddd;
+    border: none;
     border-radius: 8px;
     overflow: hidden;
     table-layout: fixed; /* Respeta anchos fijos */
@@ -454,7 +465,8 @@
   th, td {
     padding: 6px 8px;
     text-align: left;
-    border: 1px solid #dddddd;
+    border: none;
+    border-bottom: 1px solid #f5f5f5;
     font-size: 13px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -911,7 +923,7 @@
     position: absolute;
     width: 300px;
     height: 200px;
-    background: #fff;
+    background: var(--color-modal-bg, var(--color-app-bg));
     border: 1px solid var(--color-borde, #ccc);
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     border-radius: 8px;
@@ -965,8 +977,8 @@
   .window-content {
     padding: 15px;
     font-size: 14px;
-    color: var(--color-texto, #333);
-    background: #fff;
+    color: var(--color-texto, #ecf0f1);
+    background: var(--color-modal-bg, var(--color-app-bg));
   }
 
   .minimized {
@@ -1183,7 +1195,7 @@ td .fas {
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #fff;
+  background-color: var(--color-app-bg);
   border-top: 1px solid #dddddd;
   padding: 10px;
   z-index: 1000;
@@ -1384,7 +1396,14 @@ td .fas {
     transform: translate(-50%, -50%);
     box-shadow: 0 4px 8px var(--color-shadow);
     z-index: 10000000;
+    border: 2px solid #ffffff !important; /* borde blanco visible */
 }
+
+/* Borde blanco en modales solo en modo oscuro del sistema */
+/* Asegurar borde también en otros contenedores de modales/diálogos */
+.confirmacion-dialog,
+.dropdown-menu,
+#modal-pagos .modal-content { border: 2px solid #ffffff !important; }
 
 .modal-header {
     padding: 15px 20px;
@@ -1517,7 +1536,7 @@ td .fas {
   top: 100%;
   left: 0;
   right: 0;
-  background-color: white;
+  background-color: var(--color-modal-bg, var(--color-app-bg));
   border: 2px solid #dddddd;
   border-radius: 4px;
   max-height: 200px;
@@ -1534,7 +1553,7 @@ td .fas {
   border-bottom: 1px solid #eee;
   transition: all 0.2s ease;
   display: block;
-  background-color: white;
+  background-color: var(--color-modal-bg, var(--color-app-bg));
 }
 
 .sugerencia-item:last-child {
@@ -1542,7 +1561,7 @@ td .fas {
 }
 
 .sugerencia-item:hover {
-  background-color: #f5f5f5;
+  background-color: var(--color-hover, rgba(255,255,255,0.06));
   padding-left: 20px;
 }
 
@@ -1743,20 +1762,54 @@ td .fas {
 /* Estilos para el formulario de detalles de proforma */
 .detalle-proforma-container {
     display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
+    flex-wrap: nowrap;
+    gap: 6px; /* ligera separación entre campos */
     align-items: flex-end;
     background-color: var(--color-fondo);
-    padding: 20px;
+    padding: 15px 10px;
     border-radius: 8px;
     box-shadow: 0 2px 4px var(--color-shadow);
     margin-bottom: 20px;
+    overflow-x: auto;
+    overflow-y: hidden; /* evitar scroll vertical */
+}
+
+/* Quitar completamente el espacio del campo de concepto personalizado (intermedio) */
+.detalle-proforma-container #campo-concepto-personalizado {
+    display: none !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 .detalle-proforma-item {
     display: flex;
     flex-direction: column;
     gap: 5px;
+    min-width: 0; /* permite que el item encoja sin forzar ancho por contenido */
+}
+
+/* Columna del selector de productos: fijar ancho de la columna (padre) */
+.detalle-proforma-container .detalle-proforma-item.flex-1:has(> #concepto-detalle) {
+    flex: 0 0 280px !important;
+    max-width: 280px !important;
+    min-width: 280px !important;
+}
+
+/* Columna del buscador de productos: fijar ancho de la columna (padre) */
+.detalle-proforma-container .detalle-proforma-item.flex-1:has(> #busqueda-producto) {
+    flex: 0 0 160px !important;
+    max-width: 160px !important;
+    min-width: 160px !important;
+}
+
+/* Evitar que los labels fuercen el ancho del contenedor */
+.detalle-proforma-item > label {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .detalle-proforma-item label {
@@ -1872,11 +1925,13 @@ td .fas {
 }
 
 .detalle-proforma-item-importe input[type="number"]#cantidad-detalle {
-    width: 80px;
+    width: 70px;
+    max-width: 70px;
 }
 
 .detalle-proforma-item-importe input[type="number"]#precio-detalle {
-    width: 120px;
+    width: 70px;
+    max-width: 70px;
 }
 
 .precio-label-row {
@@ -1985,11 +2040,13 @@ td .fas {
 }
 
 .detalle-proforma-item-cantidad input[type="number"] {
-    width: 120px;
+    width: 70px;
+    max-width: 70px;
 }
 
 .detalle-proforma-item-importe input[type="number"]#impuesto-detalle {
-    width: 60px;
+    width: 70px;
+    max-width: 70px;
 }
 
 /* Ajustes para campos del modal */
@@ -2133,14 +2190,9 @@ table:not(.fixed-footer table) tbody tr:hover {
 }
 
 /* Ajustes para el selector de productos */
-#concepto-detalle {
-    font-size: 14px !important;
-    padding: 6px 10px !important;
-}
-
 /* Ajuste para el espaciado entre cantidad y precio */
 .detalle-proforma-item-importe {
-    margin-right: 15px !important;
+    margin-right: 0 !important; /* sin separación extra entre importes */
 }
 
 /* Contenedor principal del modal */
@@ -2571,10 +2623,108 @@ textarea:disabled {
 
 /* ===== UTILITY CLASSES - Sin estilos hardcoded ===== */
 
-/* Flex */
-.flex-1 { flex: 1; }
-.flex-2 { flex: 2; }
-.flex-3 { flex: 3; }
+/* Flex - Ajustado para que todo quepa en una línea SIN scroll */
+.flex-1 { 
+    flex: 0 0 auto; 
+    max-width: 70px;
+    min-width: 70px;
+}
+.flex-2 { 
+    flex: 0 0 auto; 
+    max-width: 70px;
+    min-width: 70px;
+}
+.flex-3 { 
+    flex: 0 0 auto; 
+    max-width: 400px;
+    min-width: 400px;
+}
+
+/* Ajuste específico para selectores de producto en tickets/proformas */
+.detalle-proforma-container .detalle-proforma-item.flex-2,
+.detalle-ticket-container .detalle-ticket-item.flex-2 {
+    flex: 0 0 auto !important;
+    max-width: 140px !important;
+    min-width: 120px !important;
+    width: 140px !important;
+}
+
+/* Campo de búsqueda de producto */
+#busqueda-producto {
+    max-width: 160px !important;
+    width: 160px !important;
+    min-width: 160px !important;
+}
+
+/* Selector de concepto/producto - FORZADO MÁXIMO */
+select#concepto-detalle,
+.detalle-proforma-item.flex-1 select#concepto-detalle,
+div.detalle-proforma-item.flex-1 select#concepto-detalle {
+    max-width: 280px !important;
+    width: 280px !important;
+    min-width: 280px !important;
+    font-size: 11px !important;
+    padding: 4px 18px 4px 6px !important; /* espacio estable para la flecha */
+    display: inline-block !important;
+    box-sizing: border-box !important;
+    font-weight: 400 !important; /* evitar cambio de peso al seleccionar */
+    line-height: 1.2 !important; /* altura constante */
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    background-color: #2a2a2a !important;
+    color: #e0e0e0 !important;
+    border-color: #4a4a4a !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* Campo de descripción */
+#descripcion-detalle {
+    max-width: 400px !important;
+    width: 400px !important;
+    min-width: 400px !important;
+}
+
+/* Total: fijar a 70px y evitar expansión */
+.detalle-proforma-container .detalle-proforma-item-importe.flex-1:has(> #total-detalle) {
+    flex: 0 0 20px !important;
+    max-width: 20px !important;
+    min-width: 20px !important;
+}
+
+#total-detalle {
+    max-width: 20px !important;
+    width: 20px !important;
+    min-width: 20px !important;
+    text-align: right !important;
+    padding: 0 2px !important;
+}
+
+/* Opciones del select */
+#concepto-detalle option {
+    background-color: #2a2a2a !important;
+    color: #e0e0e0 !important;
+}
+
+/* TODOS los selects en modo oscuro */
+select,
+select.width-full,
+body select,
+body .detalle-proforma-container select,
+body .detalle-ticket-container select,
+body .form-inline select {
+    background-color: #2a2a2a !important;
+    color: #e0e0e0 !important;
+    border-color: #4a4a4a !important;
+}
+
+select option,
+body select option {
+    background-color: #2a2a2a !important;
+    color: #e0e0e0 !important;
+}
 
 /* Width */
 .width-full { width: 100%; }
@@ -2623,3 +2773,168 @@ textarea:disabled {
     font-weight: 600;
 }
 
+/* === GESTION_PRODUCTOS === */
+.fieldset-franjas-auto {
+    margin-top: 16px;
+    border: 1px solid var(--color-borde, #ddd);
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.checkbox-input {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+}
+
+.bloque-franjas-edicion {
+    margin-top: 16px;
+    padding: 10px;
+    border: 1px dashed var(--color-borde, #bbb);
+    border-radius: 4px;
+    background: var(--color-app-bg, #fafafa);
+}
+
+.margin-bottom-10 { margin-bottom: 10px; }
+.margin-top-30 { margin-top: 30px; }
+
+/* Text Danger */
+.text-danger {
+    color: #d9534f !important;
+}
+
+/* Row hover para tablas */
+.row-hover {
+    background-color: var(--color-hover, #f8f9fa) !important;
+}
+
+
+/* ===== Overrides globales de formulario y popups para respetar la plantilla (incluye modo oscuro) ===== */
+/* Estas reglas se colocan al final para tener mayor especificidad por cascada */
+
+/* Botones con máxima prioridad - sobrescribir estilos blancos de API */
+button,
+button[type="button"],
+input[type="button"],
+input[type="submit"],
+.btn,
+#btn-agregar-detalle,
+#btn-info-precio {
+  background-color: var(--color-button, #5a9fd4) !important;
+  background: var(--color-button, #5a9fd4) !important;
+  color: var(--color-button-text, #ffffff) !important;
+  border-color: var(--color-button, #5a9fd4) !important;
+}
+
+button:hover,
+button[type="button"]:hover,
+input[type="button"]:hover,
+input[type="submit"]:hover,
+.btn:hover {
+  background-color: var(--color-button-hover, var(--color-button, #4a8ac4)) !important;
+  background: var(--color-button-hover, var(--color-button, #4a8ac4)) !important;
+}
+
+/* Labels - color claro visible sobre fondo oscuro */
+label {
+  color: var(--color-input-text, #e0e0e0) !important;
+}
+
+/* Inputs, selects y textareas */
+input,
+select,
+textarea {
+  background-color: var(--color-input-bg, #2a2a2a) !important;
+  color: var(--color-input-text, #e0e0e0) !important;
+  border-color: var(--color-input-border, #4a4a4a) !important;
+}
+
+/* Contenedor de detalles de proforma/tickets/facturas */
+.detalle-proforma-container,
+.detalle-ticket-container,
+.detalle-factura-container,
+.form-inline,
+.form-group {
+  background-color: var(--color-app-bg, #0f0f0f) !important;
+  color: var(--color-input-text, #e0e0e0) !important;
+}
+
+/* Todos los textos dentro de los contenedores de detalles */
+.detalle-proforma-container *:not(button):not(input):not(select):not(textarea),
+.detalle-ticket-container *:not(button):not(input):not(select):not(textarea),
+.detalle-factura-container *:not(button):not(input):not(select):not(textarea),
+.form-inline *:not(button):not(input):not(select):not(textarea),
+.form-group *:not(button):not(input):not(select):not(textarea) {
+  color: var(--color-input-text, #e0e0e0) !important;
+}
+
+/* Texto de totales y resúmenes */
+.total-label,
+.precio-label-row,
+.detalle-proforma-item-importe label,
+#total-presupuesto,
+#total-proforma,
+#total-factura {
+  color: var(--color-input-text, #e0e0e0) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-input-text, #ecf0f1);
+  opacity: 0.6;
+}
+
+/* Readonly/total displays */
+.readonly-field,
+.total-proforma-display {
+  background-color: var(--color-input-bg, var(--color-app-bg, #1f1f1f)) !important;
+  color: var(--color-input-text, var(--color-texto, #ecf0f1)) !important;
+}
+
+/* Tablas (celdas) - Estilos oscuros */
+table,
+table thead,
+table tbody,
+table tfoot {
+  background-color: var(--color-grid-bg, #1f1f1f) !important;
+  color: var(--color-grid-text, #e0e0e0) !important;
+}
+
+table thead tr th {
+  background-color: var(--color-grid-header, #2a2a2a) !important;
+  color: var(--color-grid-text, #e0e0e0) !important;
+  border-color: var(--color-input-border, #4a4a4a) !important;
+}
+
+table tbody tr td {
+  background-color: var(--color-grid-bg, #1f1f1f) !important;
+  color: var(--color-grid-text, #e0e0e0) !important;
+  border-color: var(--color-input-border, #4a4a4a) !important;
+}
+
+/* Inputs dentro de tablas */
+table input[type="text"],
+table input[type="number"] {
+  background-color: var(--color-input-bg, #2a2a2a) !important;
+  color: var(--color-input-text, #e0e0e0) !important;
+  border-color: var(--color-input-border, #4a4a4a) !important;
+}
+
+/* Popups / sugerencias / diálogos */
+.info-precio-popup,
+[class*="sugeren"],
+.confirmacion-dialog,
+.dropdown-menu,
+.modal-content {
+  background-color: var(--color-modal-bg, var(--color-app-bg, #1b1b1b)) !important;
+  color: var(--color-modal-text, var(--color-texto, #e6e6e6)) !important;
+}
+}

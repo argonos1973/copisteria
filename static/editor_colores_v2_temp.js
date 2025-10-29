@@ -2,14 +2,20 @@ const API_URL = 'http://192.168.1.23:5001/api';
 let empresaId = null;
 let plantillaActual = null;
 
-const PLANTILLAS = {
-    minimal: { nombre: 'Minimal', desc: 'Negro y blanco', icon: '✨', color_primario: '#ffffff', color_secundario: '#f5f5f5', color_button: '#000000', color_button_hover: '#333333', color_header_text: '#000000', color_app_bg: '#ffffff', color_success: '#000000', color_warning: '#666666', color_danger: '#000000', color_info: '#333333', color_header_bg: '#ffffff', color_grid_header: '#f5f5f5', color_button_text: '#ffffff', color_grid_text: '#000000', color_icon: '#000000' },
-    zen: { nombre: 'Zen', desc: 'Ultra minimalista', icon: '🧘', color_primario: '#f8f8f8', color_secundario: '#ececec', color_button: '#cccccc', color_button_hover: '#aaaaaa', color_header_text: '#111111', color_app_bg: '#ffffff', color_success: '#999999', color_warning: '#777777', color_danger: '#555555', color_info: '#888888', color_header_bg: '#f8f8f8', color_grid_header: '#ececec', color_button_text: '#111111', color_grid_text: '#111111', color_icon: '#666666' },
-    dark: { nombre: 'Dark Mode', desc: 'Modo oscuro moderno', icon: '🌙', color_primario: '#1a1a1a', color_secundario: '#2a2a2a', color_button: '#4a4a4a', color_button_hover: '#5a5a5a', color_header_text: '#ffffff', color_app_bg: '#0f0f0f', color_success: '#4caf50', color_warning: '#ff9800', color_danger: '#f44336', color_info: '#2196f3', color_header_bg: '#1a1a1a', color_grid_header: '#2a2a2a', color_button_text: '#ffffff', color_grid_text: '#e0e0e0', color_icon: '#b0b0b0' },
-    glassmorphism: { nombre: 'Glassmorphism', desc: 'Efecto cristal', icon: '💎', color_primario: '#1a1a2e', color_secundario: '#16213e', color_button: '#0f3460', color_button_hover: '#533483', color_header_text: '#e94560', color_app_bg: '#0a0a14', color_success: '#00d9ff', color_warning: '#ff6b6b', color_danger: '#ee5a6f', color_info: '#4ecdc4', color_header_bg: '#1a1a2e', color_grid_header: '#16213e', color_button_text: '#ffffff', color_grid_text: '#ffffff', color_icon: '#e94560' },
-    oceano: { nombre: 'Océano', desc: 'Azules profundos', icon: '🌊', color_primario: '#006994', color_secundario: '#13678A', color_button: '#012A4A', color_button_hover: '#013A63', color_header_text: '#A9D6E5', color_app_bg: '#E8F4F8', color_success: '#2A9D8F', color_warning: '#F4A261', color_danger: '#E76F51', color_info: '#89C2D9', color_header_bg: '#006994', color_grid_header: '#13678A', color_button_text: '#ffffff', color_grid_text: '#012A4A', color_icon: '#012A4A' },
-    default: { nombre: 'Por Defecto', desc: 'Clásico', icon: '🎨', color_primario: '#2c3e50', color_secundario: '#3498db', color_button: '#3498db', color_button_hover: '#2980b9', color_header_text: '#ffffff', color_app_bg: '#ffffff', color_success: '#27ae60', color_warning: '#f39c12', color_danger: '#e74c3c', color_info: '#3498db', color_header_bg: '#2c3e50', color_grid_header: '#34495e', color_button_text: '#ffffff', color_grid_text: '#333333', color_icon: '#666666' }
-};
+// Plantillas cargadas dinámicamente desde plantillas.js
+let PLANTILLAS = {};
+
+// Cargar plantillas al inicio
+async function cargarPlantillasEditor() {
+    console.log('📦 Cargando plantillas en editor...');
+    if (typeof window.cargarPlantillas === 'function') {
+        await window.cargarPlantillas();
+        PLANTILLAS = window.plantillasColores;
+        console.log('✅ Plantillas cargadas:', Object.keys(PLANTILLAS));
+    } else {
+        console.error('❌ plantillas.js no está cargado');
+    }
+}
 
 let plantillaOriginal = null;
 let coloresOriginales = {};
@@ -24,6 +30,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
+    await cargarPlantillasEditor();
     renderizarSidebar();
     await cargarEmpresa();
 });
@@ -50,10 +57,10 @@ function renderizarSidebar() {
         item.setAttribute('data-plantilla', key);
         item.onclick = () => seleccionarPlantilla(key);
         item.innerHTML = `
-            <div class="plantilla-icon">${p.icon}</div>
+            <div class="plantilla-icon">${p.icon || '🎨'}</div>
             <div class="plantilla-info">
-                <div class="nombre">${p.nombre}</div>
-                <div class="desc">${p.desc}</div>
+                <div class="nombre">${p.nombre || 'Plantilla'}</div>
+                <div class="desc">${p.descripcion || p.desc || ''}</div>
             </div>
         `;
         list.appendChild(item);
@@ -305,8 +312,8 @@ function aplicarPlantilla(nombre) {
 }
 
 function actualizarPreview() {
-    const menuBg = document.getElementById('color_primario')?.value || '#2c3e50';
-    const menuText = document.getElementById('color_header_text')?.value || '#ffffff';
+    const menuBg = document.getElementById('color_submenu_bg')?.value || '#2c3e50';
+    const menuText = document.getElementById('color_submenu_text')?.value || '#ffffff';
     const appBg = document.getElementById('color_app_bg')?.value || '#ffffff';
     const secundario = document.getElementById('color_secundario')?.value || '#3498db';
     const button = document.getElementById('color_button')?.value || '#3498db';

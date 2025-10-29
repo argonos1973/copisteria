@@ -1,0 +1,20 @@
+<\!DOCTYPE html>
+<html>
+<head>
+    <title>Test Branding</title>
+</head>
+<body>
+    <h1>Test de Endpoint Branding</h1>
+    <pre id="output">Cargando...</pre>
+    <script>
+        fetch('/api/auth/branding', {credentials: 'include'})
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(e => {
+                document.getElementById('output').textContent = 'Error: ' + e;
+            });
+    </script>
+</body>
+</html>

@@ -19,6 +19,12 @@ async function cerrarSesion() {
 // Inyectar cabecera global en la página cargada del iframe
 function injectHeader(doc) {
     if (!doc || !doc.body) return;
+    
+    // NO inyectar header si la página ya tiene .header (páginas de administración)
+    if (doc.querySelector('.header')) {
+        return;
+    }
+    
     let header = doc.querySelector('.page-header');
     if (!header) {
         const firstH1 = doc.querySelector('h1');
@@ -26,14 +32,9 @@ function injectHeader(doc) {
         if (firstH1) firstH1.remove();
         header = doc.createElement('div');
         header.className = 'page-header';
-        // aplicar color de fondo inline por si CSS no carga la variable
-        header.style.background = 'linear-gradient(90deg, #2c3e50 0%, rgba(44,62,80,0.8) 30%, rgba(44,62,80,0.4) 60%, rgba(44,62,80,0.1) 80%, transparent 100%)';
-        header.style.padding = "8px 25px";
-        header.style.margin = "0 0 20px 0";
-        header.style.borderRadius = "8px";
+        // NO agregar estilos inline - usar CSS con variables de plantilla
         const h1 = doc.createElement('h1');
         h1.textContent = txt;
-        if (h1) h1.style.color = "#ffffff";
         header.appendChild(h1);
         doc.body.insertBefore(header, doc.body.firstChild);
     } else {

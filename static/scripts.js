@@ -90,6 +90,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     const btnImprimir  = document.getElementById("btn-imprimir-ticket");
     const bntAnadir    = document.getElementById("btn-agregar-detalle");
     const btnAnular    = document.getElementById("btn-anular-ticket");
+    const contenedorAcciones = document.getElementById('guardar-ticket-boton');
+
+    // Asegurar que el contenedor de acciones sea visible (puede venir con 'hidden-field')
+    if (contenedorAcciones) {
+      contenedorAcciones.classList.remove('hidden-field');
+      contenedorAcciones.style.display = 'flex';
+      contenedorAcciones.style.gap = contenedorAcciones.style.gap || '8px';
+    }
 
     // Si el ticket está anulado o cobrado, deshabilitar edición
     if (estadoTicket === 'A' || estadoTicket === 'C') {
@@ -107,6 +115,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Configurar visibilidad y eventos del botón "Anular"
     if (btnAnular) {
+      // Quitar posibles clases que lo oculten por CSS
+      btnAnular.classList.remove('hidden');
       if (idTicket && estadoTicket !== 'A') {
         btnAnular.style.display = 'inline-block';
       }
@@ -613,18 +623,18 @@ export async function cargarDetalleParaEditar(fila) {
   // Ajustar readOnly según tipo de producto
   if (String(productoId) === String(PRODUCTO_ID_LIBRE)) {
     precioDetalleElem.readOnly = false;
+    precioDetalleElem.classList.remove('readonly-field');
     totalDetalleElem.readOnly = false;
-    precioDetalleElem.style.backgroundColor = '';
-    totalDetalleElem.style.backgroundColor = '';
+    totalDetalleElem.classList.remove('readonly-field');
   } else {
     precioDetalleElem.readOnly = true;
+    precioDetalleElem.classList.add('readonly-field');
     totalDetalleElem.readOnly = true;
-    precioDetalleElem.style.backgroundColor = '#e9ecef';
-    totalDetalleElem.style.backgroundColor = '#e9ecef';
+    totalDetalleElem.classList.add('readonly-field');
   }
   // El IVA en tickets se mantiene readonly
   impuestoDetalleElem.readOnly = true;
-  impuestoDetalleElem.style.backgroundColor = '#e9ecef';
+  impuestoDetalleElem.classList.add('readonly-field');
 
   // Re-vincular listeners para que reaccionen a cambios del usuario (no recalcular ahora)
   precioDetalleElem.removeEventListener('input', calcularTotalDetalle);

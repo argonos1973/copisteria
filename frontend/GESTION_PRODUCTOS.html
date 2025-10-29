@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gestión de Productos</title>
-    <script src="/static/auto_branding.js?v=12"></script>
+    <script src="/static/auto_branding.js?v=1761688751"></script>
+    <script src="/static/plantilla_sync.js?v=1761684810"></script>
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,8 +15,8 @@
   />
 
   <!-- Enlace al archivo de estilos externo -->
-  <link rel="stylesheet" href="../static/styles.css" />
-  <link rel="stylesheet" href="../static/notificaciones.css" />
+  <link rel="stylesheet" href="../static/styles.css?v=26?t=1761596755" />
+  <link rel="stylesheet" href="../static/notificaciones.css?v=13" />
   <link rel="stylesheet" href="../static/page_header.css">
   
   <style>
@@ -151,25 +152,25 @@
           required
           class="uppercase"
         />
-        <div id="errorNombre" class="error-message" style="display:none;"></div>
+        <div id="errorNombre" class="error-message hidden"></div>
       </div>
 
       <!-- Configuración de franjas de descuento automáticas -->
-      <fieldset id="fieldsetFranjasAuto" style="margin-top:16px; border:1px solid #ddd; padding:10px; border-radius:4px;">
+      <fieldset id="fieldsetFranjasAuto" class="fieldset-franjas-auto">
         <legend>Franjas de descuento automáticas</legend>
-        <div class="form-group" style="margin-bottom:10px;">
-          <label style="display:flex; align-items:center; gap:8px; font-weight:500; line-height:1;">
-            <input type="checkbox" id="chkFranjasAuto1500" style="margin:0; width:16px; height:16px;" />
+        <div class="form-group margin-bottom-10">
+          <label class="checkbox-label">
+            <input type="checkbox" id="chkFranjasAuto1500" class="checkbox-input" />
             Cálculo automático 1-500 (tramos de 10) con descuento progresivo hasta 60%
           </label>
           <small>Al activarlo, se fijan: inicio=1, número de franjas=50, ancho=10; el descuento aumenta de forma estricta hasta un máximo del 60%.</small>
         </div>
-        <div class="form-group" style="margin-bottom:10px;">
-          <label style="display:flex; align-items:center; gap:8px; font-weight:500; line-height:1; color:#d9534f;">
-            <input type="checkbox" id="chkNoGenerarFranjas" style="margin:0; width:16px; height:16px;" />
+        <div class="form-group margin-bottom-10">
+          <label class="checkbox-label text-danger">
+            <input type="checkbox" id="chkNoGenerarFranjas" class="checkbox-input" />
             No generar franjas automáticas (eliminar franjas existentes)
           </label>
-          <small style="color:#d9534f;">Al activarlo, se eliminan todas las franjas de descuento del producto y no se generan nuevas.</small>
+          <small class="text-danger">Al activarlo, se eliminan todas las franjas de descuento del producto y no se generan nuevas.</small>
         </div>
         <div class="form-row">
           <div class="form-group col compact-col">
@@ -185,7 +186,7 @@
             <input type="text" id="ancho" class="importe-input" inputmode="decimal" />
           </div>
         </div>
-        <div class="form-row" style="margin-top:8px;">
+        <div class="form-row margin-top-10">
           <div class="form-group col compact-col">
             <label for="descuento_inicial" class="required">% Descuento inicial</label>
             <input type="text" id="descuento_inicial" class="importe-input" inputmode="decimal" />
@@ -217,7 +218,7 @@
             step="0.00001"
             min="0"
           />
-          <div id="errorSubtotal" class="error-message" style="display:none;"></div>
+          <div id="errorSubtotal" class="error-message hidden"></div>
         </div>
 
         <div class="form-group col compact-col">
@@ -232,7 +233,7 @@
             <option value="10">10% (Reducido)</option>
             <option value="21">21% (General)</option>
           </select>
-          <div id="errorImpuestos" class="error-message" style="display:none;"></div>
+          <div id="errorImpuestos" class="error-message hidden"></div>
         </div>
 
         <div class="form-group col compact-col">
@@ -254,10 +255,10 @@
       </div>
 
       <!-- Bloque de franjas (visible en edición) -->
-      <div id="bloqueFranjasEdicion" style="display:none; margin-top:16px; padding:10px; border:1px dashed #bbb; border-radius:4px; background:#fafafa;">
+      <div id="bloqueFranjasEdicion" class="bloque-franjas-edicion hidden">
         <strong>Franjas de descuento:</strong>
         <span id="franjasResumen">-</span>
-        <div style="margin-top:8px;">
+        <div class="margin-top-10">
           <button id="btnGestionarFranjas" type="button">Gestionar franjas…</button>
         </div>
       </div>

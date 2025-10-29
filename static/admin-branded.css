@@ -1,0 +1,156 @@
+/* Admin CSS con soporte para branding automático */
+
+/* Variables que serán sobrescritas por auto_branding.js */
+:root {
+    --color-app-bg: #f0f2f5;
+    --color-primario: #3498db;
+    --color-secundario: #f0f2f5;
+    --color-success: #27ae60;
+    --color-danger: #e74c3c;
+    --color-text: #2c3e50;
+    --color-text-light: #7f8c8d;
+    --color-border: #dee2e6;
+    --color-card-bg: #ffffff;
+    --color-hover-bg: #e3f2fd;
+}
+
+/* Body y contenedores */
+body {
+    background: var(--color-app-bg) !important;
+}
+
+/* Títulos */
+h1, h2, h3 {
+    color: var(--color-text) !important;
+}
+
+/* Botones primarios */
+.btn-primary {
+    background: var(--color-primario) !important;
+    color: white !important;
+}
+
+.btn-primary:hover {
+    filter: brightness(0.9) !important;
+}
+
+/* Botones success */
+.btn-success {
+    background: var(--color-success) !important;
+    color: white !important;
+}
+
+.btn-success:hover {
+    filter: brightness(0.9) !important;
+}
+
+/* Cards */
+.empresa-card,
+.usuario-card,
+.modulo-card {
+    background: var(--color-card-bg) !important;
+}
+
+/* Status badges */
+.empresa-status.activo {
+    background: var(--color-success) !important;
+    color: white !important;
+    opacity: 0.8;
+}
+
+.empresa-status.inactivo {
+    background: var(--color-danger) !important;
+    color: white !important;
+    opacity: 0.8;
+}
+
+/* Alertas */
+.alert-success {
+    background: var(--color-success) !important;
+    color: white !important;
+    opacity: 0.9;
+}
+
+.alert-error {
+    background: var(--color-danger) !important;
+    color: white !important;
+    opacity: 0.9;
+}
+
+/* Botones de plantilla */
+.btn-plantilla {
+    border-color: var(--color-border) !important;
+    background: var(--color-card-bg) !important;
+    color: var(--color-text) !important;
+}
+
+.btn-plantilla:hover {
+    border-color: var(--color-primario) !important;
+    background: var(--color-hover-bg) !important;
+}
+
+/* Modales */
+.modal-content {
+    background: var(--color-card-bg) !important;
+}
+
+.modal-header h2 {
+    color: var(--color-text) !important;
+}
+
+/* Forms */
+.form-group label {
+    color: var(--color-text) !important;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    border-color: var(--color-border) !important;
+}
+
+/* Info boxes */
+.info-box {
+    background: var(--color-hover-bg) !important;
+    border-left-color: var(--color-primario) !important;
+}
+
+/* Stats cards */
+.stat-card {
+    background: var(--color-card-bg) !important;
+}
+
+/* Tabs */
+.tab {
+    color: var(--color-text-light) !important;
+}
+
+.tab.active {
+    color: var(--color-primario) !important;
+    border-bottom-color: var(--color-primario) !important;
+}
+
+/* Tables */
+table thead {
+    background: var(--color-primario) !important;
+    color: white !important;
+}
+
+table tbody tr:hover {
+    background: var(--color-hover-bg) !important;
+}
+
+/* Enlaces */
+a {
+    color: var(--color-primario) !important;
+}
+
+a:hover {
+    filter: brightness(0.9) !important;
+}
+
+/* Badges */
+.badge {
+    background: var(--color-primario) !important;
+    color: white !important;
+}

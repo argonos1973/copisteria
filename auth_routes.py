@@ -116,7 +116,8 @@ def obtener_sesion():
             'logo': f"/static/logos/{session.get('empresa_logo', 'default_header.png')}",
             'rol': session.get('rol'),
             'es_admin': session.get('es_admin_empresa') or session.get('es_superadmin'),
-            'es_superadmin': session.get('es_superadmin')
+            'es_superadmin': session.get('es_superadmin'),
+            'ultimo_acceso': session.get('ultimo_acceso')
         }), 200
     except Exception as e:
         logger.error(f"Error obteniendo sesión: {e}", exc_info=True)
@@ -180,12 +181,17 @@ def obtener_menu():
             'facturas_emitidas': [
                 {
                     'nombre': 'Tickets',
-                    'icono': 'fas fa-ticket-alt',
+                    'icono': 'fas fa-receipt',
                     'ruta': '#',
                     'submenu': [
                         {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_TICKETS.html'},
                         {'nombre': 'Nuevo', 'icono': 'fas fa-plus', 'ruta': '/GESTION_TICKETS.html'}
                     ]
+                },
+                {
+                    'nombre': 'Exportar',
+                    'icono': 'fas fa-download',
+                    'ruta': '/EXPORTAR.html'
                 },
                 {
                     'nombre': 'Facturas',
@@ -224,7 +230,7 @@ def obtener_menu():
         }
         
         # Módulos que ya están incluidos en submenus (no deben aparecer como items independientes)
-        modulos_en_submenu = ['facturas', 'tickets', 'proformas']
+        modulos_en_submenu = ['facturas', 'tickets', 'proformas', 'exportar', 'admin_empresas']
         
         menu = []
         for row in rows:
@@ -273,6 +279,36 @@ def obtener_menu():
         
         logger.info(f"[MENU] Total items en menú: {len(menu)}")
         
+        # Agregar opciones de administración si es superadmin
+        if es_superadmin:
+            menu.append({
+                'codigo': 'admin',
+                'nombre': 'Administración',
+                'ruta': '#',
+                'icono': 'fas fa-user-shield',
+                'orden': 999,
+                'permisos': {
+                    'ver': 1,
+                    'crear': 1,
+                    'editar': 1,
+                    'eliminar': 1,
+                    'anular': 1,
+                    'exportar': 1
+                },
+                'submenu': [
+                    {
+                        'nombre': 'Gestión',
+                        'icono': 'fas fa-cog',
+                        'ruta': '/ADMIN_PERMISOS.html'
+                    },
+                    {
+                        'nombre': 'Gestión Empresas',
+                        'icono': 'fas fa-building',
+                        'ruta': '/ADMIN_EMPRESAS.html'
+                    }
+                ]
+            })
+            logger.info("[MENU] Opciones de administración agregadas")
         
         conn.close()
         

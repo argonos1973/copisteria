@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estadísticas</title>
-    <script src="/static/auto_branding.js?v=9"></script>
+    <script src="/static/auto_branding.js?v=1761688751"></script>
+    <script src="/static/plantilla_sync.js?v=1761684810"></script>
     
     <script>
     // Variable global para el gráfico de gastos del año
@@ -124,7 +125,7 @@
     <script src="/static/estadisticas_facturas.js?v=20250911_1723" type="module"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css?v=20250911_1052">
     <link rel="stylesheet" href="/static/page_header.css">
-    <link rel="stylesheet" href="/static/styles.css?v=20250911_1052">
+    <link rel="stylesheet" href="/static/styles.css?v=26?v=20250911_1052">
     <link rel="stylesheet" href="/static/notificaciones.css?v=20250911_1052">
     <style>
         body {
@@ -359,13 +360,11 @@
         }
         
         .stats-table th {
-            background-color: #f5f5f5;
+            background-color: var(--color-grid-header, #333333) !important;
+            color: var(--color-header-text, #ffffff) !important;
             font-weight: bold;
-            color: #2c3e50;
             font-size: 0.68rem;
             text-transform: uppercase;
-            padding-top: 0.15rem;
-            padding-bottom: 0.15rem;
         }
         
         .stats-table tr:hover {
@@ -479,8 +478,8 @@
     .stats-header{display:flex;flex-direction:column;gap:0.2rem;margin-bottom:1rem;}
     .header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;}
     .header-icons{display:flex;gap:0.3rem;}
-    .header-icons button{margin:0;background:#2c3e50 !important;border:none;border-radius:4px;padding:6px;}
-    .header-icons i{color:#fff !important;}
+    .header-icons button{margin:0;background:var(--color-button, #ffffff);color:var(--color-button-text, #000000);border:1px solid var(--color-input-border, #000000);border-radius:4px;padding:6px;}
+    .header-icons i{color:var(--color-icon, #000000) !important;}
     .header-controls{display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;}
 </style>
 </head>

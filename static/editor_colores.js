@@ -2,14 +2,21 @@ const API_URL = 'http://192.168.1.23:5001/api';
 let empresaId = null;
 let plantillaActual = null;
 
-const PLANTILLAS = {
-    minimal: { nombre: 'Minimal', desc: 'Negro y blanco', icon: '✨', color_primario: '#ffffff', color_secundario: '#f5f5f5', color_button: '#000000', color_button_hover: '#333333', color_header_text: '#000000', color_app_bg: '#ffffff', color_success: '#000000', color_warning: '#666666', color_danger: '#000000', color_info: '#333333', color_header_bg: '#ffffff', color_grid_header: '#f5f5f5', color_button_text: '#ffffff', color_grid_text: '#000000', color_icon: '#000000', color_label: '#000000', color_input_bg: '#ffffff', color_input_text: '#000000', color_input_border: '#cccccc', color_select_bg: '#ffffff', color_select_text: '#000000', color_select_border: '#cccccc', color_grid_bg: '#ffffff', color_grid_hover: 'rgba(0,0,0,0.05)', color_icon_cell_bg: '#f8f9fa', color_modal_bg: '#ffffff', color_modal_text: '#000000', color_modal_border: '#cccccc', grid_cell_borders: 'true' },
-    zen: { nombre: 'Zen', desc: 'Ultra minimalista', icon: '🧘', color_primario: '#f8f8f8', color_secundario: '#ececec', color_button: '#cccccc', color_button_hover: '#aaaaaa', color_header_text: '#111111', color_app_bg: '#ffffff', color_success: '#999999', color_warning: '#777777', color_danger: '#555555', color_info: '#888888', color_header_bg: '#f8f8f8', color_grid_header: '#ececec', color_button_text: '#111111', color_grid_text: '#111111', color_icon: '#111111', color_label: '#111111', color_input_bg: '#ffffff', color_input_text: '#111111', color_input_border: '#dddddd', color_select_bg: '#ffffff', color_select_text: '#111111', color_select_border: '#dddddd', color_grid_bg: '#ffffff', color_grid_hover: 'rgba(0,0,0,0.03)', color_icon_cell_bg: '#f5f5f5', color_modal_bg: '#fafafa', color_modal_text: '#111111', color_modal_border: '#dddddd', grid_cell_borders: 'false' },
-    dark: { nombre: 'Dark Mode', desc: 'Modo oscuro moderno', icon: '🌙', color_primario: '#1a1a1a', color_secundario: '#2a2a2a', color_button: '#4a4a4a', color_button_hover: '#5a5a5a', color_header_text: '#ffffff', color_app_bg: '#0f0f0f', color_success: '#4caf50', color_warning: '#ff9800', color_danger: '#f44336', color_info: '#2196f3', color_header_bg: '#1a1a1a', color_grid_header: '#2a2a2a', color_button_text: '#ffffff', color_grid_text: '#e0e0e0', color_icon: '#e0e0e0', color_label: '#e0e0e0', color_input_bg: '#2a2a2a', color_input_text: '#ffffff', color_input_border: '#3a3a3a', color_select_bg: '#2a2a2a', color_select_text: '#ffffff', color_select_border: '#3a3a3a', color_grid_bg: '#1a1a1a', color_grid_hover: 'rgba(255,255,255,0.05)', color_icon_cell_bg: '#2a2a2a', color_modal_bg: '#2a2a2a', color_modal_text: '#e0e0e0', color_modal_border: '#3a3a3a', grid_cell_borders: 'true' },
-    glassmorphism: { nombre: 'Glassmorphism', desc: 'Efecto cristal', icon: '💎', color_primario: '#1a1a2e', color_secundario: '#16213e', color_button: '#0f3460', color_button_hover: '#533483', color_header_text: '#e94560', color_app_bg: '#0a0a14', color_success: '#00d9ff', color_warning: '#ff6b6b', color_danger: '#ee5a6f', color_info: '#4ecdc4', color_header_bg: '#1a1a2e', color_grid_header: '#16213e', color_button_text: '#ffffff', color_grid_text: '#ffffff', color_icon: '#ffffff', color_label: '#ffffff', color_input_bg: '#16213e', color_input_text: '#ffffff', color_input_border: '#0f3460', color_select_bg: '#16213e', color_select_text: '#ffffff', color_select_border: '#0f3460', color_grid_bg: '#0a0a14', color_grid_hover: 'rgba(255,255,255,0.05)', color_icon_cell_bg: '#16213e', color_modal_bg: '#16213e', color_modal_text: '#ffffff', color_modal_border: '#0f3460', grid_cell_borders: 'false' },
-    oceano: { nombre: 'Océano', desc: 'Azules profundos', icon: '🌊', color_primario: '#006994', color_secundario: '#13678A', color_button: '#012A4A', color_button_hover: '#013A63', color_header_text: '#A9D6E5', color_app_bg: '#E8F4F8', color_success: '#2A9D8F', color_warning: '#F4A261', color_danger: '#E76F51', color_info: '#89C2D9', color_header_bg: '#006994', color_grid_header: '#13678A', color_button_text: '#ffffff', color_grid_text: '#012A4A', color_icon: '#012A4A', color_label: '#012A4A', color_input_bg: '#ffffff', color_input_text: '#012A4A', color_input_border: '#A9D6E5', color_select_bg: '#ffffff', color_select_text: '#012A4A', color_select_border: '#A9D6E5', color_grid_bg: '#ffffff', color_grid_hover: 'rgba(0,105,148,0.1)', color_icon_cell_bg: '#d4ecf7', color_modal_bg: '#ffffff', color_modal_text: '#012A4A', color_modal_border: '#A9D6E5', grid_cell_borders: 'true' },
-    default: { nombre: 'Por Defecto', desc: 'Clásico', icon: '🎨', color_primario: '#2c3e50', color_secundario: '#3498db', color_button: '#3498db', color_button_hover: '#2980b9', color_header_text: '#ffffff', color_app_bg: '#ffffff', color_success: '#27ae60', color_warning: '#f39c12', color_danger: '#e74c3c', color_info: '#3498db', color_header_bg: '#2c3e50', color_grid_header: '#34495e', color_button_text: '#ffffff', color_grid_text: '#333333', color_icon: '#333333', color_label: '#333333', color_input_bg: '#ffffff', color_input_text: '#333333', color_input_border: '#cccccc', color_select_bg: '#ffffff', color_select_text: '#333333', color_select_border: '#cccccc', color_grid_bg: '#ffffff', color_grid_hover: 'rgba(52,152,219,0.1)', color_icon_cell_bg: '#ecf0f1', color_modal_bg: '#ffffff', color_modal_text: '#333333', color_modal_border: '#cccccc', grid_cell_borders: 'true' }
-};
+// Plantillas cargadas dinámicamente desde plantillas.js
+let PLANTILLAS = {};
+
+// Cargar plantillas al inicio
+async function cargarPlantillasEditor() {
+    console.log('📦 Cargando plantillas en editor...');
+    if (typeof window.cargarPlantillas === 'function') {
+        const plantillasCargadas = await window.cargarPlantillas();
+        PLANTILLAS = plantillasCargadas || window.plantillasColores || {};
+        console.log('✅ Plantillas cargadas:', Object.keys(PLANTILLAS));
+        console.log('📊 Total plantillas disponibles:', Object.keys(PLANTILLAS).length);
+    } else {
+        console.error('❌ plantillas.js no está cargado');
+    }
+}
 
 let plantillaOriginal = null;
 let coloresOriginales = {};
@@ -24,6 +31,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     
+    await cargarPlantillasEditor();
     renderizarSidebar();
     await cargarEmpresa();
     inicializarAcordeones();
@@ -51,10 +59,10 @@ function renderizarSidebar() {
         item.setAttribute('data-plantilla', key);
         item.onclick = () => seleccionarPlantilla(key);
         item.innerHTML = `
-            <div class="plantilla-icon">${p.icon}</div>
+            <div class="plantilla-icon">${p.icon || '🎨'}</div>
             <div class="plantilla-info">
-                <div class="nombre">${p.nombre}</div>
-                <div class="desc">${p.desc}</div>
+                <div class="nombre">${p.nombre || 'Plantilla'}</div>
+                <div class="desc">${p.descripcion || p.desc || ''}</div>
             </div>
         `;
         list.appendChild(item);
@@ -68,7 +76,6 @@ async function cargarEmpresa() {
         
         renderizarContentPanel(empresa);
         cargarColoresActuales(empresa);
-        actualizarPreview();
         
     } catch (error) {
         console.error('Error:', error);
@@ -94,108 +101,6 @@ function renderizarContentPanel(empresa) {
             </div>
         </div>
         
-        <div class="preview-grid">
-            <div class="preview-card">
-                <h3><i class="fas fa-bars"></i> Menú Lateral</h3>
-                <div class="menu-preview" id="menu-preview">
-                    <div class="menu-item"><i class="fas fa-home"></i> Dashboard</div>
-                    <div class="menu-item"><i class="fas fa-shopping-cart"></i> Ventas</div>
-                    <div class="submenu">
-                        <div class="submenu-item"><i class="fas fa-file-invoice"></i> Facturas</div>
-                        <div class="submenu-item"><i class="fas fa-receipt"></i> Tickets</div>
-                    </div>
-                    <div class="menu-item"><i class="fas fa-users"></i> Clientes</div>
-                </div>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-desktop"></i> Simulación App</h3>
-                <div class="app-simulation">
-                    <div class="app-header-sim" id="app-header-sim">
-                        <span><i class="fas fa-th-large"></i> Panel</span>
-                        <span><i class="fas fa-user-circle"></i></span>
-                    </div>
-                    <div class="app-content-sim" id="app-content-sim">
-                        <div class="sim-card" id="sim-card">
-                            <h4>Tarjeta</h4>
-                            <p>Color secundario</p>
-                        </div>
-                        <button class="sim-button" id="sim-button">
-                            <i class="fas fa-save"></i> Acción
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-exclamation-triangle"></i> Alertas</h3>
-                <div class="alert-preview" id="alert-success" style="background: rgba(39, 174, 96, 0.1); border-color: #27ae60; color: #27ae60;">
-                    <i class="fas fa-check-circle"></i> Operación exitosa
-                </div>
-                <div class="alert-preview" id="alert-warning" style="background: rgba(243, 156, 18, 0.1); border-color: #f39c12; color: #f39c12;">
-                    <i class="fas fa-exclamation-triangle"></i> Advertencia
-                </div>
-                <div class="alert-preview" id="alert-danger" style="background: rgba(231, 76, 60, 0.1); border-color: #e74c3c; color: #e74c3c;">
-                    <i class="fas fa-times-circle"></i> Error
-                </div>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-table"></i> Tabla</h3>
-                <table class="table-preview">
-                    <thead>
-                        <tr id="table-header-preview">
-                            <th>Producto</th>
-                            <th>Precio</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Item 1</td>
-                            <td>10.00€</td>
-                        </tr>
-                        <tr>
-                            <td>Item 2</td>
-                            <td>20.00€</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-th"></i> Grid</h3>
-                <div class="grid-preview">
-                    <div class="grid-item" id="grid-item-1">Item 1</div>
-                    <div class="grid-item" id="grid-item-2">Item 2</div>
-                    <div class="grid-item" id="grid-item-3">Item 3</div>
-                    <div class="grid-item" id="grid-item-4">Item 4</div>
-                </div>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-window-maximize"></i> Modal</h3>
-                <div class="modal-preview">
-                    <div class="modal-preview-header" id="modal-header-preview">
-                        <i class="fas fa-info-circle"></i> Título del Modal
-                    </div>
-                    <div style="padding: 0.5rem 0;">
-                        Contenido del modal aquí
-                    </div>
-                </div>
-            </div>
-            
-            <div class="preview-card">
-                <h3><i class="fas fa-icons"></i> Iconos</h3>
-                <div class="icon-preview" id="icon-preview-container">
-                    <i class="fas fa-home" id="icon-1"></i>
-                    <i class="fas fa-user" id="icon-2"></i>
-                    <i class="fas fa-cog" id="icon-3"></i>
-                    <i class="fas fa-chart-bar" id="icon-4"></i>
-                    <i class="fas fa-file" id="icon-5"></i>
-                    <i class="fas fa-bell" id="icon-6"></i>
-                </div>
-            </div>
-        </div>
         
         <div class="color-editors">
             <h3><i class="fas fa-paint-brush"></i> Personalizar Colores</h3>
@@ -203,7 +108,7 @@ function renderizarContentPanel(empresa) {
             
             <!-- Acordeón 1: Colores Principales -->
             <div class="accordion-section active">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div class="accordion-header">
                     <span><i class="fas fa-palette"></i> Colores Principales</span>
                     <i class="fas fa-chevron-up"></i>
                 </div>
@@ -220,7 +125,7 @@ function renderizarContentPanel(empresa) {
             
             <!-- Acordeón 2: Botones -->
             <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div class="accordion-header">
                     <span><i class="fas fa-square"></i> Botones</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -235,7 +140,7 @@ function renderizarContentPanel(empresa) {
             
             <!-- Acordeón 3: Notificaciones -->
             <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div class="accordion-header">
                     <span><i class="fas fa-bell"></i> Notificaciones y Alertas</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -251,19 +156,20 @@ function renderizarContentPanel(empresa) {
             
             <!-- Acordeón 4: Tablas y Grids -->
             <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div class="accordion-header">
                     <span><i class="fas fa-table"></i> Tablas y Grids</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div class="accordion-content">
                     <div class="color-grid">
                         ${crearInputColor('color_grid_header', 'Encabezado Grid', '#34495e')}
+                        ${crearInputColor('color_grid_header_text', 'Texto Encabezado', '#ffffff')}
                         ${crearInputColor('color_grid_text', 'Texto Grid', '#333333')}
                         ${crearInputColor('color_grid_bg', 'Fondo Grid', '#ffffff')}
                     </div>
                     <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Hover Fila</h5>
                     <div class="color-grid">
-                        ${crearInputColor('color_grid_hover', 'Color Hover', 'rgba(0,0,0,0.05)')}
+                        ${crearInputColor('color_grid_hover', 'Color Hover', '#f5f5f5')}
                     </div>
                     <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Celdas con Iconos</h5>
                     <div class="color-grid">
@@ -274,7 +180,7 @@ function renderizarContentPanel(empresa) {
             
             <!-- Acordeón 5: Formularios -->
             <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div class="accordion-header">
                     <span><i class="fas fa-edit"></i> Formularios</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -297,12 +203,18 @@ function renderizarContentPanel(empresa) {
                         ${crearInputColor('color_select_text', 'Texto Select', '#333333')}
                         ${crearInputColor('color_select_border', 'Borde Select', '#cccccc')}
                     </div>
+                    
+                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Estados Deshabilitados</h5>
+                    <div class="color-grid">
+                        ${crearInputColor('color_disabled_bg', 'Fondo Deshabilitado', '#f5f5f5')}
+                        ${crearInputColor('color_disabled_text', 'Texto Deshabilitado', '#9ca3af')}
+                    </div>
                 </div>
             </div>
             
             <!-- Acordeón 6: Iconos -->
             <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div class="accordion-header">
                     <span><i class="fas fa-icons"></i> Iconos</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -313,9 +225,28 @@ function renderizarContentPanel(empresa) {
                 </div>
             </div>
             
-            <!-- Acordeón 7: Modales -->
+            <!-- Acordeón 7: Menú Lateral -->
             <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div class="accordion-header">
+                    <span><i class="fas fa-bars"></i> Menú Lateral</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="accordion-content">
+                    <h5 style="margin: 1rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Fondo y Texto</h5>
+                    <div class="color-grid">
+                        ${crearInputColor('color_submenu_bg', 'Fondo Menú', '#ffffff')}
+                        ${crearInputColor('color_submenu_text', 'Texto Menú', '#000000')}
+                    </div>
+                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Interacción</h5>
+                    <div class="color-grid">
+                        ${crearInputColor('color_submenu_hover', 'Color Hover', '#f5f5f5')}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Acordeón 8: Modales -->
+            <div class="accordion-section">
+                <div class="accordion-header">
                     <span><i class="fas fa-window-restore"></i> Modales y Diálogos</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -324,17 +255,22 @@ function renderizarContentPanel(empresa) {
                         ${crearInputColor('color_modal_bg', 'Fondo Modal', '#ffffff')}
                         ${crearInputColor('color_modal_text', 'Texto Modal', '#333333')}
                         ${crearInputColor('color_modal_border', 'Borde Modal', '#cccccc')}
+                        ${crearInputColor('color_modal_overlay', 'Overlay Fondo', 'rgba(0,0,0,0.5)')}
+                        ${crearInputColor('color_modal_shadow', 'Sombra Modal', 'rgba(0,0,0,0.3)')}
                     </div>
                 </div>
             </div>
             
-            <!-- Acordeón 8: Opciones Avanzadas -->
+            <!-- Acordeón 9: Opciones Avanzadas -->
             <div class="accordion-section">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div class="accordion-header">
                     <span><i class="fas fa-cog"></i> Opciones Avanzadas</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div class="accordion-content">
+                    <div class="color-grid" style="margin-bottom: 1.5rem;">
+                        ${crearInputColor('color_spinner_border', 'Borde Spinner', '#3b82f6')}
+                    </div>
                     <div style="padding: 1rem 0;">
                         <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
                             <input type="checkbox" id="grid_cell_borders" checked style="width: 20px; height: 20px; cursor: pointer;">
@@ -344,7 +280,7 @@ function renderizarContentPanel(empresa) {
                 </div>
             </div>
             
-            <button class="save-button" onclick="guardarColores()">
+            <button class="save-button">
                 <i class="fas fa-save"></i> Guardar Cambios
             </button>
         </div>
@@ -355,14 +291,14 @@ function crearInputColor(id, label, defaultValue) {
     return `
         <div class="color-input-group">
             <label>${label}</label>
-            <input type="color" id="${id}" value="${defaultValue}" onchange="actualizarPreview()">
+            <input type="color" id="${id}" value="${defaultValue}">
             <span class="color-value" id="${id}-value">${defaultValue}</span>
         </div>
     `;
 }
 
 function cargarColoresActuales(empresa) {
-    const campos = ['color_app_bg', 'color_primario', 'color_secundario', 'color_header_text', 'color_header_bg', 'color_button', 'color_button_hover', 'color_button_text', 'color_success', 'color_warning', 'color_danger', 'color_info', 'color_grid_header', 'color_grid_text', 'color_grid_hover', 'color_icon', 'color_icon_cell_bg'];
+    const campos = ['color_app_bg', 'color_primario', 'color_secundario', 'color_header_text', 'color_header_bg', 'color_button', 'color_button_hover', 'color_button_text', 'color_success', 'color_warning', 'color_danger', 'color_info', 'color_grid_header', 'color_grid_text', 'color_grid_hover', 'color_grid_bg', 'color_icon', 'color_icon_cell_bg', 'color_label', 'color_input_bg', 'color_input_text', 'color_input_border', 'color_select_bg', 'color_select_text', 'color_select_border', 'color_disabled_bg', 'color_disabled_text', 'color_submenu_bg', 'color_submenu_text', 'color_submenu_hover', 'color_modal_bg', 'color_modal_text', 'color_modal_border', 'color_modal_overlay', 'color_modal_shadow', 'color_spinner_border'];
     
     campos.forEach(campo => {
         const input = document.getElementById(campo);
@@ -372,16 +308,71 @@ function cargarColoresActuales(empresa) {
             if (valueSpan) valueSpan.textContent = empresa[campo];
         }
     });
+    
+    // Actualizar preview después de cargar colores de la empresa
+    if (typeof window.actualizarPreview === 'function') {
+        window.actualizarPreview();
+        console.log('✅ Preview actualizado con colores de la empresa');
+    }
 }
 
-function seleccionarPlantilla(nombre) {
+async function seleccionarPlantilla(nombre) {
+    // Mostrar spinner
+    mostrarSpinnerAplicando(PLANTILLAS[nombre].nombre);
+    
     document.querySelectorAll('.plantilla-item').forEach(item => item.classList.remove('active'));
     document.querySelector(`[data-plantilla="${nombre}"]`).classList.add('active');
     
     plantillaActual = nombre;
+    plantillaOriginal = nombre;
     document.getElementById('plantilla-activa-nombre').textContent = PLANTILLAS[nombre].nombre;
     
+    // Aplicar plantilla a los inputs
     aplicarPlantilla(nombre);
+    
+    // Guardar automáticamente en la BD
+    console.log(`🎨 [PLANTILLA] Aplicando "${PLANTILLAS[nombre].nombre}" en tiempo real...`);
+    await guardarColores();
+    
+    // Esperar un poco para que plantilla_sync.js detecte el cambio
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Ocultar spinner
+    ocultarSpinnerAplicando();
+    console.log(`✅ [PLANTILLA] Plantilla aplicada y guardada`);
+}
+
+function mostrarSpinnerAplicando(nombrePlantilla) {
+    // Crear overlay con spinner si no existe
+    let overlay = document.getElementById('spinner-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'spinner-overlay';
+        overlay.innerHTML = `
+            <div class="spinner-container">
+                <div class="spinner"></div>
+                <div class="spinner-text">
+                    <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0.5rem;">
+                        Aplicando plantilla...
+                    </div>
+                    <div id="spinner-plantilla-nombre" style="font-size: 0.9rem; opacity: 0.8;">
+                        ${nombrePlantilla}
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    } else {
+        document.getElementById('spinner-plantilla-nombre').textContent = nombrePlantilla;
+    }
+    overlay.style.display = 'flex';
+}
+
+function ocultarSpinnerAplicando() {
+    const overlay = document.getElementById('spinner-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+    }
 }
 
 function aplicarPlantilla(nombre) {
@@ -397,117 +388,11 @@ function aplicarPlantilla(nombre) {
         }
     });
     
-    actualizarPreview();
+    // NO actualizar preview - aplicamos directamente
+    console.log(`🔄 [PLANTILLA] Colores aplicados a inputs: ${plantilla.nombre || nombre}`);
 }
 
-function actualizarPreview() {
-    const menuBg = document.getElementById('color_primario')?.value || '#2c3e50';
-    const menuText = document.getElementById('color_header_text')?.value || '#ffffff';
-    const appBg = document.getElementById('color_app_bg')?.value || '#ffffff';
-    const secundario = document.getElementById('color_secundario')?.value || '#3498db';
-    const button = document.getElementById('color_button')?.value || '#3498db';
-    const buttonText = document.getElementById('color_button_text')?.value || '#ffffff';
-    const headerBg = document.getElementById('color_header_bg')?.value || '#2c3e50';
-    const success = document.getElementById('color_success')?.value || '#27ae60';
-    const warning = document.getElementById('color_warning')?.value || '#f39c12';
-    const danger = document.getElementById('color_danger')?.value || '#e74c3c';
-    const gridHeader = document.getElementById('color_grid_header')?.value || '#34495e';
-    
-    // Menú
-    const menuPreview = document.getElementById('menu-preview');
-    if (menuPreview) menuPreview.style.background = menuBg;
-    
-    document.querySelectorAll('.menu-item').forEach(item => item.style.color = menuText);
-    document.querySelectorAll('.submenu-item').forEach(item => item.style.color = menuText);
-    
-    // App Header
-    const appHeader = document.getElementById('app-header-sim');
-    if (appHeader) appHeader.style.background = headerBg;
-    
-    const appContent = document.getElementById('app-content-sim');
-    if (appContent) appContent.style.background = appBg;
-    
-    const simCard = document.getElementById('sim-card');
-    if (simCard) simCard.style.background = secundario;
-    
-    const simButton = document.getElementById('sim-button');
-    if (simButton) {
-        simButton.style.background = button;
-        simButton.style.color = buttonText;
-    }
-    
-    // Alertas
-    const alertSuccess = document.getElementById('alert-success');
-    if (alertSuccess) {
-        const rgb = hexToRgb(success);
-        alertSuccess.style.background = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
-        alertSuccess.style.borderColor = success;
-        alertSuccess.style.color = success;
-    }
-    
-    const alertWarning = document.getElementById('alert-warning');
-    if (alertWarning) {
-        const rgb = hexToRgb(warning);
-        alertWarning.style.background = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
-        alertWarning.style.borderColor = warning;
-        alertWarning.style.color = warning;
-    }
-    
-    const alertDanger = document.getElementById('alert-danger');
-    if (alertDanger) {
-        const rgb = hexToRgb(danger);
-        alertDanger.style.background = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
-        alertDanger.style.borderColor = danger;
-        alertDanger.style.color = danger;
-    }
-    
-    // Tabla
-    const tableHeader = document.getElementById('table-header-preview');
-    if (tableHeader) {
-        tableHeader.querySelectorAll('th').forEach(th => {
-            th.style.background = gridHeader;
-            th.style.color = '#ffffff';
-            th.style.borderBottomColor = gridHeader;
-        });
-    }
-    
-    // Grid
-    [1,2,3,4].forEach(i => {
-        const item = document.getElementById(`grid-item-${i}`);
-        if (item) {
-            const rgb = hexToRgb(gridHeader);
-            item.style.background = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`;
-            item.style.borderLeft = `3px solid ${gridHeader}`;
-        }
-    });
-    
-    // Iconos
-    const iconColor = document.getElementById('color_icon')?.value || '#666666';
-    const iconPreviewContainer = document.getElementById('icon-preview-container');
-    if (iconPreviewContainer) {
-        iconPreviewContainer.querySelectorAll('i').forEach(icon => {
-            icon.style.color = iconColor;
-        });
-    }
-    
-    // Modal header
-    const modalHeader = document.getElementById('modal-header-preview');
-    if (modalHeader) {
-        modalHeader.style.background = `rgba(${hexToRgb(headerBg).r}, ${hexToRgb(headerBg).g}, ${hexToRgb(headerBg).b}, 0.05)`;
-        modalHeader.style.color = headerBg;
-    }
-    
-    console.log('[EDITOR] Preview actualizado correctamente');
-}
 
-function hexToRgb(hex) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16)
-    } : { r: 0, g: 0, b: 0 };
-}
 
 
 // ===== FUNCIÓN ACORDEONES =====
@@ -578,19 +463,12 @@ async function guardarColores() {
         const huboChange = detectarCambiosPlantilla();
         let nombrePersonalizado = null;
         
-        if (huboChange && plantillaOriginal !== 'custom') {
-            const crear = confirm(`Has modificado los colores de la plantilla "${PLANTILLAS[plantillaOriginal].nombre}".\n\n¿Deseas guardar como plantilla personalizada?`);
-            
-            if (crear) {
-                nombrePersonalizado = prompt(
-                    'Nombre para la plantilla personalizada:', 
-                    `${PLANTILLAS[plantillaOriginal].nombre} Personalizado`
-                );
-                
-                if (!nombrePersonalizado) {
-                    return;
-                }
-            }
+        // Si hay cambios, guardar automáticamente como plantilla personalizada
+        if (huboChange && plantillaOriginal && plantillaOriginal !== 'custom') {
+            const plantillaBase = PLANTILLAS[plantillaOriginal]?.nombre || plantillaOriginal;
+            const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            nombrePersonalizado = `${plantillaBase} (${timestamp})`;
+            console.log(`✅ Guardando como plantilla personalizada: ${nombrePersonalizado}`);
         }
         
         const colores = {
@@ -606,6 +484,7 @@ async function guardarColores() {
             color_warning: document.getElementById('color_warning').value,
             color_danger: document.getElementById('color_danger').value,
             color_info: document.getElementById('color_info').value,
+            color_grid_header_text: document.getElementById('color_grid_header_text').value,
             color_grid_header: document.getElementById('color_grid_header').value,
             color_grid_text: document.getElementById('color_grid_text').value,
             color_grid_bg: document.getElementById('color_grid_bg').value,
@@ -619,9 +498,17 @@ async function guardarColores() {
             color_select_bg: document.getElementById('color_select_bg').value,
             color_select_text: document.getElementById('color_select_text').value,
             color_select_border: document.getElementById('color_select_border').value,
+            color_submenu_bg: document.getElementById('color_submenu_bg').value,
+            color_submenu_text: document.getElementById('color_submenu_text').value,
+            color_submenu_hover: document.getElementById('color_submenu_hover').value,
             color_modal_bg: document.getElementById('color_modal_bg').value,
             color_modal_text: document.getElementById('color_modal_text').value,
             color_modal_border: document.getElementById('color_modal_border').value,
+            color_disabled_bg: document.getElementById('color_disabled_bg').value,
+            color_disabled_text: document.getElementById('color_disabled_text').value,
+            color_modal_overlay: document.getElementById('color_modal_overlay').value,
+            color_modal_shadow: document.getElementById('color_modal_shadow').value,
+            color_spinner_border: document.getElementById('color_spinner_border').value,
             grid_cell_borders: document.getElementById('grid_cell_borders').checked ? 'true' : 'false',
             plantilla_personalizada: nombrePersonalizado
         };
@@ -633,20 +520,100 @@ async function guardarColores() {
         });
         
         if (response.ok) {
-            alert('✅ Colores guardados correctamente');
-            if (nombrePersonalizado) {
-                plantillaActual = 'custom';
-                plantillaOriginal = 'custom';
-                coloresOriginales = {...colores};
-                actualizarPlantillaActiva('custom', nombrePersonalizado);
+            
+            // Si hay cambios y se generó nombre personalizado, guardar plantilla
+            if (nombrePersonalizado && typeof window.guardarPlantillaPersonalizada === 'function') {
+                try {
+                    const resultado = await window.guardarPlantillaPersonalizada(
+                        colores,
+                        plantillaOriginal,
+                        nombrePersonalizado
+                    );
+                    console.log('✅ Plantilla personalizada guardada:', resultado.nombre_plantilla);
+                    
+                    // Recargar plantillas
+                    if (typeof window.cargarPlantillas === 'function') {
+                        await window.cargarPlantillas();
+                        window.PLANTILLAS = window.plantillasColores;
+                        renderizarSidebar(); // Actualizar UI del sidebar
+                    }
+                    
+                    plantillaActual = resultado.nombre_archivo;
+                    plantillaOriginal = resultado.nombre_archivo;
+                    coloresOriginales = {...colores};
+                    actualizarPlantillaActiva(resultado.nombre_archivo, nombrePersonalizado);
+                    
+                    console.log(`✅ Colores guardados y plantilla personalizada creada: "${nombrePersonalizado}"`);
+                } catch (errorPlantilla) {
+                    console.error('❌ Error guardando plantilla:', errorPlantilla);
+                    console.warn('✅ Colores guardados, pero hubo un error al crear la plantilla personalizada');
+                }
+            } else {
+                console.log('✅ Colores guardados correctamente');
             }
         } else {
             const error = await response.text();
-            alert('❌ Error al guardar colores: ' + error);
+            console.error('❌ Error al guardar colores:', error);
         }
         
     } catch (error) {
-        console.error('Error al guardar:', error);
-        alert('❌ Error al guardar colores');
+        console.error('❌ Error al guardar colores:', error);
     }
 }
+
+// ===== SISTEMA DE AUTO-GUARDADO EN TIEMPO REAL =====
+
+let autoSaveTimeout = null;
+let haycambiosSinGuardar = false;
+
+function inicializarAutoGuardado() {
+    // Agregar event listeners a todos los inputs de color
+    const inputs = document.querySelectorAll('input[type="color"]');
+    
+    inputs.forEach(input => {
+        input.addEventListener('input', (e) => {
+            hayCambiosSinGuardar = true;
+            
+            // Debounce: esperar 500ms después del último cambio antes de guardar
+            if (autoSaveTimeout) {
+                clearTimeout(autoSaveTimeout);
+            }
+            
+            autoSaveTimeout = setTimeout(async () => {
+                console.log('🎨 [AUTO-SAVE] Cambio detectado, guardando...');
+                await guardarColores();
+                console.log('✅ [AUTO-SAVE] Guardado automático completado');
+            }, 500);
+        });
+    });
+    
+    console.log(`✅ [AUTO-SAVE] Sistema inicializado en ${inputs.length} inputs`);
+}
+
+// Preguntar al salir si guardar como personalizada
+function configurarSalidaEditor() {
+    window.addEventListener('beforeunload', (e) => {
+        // Solo preguntar si hay cambios y no es una plantilla personalizada ya guardada
+        if (hayCambiosSinGuardar && plantillaOriginal && !plantillaOriginal.startsWith('personalizada_')) {
+            e.preventDefault();
+            e.returnValue = '¿Deseas guardar estos cambios como una plantilla personalizada?';
+            return e.returnValue;
+        }
+    });
+}
+
+// Inicializar cuando el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            inicializarAutoGuardado();
+            configurarSalidaEditor();
+        }, 1000);
+    });
+} else {
+    setTimeout(() => {
+        inicializarAutoGuardado();
+        configurarSalidaEditor();
+    }, 1000);
+}
+

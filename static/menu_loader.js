@@ -81,23 +81,46 @@ function actualizarInfoUsuario(sessionData) {
         console.log('[MENU] Empresa actualizada:', sessionData.empresa);
     }
     
-    // Iniciar reloj
-    if (bottomTime) {
-        actualizarReloj();
-        setInterval(actualizarReloj, 1000);
+    // Mostrar último acceso
+    if (bottomTime && sessionData.ultimo_acceso) {
+        mostrarUltimoAcceso(sessionData.ultimo_acceso);
     }
 }
 
-function actualizarReloj() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    const timeString = `${hours}:${minutes}:${seconds}`;
-    
+function mostrarUltimoAcceso(ultimoAcceso) {
     const bottomTime = document.getElementById('bottom-time');
-    if (bottomTime) {
-        bottomTime.textContent = timeString;
+    if (!bottomTime) return;
+    
+    if (!ultimoAcceso) {
+        bottomTime.textContent = 'Primer acceso';
+        return;
+    }
+    
+    try {
+        const fecha = new Date(ultimoAcceso);
+        const hoy = new Date();
+        const ayer = new Date(hoy);
+        ayer.setDate(ayer.getDate() - 1);
+        
+        const esMismoDia = fecha.toDateString() === hoy.toDateString();
+        const esAyer = fecha.toDateString() === ayer.toDateString();
+        
+        const horas = String(fecha.getHours()).padStart(2, '0');
+        const minutos = String(fecha.getMinutes()).padStart(2, '0');
+        const horaStr = `${horas}:${minutos}`;
+        
+        if (esMismoDia) {
+            bottomTime.textContent = `Hoy ${horaStr}`;
+        } else if (esAyer) {
+            bottomTime.textContent = `Ayer ${horaStr}`;
+        } else {
+            const dia = String(fecha.getDate()).padStart(2, '0');
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            bottomTime.textContent = `${dia}/${mes} ${horaStr}`;
+        }
+    } catch (error) {
+        console.error('[MENU] Error formateando último acceso:', error);
+        bottomTime.textContent = 'No disponible';
     }
 }
 

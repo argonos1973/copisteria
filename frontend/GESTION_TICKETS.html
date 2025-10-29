@@ -14,9 +14,10 @@
   <link rel="stylesheet" href="../static/page_header.css">
 
   <!-- Enlace a tus hojas de estilos -->
-  <link rel="stylesheet" href="../static/styles.css" />
-  <link rel="stylesheet" href="../static/notificaciones.css" />
-    <script src="/static/auto_branding.js?v=12"></script>
+  <link rel="stylesheet" href="../static/styles.css?v=26?t=1761596755" />
+  <link rel="stylesheet" href="../static/notificaciones.css?v=13" />
+    <script src="/static/auto_branding.js?v=1761688751"></script>
+    <script src="/static/plantilla_sync.js?v=1761684810"></script>
 </head>
 <body>
   <div class="page-header">
@@ -52,12 +53,12 @@
   <form id="form-detalle-ticket" class="hidden-field">
  
     <div class="detalle-proforma-container">
-      <div class="detalle-proforma-item flex-2">
+      <div class="detalle-proforma-item flex-1">
         <label for="busqueda-producto">Producto</label>
-        <input type="text" id="busqueda-producto" placeholder="Buscar producto..." class="width-full">
+        <input type="text" id="busqueda-producto" placeholder="Buscar producto...">
       </div>
-      <div class="detalle-proforma-item flex-2">
-        <select id="concepto-detalle" class="width-full" required>
+      <div class="detalle-proforma-item flex-1">
+        <select id="concepto-detalle" required>
           <option value="">Seleccione un producto</option>
         </select>
       </div>
@@ -67,7 +68,7 @@
       </div>
       <div class="detalle-proforma-item flex-3">
         <label for="descripcion-detalle">Descripción</label>
-        <input type="text" id="descripcion-detalle" class="width-full">
+        <input type="text" id="descripcion-detalle">
       </div>
       <div class="detalle-proforma-item-importe flex-1">
         <label for="cantidad-detalle">Cantidad</label>
@@ -134,8 +135,8 @@
   </div>
 
   <!-- Scripts (con type="module" si haces import/export) -->
-  <script type="module" src="../static/scripts.js" defer></script>
-  <script type="module" src="../static/imprimir.js" defer></script>
+  <script type="module" src="../static/scripts.js?v=13" defer></script>
+  <script type="module" src="../static/imprimir.js?v=13" defer></script>
 
   <!-- Contenedor para notificaciones -->
   <div id="notificaciones-contenedor"></div>

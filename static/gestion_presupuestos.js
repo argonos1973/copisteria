@@ -197,29 +197,23 @@ async function seleccionarProducto() {
   if (productoId === PRODUCTO_ID_LIBRE) {
     formElements.precioDetalle.readOnly = false;
     formElements.precioDetalle.classList.remove('readonly-field');
-    formElements.precioDetalle.style.backgroundColor = '';
 
     formElements.totalDetalle.readOnly = false;
     formElements.totalDetalle.classList.remove('readonly-field');
-    formElements.totalDetalle.style.backgroundColor = '';
 
     formElements.impuestoDetalle.value = 21;
     formElements.impuestoDetalle.readOnly = true;
     formElements.impuestoDetalle.classList.add('readonly-field');
-    formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
   } else {
     formElements.precioDetalle.readOnly = true;
     formElements.precioDetalle.classList.add('readonly-field');
-    formElements.precioDetalle.style.backgroundColor = '#e9ecef';
 
     formElements.totalDetalle.readOnly = true;
     formElements.totalDetalle.classList.add('readonly-field');
-    formElements.totalDetalle.style.backgroundColor = '#e9ecef';
 
     formElements.impuestoDetalle.value = 21;
     formElements.impuestoDetalle.readOnly = true;
     formElements.impuestoDetalle.classList.add('readonly-field');
-    formElements.impuestoDetalle.style.backgroundColor = '#e9ecef';
   }
 
   await calcularTotalDetalle();
@@ -733,11 +727,11 @@ function actualizarTablaContactos() {
     `;
     
     tr.addEventListener('mouseenter', () => {
-      tr.style.backgroundColor = '#f8f9fa';
+      tr.classList.add('row-hover');
     });
     
     tr.addEventListener('mouseleave', () => {
-      tr.style.backgroundColor = '';
+      tr.classList.remove('row-hover');
     });
     
     tbody.appendChild(tr);
@@ -893,7 +887,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnAgregarDetalle) btnAgregarDetalle.addEventListener('click', () => validarYAgregarDetalle());
 
     const impuestoDetalle = document.getElementById('impuesto-detalle');
-    if (impuestoDetalle) { impuestoDetalle.readOnly = true; impuestoDetalle.style.backgroundColor = '#e9ecef'; }
+    if (impuestoDetalle) { impuestoDetalle.readOnly = true; impuestoDetalle.classList.add('readonly-field'); }
 
     const urlParams = new URLSearchParams(window.location.search);
     const idContactoParam = urlParams.get('idContacto');

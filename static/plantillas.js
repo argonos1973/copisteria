@@ -4,7 +4,7 @@
 let plantillasColores = {};
 
 // Lista de plantillas disponibles
-const plantillasDisponibles = ['minimal', 'zen'];
+const plantillasDisponibles = ['minimal', 'dark', 'eink'];
 
 // Cargar todas las plantillas
 async function cargarPlantillas() {
