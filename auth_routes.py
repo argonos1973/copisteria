@@ -410,27 +410,20 @@ def obtener_branding_preview(empresa_codigo):
 @login_required
 def obtener_branding():
     """
-    Retorna configuración visual de la empresa activa
+    Retorna SOLO el nombre de la plantilla y datos de empresa.
+    El frontend carga el JSON directamente.
     """
     try:
         empresa_id = session.get('empresa_id')
         
         conn = sqlite3.connect(DB_USUARIOS_PATH)
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
+        # Obtener datos de empresa (logos, datos, plantilla)
         cursor.execute('''
-            SELECT 
-                logo_header, logo_factura,
-                color_primario, color_secundario, color_success, color_warning, 
-                color_danger, color_info, color_button, color_button_hover,
-                color_button_text, color_app_bg,
-                color_header_bg, color_header_text, color_grid_header, color_grid_hover,
-                color_input_bg, color_input_text, color_input_border,
-                color_submenu_bg, color_submenu_text, color_submenu_hover,
-                color_icon, color_grid_bg, color_grid_text,
-                color_select_bg, color_select_text, color_select_border,
-                color_disabled_bg, color_disabled_text,
-                nombre, cif, direccion, telefono, email, web
+            SELECT logo_header, logo_factura, plantilla_personalizada,
+                   nombre, cif, direccion, telefono, email, web
             FROM empresas
             WHERE id = ?
         ''', (empresa_id,))
@@ -441,46 +434,30 @@ def obtener_branding():
         if not empresa:
             return jsonify({'error': 'Empresa no encontrada'}), 404
         
+        plantilla_nombre = empresa['plantilla_personalizada'] or 'Minimal Monocromático'
+        
+        # Detectar plantilla base para el frontend
+        plantilla_base = 'minimal'  # default
+        if 'Dark' in plantilla_nombre or 'dark' in plantilla_nombre.lower():
+            plantilla_base = 'dark'
+        elif 'e-Ink' in plantilla_nombre or 'eink' in plantilla_nombre.lower():
+            plantilla_base = 'eink'
+        elif 'Minimal' in plantilla_nombre or 'minimal' in plantilla_nombre.lower():
+            plantilla_base = 'minimal'
+        
+        logger.info(f"[BRANDING] Plantilla: {plantilla_base} ('{plantilla_nombre}')")
+        
         return jsonify({
-            'logo_header': empresa[0],
-            'logo_factura': empresa[1],
-            'colores': {
-                'primario': empresa[2],
-                'secundario': empresa[3],
-                'success': empresa[4],
-                'warning': empresa[5],
-                'danger': empresa[6],
-                'info': empresa[7],
-                'button': empresa[8],
-                'button_hover': empresa[9],
-                'button_text': empresa[10],
-                'app_bg': empresa[11],
-                'header_bg': empresa[12],
-                'header_text': empresa[13],
-                'grid_header': empresa[14],
-                'grid_hover': empresa[15],
-                'input_bg': empresa[16],
-                'input_text': empresa[17],
-                'input_border': empresa[18],
-                'submenu_bg': empresa[19],
-                'submenu_text': empresa[20],
-                'submenu_hover': empresa[21],
-                'icon': empresa[22],
-                'grid_bg': empresa[23],
-                'grid_text': empresa[24],
-                'select_bg': empresa[25],
-                'select_text': empresa[26],
-                'select_border': empresa[27],
-                'disabled_bg': empresa[28],
-                'disabled_text': empresa[29]
-            },
+            'logo_header': empresa['logo_header'],
+            'logo_factura': empresa['logo_factura'],
+            'plantilla': plantilla_base,  # ← Solo nombre de plantilla
             'datos': {
-                'nombre': empresa[30],
-                'cif': empresa[31],
-                'direccion': empresa[32],
-                'telefono': empresa[33],
-                'email': empresa[34],
-                'web': empresa[35]
+                'nombre': empresa['nombre'],
+                'cif': empresa['cif'],
+                'direccion': empresa['direccion'],
+                'telefono': empresa['telefono'],
+                'email': empresa['email'],
+                'web': empresa['web']
             }
         }), 200
         

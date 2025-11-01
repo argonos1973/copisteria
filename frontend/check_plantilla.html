@@ -1,0 +1,33 @@
+<\!DOCTYPE html>
+<html>
+<head><title>Check Plantilla</title></head>
+<body>
+<h1>Verificación de Plantilla</h1>
+<pre id="result">Cargando...</pre>
+<button onclick="cambiarAMinimal()">Cambiar a Minimal</button>
+<script>
+async function check() {
+    const r = await fetch('/api/auth/branding');
+    const data = await r.json();
+    document.getElementById('result').textContent = JSON.stringify(data, null, 2);
+}
+
+async function cambiarAMinimal() {
+    const r = await fetch('/api/auth/branding');
+    const data = await r.json();
+    const empresaId = data.empresa_id;
+    
+    const update = await fetch('/api/intranet/empresas/' + empresaId + '/colores', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({plantilla_personalizada: 'minimal'})
+    });
+    
+    alert('Plantilla cambiada a minimal. Recarga la página.');
+    check();
+}
+
+check();
+</script>
+</body>
+</html>

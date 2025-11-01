@@ -1,6 +1,8 @@
 const API_URL = 'http://192.168.1.23:5001/api';
 let empresaId = null;
 let plantillaActual = null;
+let plantillaOriginal = null;
+let hayCambiosSinGuardar = false;
 
 // Plantillas cargadas dinámicamente desde plantillas.js
 let PLANTILLAS = {};
@@ -18,7 +20,6 @@ async function cargarPlantillasEditor() {
     }
 }
 
-let plantillaOriginal = null;
 let coloresOriginales = {};
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -58,11 +59,17 @@ function renderizarSidebar() {
         item.className = 'plantilla-item';
         item.setAttribute('data-plantilla', key);
         item.onclick = () => seleccionarPlantilla(key);
+        
+        // FORMATO NUEVO: meta.icon, meta.description, name
+        const icon = p.meta?.icon || p.icon || '🎨';
+        const nombre = p.name || p.nombre || 'Plantilla';
+        const descripcion = p.meta?.description || p.descripcion || p.desc || '';
+        
         item.innerHTML = `
-            <div class="plantilla-icon">${p.icon || '🎨'}</div>
+            <div class="plantilla-icon">${icon}</div>
             <div class="plantilla-info">
-                <div class="nombre">${p.nombre || 'Plantilla'}</div>
-                <div class="desc">${p.descripcion || p.desc || ''}</div>
+                <div class="nombre">${nombre}</div>
+                <div class="desc">${descripcion}</div>
             </div>
         `;
         list.appendChild(item);
@@ -71,11 +78,33 @@ function renderizarSidebar() {
 
 async function cargarEmpresa() {
     try {
-        const response = await fetch(`${API_URL}/empresas/${empresaId}`);
+        const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            console.error('Error en respuesta:', response.status, response.statusText);
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('Respuesta no es JSON:', contentType);
+            const text = await response.text();
+            console.error('Contenido recibido:', text.substring(0, 200));
+            throw new Error('La respuesta del servidor no es JSON válido');
+        }
+        
         const empresa = await response.json();
+        console.log('✅ Empresa cargada:', empresa);
         
         renderizarContentPanel(empresa);
         cargarColoresActuales(empresa);
+        aplicarEstilosDePlantilla(empresa);
         
     } catch (error) {
         console.error('Error:', error);
@@ -101,188 +130,27 @@ function renderizarContentPanel(empresa) {
             </div>
         </div>
         
-        
-        <div class="color-editors">
-            <h3><i class="fas fa-paint-brush"></i> Personalizar Colores</h3>
-            <p><i class="fas fa-info-circle"></i> Haz clic en cada categoría para expandir/contraer</p>
-            
-            <!-- Acordeón 1: Colores Principales -->
-            <div class="accordion-section active">
-                <div class="accordion-header">
-                    <span><i class="fas fa-palette"></i> Colores Principales</span>
-                    <i class="fas fa-chevron-up"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_app_bg', 'Fondo App', '#ffffff')}
-                        ${crearInputColor('color_primario', 'Menú Lateral', '#2c3e50')}
-                        ${crearInputColor('color_secundario', 'Tarjetas', '#3498db')}
-                        ${crearInputColor('color_header_text', 'Texto Menú', '#ffffff')}
-                        ${crearInputColor('color_header_bg', 'Header Panel', '#2c3e50')}
+        <div class="instrucciones-plantillas">
+            <div class="instruccion-card">
+                <i class="fas fa-palette fa-3x"></i>
+                <h3>Selecciona una Plantilla</h3>
+                <p>Utiliza el panel lateral para elegir una de las plantillas prediseñadas disponibles.</p>
+                <p><strong>Las plantillas incluyen todos los colores y estilos necesarios para tu aplicación.</strong></p>
+                <div class="plantillas-info">
+                    <div class="plantilla-desc">
+                        <i class="fas fa-sun"></i>
+                        <strong>Minimal:</strong> Diseño minimalista blanco y negro
+                    </div>
+                    <div class="plantilla-desc">
+                        <i class="fas fa-moon"></i>
+                        <strong>Dark:</strong> Tema oscuro para reducir fatiga visual
+                    </div>
+                    <div class="plantilla-desc">
+                        <i class="fas fa-book"></i>
+                        <strong>EInk:</strong> Colores cálidos inspirados en papel
                     </div>
                 </div>
             </div>
-            
-            <!-- Acordeón 2: Botones -->
-            <div class="accordion-section">
-                <div class="accordion-header">
-                    <span><i class="fas fa-square"></i> Botones</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_button', 'Botón Normal', '#3498db')}
-                        ${crearInputColor('color_button_hover', 'Botón Hover', '#2980b9')}
-                        ${crearInputColor('color_button_text', 'Texto Botón', '#ffffff')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Acordeón 3: Notificaciones -->
-            <div class="accordion-section">
-                <div class="accordion-header">
-                    <span><i class="fas fa-bell"></i> Notificaciones y Alertas</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_success', 'Éxito', '#27ae60')}
-                        ${crearInputColor('color_warning', 'Advertencia', '#f39c12')}
-                        ${crearInputColor('color_danger', 'Peligro', '#e74c3c')}
-                        ${crearInputColor('color_info', 'Info', '#3498db')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Acordeón 4: Tablas y Grids -->
-            <div class="accordion-section">
-                <div class="accordion-header">
-                    <span><i class="fas fa-table"></i> Tablas y Grids</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_grid_header', 'Encabezado Grid', '#34495e')}
-                        ${crearInputColor('color_grid_header_text', 'Texto Encabezado', '#ffffff')}
-                        ${crearInputColor('color_grid_text', 'Texto Grid', '#333333')}
-                        ${crearInputColor('color_grid_bg', 'Fondo Grid', '#ffffff')}
-                    </div>
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Hover Fila</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_grid_hover', 'Color Hover', '#f5f5f5')}
-                    </div>
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Celdas con Iconos</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_icon_cell_bg', 'Fondo Celda Icono', '#f8f9fa')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Acordeón 5: Formularios -->
-            <div class="accordion-section">
-                <div class="accordion-header">
-                    <span><i class="fas fa-edit"></i> Formularios</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <h5 style="margin: 0 0 1rem 0; color: #667eea; font-size: 0.9rem;">Labels</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_label', 'Color Labels', '#333333')}
-                    </div>
-                    
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Inputs de Texto</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_input_bg', 'Fondo Input', '#ffffff')}
-                        ${crearInputColor('color_input_text', 'Texto Input', '#333333')}
-                        ${crearInputColor('color_input_border', 'Borde Input', '#cccccc')}
-                    </div>
-                    
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Selects / Desplegables</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_select_bg', 'Fondo Select', '#ffffff')}
-                        ${crearInputColor('color_select_text', 'Texto Select', '#333333')}
-                        ${crearInputColor('color_select_border', 'Borde Select', '#cccccc')}
-                    </div>
-                    
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Estados Deshabilitados</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_disabled_bg', 'Fondo Deshabilitado', '#f5f5f5')}
-                        ${crearInputColor('color_disabled_text', 'Texto Deshabilitado', '#9ca3af')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Acordeón 6: Iconos -->
-            <div class="accordion-section">
-                <div class="accordion-header">
-                    <span><i class="fas fa-icons"></i> Iconos</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_icon', 'Color Iconos', '#666666')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Acordeón 7: Menú Lateral -->
-            <div class="accordion-section">
-                <div class="accordion-header">
-                    <span><i class="fas fa-bars"></i> Menú Lateral</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <h5 style="margin: 1rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Fondo y Texto</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_submenu_bg', 'Fondo Menú', '#ffffff')}
-                        ${crearInputColor('color_submenu_text', 'Texto Menú', '#000000')}
-                    </div>
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #667eea; font-size: 0.9rem;">Interacción</h5>
-                    <div class="color-grid">
-                        ${crearInputColor('color_submenu_hover', 'Color Hover', '#f5f5f5')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Acordeón 8: Modales -->
-            <div class="accordion-section">
-                <div class="accordion-header">
-                    <span><i class="fas fa-window-restore"></i> Modales y Diálogos</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid">
-                        ${crearInputColor('color_modal_bg', 'Fondo Modal', '#ffffff')}
-                        ${crearInputColor('color_modal_text', 'Texto Modal', '#333333')}
-                        ${crearInputColor('color_modal_border', 'Borde Modal', '#cccccc')}
-                        ${crearInputColor('color_modal_overlay', 'Overlay Fondo', 'rgba(0,0,0,0.5)')}
-                        ${crearInputColor('color_modal_shadow', 'Sombra Modal', 'rgba(0,0,0,0.3)')}
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Acordeón 9: Opciones Avanzadas -->
-            <div class="accordion-section">
-                <div class="accordion-header">
-                    <span><i class="fas fa-cog"></i> Opciones Avanzadas</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="accordion-content">
-                    <div class="color-grid" style="margin-bottom: 1.5rem;">
-                        ${crearInputColor('color_spinner_border', 'Borde Spinner', '#3b82f6')}
-                    </div>
-                    <div style="padding: 1rem 0;">
-                        <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer;">
-                            <input type="checkbox" id="grid_cell_borders" checked style="width: 20px; height: 20px; cursor: pointer;">
-                            <span style="font-size: 1rem; color: #333;">Mostrar bordes en celdas de tabla</span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-            
-            <button class="save-button">
-                <i class="fas fa-save"></i> Guardar Cambios
-            </button>
         </div>
     `;
 }
@@ -316,30 +184,240 @@ function cargarColoresActuales(empresa) {
     }
 }
 
+function aplicarEstilosDePlantilla(empresa) {
+    // Aplicar estilos de la plantilla directamente al editor
+    console.log('🎨 [EDITOR] Aplicando estilos de plantilla...');
+    
+    if (!empresa) return;
+    
+    // Crear/actualizar elemento de estilo
+    let styleEl = document.getElementById('editor-plantilla-styles');
+    if (styleEl) styleEl.remove();
+    
+    styleEl = document.createElement('style');
+    styleEl.id = 'editor-plantilla-styles';
+    document.head.appendChild(styleEl);
+    
+    const bg = empresa.color_app_bg || '#ffffff';
+    const text = empresa.color_grid_text || '#333333';
+    const cardBg = empresa.color_secundario || '#f5f5f5';
+    const headerBg = empresa.color_header_bg || '#2c3e50';
+    const headerText = empresa.color_header_text || '#ffffff';
+    
+    styleEl.textContent = `
+        /* Ocultar DOCTYPE si aparece */
+        body::before {
+            content: none !important;
+        }
+        
+        /* Fondo general */
+        html, body {
+            background-color: ${bg} !important;
+            color: ${text} !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* Header */
+        .header {
+            background-color: ${headerBg} !important;
+            color: ${headerText} !important;
+        }
+        
+        .header h1, .header * {
+            color: ${headerText} !important;
+        }
+        
+        /* Main container y scrollable content */
+        .main-container,
+        .scrollable-content,
+        .content-wrapper {
+            background-color: ${bg} !important;
+        }
+        
+        /* Content panel (zona blanca) - MUY IMPORTANTE */
+        #content-panel,
+        .content-panel,
+        .color-editors {
+            background-color: ${bg} !important;
+            color: ${text} !important;
+        }
+        
+        /* Sidebar */
+        .sidebar, #sidebar {
+            background-color: ${cardBg} !important;
+            color: ${text} !important;
+        }
+        
+        .sidebar h2, .sidebar h3 {
+            color: ${text} !important;
+        }
+        
+        /* Acordeones */
+        .accordion-section {
+            background-color: ${cardBg} !important;
+            border-color: ${empresa.color_input_border || '#ddd'} !important;
+        }
+        
+        .accordion-header {
+            background-color: ${headerBg} !important;
+            color: ${headerText} !important;
+        }
+        
+        .accordion-header span,
+        .accordion-header i {
+            color: ${headerText} !important;
+        }
+        
+        .accordion-content {
+            background-color: ${cardBg} !important;
+        }
+        
+        /* Color grid */
+        .color-grid {
+            background-color: ${cardBg} !important;
+        }
+        
+        .color-input-group {
+            background-color: ${bg} !important;
+        }
+        
+        /* Labels y textos */
+        label, p, h3, h5, span:not(.color-value) {
+            color: ${text} !important;
+        }
+        
+        /* Inputs */
+        input[type="text"],
+        input[type="color"],
+        input[type="checkbox"] {
+            background-color: ${empresa.color_input_bg || '#fff'} !important;
+            color: ${empresa.color_input_text || '#333'} !important;
+            border-color: ${empresa.color_input_border || '#ccc'} !important;
+        }
+        
+        /* Botón guardar */
+        .save-button {
+            background-color: ${empresa.color_button || '#3498db'} !important;
+            color: ${empresa.color_button_text || '#fff'} !important;
+        }
+        
+        .save-button:hover {
+            background-color: ${empresa.color_button_hover || '#2980b9'} !important;
+        }
+        
+        /* Plantilla items */
+        .plantilla-item {
+            background-color: ${bg} !important;
+            border-color: ${empresa.color_input_border || '#ddd'} !important;
+        }
+        
+        .plantilla-item:hover {
+            background-color: ${cardBg} !important;
+        }
+        
+        .plantilla-item.active {
+            background-color: ${empresa.color_button || '#3498db'} !important;
+            color: ${empresa.color_button_text || '#fff'} !important;
+        }
+        
+        /* Plantilla activa */
+        .plantilla-activa {
+            background-color: ${cardBg} !important;
+            color: ${text} !important;
+        }
+    `;
+    
+    console.log('✅ [EDITOR] Estilos aplicados:', {
+        fondo: bg,
+        texto: text,
+        tarjetas: cardBg
+    });
+}
+
+
 async function seleccionarPlantilla(nombre) {
+    // Obtener nombre descriptivo (formato nuevo usa .name, antiguo .nombre)
+    const nombreDescriptivo = PLANTILLAS[nombre].name || PLANTILLAS[nombre].nombre || nombre;
+    
     // Mostrar spinner
-    mostrarSpinnerAplicando(PLANTILLAS[nombre].nombre);
+    mostrarSpinnerAplicando(nombreDescriptivo);
     
     document.querySelectorAll('.plantilla-item').forEach(item => item.classList.remove('active'));
     document.querySelector(`[data-plantilla="${nombre}"]`).classList.add('active');
     
     plantillaActual = nombre;
     plantillaOriginal = nombre;
-    document.getElementById('plantilla-activa-nombre').textContent = PLANTILLAS[nombre].nombre;
+    document.getElementById('plantilla-activa-nombre').textContent = nombreDescriptivo;
     
-    // Aplicar plantilla a los inputs
-    aplicarPlantilla(nombre);
+    // NUEVO: Cargar y aplicar el tema usando branding.js
+    console.log(`🎨 [PLANTILLA] Cargando JSON de plantilla: ${nombre}`);
+    try {
+        const response = await fetch(`/static/plantillas/${nombre}.json`, { cache: 'no-cache' });
+        if (response.ok) {
+            const themeJson = await response.json();
+            console.log(`🎨 [PLANTILLA] Aplicando tema en el editor: ${themeJson.name}`);
+            
+            // Aplicar tema en el documento actual del editor
+            if (typeof applyTheme === 'function') {
+                await applyTheme(themeJson);
+            }
+            
+            // También aplicar al parent (si existe)
+            if (window.parent && typeof window.parent.applyTheme === 'function') {
+                console.log(`🎨 [PLANTILLA] Aplicando tema al parent también`);
+                await window.parent.applyTheme(themeJson);
+            }
+        }
+    } catch (error) {
+        console.error(`❌ [PLANTILLA] Error cargando JSON:`, error);
+    }
     
-    // Guardar automáticamente en la BD
-    console.log(`🎨 [PLANTILLA] Aplicando "${PLANTILLAS[nombre].nombre}" en tiempo real...`);
-    await guardarColores();
-    
-    // Esperar un poco para que plantilla_sync.js detecte el cambio
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Guardar el KEY de la plantilla en BD (minimal, dark, eink)
+    console.log(`🎨 [PLANTILLA] Guardando key: "${nombre}"`);
+    await guardarNombrePlantilla(nombre); // <- ENVIAR KEY (minimal, dark, eink)
     
     // Ocultar spinner
     ocultarSpinnerAplicando();
     console.log(`✅ [PLANTILLA] Plantilla aplicada y guardada`);
+}
+
+async function guardarNombrePlantilla(nombrePlantilla) {
+    try {
+        const response = await fetch(`${API_URL}/empresas/${empresaId}/colores`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plantilla_personalizada: nombrePlantilla
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log(`✅ [PLANTILLA] Backend devolvió:`, data);
+            console.log(`✅ [PLANTILLA] data.success:`, data.success);
+            console.log(`✅ [PLANTILLA] data.plantilla:`, data.plantilla);
+            console.log(`✅ [PLANTILLA] data.colores exists:`, !!data.colores);
+            
+            // Backend devuelve el JSON nuevo (design tokens)
+            if (data.colores && window.parent && window.parent.applyTheme) {
+                console.log('[PLANTILLA] ✅ Aplicando tema desde respuesta del backend...');
+                console.log('[PLANTILLA] JSON recibido:', data.colores.name);
+                await window.parent.applyTheme(data.colores);
+            } else {
+                console.warn('[PLANTILLA] ⚠️ applyTheme no disponible, usando fallback');
+                if (window.parent && window.parent.cargarColoresEmpresa) {
+                    console.log('[PLANTILLA] Recargando estilos (fallback)...');
+                    await window.parent.cargarColoresEmpresa();
+                }
+            }
+        } else {
+            const error = await response.text();
+            console.error('❌ Error al guardar nombre de plantilla:', error);
+        }
+    } catch (error) {
+        console.error('❌ Error al guardar nombre de plantilla:', error);
+    }
 }
 
 function mostrarSpinnerAplicando(nombrePlantilla) {
@@ -377,6 +455,9 @@ function ocultarSpinnerAplicando() {
 
 function aplicarPlantilla(nombre) {
     const plantilla = PLANTILLAS[nombre];
+    console.log(`🎨 [DEBUG] Aplicando plantilla "${nombre}":`);
+    console.log(`🎨 [DEBUG] color_grid_header_text en plantilla:`, plantilla.color_grid_header_text);
+    
     Object.keys(plantilla).forEach(key => {
         if (key !== 'nombre' && key !== 'desc' && key !== 'icon') {
             const input = document.getElementById(key);
@@ -384,11 +465,21 @@ function aplicarPlantilla(nombre) {
                 input.value = plantilla[key];
                 const valueSpan = document.getElementById(`${key}-value`);
                 if (valueSpan) valueSpan.textContent = plantilla[key];
+            } else if (key === 'color_grid_header_text') {
+                console.log(`❌ [DEBUG] Input NO encontrado para: ${key}`);
             }
         }
     });
     
-    // NO actualizar preview - aplicamos directamente
+    // Verificar que se aplicó correctamente
+    const inputTest = document.getElementById('color_grid_header_text');
+    if (inputTest) {
+        console.log(`✅ [DEBUG] color_grid_header_text input value después:`, inputTest.value);
+    }
+    
+    // Aplicar estilos visualmente a la página
+    aplicarEstilosDePlantilla(plantilla);
+    
     console.log(`🔄 [PLANTILLA] Colores aplicados a inputs: ${plantilla.nombre || nombre}`);
 }
 

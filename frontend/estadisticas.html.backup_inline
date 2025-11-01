@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estadísticas</title>
-    <script src="/static/branding.js?v=1761998426"></script>
-    <script src="/static/auto_branding.js?v=1761998426"></script>
-    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762004912">
-    <script src="/static/auto_branding.js?v=1761998426"></script>
-    <script src="/static/plantilla_sync.js?v=1761938648"></script>
+    <script src="/static/auto_branding.js?v=1761841417"></script>
+    <script src="/static/plantilla_sync.js?v=1761684810"></script>
     
     <script>
     // Variable global para el gráfico de gastos del año
@@ -125,11 +122,11 @@
     };
     </script>
     
-    <script src="/static/estadisticas_facturas.js?v=1761938648_1723" type="module"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css?v=1761938648_1052">
+    <script src="/static/estadisticas_facturas.js?v=20250911_1723" type="module"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css?v=20250911_1052">
     <link rel="stylesheet" href="/static/page_header.css">
-    <link rel="stylesheet" href="/static/styles.css?v=1761938648?v=20250911_1052">
-    <link rel="stylesheet" href="/static/notificaciones.css?v=1761938648_1052">
+    <link rel="stylesheet" href="/static/styles.css?v=26?v=20250911_1052">
+    <link rel="stylesheet" href="/static/notificaciones.css?v=20250911_1052">
     <style>
         body {
             padding: 20px;
@@ -150,6 +147,33 @@
             margin-bottom: 1rem;
         }
         
+        .tab {
+            padding: 0.75rem 1.5rem;
+            background: #f5f5f5;
+            border: none;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+        
+        .tab:hover {
+            background: #e8e8e8;
+            color: #333;
+        }
+        
+        .tab.active {
+            /* background: white; */  /* Comentado - permite adaptarse al tema */
+            background: rgba(255, 255, 255, 0.1);  /* Fondo semi-transparente que se adapta */
+            color: inherit;  /* Heredar color del tema */
+            border-bottom: 2px solid #3498db;
+            font-weight: 600;
+        }
         
         .tab-content {
             display: none !important;
@@ -185,7 +209,7 @@
         }
         
         .stats-card {
-            /*  */  /* Comentado - se aplica desde branding dinámico */
+            /* background: white; */  /* Comentado - se aplica desde branding dinámico */
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             padding: 1rem;
@@ -199,8 +223,8 @@
         }
         
         .btn-actualizar {
-            background-
-            
+            background-color: #4CAF50;
+            color: white;
             border: none;
             border-radius: 4px;
             padding: 6px 12px;
@@ -212,12 +236,12 @@
         }
         
         .btn-actualizar:hover {
-            background-
+            background-color: #45a049;
         }
         
         .btn-descargar {
-            background-
-            
+            background-color: #3498db;
+            color: white;
             border: none;
             border-radius: 4px;
             padding: 6px 10px;
@@ -228,16 +252,16 @@
             font-size: 14px;
         }
         .btn-descargar:hover {
-            background-
+            background-color: #2980b9;
         }
         
         .btn-actualizar:disabled {
-            background-
+            background-color: #cccccc;
             cursor: not-allowed;
         }
         
         .icono-actualizar {
-            
+            color: #4CAF50;
             cursor: pointer;
             font-size: 0.85rem;
             transition: color 0.3s;
@@ -246,11 +270,11 @@
         }
         
         .icono-actualizar:hover {
-            
+            color: #45a049;
         }
         
         .icono-actualizar.disabled {
-            
+            color: #cccccc;
             cursor: not-allowed;
         }
         
@@ -265,7 +289,7 @@
         
         .stats-card h3 {
             margin-top: 0;
-            
+            color: #2c3e50;
             border-bottom: 1px solid #eee;
             padding-bottom: 0.4rem;
             margin-bottom: 0.75rem;
@@ -284,14 +308,14 @@
         
         .stats-label {
             font-size: 0.9rem;
-            
+            color: #7f8c8d;
             margin-bottom: 0.25rem;
         }
         
         .stats-value {
             font-size: 1.5rem;
             font-weight: bold;
-            
+            color: #2c3e50;
         }
         
         .stats-comparison {
@@ -307,16 +331,16 @@
         }
         
         .stats-percentage.positive {
-            
+            color: #27ae60;
         }
         
         .stats-percentage.negative {
-            
+            color: #e74c3c;
         }
         
         .stats-previous {
             font-size: 0.8rem;
-            
+            color: #95a5a6;
         }
         
         .monthly-stats {
@@ -336,15 +360,15 @@
         }
         
         .stats-table th {
-            background-
-            
+            background-color: var(--color-grid-header, #333333) !important;
+            color: var(--color-header-text, #ffffff) !important;
             font-weight: bold;
             font-size: 0.68rem;
             text-transform: uppercase;
         }
         
         .stats-table tr:hover {
-            background-
+            background-color: #f0f0f0;
         }
         
         .stats-table tbody tr {
@@ -394,13 +418,13 @@
         
         .stats-superado {
             box-shadow: 0 0 0 4px #b5f5c6;
-            
+            background: linear-gradient(90deg, #e6ffe6 60%, #fff 100%);
             border: 2px solid #27ae60 !important;
             transition: box-shadow 0.3s, background 0.3s, border 0.3s;
         }
         /* Modern card redesign */
         .stats-card {
-            /*  */  /* Comentado - se aplica desde branding dinámico */
+            /* background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%); */  /* Comentado - se aplica desde branding dinámico */
             border: 1px solid rgba(0, 0, 0, 0.05);
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -409,9 +433,9 @@
         }
 
         .stats-card{position:relative;}
-        .toggle-card{border:none;cursor:pointer;margin-left:0.5rem;font-size:0.9rem;padding:2px 6px;border-radius:3px;transition:all 0.2s ease;}        
-        .toggle-card:hover{}
-        .stats-card.collapsed .toggle-card{border:1px solid #e0e0e0;}
+        .toggle-card{background:none;border:none;cursor:pointer;margin-left:0.5rem;font-size:0.9rem;color:#6c757d;padding:2px 6px;border-radius:3px;transition:all 0.2s ease;}        
+        .toggle-card:hover{background:rgba(0,0,0,0.05);color:#495057;}
+        .stats-card.collapsed .toggle-card{background:#f1f1f1;border:1px solid #e0e0e0;}
         .toggle-card i{pointer-events:none;}
         .stats-card.collapsed{padding:0.3rem 1rem;transition:none;max-height:3.2rem;overflow:hidden;}
         .stats-card.collapsed h3{margin-bottom:0;}
@@ -423,7 +447,7 @@
 
         .stats-label {
             font-size: 0.75rem;
-            
+            color: #6c757d;
             margin-bottom: 0.25rem;
             text-transform: uppercase;
             letter-spacing: .5px;
@@ -432,30 +456,30 @@
         .stats-value {
             font-size: 1.8rem;
             font-weight: 700;
-            
+            color: #212529;
         }
         
         .importe-negativo {
-            
+            color: #e74c3c !important;
         }
         
         .importe-positivo {
-            
+            color: #27ae60 !important;
         }
     </style>
 
 <style>
     /* Modal para gráficos */
-    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background-} 
-    .modal-content{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px;border-radius:8px;width:90%;max-width:900px;cursor:move;}
-    .cerrar-modal{float:right;font-size:28px;font-weight:bold;cursor:pointer;}
-    .cerrar-modal:hover{}
+    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background-color:rgba(0,0,0,0.4);} 
+    .modal-content{background:#fff;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px;border-radius:8px;width:90%;max-width:900px;cursor:move;}
+    .cerrar-modal{color:#aaa;float:right;font-size:28px;font-weight:bold;cursor:pointer;}
+    .cerrar-modal:hover{color:#000;}
     /* Header layout */
     .stats-header{display:flex;flex-direction:column;gap:0.2rem;margin-bottom:1rem;}
     .header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;}
     .header-icons{display:flex;gap:0.3rem;}
-    .header-icons button{margin:0;border:1px solid var(--color-input-border, #000000);border-radius:4px;padding:6px;}
-    .header-icons i{}
+    .header-icons button{margin:0;background:var(--color-button, #ffffff);color:var(--color-button-text, #000000);border:1px solid var(--color-input-border, #000000);border-radius:4px;padding:6px;}
+    .header-icons i{color:var(--color-icon, #000000) !important;}
     .header-controls{display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;}
 </style>
 </head>
@@ -463,12 +487,12 @@
     <div class="container">
         <div class="stats-header">
             <div class="header-top">
-                <h1 style=" margin: 0;">Estadísticas <span id="year-indicator" style="font-size:0.6em;"></span></h1>
+                <h1 style="color: #ffffff !important; margin: 0;">Estadísticas <span id="year-indicator" style="font-size:0.6em;color:#7f8c8d;"></span></h1>
                 <div class="header-icons">
                     <button id="btn-descargar-csv" class="btn-descargar" title="Descargar CSV"><i class="fas fa-download"></i></button>
                     <button id="btn-graficos" class="btn-descargar" title="Ver Gráficos"><i class="fas fa-chart-bar"></i></button>
                     <button id="btn-informe-situacion" class="btn-descargar" title="Informe de Situación"><i class="fas fa-file-alt"></i></button>
-                    <button id="btn-simulador" class="btn-descargar" title="Simulador Financiero (Solo Desarrollo)" style="display:none;"><i class="fas fa-calculator"></i></button>
+                    <button id="btn-simulador" class="btn-descargar" title="Simulador Financiero (Solo Desarrollo)" style="display:none;background:#ff9800;"><i class="fas fa-calculator"></i></button>
                 </div>
             </div>
             <div class="header-controls">
@@ -693,7 +717,7 @@
             </div>
             <div class="stats-row">
                 <div class="stats-label">Última actualización</div>
-                <div class="stats-value" id="ig-ultima-actualizacion" style="font-size: 0.9rem; ">-</div>
+                <div class="stats-value" id="ig-ultima-actualizacion" style="font-size: 0.9rem; color: #666;">-</div>
             </div>
             </div>
         </div>
@@ -774,7 +798,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="topGastosBody">
-                                    <tr id="loading-row"><td colspan="3" style="text-align:center;padding:1rem;">Haz click en la pestaña Gastos para cargar datos...</td></tr>
+                                    <tr id="loading-row"><td colspan="3" style="text-align:center;padding:1rem;color:#999;">Haz click en la pestaña Gastos para cargar datos...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -790,25 +814,25 @@
         <h2 id="modal-concepto-titulo" style="margin-top: 0;">Detalles del Gasto</h2>
         
         <!-- Estadísticas resumen -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;  padding: 1rem; border-radius: 8px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; background: #f5f5f5; padding: 1rem; border-radius: 8px;">
             <div>
-                <div style="font-size: 0.75rem; ">Total Anual</div>
-                <div id="modal-total" style="font-size: 1.3rem; font-weight: 600; ">0,00 €</div>
+                <div style="font-size: 0.75rem; color: #666;">Total Anual</div>
+                <div id="modal-total" style="font-size: 1.3rem; font-weight: 600; color: #e74c3c;">0,00 €</div>
             </div>
             <div>
-                <div style="font-size: 0.75rem; ">Cantidad</div>
+                <div style="font-size: 0.75rem; color: #666;">Cantidad</div>
                 <div id="modal-cantidad" style="font-size: 1.3rem; font-weight: 600;">0</div>
             </div>
             <div>
-                <div style="font-size: 0.75rem; ">Promedio</div>
-                <div id="modal-promedio" style="font-size: 1.3rem; font-weight: 600; ">0,00 €</div>
+                <div style="font-size: 0.75rem; color: #666;">Promedio</div>
+                <div id="modal-promedio" style="font-size: 1.3rem; font-weight: 600; color: #e74c3c;">0,00 €</div>
             </div>
             <div>
-                <div style="font-size: 0.75rem; ">Mínimo</div>
+                <div style="font-size: 0.75rem; color: #666;">Mínimo</div>
                 <div id="modal-minimo" style="font-size: 1rem; font-weight: 500;">0,00 €</div>
             </div>
             <div>
-                <div style="font-size: 0.75rem; ">Máximo</div>
+                <div style="font-size: 0.75rem; color: #666;">Máximo</div>
                 <div id="modal-maximo" style="font-size: 1rem; font-weight: 500;">0,00 €</div>
             </div>
         </div>
@@ -816,7 +840,7 @@
         <!-- Tabla de detalles -->
         <div style="max-height: 400px; overflow-y: auto;">
             <table class="stats-table" style="width: 100%;">
-                <thead style="position: sticky; top: 0;  z-index: 1;">
+                <thead style="position: sticky; top: 0; background: white; z-index: 1;">
                     <tr>
                         <th style="text-align: left; width: 50%;">Concepto</th>
                         <th style="text-align: center; width: 8%;">Cant.</th>
@@ -836,9 +860,9 @@
 <div id="modal-graficos" class="modal">
     <div class="modal-content">
         <span class="cerrar-modal" id="cerrar-modal">&times;</span>
-        <div class="chart-controls" class="chart-controls">
-            <label for="tipo-datos" class="label-spacing">Mostrar:</label>
-            <select id="tipo-datos" class="form-select">
+        <div class="chart-controls" style="margin-bottom: 20px; text-align: center;">
+            <label for="tipo-datos" style="margin-right: 10px;">Mostrar:</label>
+            <select id="tipo-datos" style="padding: 5px; border-radius: 4px; border: 1px solid #ddd;">
                 <option value="global">Total Global</option>
                 <option value="tickets">Tickets</option>
                 <option value="facturas">Facturas</option>
@@ -853,10 +877,10 @@
 <div id="modal-graficos-gastos" class="modal">
     <div class="modal-content" style="max-width: 1000px;">
         <span class="cerrar-modal" id="cerrar-modal-gastos">&times;</span>
-        <h2 style="margin-top: 0; ">📊 Evolución de Gastos por Mes</h2>
-        <div class="chart-controls" class="chart-controls">
+        <h2 style="margin-top: 0; color: #2c3e50;">📊 Evolución de Gastos por Mes</h2>
+        <div class="chart-controls" style="margin-bottom: 20px; text-align: center;">
             <label for="categoria-gastos" style="margin-right: 10px; font-weight: 600;">Categoría:</label>
-            <select id="categoria-gastos" class="form-select">
+            <select id="categoria-gastos" style="padding: 8px 15px; border-radius: 4px; border: 1px solid #ddd; font-size: 14px;">
                 <option value="global">📈 Total Global</option>
                 <option value="Recibos">🧾 Recibos</option>
                 <option value="Liquidaciones TPV">💳 Liquidaciones TPV</option>
@@ -876,66 +900,66 @@
 <div id="modal-simulador" class="modal" style="display:none;">
     <div class="modal-content" style="max-width: 900px;">
         <span class="cerrar-modal" onclick="cerrarModalSimulador()">&times;</span>
-        <h2 style="margin-top: 0;  text-align: center;">
+        <h2 style="margin-top: 0; color: #2c3e50; text-align: center;">
             <i class="fas fa-calculator"></i> Simulador Financiero
         </h2>
-        <p style="text-align: center;  font-size: 0.85rem; font-weight: 600; margin-bottom: 1.5rem;">
+        <p style="text-align: center; color: #ff9800; font-size: 0.85rem; font-weight: 600; margin-bottom: 1.5rem;">
             🔧 HERRAMIENTA DE DESARROLLO - Simula escenarios para ver cómo cuadrar los números
         </p>
         
         <!-- Controles de Simulación -->
-        <div style=" padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
-            <h3 style="margin-top: 0;  font-size: 1rem;"><i class="fas fa-sliders-h"></i> Ajustes de Simulación</h3>
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+            <h3 style="margin-top: 0; color: #2c3e50; font-size: 1rem;"><i class="fas fa-sliders-h"></i> Ajustes de Simulación</h3>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <!-- Ajuste de Ventas -->
                 <div>
-                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; ">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
                         📈 Incremento/Reducción Ventas (%)
                     </label>
-                    <input type="number" id="sim-ventas-pct" value="0" step="5" class="form-input">
-                    <small >Ej: +10 = 10% más ventas, -5 = 5% menos</small>
+                    <input type="number" id="sim-ventas-pct" value="0" step="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #7f8c8d;">Ej: +10 = 10% más ventas, -5 = 5% menos</small>
                 </div>
                 
                 <!-- Ajuste de Gastos -->
                 <div>
-                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; ">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
                         📉 Incremento/Reducción Gastos (%)
                     </label>
-                    <input type="number" id="sim-gastos-pct" value="0" step="5" class="form-input">
-                    <small >Ej: -10 = 10% menos gastos, +5 = 5% más</small>
+                    <input type="number" id="sim-gastos-pct" value="0" step="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #7f8c8d;">Ej: -10 = 10% menos gastos, +5 = 5% más</small>
                 </div>
                 
                 <!-- Incremento de Precios -->
                 <div>
-                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; ">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
                         🏷️ Incremento de Precios (%)
                     </label>
-                    <input type="number" id="sim-precios-pct" value="0" step="5" class="form-input">
-                    <small >Ej: +10 = subir precios un 10%</small>
+                    <input type="number" id="sim-precios-pct" value="0" step="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #7f8c8d;">Ej: +10 = subir precios un 10%</small>
                 </div>
                 
                 <!-- Ventas Adicionales por Mes -->
                 <div>
-                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; ">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
                         💰 Ventas Adicionales por Mes (€)
                     </label>
-                    <input type="number" id="sim-ventas-mes" value="0" step="100" class="form-input">
-                    <small >Ingresos extra mensuales</small>
+                    <input type="number" id="sim-ventas-mes" value="0" step="100" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #7f8c8d;">Ingresos extra mensuales</small>
                 </div>
                 
                 <!-- Reducción de Gastos por Mes -->
                 <div>
-                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; ">
+                    <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
                         💸 Ahorro Mensual en Gastos (€)
                     </label>
-                    <input type="number" id="sim-gastos-mes" value="0" step="100" class="form-input">
-                    <small >Reducción mensual de gastos</small>
+                    <input type="number" id="sim-gastos-mes" value="0" step="100" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <small style="color: #7f8c8d;">Reducción mensual de gastos</small>
                 </div>
             </div>
             
             <div style="margin-top: 1rem;">
-                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; ">
+                <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: #2c3e50;">
                     🎯 Estrategia de Optimización
                 </label>
                 <select id="sim-estrategia" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 0.5rem;">
@@ -949,14 +973,14 @@
                     <option value="gastos70">30/70 Ventas y Gastos (Enfoque Gastos)</option>
                     <option value="mejor">AUTO - Calcular Mejor Estrategia</option>
                 </select>
-                <small >Selecciona una estrategia o deja en Manual para ajustes personalizados</small>
+                <small style="color: #7f8c8d;">Selecciona una estrategia o deja en Manual para ajustes personalizados</small>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
-                <button onclick="ejecutarSimulacion()" style="padding: 0.75rem;   border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                <button onclick="ejecutarSimulacion()" style="padding: 0.75rem; background: #2196F3; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 1rem;">
                     <i class="fas fa-play"></i> Ejecutar Simulación
                 </button>
-                <button onclick="aplicarEstrategia()" style="padding: 0.75rem;   border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 1rem;">
+                <button onclick="aplicarEstrategia()" style="padding: 0.75rem; background: #4CAF50; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 1rem;">
                     <i class="fas fa-magic"></i> Aplicar Estrategia
                 </button>
             </div>
@@ -965,28 +989,28 @@
         <!-- Resultados -->
         <div id="sim-resultados" style="display: none;">
             <!-- Comparativa Real vs Simulado -->
-            <div class="sim-grid">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                 <!-- Real -->
-                <div class="sim-card sim-actual">
-                    <h4 style="margin-top: 0;  font-size: 0.9rem;">📊 SITUACIÓN ACTUAL</h4>
+                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #e74c3c;">
+                    <h4 style="margin-top: 0; color: #2c3e50; font-size: 0.9rem;">📊 SITUACIÓN ACTUAL</h4>
                     <div style="font-size: 0.85rem; line-height: 1.8;">
                         <div><strong>Ventas:</strong> <span id="sim-real-ventas">-</span></div>
                         <div><strong>Gastos:</strong> <span id="sim-real-gastos">-</span></div>
-                        <div class="divider-top">
-                            <strong>Balance:</strong> <span id="sim-real-balance" class="text-bold">-</span>
+                        <div style="border-top: 1px solid #ddd; margin-top: 0.5rem; padding-top: 0.5rem;">
+                            <strong>Balance:</strong> <span id="sim-real-balance" style="font-weight: 700;">-</span>
                         </div>
                         <div><strong>Margen:</strong> <span id="sim-real-margen">-</span></div>
                     </div>
                 </div>
                 
                 <!-- Simulado -->
-                <div class="sim-card sim-proyectada">
-                    <h4 style="margin-top: 0;  font-size: 0.9rem;">🎯 SIMULACIÓN</h4>
+                <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; border-left: 4px solid #4CAF50;">
+                    <h4 style="margin-top: 0; color: #2c3e50; font-size: 0.9rem;">🎯 SIMULACIÓN</h4>
                     <div style="font-size: 0.85rem; line-height: 1.8;">
                         <div><strong>Ventas:</strong> <span id="sim-sim-ventas">-</span></div>
                         <div><strong>Gastos:</strong> <span id="sim-sim-gastos">-</span></div>
-                        <div class="divider-top">
-                            <strong>Balance:</strong> <span id="sim-sim-balance" class="text-bold">-</span>
+                        <div style="border-top: 1px solid #ddd; margin-top: 0.5rem; padding-top: 0.5rem;">
+                            <strong>Balance:</strong> <span id="sim-sim-balance" style="font-weight: 700;">-</span>
                         </div>
                         <div><strong>Margen:</strong> <span id="sim-sim-margen">-</span></div>
                     </div>
@@ -994,33 +1018,33 @@
             </div>
             
             <!-- Diferencias -->
-            <div class="sim-card sim-mejora">
-                <h4 style="margin-top: 0;  font-size: 0.9rem;">📈 MEJORA PROYECTADA</h4>
+            <div style="background: #fff3cd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-left: 4px solid #ff9800;">
+                <h4 style="margin-top: 0; color: #2c3e50; font-size: 0.9rem;">📈 MEJORA PROYECTADA</h4>
                 <div style="font-size: 0.85rem;">
                     <div style="display: flex; justify-content: space-between; padding: 0.3rem 0;">
                         <span><strong>Diferencia en Balance:</strong></span>
-                        <span id="sim-dif-balance" class="text-bold text-large">-</span>
+                        <span id="sim-dif-balance" style="font-weight: 700; font-size: 1.1rem;">-</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding: 0.3rem 0;">
                         <span><strong>Diferencia en Margen:</strong></span>
-                        <span id="sim-dif-margen" class="text-bold">-</span>
+                        <span id="sim-dif-margen" style="font-weight: 700;">-</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding: 0.3rem 0; border-top: 1px solid #ddd; margin-top: 0.5rem; padding-top: 0.5rem;">
                         <span><strong>Proyección Fin de Año:</strong></span>
-                        <span id="sim-dif-proyeccion" class="text-bold text-large">-</span>
+                        <span id="sim-dif-proyeccion" style="font-weight: 700; font-size: 1.1rem;">-</span>
                     </div>
                 </div>
             </div>
             
             <!-- Punto de Equilibrio -->
-            <div class="sim-card sim-equilibrio">
-                <h4 style="margin-top: 0;  font-size: 0.9rem;">⚖️ PUNTO DE EQUILIBRIO</h4>
+            <div style="background: #e3f2fd; padding: 1rem; border-radius: 8px; border-left: 4px solid #2196F3;">
+                <h4 style="margin-top: 0; color: #2c3e50; font-size: 0.9rem;">⚖️ PUNTO DE EQUILIBRIO</h4>
                 <div style="font-size: 0.85rem;">
                     <div>Para alcanzar equilibrio (Balance = 0), necesitas:</div>
-                    <div style="font-weight: 700; font-size: 1.1rem; margin-top: 0.5rem; ">
+                    <div style="font-weight: 700; font-size: 1.1rem; margin-top: 0.5rem; color: #2196F3;">
                         <span id="sim-eq-incremento">-</span> más en ventas
                     </div>
-                    <div style="margin-top: 0.3rem; ">
+                    <div style="margin-top: 0.3rem; color: #7f8c8d;">
                         (Incremento del <span id="sim-eq-pct">-</span>)
                     </div>
                 </div>
@@ -1033,10 +1057,10 @@
 <div id="modal-informe-situacion" class="modal" style="display:none;">
     <div class="modal-content" style="max-width: 1000px;">
         <span class="cerrar-modal" onclick="cerrarModalInformeSituacion()">&times;</span>
-        <h2 style="margin-top: 0;  text-align: center;">
+        <h2 style="margin-top: 0; color: #2c3e50; text-align: center;">
             <i class="fas fa-chart-line"></i> Informe de Situación Financiera
         </h2>
-        <p id="informe-periodo" style="text-align: center;  font-size: 0.95rem; margin-bottom: 2rem;"></p>
+        <p id="informe-periodo" style="text-align: center; color: #7f8c8d; font-size: 0.95rem; margin-bottom: 2rem;"></p>
         
         <!-- Estado General -->
         <div id="informe-estado" style="text-align: center; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; font-size: 1.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;">
@@ -1046,7 +1070,7 @@
         <!-- Métricas Principales -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
             <!-- Ventas -->
-            <div style="  padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
                 <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;"><i class="fas fa-euro-sign"></i> VENTAS</div>
                 <div id="informe-ventas-total" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">0,00 €</div>
                 <div id="informe-ventas-detalles" style="font-size: 0.75rem; opacity: 0.8;">0 facturas • 0,00 €/mes</div>
@@ -1054,14 +1078,14 @@
             </div>
             
             <!-- Gastos -->
-            <div style="  padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
                 <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;"><i class="fas fa-shopping-cart"></i> GASTOS</div>
                 <div id="informe-gastos-total" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">0,00 €</div>
                 <div id="informe-gastos-detalles" style="font-size: 0.75rem; opacity: 0.8;">0 gastos • 0,00 €/mes</div>
             </div>
             
             <!-- Balance -->
-            <div id="informe-balance-card" style="  padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <div id="informe-balance-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
                 <div style="font-size: 0.85rem; opacity: 0.9; margin-bottom: 0.5rem;"><i class="fas fa-balance-scale"></i> BALANCE</div>
                 <div id="informe-balance-total" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">0,00 €</div>
                 <div id="informe-balance-detalles" style="font-size: 0.75rem; opacity: 0.8;">Margen: 0%</div>
@@ -1071,38 +1095,38 @@
         <!-- Ratios y Proyecciones -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
             <!-- Ratios -->
-            <div style=" padding: 1.5rem; border-radius: 12px; border-left: 4px solid #3498db;">
-                <h3 style="margin-top: 0;  font-size: 1.1rem;"><i class="fas fa-percent"></i> Ratios Financieros</h3>
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #3498db;">
+                <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1rem;"><i class="fas fa-percent"></i> Ratios Financieros</h3>
                 <div style="display: flex; flex-direction: column; gap: 0.8rem;">
                     <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;">
-                        <span >Margen Beneficio (Año):</span>
+                        <span style="color: #7f8c8d;">Margen Beneficio (Año):</span>
                         <strong id="informe-margen-anio">0%</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;">
-                        <span >Margen Beneficio (Mes):</span>
+                        <span style="color: #7f8c8d;">Margen Beneficio (Mes):</span>
                         <strong id="informe-margen-mes">0%</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                        <span >Ratio Gastos/Ventas:</span>
+                        <span style="color: #7f8c8d;">Ratio Gastos/Ventas:</span>
                         <strong id="informe-ratio-gastos">0%</strong>
                     </div>
                 </div>
             </div>
             
             <!-- Proyecciones -->
-            <div style=" padding: 1.5rem; border-radius: 12px; border-left: 4px solid #e74c3c;">
-                <h3 style="margin-top: 0;  font-size: 1.1rem;"><i class="fas fa-chart-line"></i> Proyección Fin de Año</h3>
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #e74c3c;">
+                <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1rem;"><i class="fas fa-chart-line"></i> Proyección Fin de Año</h3>
                 <div style="display: flex; flex-direction: column; gap: 0.8rem;">
                     <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;">
-                        <span >Ventas Proyectadas:</span>
+                        <span style="color: #7f8c8d;">Ventas Proyectadas:</span>
                         <strong id="informe-proy-ventas">0,00 €</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #e0e0e0;">
-                        <span >Gastos Proyectados:</span>
+                        <span style="color: #7f8c8d;">Gastos Proyectados:</span>
                         <strong id="informe-proy-gastos">0,00 €</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                        <span >Balance Proyectado:</span>
+                        <span style="color: #7f8c8d;">Balance Proyectado:</span>
                         <strong id="informe-proy-balance">0,00 €</strong>
                     </div>
                 </div>
@@ -1110,8 +1134,8 @@
         </div>
         
         <!-- Top Categorías de Gastos -->
-        <div style=" padding: 1.5rem; border-radius: 12px;">
-            <h3 style="margin-top: 0;  font-size: 1.1rem;"><i class="fas fa-list-ol"></i> Top 5 Categorías de Gastos</h3>
+        <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 12px;">
+            <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1rem;"><i class="fas fa-list-ol"></i> Top 5 Categorías de Gastos</h3>
             <div id="informe-top-categorias" style="display: flex; flex-direction: column; gap: 0.8rem;">
                 <!-- Se llena dinámicamente -->
             </div>
@@ -1262,7 +1286,7 @@ async function cargarTop10GastosInline(anio) {
             return;
         }
         
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;">⏳ Cargando Top 10...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;color:#2196F3;">⏳ Cargando Top 10...</td></tr>';
         
         const apiHost = window.location.hostname;
         const url = `http://${apiHost}:5001/api/gastos/top10?anio=${anio}`;
@@ -1280,7 +1304,7 @@ async function cargarTop10GastosInline(anio) {
         console.log('[INLINE] Cantidad de gastos:', datos.top_gastos ? datos.top_gastos.length : 0);
         
         if (!datos.top_gastos || datos.top_gastos.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;">⚠️ No hay datos disponibles</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;color:#f44336;">⚠️ No hay datos disponibles</td></tr>';
             console.log('[INLINE] No hay datos de top gastos');
             return;
         }
@@ -1320,13 +1344,13 @@ async function cargarTop10GastosInline(anio) {
             
             fila.innerHTML = `
                 <td style="padding:0.3rem 0.5rem;font-size:0.8rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                    <span style="font-weight:600;margin-right:0.3rem;">${i + 1}.</span>
+                    <span style="color:#999;font-weight:600;margin-right:0.3rem;">${i + 1}.</span>
                     <span title="${tooltip}">${gasto.concepto}</span>
                 </td>
-                <td style="text-align:right;padding:0.3rem 0.5rem;font-size:0.8rem;font-weight:600;">
+                <td style="text-align:right;padding:0.3rem 0.5rem;font-size:0.8rem;font-weight:600;color:#e74c3c;">
                     ${formatearImporte(Math.abs(gasto.total))}
                 </td>
-                <td style="text-align:right;padding:0.3rem 0.5rem;font-size:0.75rem;font-weight:500;">
+                <td style="text-align:right;padding:0.3rem 0.5rem;font-size:0.75rem;color:${pctColor};font-weight:500;">
                     ${pctDisplay}
                 </td>
             `;
@@ -1352,7 +1376,7 @@ async function cargarTop10GastosInline(anio) {
     } catch (error) {
         console.error('[INLINE] ❌ ERROR en Top 10:', error);
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:1rem;">❌ Error: ${error.message}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:1rem;color:red;">❌ Error: ${error.message}</td></tr>`;
         }
         alert('Error al cargar Top 10 Gastos: ' + error.message);
     }
@@ -1441,14 +1465,14 @@ async function abrirModalDetallesGasto(concepto, anio) {
             
             fila.innerHTML = `
                 <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${tooltip}">
-                    <span style="font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
+                    <span style="color:#999;font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
                     <span style="cursor: help;">${gasto.concepto}</span>
-                    ${gasto.cantidad > 1 ? '<span style="font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
+                    ${gasto.cantidad > 1 ? '<span style="color:#999;font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
                 </td>
                 <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: center; width: 8%;">${gasto.cantidad}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600;  width: 15%;">${formatearImporte(gasto.total)}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right;  width: 15%;">${formatearImporte(gasto.promedio)}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center;  width: 12%;">${periodo}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; color: #e74c3c; width: 15%;">${formatearImporte(gasto.total)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; color: #666; width: 15%;">${formatearImporte(gasto.promedio)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; color: #999; width: 12%;">${periodo}</td>
             `;
             tbody.appendChild(fila);
         });
@@ -1458,7 +1482,7 @@ async function abrirModalDetallesGasto(concepto, anio) {
     } catch (error) {
         console.error('[MODAL] Error:', error);
         document.getElementById('modal-detalles-body').innerHTML = 
-            `<tr><td colspan="5" style="text-align:center;padding:2rem;">❌ Error: ${error.message}</td></tr>`;
+            `<tr><td colspan="5" style="text-align:center;padding:2rem;color:red;">❌ Error: ${error.message}</td></tr>`;
     }
 }
 
@@ -1508,7 +1532,7 @@ async function abrirModalDetallesGastoMes(categoria) {
         // Mostrar total sin puntuales como valor principal
         const hayPuntuales = datos.estadisticas.total !== datos.estadisticas.total_sin_puntuales;
         const totalHTML = hayPuntuales 
-            ? `${formatearImporte(datos.estadisticas.total_sin_puntuales)} <span style="font-size:0.7rem;font-weight:normal;">(Total bruto: ${formatearImporte(datos.estadisticas.total)})</span>`
+            ? `${formatearImporte(datos.estadisticas.total_sin_puntuales)} <span style="font-size:0.7rem;color:#999;font-weight:normal;">(Total bruto: ${formatearImporte(datos.estadisticas.total)})</span>`
             : formatearImporte(datos.estadisticas.total);
         
         document.getElementById('modal-total').innerHTML = totalHTML;
@@ -1533,20 +1557,20 @@ async function abrirModalDetallesGastoMes(categoria) {
             
             // Determinar si es gasto puntual
             const esPuntual = gasto.es_puntual === true;
-            const estiloFondo = esPuntual ? 'background-' : '';
-            const etiquetaPuntual = esPuntual ? '<span style="display:inline-block;margin-left:0.5rem;font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:0.2rem;font-weight:600;" title="Excluido del promedio mensual">PUNTUAL</span>' : '';
+            const estiloFondo = esPuntual ? 'background-color:#fff3cd;' : '';
+            const etiquetaPuntual = esPuntual ? '<span style="display:inline-block;margin-left:0.5rem;font-size:0.65rem;background:#ffc107;color:#000;padding:0.1rem 0.4rem;border-radius:0.2rem;font-weight:600;" title="Excluido del promedio mensual">PUNTUAL</span>' : '';
             
             fila.innerHTML = `
                 <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem;${estiloFondo}">
-                    <span style="font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
+                    <span style="color:#999;font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
                     ${gasto.concepto}
-                    ${gasto.cantidad > 1 ? '<span style="font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
+                    ${gasto.cantidad > 1 ? '<span style="color:#999;font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
                     ${etiquetaPuntual}
                 </td>
                 <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: center;${estiloFondo}">${gasto.cantidad}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; ${estiloFondo}">${formatearImporte(gasto.importe)}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; ${estiloFondo}">${formatearImporte(gasto.importe / gasto.cantidad)}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; ${estiloFondo}">${periodo}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; color: #e74c3c;${estiloFondo}">${formatearImporte(gasto.importe)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; color: #666;${estiloFondo}">${formatearImporte(gasto.importe / gasto.cantidad)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; color: #999;${estiloFondo}">${periodo}</td>
             `;
             
             // Aplicar estilo de fondo si es puntual
@@ -1562,7 +1586,7 @@ async function abrirModalDetallesGastoMes(categoria) {
     } catch (error) {
         console.error('[MODAL MES] Error:', error);
         document.getElementById('modal-detalles-body').innerHTML = 
-            `<tr><td colspan="5" style="text-align:center;padding:2rem;">❌ Error: ${error.message}</td></tr>`;
+            `<tr><td colspan="5" style="text-align:center;padding:2rem;color:red;">❌ Error: ${error.message}</td></tr>`;
     }
 }
 
@@ -1608,7 +1632,7 @@ async function abrirModalDetallesGastoAnio(categoria) {
         // Mostrar total sin puntuales como valor principal
         const hayPuntuales = datos.estadisticas.total !== datos.estadisticas.total_sin_puntuales;
         const totalHTML = hayPuntuales 
-            ? `${formatearImporte(datos.estadisticas.total_sin_puntuales)} <span style="font-size:0.7rem;font-weight:normal;">(Total bruto: ${formatearImporte(datos.estadisticas.total)})</span>`
+            ? `${formatearImporte(datos.estadisticas.total_sin_puntuales)} <span style="font-size:0.7rem;color:#999;font-weight:normal;">(Total bruto: ${formatearImporte(datos.estadisticas.total)})</span>`
             : formatearImporte(datos.estadisticas.total);
         
         document.getElementById('modal-total').innerHTML = totalHTML;
@@ -1633,20 +1657,20 @@ async function abrirModalDetallesGastoAnio(categoria) {
             
             // Determinar si es gasto puntual
             const esPuntual = gasto.es_puntual === true;
-            const estiloFondo = esPuntual ? 'background-' : '';
-            const etiquetaPuntual = esPuntual ? '<span style="display:inline-block;margin-left:0.5rem;font-size:0.65rem;padding:0.1rem 0.4rem;border-radius:0.2rem;font-weight:600;" title="Excluido del promedio mensual">PUNTUAL</span>' : '';
+            const estiloFondo = esPuntual ? 'background-color:#fff3cd;' : '';
+            const etiquetaPuntual = esPuntual ? '<span style="display:inline-block;margin-left:0.5rem;font-size:0.65rem;background:#ffc107;color:#000;padding:0.1rem 0.4rem;border-radius:0.2rem;font-weight:600;" title="Excluido del promedio mensual">PUNTUAL</span>' : '';
             
             fila.innerHTML = `
                 <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem;${estiloFondo}">
-                    <span style="font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
+                    <span style="color:#999;font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
                     ${gasto.concepto}
-                    ${gasto.cantidad > 1 ? '<span style="font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
+                    ${gasto.cantidad > 1 ? '<span style="color:#999;font-size:0.7rem;margin-left:0.3rem;">⚡</span>' : ''}
                     ${etiquetaPuntual}
                 </td>
                 <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: center;${estiloFondo}">${gasto.cantidad}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; ${estiloFondo}">${formatearImporte(gasto.importe)}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; ${estiloFondo}">${formatearImporte(gasto.importe / gasto.cantidad)}</td>
-                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; ${estiloFondo}">${periodo}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; color: #e74c3c;${estiloFondo}">${formatearImporte(gasto.importe)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; color: #666;${estiloFondo}">${formatearImporte(gasto.importe / gasto.cantidad)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.75rem; text-align: center; color: #999;${estiloFondo}">${periodo}</td>
             `;
             
             // Aplicar estilo de fondo si es puntual
@@ -1662,7 +1686,7 @@ async function abrirModalDetallesGastoAnio(categoria) {
     } catch (error) {
         console.error('[MODAL ANIO] Error:', error);
         document.getElementById('modal-detalles-body').innerHTML = 
-            `<tr><td colspan="5" style="text-align:center;padding:2rem;">❌ Error: ${error.message}</td></tr>`;
+            `<tr><td colspan="5" style="text-align:center;padding:2rem;color:red;">❌ Error: ${error.message}</td></tr>`;
     }
 }
 
@@ -2043,16 +2067,16 @@ async function abrirModalInformeSituacion() {
         
         data.gastos.top_categorias.forEach((cat, index) => {
             const div = document.createElement('div');
-            div.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.8rem;  border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+            div.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.8rem; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
             
             div.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 1rem; flex: 1;">
-                    <span style="  width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">${index + 1}</span>
-                    <span style="font-weight: 600; ">${cat.categoria}</span>
+                    <span style="background: #e74c3c; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">${index + 1}</span>
+                    <span style="font-weight: 600; color: #2c3e50;">${cat.categoria}</span>
                 </div>
                 <div style="text-align: right;">
-                    <div style="font-weight: 700;  font-size: 1.1rem;">${formatearImporte(cat.total)}</div>
-                    <div style="font-size: 0.75rem; ">${cat.cantidad} gastos • ${cat.porcentaje}%</div>
+                    <div style="font-weight: 700; color: #e74c3c; font-size: 1.1rem;">${formatearImporte(cat.total)}</div>
+                    <div style="font-size: 0.75rem; color: #7f8c8d;">${cat.cantidad} gastos • ${cat.porcentaje}%</div>
                 </div>
             `;
             
@@ -2452,7 +2476,7 @@ console.log('[SIMULADOR] Sistema de simulador financiero cargado');
 </script>
 
 <!-- Módulo de estadísticas de gastos -->
-<script src="/static/estadisticas_gastos.js?v=1761938648_gastos_puntuales" type="module"></script>
+<script src="/static/estadisticas_gastos.js?v=20251015_gastos_puntuales" type="module"></script>
 
 </body>
 </html>

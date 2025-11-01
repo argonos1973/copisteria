@@ -1,0 +1,74 @@
+<\!DOCTYPE html>
+<html>
+<head>
+    <title>Diagnóstico Sistema de Temas</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+        .test { padding: 10px; margin: 10px 0; border: 2px solid #000; }
+        .pass { background: #4CAF50; color: white; }
+        .fail { background: #f44336; color: white; }
+        pre { background: #fff; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>�� Diagnóstico Sistema de Temas</h1>
+    <div id="results"></div>
+    
+    <script src="/static/branding.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        
+        function addTest(name, passed, details) {
+            const div = document.createElement('div');
+            div.className = 'test ' + (passed ? 'pass' : 'fail');
+            div.innerHTML = `<strong>${passed ? '✅' : '❌'} ${name}</strong><pre>${details}</pre>`;
+            results.appendChild(div);
+        }
+        
+        // Test 1: branding.js cargado
+        addTest('branding.js cargado', typeof applyTheme \!== 'undefined', 
+            `applyTheme: ${typeof applyTheme}`);
+        
+        // Test 2: localStorage tiene tema
+        const savedTheme = localStorage.getItem('aleph70_theme');
+        addTest('Tema guardado en localStorage', \!\!savedTheme, 
+            savedTheme ? JSON.stringify(JSON.parse(savedTheme), null, 2) : 'No hay tema guardado');
+        
+        // Test 3: data-theme en HTML
+        const dataTheme = document.documentElement.dataset.theme;
+        addTest('data-theme en <html>', \!\!dataTheme, 
+            `data-theme="${dataTheme || 'NO DEFINIDO'}"`);
+        
+        // Test 4: <style id="theme-style"> existe
+        const themeStyle = document.getElementById('theme-style');
+        addTest('<style id="theme-style"> existe', \!\!themeStyle, 
+            themeStyle ? `Contenido (primeros 500 chars):\n${themeStyle.textContent.substring(0, 500)}` : 'No existe');
+        
+        // Test 5: Variables CSS definidas
+        const styles = getComputedStyle(document.documentElement);
+        const bgVar = styles.getPropertyValue('--bg');
+        const textVar = styles.getPropertyValue('--text');
+        const primaryVar = styles.getPropertyValue('--primary');
+        
+        addTest('Variables CSS definidas', \!\!(bgVar || textVar || primaryVar), 
+            `--bg: "${bgVar}"\n--text: "${textVar}"\n--primary: "${primaryVar}"`);
+        
+        // Test 6: Aliases definidos
+        const colorAppBg = styles.getPropertyValue('--color-app-bg');
+        const colorPrimario = styles.getPropertyValue('--color-primario');
+        
+        addTest('Aliases de compatibilidad', \!\!(colorAppBg || colorPrimario), 
+            `--color-app-bg: "${colorAppBg}"\n--color-primario: "${colorPrimario}"`);
+        
+        // Test 7: Aplicar tema manualmente
+        setTimeout(() => {
+            if (typeof cargarColoresEmpresa === 'function') {
+                cargarColoresEmpresa();
+                addTest('cargarColoresEmpresa() ejecutado', true, 'Función ejecutada, revisa consola para logs');
+            } else {
+                addTest('cargarColoresEmpresa() disponible', false, 'Función no encontrada');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

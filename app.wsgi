@@ -96,3 +96,5 @@ except Exception as e:
     logger.error(f"Error al cargar la aplicación Flask: {e}")
     raise
 # Force reload mié 22 oct 2025 22:40:43 CEST
+# Force reload: 1761771147
+# Reload mié 29 oct 2025 22:12:46 CET

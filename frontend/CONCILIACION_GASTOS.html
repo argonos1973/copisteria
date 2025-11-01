@@ -4,11 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conciliación Bancaria</title>
-    <script src="/static/auto_branding.js?v=1761688751"></script>
-    <script src="/static/plantilla_sync.js?v=1761684810"></script>
+    <script src="/static/branding.js?v=1761998426"></script>
+    <script src="/static/auto_branding.js?v=1761998426"></script>
+    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762004912">
+    <script src="/static/auto_branding.js?v=1761998426"></script>
+    <script src="/static/plantilla_sync.js?v=1761938648"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="../static/page_header.css">
-    <link rel="stylesheet" href="../static/styles.css?v=26">
+    <link rel="stylesheet" href="../static/styles.css?v=1761938648">
     <link rel="stylesheet" href="../static/notificaciones.css">
     <style>
         .stats-cards {
@@ -19,7 +22,7 @@
         }
 
         .stat-card {
-            background: white;
+            
             padding: 15px;
             border-radius: 8px;
             border: 1px solid #ddd;
@@ -29,13 +32,13 @@
         .stat-card h3 {
             margin: 0 0 10px 0;
             font-size: 14px;
-            color: #666;
+            
         }
 
         .stat-card .value {
             font-size: 24px;
             font-weight: bold;
-            color: #2c3e50;
+            
         }
 
         .actions-bar {
@@ -57,31 +60,31 @@
         }
 
         .btn-primary {
-            background: #2c3e50;
-            color: white;
+            
+            
         }
 
         .btn-primary:hover {
-            background: #34495e;
+            
         }
 
         .btn-success {
-            background: #27ae60;
-            color: white;
+            
+            
         }
 
         .btn-success:hover {
-            background: #229954;
+            
         }
 
         .btn-warning {
-            background: #f39c12;
-            color: white;
+            
+            
         }
 
         .btn-danger {
-            background: #e74c3c;
-            color: white;
+            
+            
         }
 
         .tabs {
@@ -91,29 +94,6 @@
             border-bottom: 2px solid #ddd;
         }
 
-        .tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            border: none;
-            background: transparent;
-            font-size: 14px;
-            color: #666;
-            border-bottom: 3px solid transparent;
-        }
-
-        .tab.active {
-            color: #2c3e50;
-            border-bottom-color: #2c3e50;
-            font-weight: bold;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
 
         .ingresos-table {
             width: 100%;
@@ -129,8 +109,8 @@
         }
 
         .ingresos-table th {
-            background: #2c3e50;
-            color: white;
+            
+            
             font-weight: 600;
             position: sticky;
             top: 0;
@@ -149,23 +129,23 @@
         }
 
         .badge-success {
-            background: #d4edda;
-            color: #155724;
+            
+            
         }
 
         .badge-warning {
-            background: #fff3cd;
-            color: #856404;
+            
+            
         }
 
         .badge-danger {
-            background: #f8d7da;
-            color: #721c24;
+            
+            
         }
 
         .badge-info {
-            background: #d1ecf1;
-            color: #0c5460;
+            
+            
         }
 
         .modal {
@@ -176,7 +156,7 @@
             top: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            
         }
 
         .modal.active {
@@ -186,7 +166,7 @@
         }
 
         .modal-content {
-            background: white;
+            
             padding: 20px;
             border-radius: 8px;
             max-width: 800px;
@@ -211,11 +191,11 @@
         .close-modal {
             font-size: 24px;
             cursor: pointer;
-            color: #999;
+            
         }
 
         .close-modal:hover {
-            color: #333;
+            
         }
 
         .coincidencias-list {
@@ -233,13 +213,13 @@
         }
 
         .coincidencia-item:hover {
-            border-color: #2c3e50;
-            background: #f8f9fa;
+            border-
+            
         }
 
         .coincidencia-item.selected {
-            border-color: #27ae60;
-            background: #d4edda;
+            border-
+            
         }
 
         .coincidencia-header {
@@ -257,18 +237,18 @@
         }
 
         .score-high {
-            background: #27ae60;
-            color: white;
+            
+            
         }
 
         .score-medium {
-            background: #f39c12;
-            color: white;
+            
+            
         }
 
         .score-low {
-            background: #e74c3c;
-            color: white;
+            
+            
         }
 
         .coincidencia-details {
@@ -284,41 +264,41 @@
         }
 
         .detail-label {
-            color: #666;
+            
             font-size: 11px;
             text-transform: uppercase;
         }
 
         .detail-value {
             font-weight: bold;
-            color: #333;
+            
         }
 
         .loading {
             text-align: center;
             padding: 40px;
-            color: #666;
+            
         }
 
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: #999;
+            
         }
 
         .empty-state i {
             font-size: 48px;
             margin-bottom: 20px;
-            color: #ddd;
+            
         }
 
         .importe-positivo {
-            color: #27ae60;
+            
             font-weight: bold;
         }
 
         .importe-negativo {
-            color: #e74c3c;
+            
             font-weight: bold;
         }
 
@@ -329,29 +309,29 @@
         }
 
         #tabla-pendientes tbody tr:hover {
-            background-color: #f0f8ff;
+            background-
         }
 
         /* Estados de liquidaciones TPV */
         .estado-exacto {
-            background-color: #d4edda;
-            color: #155724;
+            background-
+            
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: bold;
         }
 
         .estado-aceptable {
-            background-color: #fff3cd;
-            color: #856404;
+            background-
+            
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: bold;
         }
 
         .estado-revisar {
-            background-color: #f8d7da;
-            color: #721c24;
+            background-
+            
             padding: 4px 8px;
             border-radius: 4px;
             font-weight: bold;
@@ -363,7 +343,7 @@
         }
 
         .delete-x {
-            color: #e74c3c;
+            
             font-size: 18px;
             font-weight: normal;
             cursor: pointer;
@@ -373,7 +353,7 @@
         }
         
         .delete-x:hover {
-            color: #c0392b;
+            
         }
 
         /* Estilos de paginación - Consistente con tickets */
@@ -387,20 +367,20 @@
             padding: 6px 8px;
             border: 1px solid #e0e0e0;
             border-radius: 8px;
-            background: #fafafa;
+            
         }
 
         .pagination button {
             padding: 4px 8px;
             font-size: 12px;
             border: 1px solid #ddd;
-            background: white;
+            
             border-radius: 4px;
             cursor: pointer;
         }
 
         .pagination button:hover:not(:disabled) {
-            background: #f0f0f0;
+            
         }
 
         .pagination button:disabled {
@@ -410,7 +390,7 @@
 
         .pagination .page-info {
             font-size: 12px;
-            color: #666;
+            
         }
 
         .pagination select {
@@ -435,10 +415,10 @@
 </head>
 <body>
     <!-- Spinner de carga inicial -->
-    <div id="loading-spinner" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;">
+    <div id="loading-spinner" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;  display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;">
         <div style="border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite;"></div>
-        <p style="margin-top: 20px; font-size: 16px; color: #2c3e50; font-weight: 500;">Procesando conciliación automática...</p>
-        <div id="loading-messages" style="margin-top: 20px; max-width: 600px; max-height: 300px; overflow-y: auto; padding: 10px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-size: 13px; color: #555; line-height: 1.6;"></div>
+        <p style="margin-top: 20px; font-size: 16px;  font-weight: 500;">Procesando conciliación automática...</p>
+        <div id="loading-messages" style="margin-top: 20px; max-width: 600px; max-height: 300px; overflow-y: auto; padding: 10px;  border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-size: 13px;  line-height: 1.6;"></div>
     </div>
     
     <div class="container">
@@ -490,9 +470,9 @@
             <!-- Paginación Pendientes (arriba) -->
             <div class="pagination" id="pagination-pendientes" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaPendientes('anterior')">⟨</button>
+                    <button id="prevPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaPendientes('anterior')">⟨</button>
                     <span id="pageInfoPendientes">Página 1 de 1</span>
-                    <button id="nextPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaPendientes('siguiente')">⟩</button>
+                    <button id="nextPagePendientes" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaPendientes('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -530,9 +510,9 @@
             <!-- Paginación Transferencias (arriba) -->
             <div class="pagination" id="pagination-transferencias" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPageTransferencias" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaTransferencias('anterior')">⟨</button>
+                    <button id="prevPageTransferencias" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaTransferencias('anterior')">⟨</button>
                     <span id="pageInfoTransferencias">Página 1 de 1</span>
-                    <button id="nextPageTransferencias" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaTransferencias('siguiente')">⟩</button>
+                    <button id="nextPageTransferencias" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaTransferencias('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -570,9 +550,9 @@
             <!-- Paginación Liquidaciones (arriba) -->
             <div class="pagination" id="pagination-liquidaciones" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPageLiquidaciones" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaLiquidaciones('anterior')">⟨</button>
+                    <button id="prevPageLiquidaciones" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaLiquidaciones('anterior')">⟨</button>
                     <span id="pageInfoLiquidaciones">Página 1 de 1</span>
-                    <button id="nextPageLiquidaciones" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaLiquidaciones('siguiente')">⟩</button>
+                    <button id="nextPageLiquidaciones" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaLiquidaciones('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -616,9 +596,9 @@
             <!-- Paginación Ingresos Efectivo (arriba) -->
             <div class="pagination" id="pagination-ingresos" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPageIngresos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaIngresos('anterior')">⟨</button>
+                    <button id="prevPageIngresos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaIngresos('anterior')">⟨</button>
                     <span id="pageInfoIngresos">Página 1 de 1</span>
-                    <button id="nextPageIngresos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaIngresos('siguiente')">⟩</button>
+                    <button id="nextPageIngresos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaIngresos('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -661,9 +641,9 @@
             <!-- Paginación Conciliados (arriba) -->
             <div class="pagination" id="pagination-conciliados" style="display:none;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPageConciliados" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaConciliados('anterior')">⟨</button>
+                    <button id="prevPageConciliados" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaConciliados('anterior')">⟨</button>
                     <span id="pageInfoConciliados">Página 1 de 1</span>
-                    <button id="nextPageConciliados" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaConciliados('siguiente')">⟩</button>
+                    <button id="nextPageConciliados" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaConciliados('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -711,7 +691,7 @@
             </div>
             
             <div>
-                <div id="gasto-info" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <div id="gasto-info" style=" padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                     <!-- Info del gasto se cargará aquí -->
                 </div>
 
@@ -739,15 +719,15 @@
                 <span class="close-modal" onclick="cerrarModalSeleccion()">&times;</span>
             </div>
             
-            <div style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 4px; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="margin: 20px 0; padding: 15px;  border-radius: 4px; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div>
                         <strong>Ingreso:</strong> <span id="ingreso-fecha"></span><br>
-                        <strong>Importe:</strong> <span id="ingreso-importe" style="color: #28a745; font-size: 18px; font-weight: bold;"></span>
+                        <strong>Importe:</strong> <span id="ingreso-importe" style=" font-size: 18px; font-weight: bold;"></span>
                     </div>
                     <div style="text-align: right;">
                         <strong>Seleccionados:</strong> <span id="docs-seleccionados-count">0</span> docs<br>
-                        <strong>Total:</strong> <span id="total-seleccionado" style="color: #007bff; font-size: 18px; font-weight: bold;">0.00 €</span><br>
+                        <strong>Total:</strong> <span id="total-seleccionado" style=" font-size: 18px; font-weight: bold;">0.00 €</span><br>
                         <strong>Diferencia:</strong> <span id="diferencia-seleccion" style="font-size: 16px; font-weight: bold;">0.00 €</span>
                     </div>
                 </div>
@@ -760,9 +740,9 @@
             <!-- Paginación Modal (arriba) -->
             <div class="pagination" id="pagination-modal-docs" style="display:none; margin-bottom: 10px;">
                 <div style="display:flex;align-items:center;gap:12px;">
-                    <button id="prevPageModalDocs" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaModalDocs('anterior')">⟨</button>
+                    <button id="prevPageModalDocs" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaModalDocs('anterior')">⟨</button>
                     <span id="pageInfoModalDocs">Página 1 de 1</span>
-                    <button id="nextPageModalDocs" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;background:#2c3e50;color:white;border:none;" onclick="cambiarPaginaModalDocs('siguiente')">⟩</button>
+                    <button id="nextPageModalDocs" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;border:none;" onclick="cambiarPaginaModalDocs('siguiente')">⟩</button>
                 </div>
                 <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
                     <label>Por página:
@@ -779,7 +759,7 @@
             <!-- Contenido scrollable con header sticky -->
             <div id="lista-documentos" style="display: none; flex: 1; overflow-y: auto; overflow-x: hidden; min-height: 0;">
                 <!-- Header sticky dentro del scroll -->
-                <div id="header-documentos" style="display: none; background: #2c3e50; color: white; padding-right: 17px; border-radius: 8px 8px 0 0; overflow: hidden; position: sticky; top: 0; z-index: 100;">
+                <div id="header-documentos" style="display: none;   padding-right: 17px; border-radius: 8px 8px 0 0; overflow: hidden; position: sticky; top: 0; z-index: 100;">
                     <table class="ingresos-table" style="font-size: 13px; width: 100%; margin: 0; border: none;">
                         <thead>
                             <tr>
@@ -805,10 +785,10 @@
                 </table>
             </div>
             
-            <div style="margin-top: auto; padding-top: 15px; border-top: 2px solid #ddd; display: flex; justify-content: space-between; align-items: center; background: white;">
+            <div style="margin-top: auto; padding-top: 15px; border-top: 2px solid #ddd; display: flex; justify-content: space-between; align-items: center; ">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <span id="total-documentos-disponibles" style="color: #666; font-size: 13px;"></span>
-                    <button class="btn" onclick="conciliacionAutomatica()" style="background: #3498db; color: white; font-size: 13px; padding: 8px 12px;">
+                    <span id="total-documentos-disponibles" style=" font-size: 13px;"></span>
+                    <button class="btn" onclick="conciliacionAutomatica()" style="  font-size: 13px; padding: 8px 12px;">
                         <i class="fas fa-magic"></i> Conciliación Automática
                     </button>
                 </div>
@@ -825,6 +805,6 @@
     <!-- Contenedor de notificaciones -->
     <div id="notificaciones-contenedor"></div>
 
-    <script type="module" src="../static/conciliacion_gastos.js?v=202510101717"></script>
+    <script type="module" src="../static/conciliacion_gastos.js?v=1761938648"></script>
 </body>
 </html>

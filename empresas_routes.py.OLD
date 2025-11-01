@@ -1,83 +1,85 @@
-import os
+# -*- coding: utf-8 -*-
+from flask import Blueprint, request, jsonify, send_file
+from auth_middleware import superadmin_required
 import sqlite3
-import shutil
-import json
-from flask import Blueprint, request, jsonify, session
-from werkzeug.utils import secure_filename
-from auth_middleware import login_required, superadmin_required
+import os
 from logger_config import get_logger
-from color_generator import generate_palette
 
 logger = get_logger(__name__)
 
 empresas_bp = Blueprint('empresas', __name__)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_USUARIOS_PATH = os.path.join(BASE_DIR, 'db', 'usuarios_sistema.db')
-DB_DIR = os.path.join(BASE_DIR, 'db')
-UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'logos')
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
+DB_USUARIOS_PATH = '/var/www/html/db/usuarios_sistema.db'
 
-# Crear directorio de logos si no existe
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# SELECT estándar con TODAS las columnas (41 total)
+SELECT_EMPRESAS_FULL = """
+    SELECT id, codigo, nombre, cif, direccion, telefono, email, web,
+           logo_header, logo_factura,
+           color_primario, color_secundario, color_success, color_warning, color_danger, color_info,
+           color_button, color_button_hover, color_button_text,
+           color_app_bg, color_header_bg, color_header_text,
+           color_grid_header, color_grid_header_text, color_grid_hover, color_grid_bg, color_grid_text,
+           color_input_bg, color_input_text, color_input_border,
+           color_select_bg, color_select_text, color_select_border,
+           color_submenu_bg, color_submenu_text, color_submenu_hover,
+           color_icon,
+           color_disabled_bg, color_disabled_text,
+           activa, db_path
+    FROM empresas
+"""
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def generar_codigo_empresa(nombre):
-    """Genera código de empresa: primeros 5 caracteres sin espacios"""
-    codigo = nombre.replace(' ', '').lower()[:5]
-    return codigo
-
-def clonar_estructura_bd(bd_origen, bd_destino):
-    """
-    Clona la estructura (schema) de una BD SQLite sin copiar datos
-    """
-    try:
-        # Conectar a BD origen
-        conn_origen = sqlite3.connect(bd_origen)
-        cursor_origen = conn_origen.cursor()
-        
-        # Obtener el schema completo
-        cursor_origen.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
-        tablas_sql = cursor_origen.fetchall()
-        
-        cursor_origen.execute("SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL")
-        indices_sql = cursor_origen.fetchall()
-        
-        cursor_origen.execute("SELECT sql FROM sqlite_master WHERE type='trigger'")
-        triggers_sql = cursor_origen.fetchall()
-        
-        conn_origen.close()
-        
-        # Crear nueva BD con el schema
-        conn_destino = sqlite3.connect(bd_destino)
-        cursor_destino = conn_destino.cursor()
-        
-        # Crear tablas
-        for (sql,) in tablas_sql:
-            if sql:
-                cursor_destino.execute(sql)
-        
-        # Crear índices
-        for (sql,) in indices_sql:
-            if sql:
-                cursor_destino.execute(sql)
-        
-        # Crear triggers
-        for (sql,) in triggers_sql:
-            if sql:
-                cursor_destino.execute(sql)
-        
-        conn_destino.commit()
-        conn_destino.close()
-        
-        logger.info(f"Estructura de BD clonada correctamente: {bd_destino}")
-        return True
-        
-    except Exception as e:
-        logger.error(f"Error clonando estructura de BD: {e}", exc_info=True)
-        return False
+def _row_to_dict_full(row):
+    """Convierte row con 41 columnas a diccionario completo"""
+    if not row:
+        return None
+    if len(row) != 41:
+        logger.error(f"Row tiene {len(row)} columnas, se esperaban 41")
+        return None
+    
+    return {
+        'id': row[0],
+        'codigo': row[1],
+        'nombre': row[2],
+        'cif': row[3],
+        'direccion': row[4],
+        'telefono': row[5],
+        'email': row[6],
+        'web': row[7],
+        'logo_header': row[8],
+        'logo_factura': row[9],
+        'logo_url': f'/static/logos/{row[8]}' if row[8] else '/static/img/logo.png',
+        'color_primario': row[10],
+        'color_secundario': row[11],
+        'color_success': row[12],
+        'color_warning': row[13],
+        'color_danger': row[14],
+        'color_info': row[15],
+        'color_button': row[16],
+        'color_button_hover': row[17],
+        'color_button_text': row[18],
+        'color_app_bg': row[19],
+        'color_header_bg': row[20],
+        'color_header_text': row[21],
+        'color_grid_header': row[22],
+        'color_grid_header_text': row[23],
+        'color_grid_hover': row[24],
+        'color_grid_bg': row[25],
+        'color_grid_text': row[26],
+        'color_input_bg': row[27],
+        'color_input_text': row[28],
+        'color_input_border': row[29],
+        'color_select_bg': row[30],
+        'color_select_text': row[31],
+        'color_select_border': row[32],
+        'color_submenu_bg': row[33],
+        'color_submenu_text': row[34],
+        'color_submenu_hover': row[35],
+        'color_icon': row[36],
+        'color_disabled_bg': row[37],
+        'color_disabled_text': row[38],
+        'activa': row[39],
+        'db_path': row[40]
+    }
 
 @empresas_bp.route('/api/empresas', methods=['GET'])
 @superadmin_required
@@ -87,39 +89,13 @@ def listar_empresas():
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        cursor.execute('''
-            SELECT id, codigo, nombre, cif, direccion, telefono, email, web,
-                   logo_header, logo_factura, color_primario, color_secundario,
-                   color_success, color_warning, color_danger, color_info,
-                   color_button, color_button_hover, activa, fecha_alta
-            FROM empresas
-            ORDER BY nombre
-        ''')
+        cursor.execute(SELECT_EMPRESAS_FULL + " ORDER BY nombre")
         
         empresas = []
         for row in cursor.fetchall():
-            empresas.append({
-                'id': row[0],
-                'codigo': row[1],
-                'nombre': row[2],
-                'cif': row[3],
-                'direccion': row[4],
-                'telefono': row[5],
-                'email': row[6],
-                'web': row[7],
-                'logo_header': row[8],
-                'logo_factura': row[9],
-                'color_primario': row[10],
-                'color_secundario': row[11],
-                'color_success': row[12],
-                'color_warning': row[13],
-                'color_danger': row[14],
-                'color_info': row[15],
-                'color_button': row[16],
-                'color_button_hover': row[17],
-                'activa': row[18],
-                'fecha_alta': row[19]
-            })
+            empresa = _row_to_dict_full(row)
+            if empresa:
+                empresas.append(empresa)
         
         conn.close()
         return jsonify(empresas), 200
@@ -127,6 +103,31 @@ def listar_empresas():
     except Exception as e:
         logger.error(f"Error listando empresas: {e}", exc_info=True)
         return jsonify({'error': 'Error listando empresas'}), 500
+
+@empresas_bp.route('/api/empresas/<int:empresa_id>', methods=['GET'])
+@superadmin_required
+def obtener_empresa(empresa_id):
+    """Obtiene los datos de una empresa específica"""
+    try:
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute(SELECT_EMPRESAS_FULL + " WHERE id = ?", (empresa_id,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if not row:
+            return jsonify({'error': 'Empresa no encontrada'}), 404
+        
+        empresa = _row_to_dict_full(row)
+        if not empresa:
+            return jsonify({'error': 'Error procesando datos de empresa'}), 500
+        
+        return jsonify(empresa), 200
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo empresa: {e}", exc_info=True)
+        return jsonify({'error': 'Error obteniendo empresa'}), 500
 
 @empresas_bp.route('/api/empresas', methods=['POST'])
 @superadmin_required
@@ -265,82 +266,6 @@ def crear_empresa():
 
 @empresas_bp.route('/api/empresas/<int:empresa_id>', methods=['GET'])
 @superadmin_required
-def obtener_empresa(empresa_id):
-    """Obtiene los datos de una empresa específica para edición"""
-    try:
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT id, codigo, nombre, cif, direccion, telefono, email, web,
-                   logo_header, logo_factura,
-                   color_primario, color_secundario, color_success, color_warning, color_danger, color_info,
-                   color_button, color_button_hover, color_button_text,
-                   color_app_bg, color_header_bg, color_header_text,
-                   color_grid_header, color_grid_header_text, color_grid_hover, color_grid_bg, color_grid_text,
-                   color_input_bg, color_input_text, color_input_border,
-                   color_select_bg, color_select_text, color_select_border,
-                   color_submenu_bg, color_submenu_text, color_submenu_hover,
-                   color_icon,
-                   color_disabled_bg, color_disabled_text,
-                   activa, db_path
-            FROM empresas
-            WHERE id = ?
-        ''', (empresa_id,))
-        
-        row = cursor.fetchone()
-        conn.close()
-        
-        if not row:
-            return jsonify({'error': 'Empresa no encontrada'}), 404
-        
-        return jsonify({
-            'id': row[0],
-            'codigo': row[1],
-            'nombre': row[2],
-            'cif': row[3],
-            'direccion': row[4],
-            'telefono': row[5],
-            'email': row[6],
-            'web': row[7],
-            'logo_header': row[8],
-            'logo_factura': row[9],
-            'color_primario': row[10],
-            'color_secundario': row[11],
-            'color_success': row[12],
-            'color_warning': row[13],
-            'color_danger': row[14],
-            'color_info': row[15],
-            'color_button': row[16],
-            'color_button_hover': row[17],
-            'color_button_text': row[18],
-            'color_app_bg': row[19],
-            'color_header_bg': row[20],
-            'color_header_text': row[21],
-            'color_grid_header': row[22],
-            'color_grid_header_text': row[58],
-            'color_grid_hover': row[23],
-            'color_grid_bg': row[24],
-            'color_grid_text': row[25],
-            'color_input_bg': row[26],
-            'color_input_text': row[27],
-            'color_input_border': row[28],
-            'color_select_bg': row[29],
-            'color_select_text': row[30],
-            'color_select_border': row[31],
-            'color_submenu_bg': row[32],
-            'color_submenu_text': row[33],
-            'color_submenu_hover': row[34],
-            'color_icon': row[35],
-            'color_disabled_bg': row[36],
-            'color_disabled_text': row[37],
-            'activa': row[38],
-            'db_path': row[39]
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Error obteniendo empresa: {e}", exc_info=True)
-        return jsonify({'error': 'Error obteniendo empresa'}), 500
 @empresas_bp.route('/api/empresas/<int:empresa_id>', methods=['PUT'])
 @superadmin_required
 def actualizar_empresa(empresa_id):

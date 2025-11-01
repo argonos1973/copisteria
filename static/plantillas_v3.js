@@ -90,6 +90,7 @@ async function cargarPlantillas() {
                             color_submenu_hover: p.color_submenu_hover,
                             color_grid_bg: p.color_grid_bg,
                             color_grid_text: p.color_grid_text,
+                            color_grid_header_text: p.color_grid_header_text,
                             color_icon: p.color_icon
                         };
                         

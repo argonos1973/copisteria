@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facturas</title>
-    <script src="/static/auto_branding.js?v=1761688751"></script>
-    <script src="/static/plantilla_sync.js?v=1761684810"></script>
+    <script src="/static/branding.js?v=1761998426"></script>
+    <script src="/static/auto_branding.js?v=1761998426"></script>
+    <script src="/static/plantilla_sync.js?v=1761938648"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="../static/page_header.css">
-    <link rel="stylesheet" href="../static/styles.css?v=26">
+    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762004912">
+    <link rel="stylesheet" href="../static/styles.css?v=1761938648">
     <link rel="stylesheet" href="../static/notificaciones.css">
     <link rel="stylesheet" href="../static/footer.css">
     <style>
@@ -88,11 +90,11 @@
         </div>
 
         <!-- Controles de paginación (debajo de filtros, compacto) -->
-        <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <button id="prevPageFacturas" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟨</button>
+        <div class="pagination" class="pagination-controls">
+          <div class="pagination-nav">
+            <button id="prevPageFacturas" class="btn btn-secondary" class="btn-pagination">⟨</button>
             <span id="pageInfoFacturas">Página 1 de 1</span>
-            <button id="nextPageFacturas" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟩</button>
+            <button id="nextPageFacturas" class="btn btn-secondary" class="btn-pagination">⟩</button>
           </div>
           <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
             <label>Por página:
@@ -161,7 +163,7 @@
 
     <div id="notificaciones-contenedor"></div>
 
-    <script type="module" src="../static/consulta_facturas.js?v=20250925_1345" defer></script>
+    <script type="module" src="../static/consulta_facturas.js?v=1761938648_1345" defer></script>
     
     <div id="overlay" class="overlay">
         <div class="progress-container">
@@ -223,12 +225,12 @@
 
         .fixed-footer .toggle-totals i {
             font-size: 16px;
-            color: #666;
+            
             transition: color 0.3s;
         }
 
         .fixed-footer .toggle-totals i:hover {
-            color: #333;
+            
         }
     </style>
 

@@ -1,0 +1,114 @@
+{
+  "name": "E-Ink Monochrome",
+  "version": 1,
+  "meta": {
+    "author": "aleph70",
+    "icon": "📖",
+    "dark": false,
+    "description": "Simula pantalla de tinta electrónica en escala de grises neutra"
+  },
+  "palette": {
+    "ink900": "#111111",
+    "ink800": "#1a1a1a",
+    "ink700": "#2b2b2b",
+    "ink600": "#3a3a3a",
+    "ink500": "#555555",
+    "ink400": "#777777",
+    "ink300": "#a0a0a0",
+    "ink200": "#c8c8c8",
+    "ink100": "#e6e6e6",
+    "paper": "#f4f4f2",
+    "white": "#ffffff"
+  },
+  "semantic": {
+    "bg": "{palette.paper}",
+    "bg-elevated": "{palette.white}",
+    "text": "{palette.ink700}",
+    "text-muted": "{palette.ink400}",
+    "primary": "{palette.ink700}",
+    "success": "{palette.ink700}",
+    "warning": "{palette.ink700}",
+    "danger": "{palette.ink700}",
+    "info": "{palette.ink700}",
+    "border": "{palette.ink200}",
+    "focus-ring": "#88888888"
+  },
+  "components": {
+    "button": {
+      "bg": "{palette.ink100}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.ink200}",
+      "border": "{semantic.border}"
+    },
+    "button-secondary": {
+      "bg": "{palette.ink200}",
+      "text": "{palette.ink700}",
+      "hover-bg": "{palette.ink300}",
+      "border": "{semantic.border}"
+    },
+    "input": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "placeholder": "{semantic.text-muted}",
+      "focus-ring": "{semantic.focus-ring}"
+    },
+    "select": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "focus-ring": "{semantic.focus-ring}"
+    },
+    "modal": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}",
+      "overlay": "#0000001a",
+      "border": "{palette.ink700}",
+      "border-width": "2px",
+      "border-radius": "8px",
+      "shadow": "0 8px 24px #00000026",
+      "header-bg": "{palette.ink100}",
+      "header-text": "{palette.ink700}",
+      "body-bg": "{semantic.bg-elevated}",
+      "body-text": "{semantic.text}",
+      "label-color": "{palette.ink700}",
+      "input-bg": "{semantic.bg-elevated}",
+      "input-text": "{semantic.text}",
+      "input-border": "{semantic.border}"
+    },
+    "table": {
+      "bg": "{semantic.bg}",
+      "text": "{semantic.text}",
+      "header-bg": "{palette.ink100}",
+      "header-text": "{semantic.text}",
+      "row-hover": "{palette.ink100}",
+      "border": "{semantic.border}"
+    },
+    "menu": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}",
+      "hover": "{palette.ink100}",
+      "border": "{semantic.border}",
+      "submenu-bg": "{semantic.bg-elevated}"
+    },
+    "header": {
+      "bg": "{semantic.bg}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}"
+    },
+    "icon": {
+      "color": "{semantic.text}"
+    },
+    "spinner": {
+      "border": "{palette.ink400}"
+    },
+    "tab": {
+      "active-bg": "{palette.ink100}",
+      "active-text": "{semantic.text}"
+    },
+    "disabled": {
+      "bg": "{palette.ink100}",
+      "text": "{semantic.text-muted}"
+    }
+  }
+}

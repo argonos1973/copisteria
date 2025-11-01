@@ -449,12 +449,17 @@
     overflow: hidden;
     table-layout: fixed; /* Respeta anchos fijos */
   }
-  thead {
+  thead, thead th, th {
     background-color: var(--color-grid-header, var(--color-primario)) !important;
-    color: var(--color-header-text, #fff) !important;
+    color: var(--color-grid-header-text, var(--color-grid-text, #000)) !important;
     position: sticky;
     top: 0;
     z-index: 2;
+    font-weight: 600;
+  }
+  
+  thead th *, th * {
+    color: var(--color-grid-header-text, var(--color-grid-text, #000)) !important;
   }
   thead tr:first-child th:first-child {
     border-top-left-radius: 8px;
@@ -2910,7 +2915,7 @@ table tfoot {
 
 table thead tr th {
   background-color: var(--color-grid-header, #2a2a2a) !important;
-  color: var(--color-grid-text, #e0e0e0) !important;
+  color: var(--color-grid-header-text, var(--color-grid-text, #e0e0e0)) !important;
   border-color: var(--color-input-border, #4a4a4a) !important;
 }
 

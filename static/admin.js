@@ -812,7 +812,7 @@ function renderizarTablaEmpresas(empresas) {
                     <button class="btn btn-sm" onclick="verDetallesEmpresa(${emp.id})" title="Ver detalles">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn btn-sm btn-primary" onclick="window.location.href='EDITAR_EMPRESA_COLORES.html?id=${emp.id}'"  title="Editar">
+                    <button class="btn btn-sm btn-primary" onclick="window.location.href='EDITAR_EMPRESA_COLORES_SIMPLE.html?id=${emp.id}'"  title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
                     <button class="btn btn-sm btn-danger" onclick="eliminarEmpresaCompleta(${emp.id})" title="Eliminar">

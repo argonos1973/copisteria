@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestión de Empresas</title>
+    <script src="/static/branding.js?v=1761998426"></script>
+    <script src="/static/auto_branding.js?v=1761998426"></script>
+    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762004912">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
@@ -86,11 +89,10 @@
         details[open] summary { margin-bottom: 15px; }
         details summary:hover { color: #3498db; }
     </style>
-    <link rel="stylesheet" href="/static/admin-branded-override.css?v=1761677893">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-    <link rel="stylesheet" href="/static/iframe-adapter.css?v=1761677893">
+    <link rel="stylesheet" href="/static/iframe-adapter.css?v=1761938648">
 </head>
 <body>
     <div class="container">
@@ -810,7 +812,7 @@
                         <span class="empresa-status ${emp.activo ? 'activo' : 'inactivo'}">
                             ${emp.activo ? '✓ Activa' : '✗ Inactiva'}
                         </span>
-                        <button class="btn btn-primary" onclick='window.location.href="EDITAR_EMPRESA_COLORES.html?id=" + ${emp.id}'>
+                        <button class="btn btn-primary" onclick='window.location.href="EDITAR_EMPRESA_COLORES_SIMPLE.html?id=" + ${emp.id}'>
                             <i class="fas fa-edit"></i> Editar Colores y Plantilla
                         </button>
                     </div>
@@ -1210,7 +1212,7 @@
             try {
                 const response = await fetch('/api/plantillas/personalizadas');
                 if (!response.ok) {
-                    console.warn('No se pudieron cargar plantillas personalizadas');
+                    // Plantillas personalizadas no cargadas
                     return;
                 }
                 
@@ -1223,7 +1225,7 @@
                 agregarPlantillasPersonalizadas('plantillas-container-editar', data.plantillas, 'editar');
                 
             } catch (error) {
-                console.error('Error cargando plantillas personalizadas:', error);
+                // Error cargando plantillas
             }
         }
         
@@ -1261,8 +1263,8 @@
             actualizarVistaPrevia();
         }
     
-    <script src="/static/auto_branding.js?v=1761688751"></script>
-    <script src="/static/plantilla_sync.js?v=1761684810"></script>
+    <script src="/static/auto_branding.js?v=1761998426"></script>
+    <script src="/static/plantilla_sync.js?v=1761938648"></script>
 </body>
 </html>
 <!-- Cache buster: 1761316483 -->

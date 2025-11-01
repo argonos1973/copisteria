@@ -1,40 +1,109 @@
 {
-  "nombre": "Tinta e-Ink",
-  "descripcion": "Imita pantalla e-ink estilo Kindle: papel cálido, tinta oscura, UI sin brillos",
-  "icon": "📖",
-  "color_primario": "#0b0b0b",
-  "color_secundario": "#f4f1e6",
-  "color_success": "#2f2f2f",
-  "color_warning": "#444444",
-  "color_danger": "#1f1f1f",
-  "color_info": "#3a3a3a",
-  "color_button": "#0b0b0b",
-  "color_button_hover": "#1f2937",
-  "color_button_text": "#f4f1e6",
-  "color_app_bg": "#f4f1e6",
-  "color_header_bg": "#f4f1e6",
-  "color_header_text": "#0b0b0b",
-  "color_grid_bg": "#f4f1e6",
-  "color_grid_text": "#0b0b0b",
-  "color_grid_header": "#0b0b0b",
-  "color_grid_hover": "#f0f0f0",
-  "color_input_bg": "#f8f6ec",
-  "color_input_text": "#0b0b0b",
-  "color_input_border": "#c9c4b6",
-  "color_select_bg": "#f8f6ec",
-  "color_select_text": "#0b0b0b",
-  "color_select_border": "#c9c4b6",
-  "color_disabled_bg": "#e6e2d6",
-  "color_disabled_text": "#6b6b6b",
-  "color_submenu_bg": "#f6f3e9",
-  "color_submenu_text": "#0b0b0b",
-  "color_submenu_hover": "#eae6da",
-  "color_icon": "#0b0b0b",
-  "color_modal_bg": "#f7f4ea",
-  "color_modal_text": "#0b0b0b",
-  "color_modal_border": "#0b0b0b",
-  "color_modal_overlay": "#cccccc",
-  "color_modal_shadow": "#d9d9d9",
-  "color_spinner_border": "#1f2937",
-  "color_grid_header_text": "#ffffff"
+  "name": "EInk",
+  "version": 1,
+  "meta": {
+    "author": "aleph70",
+    "icon": "📖",
+    "dark": false,
+    "description": "Inspirado en lectores e-Ink: alto contraste, máxima legibilidad"
+  },
+  "palette": {
+    "black": "#0b0b0b",
+    "white": "#f4f1e6",
+    "gray50": "#f4f1e6",
+    "gray100": "#f0f0f0",
+    "gray200": "#e6e2d6",
+    "gray300": "#c9c4b6",
+    "gray400": "#6b6b6b",
+    "gray500": "#3a3a3a",
+    "gray600": "#2f2f2f",
+    "gray700": "#1f1f1f",
+    "gray800": "#1f2937"
+  },
+  "semantic": {
+    "bg": "{palette.gray50}",
+    "bg-elevated": "{palette.gray100}",
+    "text": "{palette.black}",
+    "text-muted": "{palette.gray500}",
+    "primary": "{palette.black}",
+    "success": "{palette.gray600}",
+    "warning": "{palette.gray800}",
+    "danger": "{palette.black}",
+    "info": "{palette.gray500}",
+    "border": "{palette.gray300}"
+  },
+  "components": {
+    "button": {
+      "bg": "{semantic.primary}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.gray700}",
+      "border": "{semantic.primary}"
+    },
+    "input": {
+      "bg": "{palette.white}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "placeholder": "{semantic.text-muted}"
+    },
+    "select": {
+      "bg": "{palette.white}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}"
+    },
+    "modal": {
+      "bg": "{palette.white}",
+      "text": "{semantic.text}",
+      "overlay": "#0000009a",
+      "border": "{palette.black}",
+      "border-width": "2px",
+      "border-radius": "8px",
+      "shadow": "0 8px 24px #00000033",
+      "header-bg": "{palette.gray200}",
+      "header-text": "{palette.black}",
+      "body-bg": "{palette.white}",
+      "body-text": "{semantic.text}",
+      "label-color": "{palette.black}",
+      "input-bg": "{palette.white}",
+      "input-text": "{semantic.text}",
+      "input-border": "{semantic.border}"
+    },
+    "button-secondary": {
+      "bg": "{palette.gray200}",
+      "text": "{palette.black}",
+      "hover-bg": "{palette.gray300}",
+      "border": "{semantic.border}"
+    },
+    "table": {
+      "bg": "{palette.white}",
+      "text": "{semantic.text}",
+      "header-bg": "{palette.gray200}",
+      "header-text": "{semantic.text}",
+      "row-hover": "{palette.gray100}",
+      "border": "{semantic.border}"
+    },
+    "menu": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}",
+      "hover": "{palette.gray200}",
+      "submenu-bg": "{semantic.bg-elevated}"
+    },
+    "header": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}"
+    },
+    "icon": {
+      "color": "{semantic.text}"
+    },
+    "spinner": {
+      "border": "{semantic.primary}"
+    },
+    "tab": {
+      "active-bg": "{semantic.primary}",
+      "active-text": "{palette.white}"
+    },
+    "disabled": {
+      "bg": "{palette.gray100}",
+      "text": "{palette.gray400}"
+    }
+  }
 }

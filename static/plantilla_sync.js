@@ -8,18 +8,19 @@
     
     let ultimaPlantilla = null;
     let checkInterval = null;
+    let recargando = false; // Flag para evitar recargas múltiples
     
     // Verificar cambios cada 2 segundos
     const CHECK_INTERVAL = 2000;
     
     async function obtenerPlantillaActiva() {
         try {
-            // Obtener colores de la empresa del usuario actual (requiere sesión)
-            const coloresResponse = await fetch('/api/auth/branding');
-            if (!coloresResponse.ok) return null;
+            // Obtener nombre de plantilla activa
+            const response = await fetch('/api/auth/branding');
+            if (!response.ok) return null;
             
-            const data = await coloresResponse.json();
-            return data.colores;
+            const data = await response.json();
+            return data.plantilla; // Devuelve solo el nombre: 'minimal', 'dark', 'eink'
             
         } catch (error) {
             console.error('[PLANTILLA-SYNC] Error obteniendo plantilla:', error);
@@ -28,15 +29,14 @@
     }
     
     function compararPlantillas(plantilla1, plantilla2) {
-        if (!plantilla1 || !plantilla2) return false;
-        
-        // Comparar propiedades clave
-        const keys = ['primario', 'secundario', 'button', 'app_bg', 'header_text'];
-        
-        return keys.every(key => plantilla1[key] === plantilla2[key]);
+        // Comparar nombres de plantilla directamente
+        return plantilla1 === plantilla2;
     }
     
     async function verificarCambios() {
+        // Si ya está recargando, no hacer nada
+        if (recargando) return;
+        
         const plantillaActual = await obtenerPlantillaActiva();
         
         if (!plantillaActual) return;
@@ -55,11 +55,19 @@
             
             ultimaPlantilla = plantillaActual;
             
+            // Marcar como recargando
+            recargando = true;
+            
             // Recargar estilos
             await recargarEstilos();
             
-            // Notificar a otras ventanas/iframes
-            notificarCambio();
+            // Esperar un poco antes de permitir otra recarga
+            setTimeout(() => {
+                recargando = false;
+            }, 3000);
+            
+            // NO notificar más para evitar loop
+            // notificarCambio();
         }
     }
     
@@ -130,63 +138,39 @@
         }
     }
     
-    // Escuchar mensajes de cambio de plantilla
-    window.addEventListener('message', async (event) => {
-        if (event.origin !== window.location.origin) return;
-        
-        if (event.data.type === 'plantilla-changed') {
-            console.log('[PLANTILLA-SYNC] 📩 Mensaje de cambio recibido');
-            
-            // Esperar un poco para que la BD se actualice
-            setTimeout(async () => {
-                const plantillaActual = await obtenerPlantillaActiva();
-                if (plantillaActual) {
-                    ultimaPlantilla = plantillaActual;
-                    await recargarEstilos();
-                }
-            }, 500);
-        }
-    });
+    // DESACTIVADO: Listener causaba loop infinito de recargas
+    // La verificación periódica es suficiente
+    // window.addEventListener('message', async (event) => {
+    //     if (event.origin !== window.location.origin) return;
+    //     
+    //     if (event.data.type === 'plantilla-changed') {
+    //         console.log('[PLANTILLA-SYNC] 📩 Mensaje de cambio recibido');
+    //         
+    //         // Esperar un poco para que la BD se actualice
+    //         setTimeout(async () => {
+    //             const plantillaActual = await obtenerPlantillaActiva();
+    //             if (plantillaActual) {
+    //                 ultimaPlantilla = plantillaActual;
+    //                 await recargarEstilos();
+    //             }
+    //         }, 500);
+    //     }
+    // });
     
-    // Iniciar verificación periódica
+    // DESACTIVADO: No necesitamos polling cada 2 segundos
+    // El editor ya aplica los estilos al cambiar plantilla
     function iniciar() {
-        console.log('[PLANTILLA-SYNC] 🚀 Sistema de sincronización iniciado');
-        
-        // Primera verificación inmediata
-        verificarCambios();
-        
-        // Verificación periódica
-        if (checkInterval) {
-            clearInterval(checkInterval);
-        }
-        
-        checkInterval = setInterval(verificarCambios, CHECK_INTERVAL);
+        console.log('[PLANTILLA-SYNC] Sistema desactivado - cambios se aplican directamente desde editor');
     }
     
-    // Detener verificación
     function detener() {
-        if (checkInterval) {
-            clearInterval(checkInterval);
-            checkInterval = null;
-            console.log('[PLANTILLA-SYNC] ⏸️ Sistema de sincronización detenido');
-        }
+        // No hay nada que detener
     }
     
-    // Auto-iniciar cuando el DOM esté listo
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', iniciar);
-    } else {
-        iniciar();
-    }
-    
-    // Limpiar al salir
-    window.addEventListener('beforeunload', detener);
-    
-    // Exportar funciones
+    // Exportar funciones para compatibilidad
     window.PlantillaSync = {
         iniciar,
         detener,
-        verificarCambios,
         recargarEstilos
     };
     

@@ -14,7 +14,11 @@ from logger_config import get_logger
 # Sistema Multiempresa
 from multiempresa_config import SESSION_CONFIG, inicializar_bd_usuarios
 from auth_routes import auth_bp
-from empresas_routes import empresas_bp
+# Force reload empresas_routes
+import sys
+if 'empresas_routes' in sys.modules:
+    del sys.modules['empresas_routes']
+from empresas_api import empresas_bp
 from admin_routes import admin_bp
 from plantillas_routes import plantillas_bp
 from auth_middleware import login_required, require_admin, require_permission
@@ -3153,11 +3157,13 @@ def enviar_email_presupuesto_endpoint(id):
 @app.route('/api/auth/branding', methods=['GET'])
 def get_branding():
     """Obtener logo y colores de la empresa del usuario logueado"""
+    print("[BRANDING-DEBUG] ===== ENDPOINT EJECUT Ándose =====", flush=True)
     if 'user_id' not in session:
         return jsonify({'error': 'No autorizado'}), 401
     
     try:
         empresa_id = session.get('empresa_id')
+        print(f"[BRANDING-DEBUG] empresa_id from session: {empresa_id}", flush=True)
         if not empresa_id:
             logger.warning(f"Usuario {session.get('username')} sin empresa_id en sesión")
             return jsonify({'error': 'No hay empresa asociada'}), 400
@@ -3167,11 +3173,12 @@ def get_branding():
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         conn.row_factory = sqlite3.Row
         empresa = conn.execute('''
-            SELECT nombre, logo_header, logo_url,
+            SELECT nombre, logo_header,
                    color_primario, color_secundario, color_success, color_warning, 
                    color_danger, color_info, color_button, color_button_hover,
                    color_button_text, color_app_bg, color_header_bg, color_header_text,
                    color_grid_header, color_grid_hover, color_grid_bg, color_grid_text,
+                   color_grid_header_text,
                    color_grid_border, grid_border_width,
                    color_input_bg, color_input_text, color_input_border,
                    color_select_bg, color_select_text, color_select_border,
@@ -3179,7 +3186,7 @@ def get_branding():
                    color_modal_border_width, color_modal_overlay, color_modal_shadow,
                    color_submenu_bg, color_submenu_text, color_submenu_hover,
                    color_disabled_bg, color_disabled_text, color_icon,
-                   color_spinner_border
+                   color_spinner_border, color_tab_active_bg, color_tab_active_text
             FROM empresas 
             WHERE id = ?
         ''', (empresa_id,)).fetchone()
@@ -3188,12 +3195,17 @@ def get_branding():
         if not empresa:
             return jsonify({'error': 'Empresa no encontrada'}), 404
         
+        # DEBUG: Log del valor recibido
+        print(f"[BRANDING-DEBUG] color_grid_header_text from DB: {empresa['color_grid_header_text']}", flush=True)
+        
         # Construir logo URL
         logo_url = None
         if empresa['logo_header']:
-            logo_url = f"/static/logos/{empresa['logo_header']}"
-        elif empresa['logo_url']:
-            logo_url = empresa['logo_url']
+            # Si logo_header ya tiene la ruta completa, usarla directamente
+            if empresa['logo_header'].startswith('/static/'):
+                logo_url = empresa['logo_header']
+            else:
+                logo_url = f"/static/logos/{empresa['logo_header']}"
         
         # Construir objeto de colores
         colores = {
@@ -3209,6 +3221,7 @@ def get_branding():
             'app_bg': empresa['color_app_bg'] or '#ffffff',
             'header_bg': empresa['color_header_bg'] or '#2c3e50',
             'header_text': empresa['color_header_text'] or '#ffffff',
+            'grid_header_text': empresa['color_grid_header_text'] or '#ffffff',
             'grid_header': empresa['color_grid_header'] or '#2c3e50',
             'grid_hover': empresa['color_grid_hover'] or 'rgba(52, 152, 219, 0.1)',
             'grid_bg': empresa['color_grid_bg'] or '#ffffff',
@@ -3233,8 +3246,14 @@ def get_branding():
             'disabled_bg': empresa['color_disabled_bg'] or '#f5f5f5',
             'disabled_text': empresa['color_disabled_text'] or '#999999',
             'icon': empresa['color_icon'] or '#000000',
-            'spinner_border': empresa['color_spinner_border'] or '#3498db'
+            'spinner_border': empresa['color_spinner_border'] or '#3498db',
+            'tab_active_bg': empresa['color_tab_active_bg'] or '#000000',
+            'tab_active_text': empresa['color_tab_active_text'] or '#ffffff'
         }
+        
+        # DEBUG: Log del objeto colores completo
+        print(f"[BRANDING-DEBUG] grid_header_text in colores object: {colores.get('grid_header_text', 'NOT_FOUND')}", flush=True)
+        print(f"[BRANDING-DEBUG] colores keys: {list(colores.keys())}", flush=True)
         
         return jsonify({
             'nombre_empresa': empresa['nombre'],

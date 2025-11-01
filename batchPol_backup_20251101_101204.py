@@ -4,6 +4,7 @@ import os
 import csv
 import logging
 import sqlite3
+from db_utils import get_db_connection
 from datetime import datetime
 from pathlib import Path
 from notificaciones_utils import guardar_notificacion
@@ -34,11 +35,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def get_db_connection():
-    """Establece conexión con la base de datos"""
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 def redondear_importe(valor, decimales=2):
     """Redondea un valor a 2 decimales"""
@@ -282,33 +278,50 @@ def actualizar_proforma_existente(proforma_id, detalles, conn):
     """Actualiza una proforma existente con nuevos detalles"""
     try:
         with conn:
-            # ELIMINAR TODOS LOS DETALLES EXISTENTES ANTES DE INSERTAR LOS NUEVOS
-            conn.execute('DELETE FROM detalle_proforma WHERE id_proforma = ?', (proforma_id,))
-            logger.info(f"Eliminados todos los detalles antiguos de proforma ID {proforma_id}")
+            # Obtenemos los detalles existentes para compararlos
+            detalles_existentes = conn.execute('''
+                SELECT concepto, descripcion, productoId 
+                FROM detalle_proforma 
+                WHERE id_proforma = ?
+            ''', (proforma_id,)).fetchall()
             
             # Contador de detalles añadidos
             detalles_nuevos = 0
             
-            # Insertar todos los nuevos detalles
+            # Insertamos solo los detalles que no existen ya
             for detalle in detalles:
-                conn.execute('''
-                    INSERT INTO detalle_proforma (
-                        id_proforma, concepto, descripcion, cantidad,
-                        precio, impuestos, total, formaPago, productoId, fechaDetalle 
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (
-                    proforma_id,
-                    detalle['concepto'],
-                    detalle['descripcion'],
-                    detalle['cantidad'],
-                    detalle['precio'],
-                    detalle['impuestos'],
-                    detalle['total'],
-                    detalle['formaPago'],
-                    detalle['productoId'],
-                    detalle['fechaDetalle']
-                ))
-                detalles_nuevos += 1
+                # Comprobamos si este detalle ya existe en la proforma
+                detalle_existe = False
+                for existente in detalles_existentes:
+                    # Comparamos los campos clave que determinan la unicidad del detalle
+                    # Es esencial verificar tanto concepto, descripción y productoId 
+                    # La descripción contiene el zip_date que los diferencia
+                    if (existente['concepto'] == detalle['concepto'] and 
+                        existente['descripcion'] == detalle['descripcion'] and 
+                        existente['productoId'] == detalle['productoId']):
+                        detalle_existe = True
+                        break
+                        
+                # Si el detalle no existe, lo insertamos
+                if not detalle_existe:
+                    conn.execute('''
+                        INSERT INTO detalle_proforma (
+                            id_proforma, concepto, descripcion, cantidad,
+                            precio, impuestos, total, formaPago, productoId, fechaDetalle 
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ''', (
+                        proforma_id,
+                        detalle['concepto'],
+                        detalle['descripcion'],
+                        detalle['cantidad'],
+                        detalle['precio'],
+                        detalle['impuestos'],
+                        detalle['total'],
+                        detalle['formaPago'],
+                        detalle['productoId'],
+                        detalle['fechaDetalle']
+                    ))
+                    detalles_nuevos += 1
             
             # Obtener todos los detalles para calcular los totales
             todos_detalles = conn.execute('''
@@ -336,13 +349,12 @@ def actualizar_proforma_existente(proforma_id, detalles, conn):
                 proforma_id
             ))
             
-        logger.info(f"Proforma {proforma_id} actualizada correctamente con {detalles_nuevos} nuevos detalles")
+        logger.info(f"Proforma {proforma_id} actualizada correctamente con {detalles_nuevos} nuevos detalles de {len(detalles)} procesados")
         return True
     
     except Exception as e:
         logger.error(f"Error actualizando proforma: {str(e)}")
         return False
-
 
 def main():
     """Función principal ejecutada por cron"""

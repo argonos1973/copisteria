@@ -6,12 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="/static/styles.css?v=26">
-    <link rel="stylesheet" href="/static/colors.css">
+    <!-- CSS base que usa variables CSS generadas por applyTheme -->
+    <link rel="stylesheet" href="/static/theme-base.css?v=1761938648">
+    <!-- CSS que consume las variables del tema y las aplica a la UI -->
+    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762004912">
+    <link rel="stylesheet" href="/static/styles.css?v=1761938648">
     <link rel="stylesheet" href="/static/notificaciones.css">
     <link rel="stylesheet" href="/static/footer.css">
     <link rel="stylesheet" href="/static/page_header.css">
-    <link rel="stylesheet" href="/static/app_private.css?v=1">
+    <link rel="stylesheet" href="/static/app_private.css?v=1761938648">
     <!-- CSS inline eliminado - movido a app_private.css -->
 </head>
 <body>
@@ -24,14 +27,14 @@
             <!-- Icono de notificaciones -->
             <div style="padding: 0.5rem 1rem; display: flex; justify-content: flex-end;">
                 <div id="notificaciones-icon" style="position: relative; cursor: pointer;">
-                    <i class="fas fa-bell" style="font-size: 20px; color: white;"></i>
-                    <span id="notificaciones-badge" style="display: none; position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: bold; text-align: center; line-height: 20px;">0</span>
+                    <i class="fas fa-bell" class="notif-bell-icon"></i>
+                    <span id="notificaciones-badge" class="notif-badge" style="display: none;">0</span>
                 </div>
             </div>
             
                         <ul class="menu-list">
                 <!-- El menú se cargará dinámicamente según permisos -->
-                <li style="padding: 20px; color: white; text-align: center;">
+                <li class="menu-loading">
                     <i class="fas fa-spinner fa-spin"></i> Cargando menú...
                 </li>
             </ul>
@@ -49,7 +52,7 @@
                     </div>
                     <div class="user-time">
                         <i class="fas fa-history"></i>
-                        <span id="bottom-time" style="font-size: 0.85em;">Cargando...</span>
+                        <span id="bottom-time" class="user-time-text">Cargando...</span>
                     </div>
                 </div>
                 <button class="btn-logout-compact" onclick="cerrarSesion()">
@@ -80,7 +83,7 @@
         </div>
         <div class="notif-body" id="notificaciones-lista">
             <div class="notif-empty">
-                <i class="fas fa-check-circle" style="font-size: 32px; color: #ddd;"></i>
+                <i class="fas fa-check-circle" class="notif-empty-icon"></i>
                 <p>No hay notificaciones nuevas</p>
             </div>
         </div>
@@ -96,17 +99,17 @@
     </script>
     
     <!-- Cargador de menú dinámico -->
-    <script src="/static/menu_loader.js?v=2"></script>
+    <script src="/static/menu_loader.js?v=1761938648"></script>
     
     <!-- Manejador de navegación del menú -->
-    <script src="/static/menu.js?v=1"></script>
+    <script src="/static/menu.js?v=1761938648"></script>
     
     <!-- Branding y colores de empresa -->
-    <script src="/static/branding.js?v=18"></script>
+    <script src="/static/branding.js?v=1761998426"></script>
     
     <!-- Funciones principales de la aplicación -->
-    <script src="/static/app_private.js?v=1761678175"></script>
-    <script src="/static/plantilla_sync.js?v=1761684810"></script>
+    <script src="/static/app_private.js?v=1761938648"></script>
+    <script src="/static/plantilla_sync.js?v=1761938648"></script>
 </body>
 </html>
 <!-- Version: 20251026_refactored - CSS y JS movidos a archivos externos -->

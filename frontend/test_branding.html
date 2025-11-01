@@ -1,20 +1,57 @@
 <\!DOCTYPE html>
 <html>
 <head>
-    <title>Test Branding</title>
+    <title>Test Branding API</title>
+    <script src="/static/auto_branding.js?v=1761998426"></script>
+    <link rel="stylesheet" href="/static/styles.css?v=1761938648">
 </head>
-<body>
-    <h1>Test de Endpoint Branding</h1>
-    <pre id="output">Cargando...</pre>
+<body style="padding: 20px;">
+    <h1>Test de Branding</h1>
+    
+    <div id="apiResponse"></div>
+    
+    <div style="margin-top: 20px;">
+        <h2>Variables CSS Computadas:</h2>
+        <div id="cssVars"></div>
+    </div>
+    
+    <div style="margin-top: 20px;">
+        <h2>Tabla de Prueba:</h2>
+        <table class="grid">
+            <thead>
+                <tr>
+                    <th>Header 1</th>
+                    <th>Header 2</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Data 1</td>
+                    <td>Data 2</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    
     <script>
-        fetch('/api/auth/branding', {credentials: 'include'})
-            .then(r => r.json())
-            .then(data => {
-                document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-            })
-            .catch(e => {
-                document.getElementById('output').textContent = 'Error: ' + e;
-            });
+        setTimeout(async () => {
+            const response = await fetch('/api/auth/branding');
+            const data = await response.json();
+            document.getElementById('apiResponse').innerHTML = '<h3>API Response:</h3><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            
+            const computed = window.getComputedStyle(document.documentElement);
+            const vars = {
+                'color-grid-header': computed.getPropertyValue('--color-grid-header'),
+                'color-grid-header-text': computed.getPropertyValue('--color-grid-header-text'),
+                'color-grid-text': computed.getPropertyValue('--color-grid-text')
+            };
+            document.getElementById('cssVars').innerHTML = '<pre>' + JSON.stringify(vars, null, 2) + '</pre>';
+            
+            const th = document.querySelector('thead th');
+            const thComputed = window.getComputedStyle(th);
+            console.log('TH color computado:', thComputed.color);
+            console.log('TH background computado:', thComputed.backgroundColor);
+        }, 1000);
     </script>
 </body>
 </html>

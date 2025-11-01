@@ -1,40 +1,116 @@
 {
-  "nombre": "Dark",
-  "descripcion": "Tema oscuro para reducir fatiga visual",
-  "icon": "🌙",
-  "color_primario": "#3b82f6",
-  "color_secundario": "#1e293b",
-  "color_success": "#10b981",
-  "color_warning": "#f59e0b",
-  "color_danger": "#ef4444",
-  "color_info": "#3b82f6",
-  "color_button": "#3b82f6",
-  "color_button_hover": "#2563eb",
-  "color_button_text": "#ffffff",
-  "color_app_bg": "#0f172a",
-  "color_header_bg": "#1e293b",
-  "color_header_text": "#f1f5f9",
-  "color_grid_header": "#1e293b",
-  "color_grid_hover": "#3b82f6",
-  "color_input_bg": "#1e293b",
-  "color_input_text": "#f1f5f9",
-  "color_input_border": "#334155",
-  "color_select_bg": "#1e293b",
-  "color_select_text": "#f1f5f9",
-  "color_select_border": "#334155",
-  "color_disabled_bg": "#334155",
-  "color_disabled_text": "#64748b",
-  "color_submenu_bg": "#1e293b",
-  "color_submenu_text": "#f1f5f9",
-  "color_submenu_hover": "#334155",
-  "color_grid_bg": "#0f172a",
-  "color_grid_text": "#f1f5f9",
-  "color_icon": "#f1f5f9",
-  "color_modal_bg": "#1e293b",
-  "color_modal_text": "#f1f5f9",
-  "color_modal_border": "#334155",
-  "color_modal_overlay": "#000000",
-  "color_modal_shadow": "#000000",
-  "color_spinner_border": "#3b82f6",
-  "color_grid_header_text": "#ffffff"
+  "name": "Dark Linux",
+  "version": 1,
+  "meta": {
+    "author": "aleph70",
+    "icon": "",
+    "dark": true,
+    "description": "Oscuro estilo Linux (Adwaita/Mint-Y), alto contraste, acento azul GNOME"
+  },
+  "palette": {
+    "base900": "#1e1e1e",
+    "base800": "#242424",
+    "base700": "#2f3136",
+    "base600": "#3a3a3a",
+    "base500": "#4f4f4f",
+    "base300": "#9aa0a6",
+    "base100": "#e6e6e6",
+    "white": "#ffffff",
+    "blue500": "#3584e4",
+    "blue600": "#1c71d8",
+    "green500": "#57e389",
+    "yellow500": "#f8e45c",
+    "red500": "#ff7b63"
+  },
+  "semantic": {
+    "bg": "{palette.base800}",
+    "bg-elevated": "{palette.base800}",
+    "text": "{palette.white}",
+    "text-muted": "{palette.base300}",
+    "primary": "{palette.blue500}",
+    "success": "{palette.green500}",
+    "warning": "{palette.yellow500}",
+    "danger": "{palette.red500}",
+    "info": "{palette.blue500}",
+    "border": "{palette.base600}",
+    "focus-ring": "#63adff99"
+  },
+  "components": {
+    "button": {
+      "bg": "{semantic.primary}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.blue600}",
+      "border": "transparent"
+    },
+    "button-secondary": {
+      "bg": "{palette.base700}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.base600}",
+      "border": "{semantic.border}"
+    },
+    "input": {
+      "bg": "{palette.base700}",
+      "text": "{palette.white}",
+      "border": "{semantic.border}",
+      "placeholder": "{semantic.text-muted}",
+      "focus-ring": "{semantic.focus-ring}"
+    },
+    "select": {
+      "bg": "{palette.base700}",
+      "text": "{palette.white}",
+      "border": "{semantic.border}",
+      "focus-ring": "{semantic.focus-ring}"
+    },
+    "modal": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}",
+      "overlay": "#000000b3",
+      "border": "{palette.white}",
+      "border-width": "2px",
+      "border-radius": "8px",
+      "shadow": "0 8px 24px #00000073",
+      "header-bg": "{palette.base700}",
+      "header-text": "{palette.white}",
+      "body-bg": "{semantic.bg-elevated}",
+      "body-text": "{semantic.text}",
+      "label-color": "{palette.white}",
+      "input-bg": "{palette.base700}",
+      "input-text": "{palette.white}",
+      "input-border": "{semantic.border}"
+    },
+    "table": {
+      "bg": "{semantic.bg}",
+      "text": "{palette.white}",
+      "header-bg": "{palette.base700}",
+      "header-text": "{palette.white}",
+      "row-hover": "{palette.base700}",
+      "border": "{semantic.border}"
+    },
+    "menu": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}",
+      "hover": "{palette.base700}",
+      "border": "{semantic.border}",
+      "submenu-bg": "{semantic.bg-elevated}"
+    },
+    "header": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}"
+    },
+    "icon": {
+      "color": "{semantic.text}"
+    },
+    "spinner": {
+      "border": "{semantic.primary}"
+    },
+    "tab": {
+      "active-bg": "{palette.base700}",
+      "active-text": "{palette.white}"
+    },
+    "disabled": {
+      "bg": "{palette.base800}",
+      "text": "{semantic.text-muted}"
+    }
+  }
 }

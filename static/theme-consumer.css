@@ -1,0 +1,317 @@
+/**
+ * Theme Consumer CSS v3
+ * Aplica variables CSS del tema a TODOS los elementos
+ */
+
+/* ==================== BODY ==================== */
+body {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+.container, .content, .main-content,
+#content-area, .page-content,
+.main-container, .content-wrapper, 
+.scrollable-content, #content-panel {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+/* ==================== TEXTOS - LABELS Y HEADERS BLANCOS EN DARK ==================== */
+label, .label {
+    color: var(--text) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text) !important;
+}
+
+p, span, div, a {
+    color: var(--text) !important;
+}
+
+/* ==================== TABLAS ==================== */
+table, .table {
+    background: var(--table-bg) !important;
+    color: var(--table-text) !important;
+    border-color: var(--table-border) !important;
+}
+
+/* Headers de tabla - BLANCO en tema oscuro */
+table thead, table thead th,
+.table thead, .table thead th,
+thead, thead th {
+    background: var(--table-header-bg) !important;
+    color: var(--table-header-text) !important;
+    font-weight: bold !important;
+}
+
+table tbody, .table tbody {
+    background: var(--table-bg) !important;
+    color: var(--table-text) !important;
+}
+
+table tbody tr, .table tbody tr {
+    background: var(--table-bg) !important;
+    color: var(--table-text) !important;
+}
+
+table td, .table td,
+table th, .table th {
+    color: var(--table-text) !important;
+}
+
+table tbody tr:hover, .table tbody tr:hover {
+    background: var(--table-row-hover) !important;
+}
+
+/* ==================== GRIDS ==================== */
+.grid, .data-grid {
+    background: var(--table-bg) !important;
+    color: var(--table-text) !important;
+}
+
+.grid-header, .data-grid-header {
+    background: var(--table-header-bg) !important;
+    color: var(--table-header-text) !important;
+    font-weight: bold !important;
+}
+
+/* ==================== BOTONES ==================== */
+button, .btn,
+input[type="button"],
+input[type="submit"] {
+    background: var(--button-bg) !important;
+    color: var(--button-text) !important;
+    border-color: var(--button-border) !important;
+}
+
+button:hover, .btn:hover {
+    background: var(--button-hover-bg) !important;
+}
+
+/* ==================== INPUTS ==================== */
+input, textarea, select {
+    background: var(--input-bg) !important;
+    color: var(--input-text) !important;
+    border-color: var(--input-border) !important;
+}
+
+input::placeholder, textarea::placeholder {
+    color: var(--input-placeholder) !important;
+}
+
+/* ==================== HEADERS DE PÁGINA ==================== */
+.header, header, .page-header {
+    background: var(--header-bg) !important;
+    color: var(--header-text) !important;
+}
+
+/* ==================== MENÚ ==================== */
+.menu, .sidebar, nav.menu {
+    background: var(--menu-bg) !important;
+}
+
+.menu-link, .menu-item a {
+    color: var(--menu-text) !important;
+}
+
+.menu-link:hover, .menu-item:hover {
+    background: var(--menu-hover) !important;
+}
+
+.submenu {
+    background: var(--menu-submenu-bg, var(--menu-bg)) !important;
+}
+
+.submenu-item {
+    color: var(--menu-text) !important;
+}
+
+.submenu-item:hover {
+    background: var(--menu-hover) !important;
+}
+
+/* ==================== MODALES ==================== */
+.modal, .modal-content,
+.confirmacion-dialog,
+.dropdown-menu,
+.info-precio-popup,
+#modal-detalles-gasto .modal-content,
+#modal-coincidencias .modal-content,
+#modal-seleccion-documentos .modal-content,
+#modalContactos .modal-content,
+#modalUsuario .modal-content,
+#modalCrear .modal-content,
+#modalEditar .modal-content {
+    background: var(--modal-bg) !important;
+    color: var(--modal-text) !important;
+    border: var(--modal-border-width) solid var(--modal-border) !important;
+    border-radius: var(--modal-border-radius) !important;
+    box-shadow: var(--modal-shadow) !important;
+}
+
+.modal-overlay {
+    background: var(--modal-overlay) !important;
+}
+
+/* Header de modales */
+.modal-header {
+    background: var(--modal-header-bg) !important;
+    color: var(--modal-header-text) !important;
+    border-top-left-radius: var(--modal-border-radius) !important;
+    border-top-right-radius: var(--modal-border-radius) !important;
+}
+
+.modal-header h2,
+.modal-header h3 {
+    color: var(--modal-header-text) !important;
+}
+
+.modal-header .close {
+    color: var(--modal-header-text) !important;
+}
+
+.modal-header .close:hover {
+    opacity: 0.8 !important;
+}
+
+/* Body de modales */
+.modal-body {
+    background: var(--modal-body-bg) !important;
+    color: var(--modal-body-text) !important;
+}
+
+/* Labels en modales */
+.modal-campo label,
+.modal label {
+    color: var(--modal-label-color) !important;
+}
+
+/* Inputs y selects en modales */
+.modal-campo input,
+.modal-campo select,
+.modal input,
+.modal select,
+.info-precio-popup input {
+    background: var(--modal-input-bg) !important;
+    color: var(--modal-input-text) !important;
+    border: 1px solid var(--modal-input-border) !important;
+}
+
+.modal-campo input:focus,
+.modal-campo select:focus,
+.modal input:focus,
+.modal select:focus {
+    border-color: var(--primary) !important;
+    outline: none !important;
+}
+
+/* Popup de información de precio */
+.info-precio-popup {
+    z-index: 10000 !important;
+}
+
+.info-precio-contenido {
+    color: var(--modal-text) !important;
+}
+
+/* ==================== CARDS ==================== */
+.card, .panel, .box {
+    background: var(--bg-elevated) !important;
+    color: var(--text) !important;
+}
+
+/* ==================== TABS ==================== */
+.tab.active, .tab-active {
+    background: var(--tab-active-bg) !important;
+    color: var(--tab-active-text) !important;
+}
+
+/* ==================== ICONOS ==================== */
+.menu-link i, .menu-item i, i, .icon,
+.fas, .far, .fab, .fa,
+button i, a i, span i {
+    color: var(--icon-color) !important;
+}
+
+/* Iconos en botones y tabs */
+.tab i, .btn i, button i {
+    color: inherit !important;
+}
+
+/* ==================== PAGINACIÓN ==================== */
+.pagination, .pagination-container,
+.page-controls, .pagination-info {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 6px 8px !important;
+    margin-top: 6px !important;
+    margin-bottom: 4px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+}
+
+/* Botones de paginación secundarios (gris oscuro - Facturas) */
+.btn-secondary,
+.btn-pagination,
+#prevPageFacturas,
+#nextPageFacturas {
+    background: var(--button-secondary-bg) !important;
+    color: var(--button-secondary-text) !important;
+    border: 1px solid var(--button-secondary-border) !important;
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    min-width: 32px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+}
+
+.btn-secondary:hover,
+.btn-pagination:hover,
+#prevPageFacturas:hover,
+#nextPageFacturas:hover {
+    background: var(--button-secondary-hover-bg) !important;
+}
+
+/* Botones deshabilitados */
+.pagination button:disabled,
+.pagination .page-link.disabled,
+button[onclick*="pagina"]:disabled,
+button[onclick*="Pagina"]:disabled,
+button[onclick*="anterior"]:disabled,
+button[onclick*="siguiente"]:disabled {
+    background: var(--bg-elevated) !important;
+    color: var(--text-muted) !important;
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+.pagination .active {
+    background: var(--button-hover-bg) !important;
+    color: var(--button-text) !important;
+    font-weight: bold !important;
+}
+
+.pagination span,
+.pagination label,
+.pagination-info,
+#pageInfoTickets {
+    color: var(--text) !important;
+    font-size: 12px !important;
+}
+
+/* Select de "Por página" en paginación */
+.pagination select,
+#pageSizeSelectTickets {
+    background: var(--input-bg) !important;
+    color: var(--input-text) !important;
+    border: 1px solid var(--input-border) !important;
+    padding: 2px 6px !important;
+    font-size: 12px !important;
+    border-radius: 4px !important;
+}
