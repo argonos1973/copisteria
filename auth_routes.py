@@ -189,11 +189,6 @@ def obtener_menu():
                     ]
                 },
                 {
-                    'nombre': 'Exportar',
-                    'icono': 'fas fa-download',
-                    'ruta': '/EXPORTAR.html'
-                },
-                {
                     'nombre': 'Facturas',
                     'icono': 'fas fa-file-invoice',
                     'ruta': '#',
@@ -208,6 +203,11 @@ def obtener_menu():
                     'submenu': [
                         {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_PROFORMAS.html'}
                     ]
+                },
+                {
+                    'nombre': 'Exportar',
+                    'icono': 'fas fa-download',
+                    'ruta': '/EXPORTAR.html'
                 }
             ],
             'presupuestos': [
@@ -300,11 +300,6 @@ def obtener_menu():
                         'nombre': 'Gestión',
                         'icono': 'fas fa-cog',
                         'ruta': '/ADMIN_PERMISOS.html'
-                    },
-                    {
-                        'nombre': 'Gestión Empresas',
-                        'icono': 'fas fa-building',
-                        'ruta': '/ADMIN_EMPRESAS.html'
                     }
                 ]
             })
@@ -422,7 +417,7 @@ def obtener_branding():
         
         # Obtener datos de empresa (logos, datos, plantilla)
         cursor.execute('''
-            SELECT logo_header, logo_factura, plantilla_personalizada,
+            SELECT logo_header, logo_factura, plantilla, plantilla_personalizada,
                    nombre, cif, direccion, telefono, email, web
             FROM empresas
             WHERE id = ?
@@ -434,16 +429,9 @@ def obtener_branding():
         if not empresa:
             return jsonify({'error': 'Empresa no encontrada'}), 404
         
-        plantilla_nombre = empresa['plantilla_personalizada'] or 'Minimal Monocromático'
-        
-        # Detectar plantilla base para el frontend
-        plantilla_base = 'minimal'  # default
-        if 'Dark' in plantilla_nombre or 'dark' in plantilla_nombre.lower():
-            plantilla_base = 'dark'
-        elif 'e-Ink' in plantilla_nombre or 'eink' in plantilla_nombre.lower():
-            plantilla_base = 'eink'
-        elif 'Minimal' in plantilla_nombre or 'minimal' in plantilla_nombre.lower():
-            plantilla_base = 'minimal'
+        # Usar directamente el campo plantilla (minimal, dark, eink)
+        plantilla_base = empresa['plantilla'] or 'dark'  # default dark
+        plantilla_nombre = empresa['plantilla_personalizada'] or plantilla_base.capitalize()
         
         logger.info(f"[BRANDING] Plantilla: {plantilla_base} ('{plantilla_nombre}')")
         

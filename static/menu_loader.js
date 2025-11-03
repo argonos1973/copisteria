@@ -67,6 +67,17 @@ function actualizarInfoUsuario(sessionData) {
         console.log('[MENU] Logo actualizado a:', sessionData.logo);
     }
     
+    // Actualizar info en menú superior (header)
+    const topUsuario = document.getElementById('top-usuario');
+    const topEmpresa = document.getElementById('top-empresa');
+    
+    if (topUsuario) {
+        topUsuario.textContent = sessionData.usuario || 'Usuario';
+    }
+    if (topEmpresa) {
+        topEmpresa.textContent = sessionData.empresa || 'Empresa';
+    }
+    
     // Actualizar info en menú inferior
     const bottomUsuario = document.getElementById('bottom-usuario');
     const bottomEmpresa = document.getElementById('bottom-empresa');

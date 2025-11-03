@@ -278,9 +278,10 @@ def autenticar_usuario(username, password, empresa_codigo):
         
         rol, es_admin_empresa, empresa_id, empresa_nombre, db_path, logo_header = empresa
         
-        # Obtener último acceso antes de actualizarlo
+        # Obtener último acceso ANTES de actualizarlo
         cursor.execute('SELECT ultimo_acceso FROM usuarios WHERE id = ?', (user_id,))
-        ultimo_acceso_anterior = cursor.fetchone()[0]
+        ultimo_acceso_row = cursor.fetchone()
+        ultimo_acceso_anterior = ultimo_acceso_row[0] if ultimo_acceso_row and ultimo_acceso_row[0] else None
         
         # Reset intentos fallidos y actualizar último acceso
         cursor.execute('''
