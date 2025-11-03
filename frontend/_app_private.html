@@ -24,19 +24,32 @@
                 <img id="logo-empresa" src="/static/img/logo.png" alt="Logo" style="max-width: 200px; height: auto;">
             </div>
             
-            <!-- Info de sesión + Notificaciones -->
-            <div style="padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                <!-- Info de sesión (izquierda) -->
-                <div style="display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--color-header-text, #fff); opacity: 0.85;">
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <i class="fas fa-user" style="font-size: 10px;"></i>
-                        <span id="top-usuario" style="font-weight: 500;">Usuario</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 4px;">
-                        <i class="fas fa-building" style="font-size: 10px;"></i>
-                        <span id="top-empresa" style="font-weight: 400;">Empresa</span>
-                    </div>
+            <\!-- Iconos de notificaciones y cerrar sesión -->
+            <div style="padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 15px;">
+                <div id="notificaciones-icon" style="position: relative; cursor: pointer;">
+                    <i class="fas fa-bell" style="font-size: 20px; color: white;"></i>
+                    <span id="notificaciones-badge" style="display: none; position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: bold; text-align: center; line-height: 20px;">0</span>
                 </div>
+                <div onclick="cerrarSesion()" style="cursor: pointer;" title="Cerrar Sesión">
+                    <i class="fas fa-sign-out-alt" style="font-size: 20px; color: white;"></i>
+                </div>
+            </div>
+            
+            <\!-- Información de sesión -->
+            <div style="padding: 0.5rem 1rem; border-top: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem;">
+                <div style="color: rgba(255,255,255,0.7); font-size: 12px; margin-bottom: 5px;">
+                    <i class="fas fa-user" style="margin-right: 5px;"></i>
+                    <span id="menu-usuario-nombre">Usuario</span>
+                </div>
+                <div style="color: rgba(255,255,255,0.7); font-size: 12px; margin-bottom: 5px;">
+                    <i class="fas fa-building" style="margin-right: 5px;"></i>
+                    <span id="menu-empresa-nombre">Empresa</span>
+                </div>
+                <div style="color: rgba(255,255,255,0.5); font-size: 11px;">
+                    <i class="fas fa-clock" style="margin-right: 5px;"></i>
+                    Último acceso: <span id="menu-ultimo-acceso">--:--</span>
+                </div>
+            </div>
                 
                 <!-- Icono de notificaciones (derecha) -->
                 <div id="notificaciones-icon" style="position: relative; cursor: pointer;">
@@ -52,28 +65,7 @@
                 </li>
             </ul>
         
-            <!-- Info de usuario en parte inferior -->
-            <div class="user-info-bottom">
-                <div class="user-details-compact">
-                    <div>
-                        <i class="fas fa-user"></i>
-                        <span id="bottom-usuario">Usuario</span>
-                    </div>
-                    <div>
-                        <i class="fas fa-building"></i>
-                        <span id="bottom-empresa">Empresa</span>
-                    </div>
-                    <div class="user-time">
-                        <i class="fas fa-history"></i>
-                        <span id="bottom-time" class="user-time-text">Cargando...</span>
-                    </div>
-                </div>
-                <button class="btn-logout-compact" onclick="cerrarSesion()">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Cerrar Sesión
-                </button>
-            </div>
-        </nav>
+                    </nav>
         
         <div class="content-container" style="flex-grow: 1; height: 100vh; overflow: hidden;">
             <div style="height: 100%;">
