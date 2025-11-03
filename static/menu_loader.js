@@ -250,9 +250,9 @@ window.verificarSesionYCargarMenu = verificarSesionYCargarMenu;
 // Formatear y mostrar último acceso
 function mostrarUltimoAcceso(ultimoAcceso) {
     const menuUltimoAcceso = document.getElementById('menu-ultimo-acceso');
-    if (\!menuUltimoAcceso) return;
+    if (!menuUltimoAcceso) return;
     
-    if (\!ultimoAcceso) {
+    if (!ultimoAcceso) {
         menuUltimoAcceso.textContent = 'Primer acceso';
         return;
     }
