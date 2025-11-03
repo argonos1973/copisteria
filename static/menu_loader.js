@@ -79,9 +79,9 @@ function actualizarInfoUsuario(sessionData) {
     }
     
     // Actualizar info en menú inferior
-    const bottomUsuario = document.getElementById('bottom-usuario');
-    const bottomEmpresa = document.getElementById('bottom-empresa');
-    const bottomTime = document.getElementById('bottom-time');
+    const bottomUsuario = document.getElementById('menu-usuario-nombre');
+    const bottomEmpresa = document.getElementById('menu-empresa-nombre');
+    const bottomTime = document.getElementById('menu-ultimo-acceso');
     
     if (bottomUsuario) {
         bottomUsuario.textContent = sessionData.usuario || 'Usuario';
@@ -99,7 +99,7 @@ function actualizarInfoUsuario(sessionData) {
 }
 
 function mostrarUltimoAcceso(ultimoAcceso) {
-    const bottomTime = document.getElementById('bottom-time');
+    const bottomTime = document.getElementById('menu-ultimo-acceso');
     if (!bottomTime) return;
     
     if (!ultimoAcceso) {
@@ -246,3 +246,22 @@ function crearMenuItem(nombre, icono, ruta, submodulos) {
 
 // Exportar función
 window.verificarSesionYCargarMenu = verificarSesionYCargarMenu;
+
+// Formatear y mostrar último acceso
+function mostrarUltimoAcceso(ultimoAcceso) {
+    const menuUltimoAcceso = document.getElementById('menu-ultimo-acceso');
+    if (\!menuUltimoAcceso) return;
+    
+    if (\!ultimoAcceso) {
+        menuUltimoAcceso.textContent = 'Primer acceso';
+        return;
+    }
+    
+    try {
+        const fecha = new Date(ultimoAcceso);
+        const opciones = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+        menuUltimoAcceso.textContent = fecha.toLocaleString('es-ES', opciones);
+    } catch (e) {
+        menuUltimoAcceso.textContent = ultimoAcceso;
+    }
+}
