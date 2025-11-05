@@ -511,6 +511,12 @@ async function gestionarEmpresas(usuarioId) {
     usuarioEmpresasId.value = usuarioId;
     
     try {
+        // Cargar lista de todas las empresas primero
+        const empresasResponse = await fetch('/api/empresas');
+        if (!empresasResponse.ok) throw new Error('Error cargando lista de empresas');
+        const todasEmpresas = await empresasResponse.json();
+        
+        // Cargar empresas asignadas al usuario
         const response = await fetch(`/api/admin/usuarios/${usuarioId}/empresas`);
         if (!response.ok) throw new Error('Error cargando empresas del usuario');
         
@@ -518,7 +524,7 @@ async function gestionarEmpresas(usuarioId) {
         
         let html = '<div style="max-height: 400px; overflow-y: auto;">';
         
-        empresas.forEach(empresa => {
+        todasEmpresas.forEach(empresa => {
             const asignada = empresasUsuario.find(e => e.id === empresa.id);
             const checked = asignada ? 'checked' : '';
             const rol = asignada ? asignada.rol : 'usuario';
