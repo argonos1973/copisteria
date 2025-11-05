@@ -2854,6 +2854,7 @@ input[type="submit"]:hover,
 #btn-agregar-detalle i {
   margin: 0 !important;
   padding: 0 !important;
+  color: inherit !important;
 }
 
 /* Labels - color claro visible sobre fondo oscuro */
