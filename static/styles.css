@@ -2837,6 +2837,25 @@ input[type="submit"]:hover,
   background: var(--color-button-hover, var(--color-button, #4a8ac4)) !important;
 }
 
+/* Botón agregar detalle - compacto con icono */
+#btn-agregar-detalle {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 16px !important;
+  border-radius: 4px !important;
+}
+
+#btn-agregar-detalle i {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
 /* Labels - color claro visible sobre fondo oscuro */
 label {
   color: var(--color-input-text, #e0e0e0) !important;
