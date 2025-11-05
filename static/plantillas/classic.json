@@ -1,6 +1,6 @@
 {
   "name": "Classic",
-  "version": 12,
+  "version": 13,
   "meta": {
     "author": "aleph70",
     "icon": "🏛️",
@@ -120,9 +120,9 @@
       "negative": "{palette.red500}"
     },
     "button-card": {
-      "bg": "{palette.navy}",
-      "text": "{palette.white}",
-      "hover-bg": "{semantic.secondary}",
+      "bg": "{palette.gray200}",
+      "text": "{palette.gray900}",
+      "hover-bg": "{palette.gray300}",
       "border": "{semantic.border}"
     },
     "button-table": {
