@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 6. Ajustes: mostrar botones "Volver" e "Imprimir", etc.
     const estadoTicket = document.getElementById("estado-ticket").value.toUpperCase();
     const btnGuardar   = document.getElementById("btn-guardar-ticket");
-    const btnVolver    = document.getElementById("btn-volver");
+    const btnVolver    = document.getElementById("btnCancelar");
     const btnImprimir  = document.getElementById("btn-imprimir-ticket");
     const bntAnadir    = document.getElementById("btn-agregar-detalle");
     const btnAnular    = document.getElementById("btn-anular-ticket");
@@ -99,12 +99,47 @@ document.addEventListener("DOMContentLoaded", async () => {
       contenedorAcciones.style.gap = contenedorAcciones.style.gap || '8px';
     }
 
-    // Si el ticket está anulado o cobrado, deshabilitar edición
-    if (estadoTicket === 'A' || estadoTicket === 'C') {
-      if (btnGuardar) btnGuardar.style.display = 'none';
-      if (bntAnadir)  bntAnadir.style.display  = 'none';
+    // Controlar visibilidad de botones según estado
+    // Estados: P=Pendiente, C=Cobrado, A=Anulado
+    if (!idTicket) {
+      // Ticket nuevo: solo mostrar Volver y Guardar
+      if (btnGuardar) btnGuardar.classList.remove('hidden');
+      if (bntAnadir)  bntAnadir.classList.remove('hidden');
+      if (btnAnular)  btnAnular.classList.add('hidden');
+      if (btnVolver)  btnVolver.classList.remove('hidden');
+      if (btnImprimir) btnImprimir.classList.add('hidden');
+    } else if (estadoTicket === 'P') {
+      // Ticket pendiente: mostrar todos los botones
+      if (btnGuardar) btnGuardar.classList.remove('hidden');
+      if (bntAnadir)  bntAnadir.classList.remove('hidden');
+      if (btnAnular)  btnAnular.classList.remove('hidden');
+      if (btnVolver)  btnVolver.classList.remove('hidden');
+      if (btnImprimir) btnImprimir.classList.remove('hidden');
+    } else if (estadoTicket === 'C' || estadoTicket === 'A') {
+      // Ticket cobrado o anulado: solo Volver e Imprimir
+      console.log('[TICKETS] → Ticket COBRADO/ANULADO: ocultando botones de edición');
+      if (btnGuardar) {
+        btnGuardar.classList.add('hidden');
+        btnGuardar.style.setProperty('display', 'none', 'important');
+        console.log('[TICKETS] → Botón Guardar OCULTADO con !important');
+      }
+      if (bntAnadir) {
+        bntAnadir.classList.add('hidden');
+        bntAnadir.style.setProperty('display', 'none', 'important');
+        console.log('[TICKETS] → Botón Añadir OCULTADO con !important');
+      }
+      if (btnAnular) {
+        btnAnular.classList.add('hidden');
+        btnAnular.style.setProperty('display', 'none', 'important');
+        console.log('[TICKETS] → Botón Anular OCULTADO con !important');
+      }
+      if (btnVolver)  btnVolver.classList.remove('hidden');
+      if (btnImprimir) btnImprimir.classList.remove('hidden');
       const btnCobrarTmp = document.getElementById('btn-cobrar');
-      if (btnCobrarTmp)  btnCobrarTmp.style.display = 'none';
+      if (btnCobrarTmp) {
+        btnCobrarTmp.style.setProperty('display', 'none', 'important');
+        console.log('[TICKETS] → Botón Cobrar OCULTADO con !important');
+      }
       // Cambiar cursor del grid de detalles
       const gridBody = document.querySelector('#tabla-detalle-ticket tbody');
       if (gridBody) {
@@ -113,15 +148,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
-    // Configurar visibilidad y eventos del botón "Anular"
-    if (btnAnular) {
-      // Quitar posibles clases que lo oculten por CSS
+    // Configurar evento del botón "Anular" (solo si es visible)
+    if (btnAnular && idTicket && estadoTicket === 'P') {
       btnAnular.classList.remove('hidden');
-      if (idTicket && estadoTicket !== 'A') {
-        btnAnular.style.display = 'inline-block';
-      }
       btnAnular.addEventListener('click', async () => {
-        if (!idTicket) return;
         const confirmado = await mostrarConfirmacion('¿Está seguro de anular este ticket? Se creará un ticket rectificativo.');
         if (!confirmado) return;
         try {
@@ -138,9 +168,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
     }
-
-    if (btnVolver)     btnVolver.style.display    = "inline-block";
-    if (btnImprimir)   btnImprimir.style.display  = "inline-block";
 
     // Foco inicial en el campo de búsqueda de producto
     document.getElementById('busqueda-producto').focus();
@@ -201,7 +228,7 @@ document.addEventListener("DOMContentLoaded", async () => {
  */
 function asociarEventos() {
   // Botón "Volver"
-  const btnVolver = document.getElementById("btn-volver");
+  const btnVolver = document.getElementById("btnCancelar");
   if (btnVolver) {
     btnVolver.addEventListener('click', () => volverAConsulta());
   }
@@ -683,6 +710,7 @@ export async function cargarDetalleParaEditar(fila) {
   }
   document.getElementById('btn-agregar-detalle').dataset.detalleId = detalleId;
   fila.remove();
+  sumarTotales(); // Recalcular totales después de eliminar la fila
 }
 
 /**
@@ -996,14 +1024,22 @@ export async function cargarTicket(idTicket) {
       const btnGuardar   = document.getElementById("btn-guardar-ticket");
       const bntAnadir    = document.getElementById("btn-agregar-detalle");
 
+      console.log('[TICKETS] Estado del ticket:', estadoTicket);
       if (estadoTicket === 'C' || estadoTicket === 'A') {
-        if (btnGuardar) btnGuardar.style.display = "none";
+        console.log('[TICKETS] → Ticket COBRADO/ANULADO en cargarTicket()');
+        if (btnGuardar) {
+          btnGuardar.style.setProperty('display', 'none', 'important');
+          console.log('[TICKETS] → Botón Guardar OCULTADO con !important');
+        }
         const gridBody = document.querySelector('#tabla-detalle-ticket tbody');
         if (gridBody) {
           gridBody.style.cursor = 'not-allowed';
           gridBody.classList.add('grid-bloqueada');
         }
-        if (bntAnadir)  bntAnadir.style.display  = "none";
+        if (bntAnadir) {
+          bntAnadir.style.setProperty('display', 'none', 'important');
+          console.log('[TICKETS] → Botón Añadir OCULTADO con !important');
+        }
       } else {
         if (btnGuardar) btnGuardar.style.display = "";
         if (bntAnadir)  bntAnadir.style.display  = "";
@@ -1066,7 +1102,15 @@ export function mostrarDatosTicket(ticket) {
   document.getElementById('detalle-ticket-grid').style.display   = 'block';
   document.getElementById('guardar-ticket-boton').style.display  = 'block';
 
-  document.getElementById('btn-imprimir-ticket').style.display   = 'inline-block';
+  // Solo mostrar botón imprimir si el ticket tiene ID (no es nuevo)
+  const btnImprimir = document.getElementById('btn-imprimir-ticket');
+  if (btnImprimir) {
+    if (ticket.id) {
+      btnImprimir.classList.remove('hidden');
+    } else {
+      btnImprimir.classList.add('hidden');
+    }
+  }
 }
 
 /**

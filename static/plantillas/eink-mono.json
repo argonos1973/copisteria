@@ -1,6 +1,6 @@
 {
   "name": "E-Ink Monochrome",
-  "version": 1,
+  "version": 2,
   "meta": {
     "author": "aleph70",
     "icon": "📖",
@@ -23,8 +23,8 @@
   "semantic": {
     "bg": "{palette.paper}",
     "bg-elevated": "{palette.white}",
-    "text": "{palette.ink700}",
-    "text-muted": "{palette.ink400}",
+    "text": "{palette.ink900}",
+    "text-muted": "{palette.ink500}",
     "primary": "{palette.ink700}",
     "success": "{palette.ink700}",
     "warning": "{palette.ink700}",
@@ -67,8 +67,8 @@
       "border-width": "2px",
       "border-radius": "8px",
       "shadow": "0 8px 24px #00000026",
-      "header-bg": "{palette.ink100}",
-      "header-text": "{palette.ink700}",
+      "header-bg": "{palette.ink900}",
+      "header-text": "{palette.white}",
       "body-bg": "{semantic.bg-elevated}",
       "body-text": "{semantic.text}",
       "label-color": "{palette.ink700}",
@@ -79,8 +79,8 @@
     "table": {
       "bg": "{semantic.bg}",
       "text": "{semantic.text}",
-      "header-bg": "{palette.ink100}",
-      "header-text": "{semantic.text}",
+      "header-bg": "{palette.ink900}",
+      "header-text": "{palette.white}",
       "row-hover": "{palette.ink100}",
       "border": "{semantic.border}"
     },
@@ -92,8 +92,8 @@
       "submenu-bg": "{semantic.bg-elevated}"
     },
     "header": {
-      "bg": "{semantic.bg}",
-      "text": "{semantic.text}",
+      "bg": "{palette.ink900}",
+      "text": "{palette.white}",
       "border": "{semantic.border}"
     },
     "icon": {
@@ -109,6 +109,10 @@
     "disabled": {
       "bg": "{palette.ink100}",
       "text": "{semantic.text-muted}"
+    },
+    "amount": {
+      "positive": "{palette.ink600}",
+      "negative": "{palette.ink900}"
     }
   }
 }

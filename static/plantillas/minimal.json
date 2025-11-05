@@ -1,6 +1,6 @@
 {
   "name": "Minimal",
-  "version": 1,
+  "version": 3,
   "meta": {
     "author": "aleph70",
     "icon": "✨",
@@ -17,7 +17,9 @@
     "success-light": "#e8f5e9",
     "warning-light": "#fff3e0",
     "danger-light": "#ffebee",
-    "info-light": "#e3f2fd"
+    "info-light": "#e3f2fd",
+    "green600": "#2e7d32",
+    "red600": "#c62828"
   },
   "semantic": {
     "bg": "{palette.white}",
@@ -75,16 +77,14 @@
     "table": {
       "bg": "{palette.white}",
       "text": "{semantic.text}",
-      "header-bg": "{palette.gray50}",
-      "header-text": "{semantic.text}",
-      "row-hover": "{palette.gray100}",
-      "border": "{semantic.border}"
+      "header-bg": "{palette.gray200}",
+      "header-text": "#000000",
+      "row-hover": "{palette.gray100}"
     },
     "menu": {
       "bg": "{palette.white}",
       "text": "{semantic.text}",
-      "hover": "{palette.gray100}",
-      "submenu-bg": "{palette.white}"
+      "hover": "{palette.gray100}"
     },
     "header": {
       "bg": "{palette.white}",
@@ -103,6 +103,10 @@
     "disabled": {
       "bg": "{palette.gray100}",
       "text": "{semantic.text-muted}"
+    },
+    "amount": {
+      "positive": "{palette.green600}",
+      "negative": "{palette.red600}"
     }
   }
 }

@@ -48,6 +48,7 @@ let idPresupuesto = null;
 let idContacto = null;
 let productosOriginales = [];
 let detalleEnEdicion = null;
+let estadoPresupuestoCodigo = 'B'; // B=Borrador, A=Aceptado, R=Rechazado, C=Cerrado
 let totalInicial = 0;
 
 // Variables para modal de contactos
@@ -453,13 +454,51 @@ async function cargarPresupuesto(id) {
     document.getElementById('numero').value = data.numero;
     document.getElementById('fecha').value = formatearFechaSoloDia(data.fecha);
     // Decodificar estado para mostrar texto legible
-    let estadoTexto = data.estado;
+    // Guardar código de estado
+    estadoPresupuestoCodigo = data.estado || 'B';
+    
+    let estadoTexto = 'Borrador';
     if (data.estado === 'B') estadoTexto = 'Borrador';
     else if (data.estado === 'A') estadoTexto = 'Aceptado';
     else if (data.estado === 'R') estadoTexto = 'Rechazado';
     else if (data.estado === 'C') estadoTexto = 'Cerrado';
     document.getElementById('estado').value = estadoTexto;
     document.getElementById('total-presupuesto').value = formatearImporte(importes.total || 0);
+    
+    // Controlar visibilidad de botones según estado
+    const btnGuardar = document.getElementById('btnGuardar');
+    const btnAgregarDetalle = document.getElementById('btn-agregar-detalle');
+    const cerrado = (estadoPresupuestoCodigo === 'C');
+    const aceptado = (estadoPresupuestoCodigo === 'A');
+    const rechazado = (estadoPresupuestoCodigo === 'R');
+    
+    console.log('[PRESUPUESTOS] Estado:', estadoPresupuestoCodigo, 'Cerrado:', cerrado, 'Aceptado:', aceptado, 'Rechazado:', rechazado);
+    if (cerrado || aceptado || rechazado) {
+        // Presupuesto cerrado, aceptado o rechazado: deshabilitar edición
+        console.log('[PRESUPUESTOS] → Presupuesto CERRADO/ACEPTADO/RECHAZADO: ocultando botones');
+        if (btnGuardar) {
+            btnGuardar.style.setProperty('display', 'none', 'important');
+            console.log('[PRESUPUESTOS] → Botón Guardar OCULTADO con !important');
+        }
+        if (btnAgregarDetalle) {
+            btnAgregarDetalle.style.setProperty('display', 'none', 'important');
+            console.log('[PRESUPUESTOS] → Botón Añadir Detalle OCULTADO con !important');
+        }
+        
+        // Deshabilitar botones de eliminar detalles
+        const botonesEliminar = document.querySelectorAll('.btn-icon');
+        botonesEliminar.forEach(btn => {
+            btn.disabled = true;
+            btn.style.pointerEvents = 'none';
+            btn.style.opacity = '0.4';
+        });
+        
+        // Bloquear grid de detalles
+        const gridBody = document.querySelector('table tbody');
+        if (gridBody) {
+            gridBody.style.cursor = 'not-allowed';
+        }
+    }
 
     const tipo = 'N';
     document.getElementById('tipo-presupuesto').value = 'N';
@@ -520,7 +559,10 @@ async function buscarPresupuestoAbierto(idContacto) {
       const fechaFormateada = formatearFechaSoloDia(data.fecha);
       document.getElementById('fecha').value = fechaFormateada;
       // Decodificar estado para mostrar texto legible
-      let estadoTexto = data.estado;
+      // Guardar código de estado
+      estadoPresupuestoCodigo = data.estado || 'B';
+      
+      let estadoTexto = 'Borrador';
       if (data.estado === 'B') estadoTexto = 'Borrador';
       else if (data.estado === 'A') estadoTexto = 'Aceptado';
       else if (data.estado === 'R') estadoTexto = 'Rechazado';
@@ -529,6 +571,41 @@ async function buscarPresupuestoAbierto(idContacto) {
       document.getElementById('total-presupuesto').value = formatearImporte(data.total);
       document.getElementById('tipo-presupuesto').value = 'N';
       sessionStorage.setItem('tipoPresupuesto', 'N');
+
+      // Controlar visibilidad de botones según estado
+      const btnGuardar = document.getElementById('btnGuardar');
+      const btnAgregarDetalle = document.getElementById('btn-agregar-detalle');
+      const cerrado = (estadoPresupuestoCodigo === 'C');
+      const aceptado = (estadoPresupuestoCodigo === 'A');
+      const rechazado = (estadoPresupuestoCodigo === 'R');
+      
+      console.log('[PRESUPUESTOS] Estado:', estadoPresupuestoCodigo, 'Cerrado:', cerrado, 'Aceptado:', aceptado, 'Rechazado:', rechazado);
+      if (cerrado || aceptado || rechazado) {
+          // Presupuesto cerrado, aceptado o rechazado: deshabilitar edición
+          console.log('[PRESUPUESTOS] → Presupuesto CERRADO/ACEPTADO/RECHAZADO en buscarPresupuestoAbierto()');
+          if (btnGuardar) {
+              btnGuardar.style.setProperty('display', 'none', 'important');
+              console.log('[PRESUPUESTOS] → Botón Guardar OCULTADO con !important');
+          }
+          if (btnAgregarDetalle) {
+              btnAgregarDetalle.style.setProperty('display', 'none', 'important');
+              console.log('[PRESUPUESTOS] → Botón Añadir Detalle OCULTADO con !important');
+          }
+          
+          // Deshabilitar botones de eliminar detalles
+          const botonesEliminar = document.querySelectorAll('.btn-icon');
+          botonesEliminar.forEach(btn => {
+              btn.disabled = true;
+              btn.style.pointerEvents = 'none';
+              btn.style.opacity = '0.4';
+          });
+          
+          // Bloquear grid de detalles
+          const gridBody = document.querySelector('table tbody');
+          if (gridBody) {
+              gridBody.style.cursor = 'not-allowed';
+          }
+      }
 
       if (detallesNormalizados.length > 0) {
         detalles = detallesNormalizados.map(d => ({
@@ -749,16 +826,26 @@ function actualizarPaginacionContactos() {
 }
 
 function abrirModalContactos() {
+  console.log('[PRESUPUESTOS] abrirModalContactos() llamada');
   const modal = document.getElementById('modalContactos');
+  console.log('[PRESUPUESTOS] Modal encontrado:', !!modal);
   if (modal) {
+    modal.classList.remove('hidden');
     modal.style.display = 'block';
+    console.log('[PRESUPUESTOS] Modal abierto (clase hidden removida), cargando contactos...');
     cargarContactos(1);
+  } else {
+    console.error('[PRESUPUESTOS] ERROR: Modal no encontrado!');
   }
 }
 
 function cerrarModalContactos() {
   const modal = document.getElementById('modalContactos');
-  if (modal) modal.style.display = 'none';
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+    console.log('[PRESUPUESTOS] Modal cerrado (clase hidden agregada)');
+  }
 }
 
 function seleccionarContactoModal(contactoData) {
@@ -778,10 +865,19 @@ function seleccionarContactoModal(contactoData) {
 }
 
 function inicializarModalContactos() {
+  console.log('[PRESUPUESTOS] Inicializando modal de contactos...');
   // Botón Asignar
   const btnAsignar = document.getElementById('btnAsignarContacto');
+  console.log('[PRESUPUESTOS] Botón Asignar encontrado:', !!btnAsignar);
   if (btnAsignar) {
-    btnAsignar.addEventListener('click', abrirModalContactos);
+    console.log('[PRESUPUESTOS] Asignando evento click al botón Asignar');
+    btnAsignar.addEventListener('click', () => {
+      console.log('[PRESUPUESTOS] ¡Click en botón Asignar detectado!');
+      abrirModalContactos();
+    });
+    console.log('[PRESUPUESTOS] Evento asignado correctamente');
+  } else {
+    console.error('[PRESUPUESTOS] ERROR: Botón Asignar no encontrado!');
   }
   
   // Cerrar modal

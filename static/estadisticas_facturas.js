@@ -171,6 +171,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const el = document.getElementById(id);
     if (el) el.textContent = value;
   }
+  
+  // Asignación de importe con color automático (verde/rojo)
+  function safeSetAmount(id, value, rawAmount) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = value;
+    // Aplicar clase de color según el valor
+    el.classList.remove('amount-positive', 'amount-negative');
+    if (rawAmount !== undefined && rawAmount !== null) {
+      const numValue = typeof rawAmount === 'number' ? rawAmount : parsearImporte(rawAmount);
+      if (numValue >= 0) {
+        el.classList.add('amount-positive');
+      } else {
+        el.classList.add('amount-negative');
+      }
+    }
+  }
 
   
   function formatearPorcentaje(valor) {
@@ -583,7 +600,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       mes_total: data?.actual?.mes_actual?.total,
       mes_cantidad: data?.actual?.mes_actual?.cantidad
     });
-    safeSet(`${prefijo}Total`, formatearImporte(data.actual.total));
+    safeSetAmount(`${prefijo}Total`, formatearImporte(data.actual.total), data.actual.total);
     let mediaValor = parsearImporte(data.actual.media);
     if (!mediaValor || mediaValor === 0) {
       const tot = parsearImporte(data.actual.total);
@@ -597,11 +614,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (mesCant > 0 && mesTot !== null) mediaValor = mesTot / mesCant;
       }
     }
-    safeSet(`${prefijo}Media`, formatearImporte(mediaValor));
+    safeSetAmount(`${prefijo}Media`, formatearImporte(mediaValor), mediaValor);
     // Datos del mes seleccionado
     const totalMesSeleccionado = data.actual.mes_actual?.total ?? 0;
     const cantidadMes = data.actual.mes_actual?.cantidad ?? 0;
-    safeSet(`${prefijo}MediaMensual`, formatearImporte(data.actual.media_mensual));
+    safeSetAmount(`${prefijo}MediaMensual`, formatearImporte(data.actual.media_mensual), data.actual.media_mensual);
     // Cantidad debe ser del mes seleccionado (o 0 si no hay)
     safeSet(`${prefijo}Cantidad`, cantidadMes);
     safeSet(`${prefijo}Anterior`, `Año anterior: ${formatearImporte(data.anterior.total)}`);
@@ -623,16 +640,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         mediaPreferida = totAcumNum / cantAcumNum;
       }
       console.debug(`[stats] ${prefijo} media recalculada (Mes→YTD)`, { mediaPreferida, totMesNum, cantMesNum, totAcumNum, cantAcumNum });
-      safeSet(`${prefijo}Media`, formatearImporte(mediaPreferida));
+      safeSetAmount(`${prefijo}Media`, formatearImporte(mediaPreferida), mediaPreferida);
     } catch (e) {
       console.warn(`[stats] ${prefijo} no se pudo recalcular media`, e);
     }
-    safeSet(`${prefijo}TotalMes`, formatearImporte(totalMes));
+    safeSetAmount(`${prefijo}TotalMes`, formatearImporte(totalMes), totalMes);
     const mesAnteriorTotal = data.anterior?.mismo_mes?.total ?? 0;
     safeSet(`${prefijo}MesAnterior`, `Mismo mes año anterior: ${formatearImporte(mesAnteriorTotal)}`);
 
     if (cantMes) {
-      safeSet(`${prefijo}TotalMes`, formatearImporte(data.actual.mes_actual.total));
+      safeSetAmount(`${prefijo}TotalMes`, formatearImporte(data.actual.mes_actual.total), data.actual.mes_actual.total);
       safeSet(`${prefijo}MesAnterior`, `Mismo mes año anterior: ${formatearImporte(mesAnteriorTotal)}`);
       actualizarPorcentaje(`${prefijo}PorcentajeMes`, data.porcentaje_diferencia_mes);
       actualizarPorcentajeFaltaMediaMensual(
@@ -664,7 +681,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       mes_total: global?.actual?.mes_actual?.total,
       mes_cantidad: global?.actual?.mes_actual?.cantidad
     });
-    document.getElementById('globalTotal').textContent = formatearImporte(global.actual.total);
+    safeSetAmount('globalTotal', formatearImporte(global.actual.total), global.actual.total);
     let globalMedia = parsearImporte(global.actual.media);
     if (!globalMedia || globalMedia === 0) {
       const tot = parsearImporte(global.actual.total);
@@ -677,8 +694,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (mesCant > 0 && mesTot !== null) globalMedia = mesTot / mesCant;
       }
     }
-    document.getElementById('globalMedia').textContent = formatearImporte(globalMedia);
-    document.getElementById('globalMediaMensual').textContent = formatearImporte(global.actual.media_mensual);
+    safeSetAmount('globalMedia', formatearImporte(globalMedia), globalMedia);
+    safeSetAmount('globalMediaMensual', formatearImporte(global.actual.media_mensual), global.actual.media_mensual);
     document.getElementById('globalCantidad').textContent = global.actual.cantidad;
     document.getElementById('globalAnterior').textContent = `Año anterior: ${formatearImporte(global.anterior.total)}`;
     actualizarPorcentaje('globalPorcentaje', global.porcentaje_diferencia);
@@ -690,7 +707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mesActual = esProd ? (new Date().getMonth() + 1) : parseInt(mesSel, 10);
     const acumulado = parsearImporte(global.actual.total);
     const previsto = acumulado + (mediaMensual * (12 - mesActual));
-    document.getElementById('globalTotalPrevisto').textContent = formatearImporte(previsto);
+    safeSetAmount('globalTotalPrevisto', formatearImporte(previsto), previsto);
   
     const p = (acumulado / previsto) * 100;
     const diff = p >= 100 ? p - 100 : 100 - p;
@@ -698,7 +715,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('globalPorcentajePrevistoAnyo').className = 'stats-percentage ' + (p >= 100 ? 'positive' : 'negative');
   
     // Mostrar SIEMPRE los valores del mes, aunque la cantidad sea 0
-    document.getElementById('globalTotalMes').textContent = formatearImporte(global.actual.mes_actual?.total || 0);
+    safeSetAmount('globalTotalMes', formatearImporte(global.actual.mes_actual?.total || 0), global.actual.mes_actual?.total || 0);
     document.getElementById('globalMesAnterior').textContent = `Mismo mes año anterior: ${formatearImporte(global.anterior.mismo_mes?.total || 0)}`;
     actualizarPorcentaje('globalPorcentajeMes', global.porcentaje_diferencia_mes);
     actualizarPorcentajeFaltaMediaMensual(
@@ -777,8 +794,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const gastos   = data.gastos;
     const ingresosEl = document.getElementById('ig-total-ingresos');
     const gastosEl   = document.getElementById('ig-total-gastos');
-    if(ingresosEl) ingresosEl.textContent = formatearImporte(ingresos.total_actual);
-    if(gastosEl)   gastosEl.textContent   = formatearImporte(Math.abs(gastos.total_actual));
+    if(ingresosEl) {
+      ingresosEl.textContent = formatearImporte(ingresos.total_actual);
+      ingresosEl.classList.remove('amount-positive', 'amount-negative');
+      ingresosEl.classList.add('amount-positive');
+    }
+    if(gastosEl) {
+      gastosEl.textContent = formatearImporte(Math.abs(gastos.total_actual));
+      gastosEl.classList.remove('amount-positive', 'amount-negative');
+      gastosEl.classList.add('amount-negative');
+    }
     
     // Mostrar la última actualización con fecha y hora
     const ultimaActualizacionEl = document.getElementById('ig-ultima-actualizacion');
@@ -806,15 +831,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const balanceEl = document.getElementById('kpi-balance-mes-actual');
     if(balanceEl){
       balanceEl.textContent = formatearImporte(balanceValor);
-      balanceEl.classList.remove('importe-positivo','importe-negativo');
-      balanceEl.classList.add(balanceValor>=0 ? 'importe-positivo' : 'importe-negativo');
+      balanceEl.classList.remove('amount-positive','amount-negative');
+      balanceEl.classList.add(balanceValor>=0 ? 'amount-positive' : 'amount-negative');
     }
 
     const balTotalEl = document.getElementById('ig-total-balance');
     if(balTotalEl){
       balTotalEl.textContent = formatearImporte(balanceValor);
-      balTotalEl.classList.remove('importe-positivo','importe-negativo');
-      balTotalEl.classList.add(balanceValor>=0 ? 'importe-positivo' : 'importe-negativo');
+      balTotalEl.classList.remove('amount-positive','amount-negative');
+      balTotalEl.classList.add(balanceValor>=0 ? 'amount-positive' : 'amount-negative');
     }
 
     // Porcentajes
@@ -939,9 +964,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         elemento.textContent = formatearImporte(valor);
         elemento.className = ''; // Limpiar clases existentes
         if (parsearImporte(valor) >= 0) {
-          elemento.classList.add('importe-positivo');
+          elemento.classList.add('amount-positive');
         } else {
-          elemento.classList.add('importe-negativo');
+          elemento.classList.add('amount-negative');
         }
       }
     }

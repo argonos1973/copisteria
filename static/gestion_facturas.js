@@ -718,6 +718,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById('total-proforma').value = '0,00';
         detalles = [];
         actualizarTablaDetalles();
+        
+        // Ocultar botones Cobrar y Anular en factura nueva
+        console.log('[CONTROL BOTONES] → Nueva factura: ocultando Cobrar y Anular');
+        const btnCobrarp = document.getElementById('btnCobrarp');
+        const btnAnular = document.getElementById('btnAnular');
+        if (btnCobrarp) {
+          btnCobrarp.style.setProperty('display', 'none', 'important');
+          console.log('[CONTROL BOTONES] → Botón Cobrar OCULTADO (nueva factura)');
+        }
+        if (btnAnular) {
+          btnAnular.style.setProperty('display', 'none', 'important');
+          console.log('[CONTROL BOTONES] → Botón Anular OCULTADO (nueva factura)');
+        }
       } catch (error) {
         console.error('Error al inicializar nueva factura:', error);
         mostrarNotificacion('Error al inicializar nueva factura', 'error');
@@ -730,49 +743,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       btnCancelar.addEventListener('click', volverSegunOrigen);
     }
 
+    // NOTA: Control de visibilidad de botones ahora se hace en buscarFacturaAbierta()
+    // Este código legacy está comentado para evitar conflictos
+    
     const btnAnular = document.getElementById("btnAnular");
     if (btnAnular) {
-       // Mostrar u ocultar según modo y estado
-       const enEdicion = facturaData ? facturaData.modo === 'edicion' : true;
-       const yaAnulada = facturaData ? facturaData.estado === 'A' : false;
-      btnAnular.style.display = enEdicion && !yaAnulada ? 'inline-block' : 'none';
-      // Configurar visibilidad del botón Cobrar (solo pendiente en edición)
-      const btnCobrarp = document.getElementById("btnCobrarp");
-      let pendiente = false;
-      let cobrada = false;
-      if (btnCobrarp) {
-        // Permitir cobrar también cuando la factura esté Vencida ('V')
-        pendiente = facturaData ? (facturaData.estado === 'P' || facturaData.estado === 'V') : true;
-        cobrada = facturaData ? facturaData.estado === 'C' : false;
-        // Actualizar flag global
-        facturaCobrada = cobrada;
-        // Cambiar el cursor del grid de detalles según estado
-        const gridBody = document.querySelector('table#tabla-detalle-proforma tbody');
-        if (gridBody) {
-          gridBody.style.cursor = cobrada ? 'not-allowed' : 'default';
-        }
-        btnCobrarp.style.display = enEdicion && pendiente ? 'inline-block' : 'none';
-      }
-      // Determinar visibilidad
-      const anularVisible = enEdicion && !yaAnulada && !pendiente;
-      btnAnular.style.display = anularVisible ? 'inline-block' : 'none';
-      // Si Anular visible, ocultar Guardar
-      const btnGuardarElement = document.getElementById("btnGuardar");
-      if (btnGuardarElement) {
-        btnGuardarElement.style.display = anularVisible ? 'none' : 'inline-block';
-      }
-      // Mostrar/ocultar botón Añadir detalle según estado cobradas
-      const btnAgregarDetalle = document.getElementById("btn-agregar-detalle");
-      if (btnAgregarDetalle) {
-        btnAgregarDetalle.style.display = cobrada ? 'none' : 'inline-block';
-      }
-      // Deshabilitar botones Eliminar cuando factura cobrada
-      const botonesEliminar = document.querySelectorAll('.btn-icon');
-      botonesEliminar.forEach(btn => {
-        btn.disabled = cobrada;
-        btn.style.pointerEvents = cobrada ? 'none' : '';
-        btn.style.opacity = cobrada ? '0.4' : '';
-      });
       // Reiniciar listeners para evitar duplicados
       btnAnular.replaceWith(btnAnular.cloneNode(true));
       const btnAnularActual = document.getElementById("btnAnular");
@@ -1294,7 +1269,10 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
             const estadoTexto = getEstadoFormateado(estadoCodigo);
             
             console.log('Estado original:', estadoCodigo, 'Estado formateado:', estadoTexto);
+            // Mostrar el texto formateado en el input de solo lectura
             document.getElementById('estado').value = estadoTexto;
+            // IMPORTANTE: Mantener el código de estado en facturaData para comparaciones
+            facturaData.estado = estadoCodigo;
             
             document.getElementById('total-proforma').value = formatearImporte(factura.total || 0);
 
@@ -1342,36 +1320,97 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
             const btnGuardar = document.getElementById("btnGuardar");
             const btnAgregarDetalle = document.getElementById("btn-agregar-detalle");
             
-            // Usar el estado original (código) antes de la conversión a texto
-            const estadoFactura = factura.estado || 'P';
+            // IMPORTANTE: Usar facturaData.estado (que ya tiene el código)
+            const estadoFactura = facturaData.estado || 'P';
             const pendiente = (estadoFactura === 'P' || estadoFactura === 'V');
             const cobrada = (estadoFactura === 'C');
             const anulada = (estadoFactura === 'A');
             
+            // DEBUG: Logs para verificar
+            console.log('[CONTROL BOTONES] estadoFactura:', estadoFactura);
+            console.log('[CONTROL BOTONES] pendiente:', pendiente, 'cobrada:', cobrada, 'anulada:', anulada);
+            console.log('[CONTROL BOTONES] btnCobrarp existe:', !!btnCobrarp);
+            
             // Actualizar flag global
             facturaCobrada = cobrada;
             
-            // Configurar visibilidad del botón Cobrar (pendiente o vencida)
-            if (btnCobrarp) {
-                btnCobrarp.style.display = pendiente ? 'inline-block' : 'none';
-                console.log(`Botón Cobrar: ${pendiente ? 'visible' : 'oculto'} (estado: ${estadoFactura})`);
-            }
+            // Controlar visibilidad de botones según estado
+            // Estados: P=Pendiente, V=Vencida, C=Cobrada, A=Anulada
             
-            // Configurar visibilidad del botón Anular (solo si no está anulada ni pendiente)
-            if (btnAnular) {
-                const anularVisible = !anulada && !pendiente && cobrada;
-                btnAnular.style.display = anularVisible ? 'inline-block' : 'none';
-            }
-            
-            // Configurar visibilidad del botón Guardar (ocultar si anular está visible)
-            if (btnGuardar && btnAnular) {
-                const anularVisible = !anulada && !pendiente && cobrada;
-                btnGuardar.style.display = anularVisible ? 'none' : 'inline-block';
-            }
-            
-            // Configurar visibilidad del botón Añadir detalle
-            if (btnAgregarDetalle) {
-                btnAgregarDetalle.style.display = cobrada ? 'none' : 'inline-block';
+            if (pendiente) {
+                // Factura Pendiente/Vencida: mostrar Guardar, Cobrar
+                console.log('[CONTROL BOTONES] → Factura PENDIENTE: mostrando Guardar y Cobrar');
+                if (btnGuardar) btnGuardar.style.display = 'inline-block';
+                if (btnCobrarp) btnCobrarp.style.display = 'inline-block';
+                if (btnAnular) btnAnular.style.display = 'none';
+                if (btnAgregarDetalle) btnAgregarDetalle.style.display = 'inline-block';
+            } else if (cobrada) {
+                // Factura Cobrada: mostrar Anular, ocultar Guardar y Cobrar
+                console.log('[CONTROL BOTONES] → Factura COBRADA: ocultando Guardar y Cobrar');
+                if (btnGuardar) {
+                    btnGuardar.style.setProperty('display', 'none', 'important');
+                    btnGuardar.setAttribute('data-estado-bloqueado', 'true');
+                    console.log('[CONTROL BOTONES] → Botón Guardar OCULTADO con !important');
+                }
+                if (btnCobrarp) {
+                    btnCobrarp.style.setProperty('display', 'none', 'important');
+                    btnCobrarp.setAttribute('data-estado-bloqueado', 'true');
+                    console.log('[CONTROL BOTONES] → Botón Cobrar OCULTADO con !important');
+                    
+                    // OBSERVER: Detectar si algo re-muestra el botón
+                    const observer = new MutationObserver((mutations) => {
+                        mutations.forEach((mutation) => {
+                            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                                const currentDisplay = btnCobrarp.style.display;
+                                if (currentDisplay !== 'none' && currentDisplay !== '') {
+                                    console.error('⚠️ [CONTROL BOTONES] ALERTA: Algo cambió el display del botón Cobrar!');
+                                    console.error('⚠️ Display actual:', currentDisplay);
+                                    console.error('⚠️ Stack trace:', new Error().stack);
+                                    // Forzar de nuevo a none con !important
+                                    btnCobrarp.style.setProperty('display', 'none', 'important');
+                                }
+                            }
+                        });
+                    });
+                    observer.observe(btnCobrarp, { attributes: true, attributeFilter: ['style'] });
+                    
+                    // Verificar después de 1 segundo
+                    setTimeout(() => {
+                        const finalDisplay = btnCobrarp.style.display;
+                        const isVisible = btnCobrarp.offsetParent !== null;
+                        console.log('[CONTROL BOTONES] ⏰ Verificación después de 1s:');
+                        console.log('  display:', finalDisplay);
+                        console.log('  visible:', isVisible);
+                        if (isVisible) {
+                            console.error('⚠️ [CONTROL BOTONES] ERROR: El botón sigue visible!');
+                        }
+                    }, 1000);
+                }
+                if (btnAnular) btnAnular.style.display = 'inline-block';
+                if (btnAgregarDetalle) {
+                    btnAgregarDetalle.style.setProperty('display', 'none', 'important');
+                    btnAgregarDetalle.setAttribute('data-estado-bloqueado', 'true');
+                    console.log('[CONTROL BOTONES] → Botón Añadir Detalle OCULTADO con !important');
+                }
+            } else if (anulada) {
+                // Factura Anulada: ocultar todos los botones de edición
+                console.log('[CONTROL BOTONES] → Factura ANULADA: ocultando todos los botones');
+                if (btnGuardar) {
+                    btnGuardar.style.setProperty('display', 'none', 'important');
+                    console.log('[CONTROL BOTONES] → Botón Guardar OCULTADO con !important');
+                }
+                if (btnCobrarp) {
+                    btnCobrarp.style.setProperty('display', 'none', 'important');
+                    console.log('[CONTROL BOTONES] → Botón Cobrar OCULTADO con !important');
+                }
+                if (btnAnular) {
+                    btnAnular.style.setProperty('display', 'none', 'important');
+                    console.log('[CONTROL BOTONES] → Botón Anular OCULTADO con !important');
+                }
+                if (btnAgregarDetalle) {
+                    btnAgregarDetalle.style.setProperty('display', 'none', 'important');
+                    console.log('[CONTROL BOTONES] → Botón Añadir Detalle OCULTADO con !important');
+                }
             }
             
             // Deshabilitar botones Eliminar cuando factura cobrada

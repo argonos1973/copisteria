@@ -1,6 +1,6 @@
 {
   "name": "Dark Linux",
-  "version": 1,
+  "version": 3,
   "meta": {
     "author": "aleph70",
     "icon": "",
@@ -48,6 +48,18 @@
       "hover-bg": "{palette.base600}",
       "border": "{semantic.border}"
     },
+    "button-card": {
+      "bg": "{palette.base900}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.base800}",
+      "border": "{semantic.border}"
+    },
+    "button-table": {
+      "bg": "{palette.base900}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.base800}",
+      "border": "{semantic.border}"
+    },
     "input": {
       "bg": "{palette.base700}",
       "text": "{palette.white}",
@@ -83,15 +95,13 @@
       "text": "{palette.white}",
       "header-bg": "{palette.base700}",
       "header-text": "{palette.white}",
-      "row-hover": "{palette.base700}",
-      "border": "{semantic.border}"
+      "row-hover": "{palette.base700}"
     },
     "menu": {
       "bg": "{semantic.bg-elevated}",
       "text": "{semantic.text}",
       "hover": "{palette.base700}",
-      "border": "{semantic.border}",
-      "submenu-bg": "{semantic.bg-elevated}"
+      "border": "{semantic.border}"
     },
     "header": {
       "bg": "{semantic.bg-elevated}",
@@ -111,6 +121,10 @@
     "disabled": {
       "bg": "{palette.base800}",
       "text": "{semantic.text-muted}"
+    },
+    "amount": {
+      "positive": "{palette.green500}",
+      "negative": "{palette.red500}"
     }
   }
 }

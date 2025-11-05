@@ -47,6 +47,7 @@ let idContacto = null;
 let productosOriginales = [];
 let detalleEnEdicion = null;
 let totalInicial = 0;
+let estadoProformaCodigo = 'A'; // A=Abierta, C=Cerrada
 
 /**
  * Obtiene el total actual de la proforma
@@ -661,10 +662,46 @@ async function cargarProforma(id) {
       // Establecer el texto visible según el tipo
       if (data.estado === 'A') {
         campoEstado.value = 'Abierta';
+        estadoProformaCodigo = 'A';
       } else if (data.estado === 'C') {
         campoEstado.value = 'Cerrada';
+        estadoProformaCodigo = 'C';
       } else {
-        campoEstado.value = data.estado; // Valor por defecto si no reconocemos el código
+        campoEstado.value = data.estado;
+        estadoProformaCodigo = data.estado;
+      }
+      
+      // Controlar visibilidad de botones según estado
+      const btnGuardar = document.getElementById('btnGuardar');
+      const btnAgregarDetalle = document.getElementById('btn-agregar-detalle');
+      const cerrada = (estadoProformaCodigo === 'C');
+      
+      console.log('[PROFORMAS] Estado:', estadoProformaCodigo, 'Cerrada:', cerrada);
+      if (cerrada) {
+        // Proforma cerrada: deshabilitar edición
+        console.log('[PROFORMAS] → Proforma CERRADA: ocultando botones de edición');
+        if (btnGuardar) {
+          btnGuardar.style.setProperty('display', 'none', 'important');
+          console.log('[PROFORMAS] → Botón Guardar OCULTADO con !important');
+        }
+        if (btnAgregarDetalle) {
+          btnAgregarDetalle.style.setProperty('display', 'none', 'important');
+          console.log('[PROFORMAS] → Botón Añadir Detalle OCULTADO con !important');
+        }
+        
+        // Deshabilitar botones de eliminar detalles
+        const botonesEliminar = document.querySelectorAll('.btn-icon');
+        botonesEliminar.forEach(btn => {
+          btn.disabled = true;
+          btn.style.pointerEvents = 'none';
+          btn.style.opacity = '0.4';
+        });
+        
+        // Bloquear grid de detalles
+        const gridBody = document.querySelector('table tbody');
+        if (gridBody) {
+          gridBody.style.cursor = 'not-allowed';
+        }
       }
     }
     
@@ -746,8 +783,45 @@ async function buscarProformaAbierta(idContacto) {
             // Convertir la fecha de YYYY-MM-DD a DD/MM/AAAA
             const fechaFormateada = formatearFechaSoloDia(data.fecha);
             document.getElementById('fecha').value = fechaFormateada;
-            document.getElementById('estado').value = data.estado === 'A' ? 'Abierta' : data.estado;
+            
+            // Guardar código de estado y mostrar texto
+            estadoProformaCodigo = data.estado || 'A';
+            const estadoTexto = (data.estado === 'A') ? 'Abierta' : (data.estado === 'C') ? 'Cerrada' : data.estado;
+            document.getElementById('estado').value = estadoTexto;
             document.getElementById('total-proforma').value = formatearImporte(importes.total || 0);
+            
+            // Controlar visibilidad de botones según estado
+            const btnGuardar = document.getElementById('btnGuardar');
+            const btnAgregarDetalle = document.getElementById('btn-agregar-detalle');
+            const cerrada = (estadoProformaCodigo === 'C');
+            
+            console.log('[PROFORMAS] Estado:', estadoProformaCodigo, 'Cerrada:', cerrada);
+            if (cerrada) {
+                // Proforma cerrada: deshabilitar edición
+                console.log('[PROFORMAS] → Proforma CERRADA en buscarProformaAbierta()');
+                if (btnGuardar) {
+                    btnGuardar.style.setProperty('display', 'none', 'important');
+                    console.log('[PROFORMAS] → Botón Guardar OCULTADO con !important');
+                }
+                if (btnAgregarDetalle) {
+                    btnAgregarDetalle.style.setProperty('display', 'none', 'important');
+                    console.log('[PROFORMAS] → Botón Añadir Detalle OCULTADO con !important');
+                }
+                
+                // Deshabilitar botones de eliminar detalles
+                const botonesEliminar = document.querySelectorAll('.btn-icon');
+                botonesEliminar.forEach(btn => {
+                    btn.disabled = true;
+                    btn.style.pointerEvents = 'none';
+                    btn.style.opacity = '0.4';
+                });
+                
+                // Bloquear grid de detalles
+                const gridBody = document.querySelector('table tbody');
+                if (gridBody) {
+                    gridBody.style.cursor = 'not-allowed';
+                }
+            }
 
             // IMPORTANTE: Actualizar el tipo de proforma (tanto el campo oculto como el selector)
             const tipoProforma = data.tipo === 'A' ? 'A' : 'N';
@@ -977,8 +1051,13 @@ async function guardarProforma(formaPago = 'E', totalPago = 0, estado = 'A') {
             return sum + impuesto;
         }, 0));
 
-        // Calcular el total sumando importe_bruto e importe_impuestos
-        const total = redondearImporte(importe_bruto + importe_impuestos);
+        // CORRECCIÓN: Calcular total correcto sumando totales de línea (no subtotal + iva)
+        const total = redondearImporte(detalles.reduce((sum, d) => {
+            const subtotal_linea = parseFloat(d.precio) * parseInt(d.cantidad);
+            const iva_linea = redondearImporte(subtotal_linea * (parseFloat(d.impuestos) / 100));
+            const total_linea = redondearImporte(subtotal_linea + iva_linea);
+            return sum + total_linea;
+        }, 0));
         
         // Asegurar que totalPago sea un número válido
         totalPago = redondearImporte(String(totalPago).replace(',', '.'));

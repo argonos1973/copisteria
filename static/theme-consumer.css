@@ -3,6 +3,24 @@
  * Aplica variables CSS del tema a TODOS los elementos
  */
 
+/* ==================== UTILIDADES ==================== */
+.hidden {
+    display: none !important;
+}
+
+/* ==================== COMPATIBILIDAD VARIABLES ANTIGUAS ==================== */
+/* Variables de compatibilidad para páginas que usan nombres antiguos */
+:root {
+    --color-fondo: var(--bg);
+    --color-primario: var(--primary);
+    --color-secundario: var(--secondary);
+    --color-texto: var(--text);
+    --color-etiqueta: var(--text);
+    --color-borde: var(--border);
+    --color-shadow: var(--shadow);
+    --color-hover: var(--menu-hover);
+}
+
 /* ==================== BODY ==================== */
 body {
     background: var(--bg) !important;
@@ -26,6 +44,17 @@ h1, h2, h3, h4, h5, h6 {
     color: var(--text) !important;
 }
 
+/* Headers de stats-cards - fondo gris claro */
+.stats-card h3,
+.stats-card h2,
+.card-header {
+    background: var(--table-header-bg, var(--header-bg, #e9ecef)) !important;
+    color: var(--table-header-text, var(--header-text, #2c3e50)) !important;
+    padding: 12px 16px !important;
+    margin: -20px -20px 16px -20px !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
 p, span, div, a {
     color: var(--text) !important;
 }
@@ -34,16 +63,30 @@ p, span, div, a {
 table, .table {
     background: var(--table-bg) !important;
     color: var(--table-text) !important;
-    border-color: var(--table-border) !important;
+    border-collapse: collapse !important;
 }
 
-/* Headers de tabla - BLANCO en tema oscuro */
+/* Headers de tabla - Color según tema */
 table thead, table thead th,
 .table thead, .table thead th,
-thead, thead th {
+thead, thead th,
+#tabla-detalle-ticket thead th,
+#tabla-detalle-ticket th,
+#tabla-detalle-proforma thead th,
+#tabla-detalle-proforma th,
+#tabla-detalle-presupuesto thead th,
+#tabla-detalle-presupuesto th {
     background: var(--table-header-bg) !important;
     color: var(--table-header-text) !important;
     font-weight: bold !important;
+}
+
+/* Forzar color de texto en encabezados para evitar sobrescrituras */
+thead th, table thead th, .table thead th,
+#tabla-detalle-ticket thead th,
+#tabla-detalle-proforma thead th,
+#tabla-detalle-presupuesto thead th {
+    color: var(--table-header-text) !important;
 }
 
 table tbody, .table tbody {
@@ -59,6 +102,11 @@ table tbody tr, .table tbody tr {
 table td, .table td,
 table th, .table th {
     color: var(--table-text) !important;
+    border: none !important;
+}
+
+table tbody tr, .table tbody tr {
+    border: none !important;
 }
 
 table tbody tr:hover, .table tbody tr:hover {
@@ -77,17 +125,233 @@ table tbody tr:hover, .table tbody tr:hover {
     font-weight: bold !important;
 }
 
+.grid div, .data-grid div,
+.grid-row, .data-grid-row,
+.grid-cell, .data-grid-cell {
+    border: none !important;
+}
+
+/* ==================== FOOTER FIJO ==================== */
+.fixed-footer,
+.fixed-footer-factura,
+.fixed-footer-gastos,
+.fixed-footer-ticket {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+    border-top: 1px solid var(--border) !important;
+}
+
+.fixed-footer table,
+.fixed-footer-factura table,
+.fixed-footer-gastos table,
+.fixed-footer-ticket table {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+.fixed-footer td,
+.fixed-footer-factura td,
+.fixed-footer-gastos td,
+.fixed-footer-ticket td,
+.fixed-footer th,
+.fixed-footer-factura th,
+.fixed-footer-gastos th,
+.fixed-footer-ticket th {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+.totales,
+.total-data,
+.label-totales {
+    background: transparent !important;
+    color: var(--text) !important;
+}
+
+/* ==================== FORMULARIOS Y PESTAÑAS ==================== */
+.tabs-container,
+.tab-content,
+.tab-section,
+form,
+#contactForm {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+.field-item,
+.field-row {
+    background: transparent !important;
+}
+
+.tab-section-title {
+    color: var(--text) !important;
+}
+
 /* ==================== BOTONES ==================== */
 button, .btn,
 input[type="button"],
-input[type="submit"] {
+input[type="submit"],
+.btn-primary,
+.btn-secondary,
+#btnGuardar,
+#btnCancelar {
     background: var(--button-bg) !important;
     color: var(--button-text) !important;
-    border-color: var(--button-border) !important;
+    border: 1px solid var(--button-border) !important;
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    min-height: 32px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    transition: all 0.3s !important;
 }
 
-button:hover, .btn:hover {
+button:hover, .btn:hover,
+.btn-primary:hover,
+#btnGuardar:hover {
     background: var(--button-hover-bg) !important;
+}
+
+/* Botones secundarios específicos */
+.btn-secondary,
+#btnCancelar {
+    background: var(--button-secondary-bg) !important;
+    color: var(--button-secondary-text) !important;
+    border: 1px solid var(--button-secondary-border) !important;
+}
+
+.btn-secondary:hover,
+#btnCancelar:hover {
+    background: var(--button-secondary-hover-bg) !important;
+}
+
+/* Botones en tarjetas/cards */
+.card button,
+.stats-card button,
+.card .btn,
+.stats-card .btn {
+    background: var(--button-card-bg) !important;
+    color: var(--button-card-text) !important;
+    border: 1px solid var(--button-card-border) !important;
+}
+
+.card button:hover,
+.stats-card button:hover,
+.card .btn:hover,
+.stats-card .btn:hover {
+    background: var(--button-card-hover-bg) !important;
+}
+
+/* Botones en tablas/grids */
+table button,
+table .btn,
+.tabla-consulta button,
+.tabla-consulta .btn,
+.grid button,
+.grid .btn,
+tbody button,
+tbody .btn {
+    background: var(--button-table-bg) !important;
+    color: var(--button-table-text) !important;
+    border: 1px solid var(--button-table-border) !important;
+}
+
+table button:hover,
+table .btn:hover,
+.tabla-consulta button:hover,
+.tabla-consulta .btn:hover,
+.grid button:hover,
+.grid .btn:hover,
+tbody button:hover,
+tbody .btn:hover {
+    background: var(--button-table-hover-bg) !important;
+}
+
+/* ==================== IMPORTES POSITIVOS Y NEGATIVOS ==================== */
+/* Valores positivos en verde */
+.amount-positive,
+.positivo,
+.ingreso,
+.stats-percentage.positive,
+.positive {
+    color: var(--amount-positive) !important;
+    font-weight: 500 !important;
+}
+
+/* Valores negativos en rojo */
+.amount-negative,
+.negativo,
+.gasto,
+.stats-percentage.negative,
+.negative {
+    color: var(--amount-negative) !important;
+    font-weight: 500 !important;
+}
+
+/* Iconos en botones - tamaño heredado, no forzado */
+/* NO aplicar a iconos de información de precio */
+button:not(.icono-info-precio) i, 
+.btn:not(.icono-info-precio) i {
+    /* font-size se deja heredar del contexto */
+    margin: 0 !important;
+}
+
+/* Iconos de información de precio - mantener tamaño pequeño original */
+.icono-info-precio {
+    width: 14px !important;
+    height: 14px !important;
+    min-width: 14px !important;
+    min-height: 14px !important;
+    padding: 0 !important;
+    font-size: 9px !important;
+    line-height: 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.icono-info-precio.oculto {
+    display: none !important;
+}
+
+.icono-info-precio i,
+.icono-info-precio span {
+    font-size: 9px !important;
+    line-height: 14px !important;
+}
+
+/* Aplicar colores de plantilla al popup de información de precio */
+.info-precio-popup {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+.info-precio-popup h4 {
+    color: var(--text) !important;
+}
+
+.info-precio-popup .lista-info-precio li {
+    color: var(--text) !important;
+}
+
+/* Reducir iconos de botones en estadísticas y headers */
+.btn-descargar,
+.header-icons button {
+    padding: 3px 5px !important;
+    min-width: 24px !important;
+    min-height: 24px !important;
+    font-size: 11px !important;
+}
+
+.btn-descargar i,
+.header-icons button i {
+    font-size: 10px !important;
+    margin: 0 !important;
 }
 
 /* ==================== INPUTS ==================== */
@@ -120,8 +384,10 @@ input::placeholder, textarea::placeholder {
     background: var(--menu-hover) !important;
 }
 
-.submenu {
-    background: var(--menu-submenu-bg, var(--menu-bg)) !important;
+.submenu,
+.menu-item .submenu,
+.submenu-block .submenu {
+    background: var(--menu-bg) !important;
 }
 
 .submenu-item {
@@ -216,6 +482,25 @@ input::placeholder, textarea::placeholder {
     color: var(--modal-text) !important;
 }
 
+/* Botones dentro de modales */
+.modal button,
+.modal .btn,
+.modal-footer button,
+.modal-footer .btn,
+.modal-body button,
+.modal-content button {
+    background: var(--modal-button-bg, var(--button-bg)) !important;
+    color: var(--modal-button-text, var(--button-text)) !important;
+    border: 1px solid var(--modal-button-bg, var(--button-bg)) !important;
+}
+
+.modal button:hover,
+.modal .btn:hover,
+.modal-footer button:hover,
+.modal-footer .btn:hover {
+    background: var(--modal-button-hover-bg, var(--button-hover-bg)) !important;
+}
+
 /* ==================== CARDS ==================== */
 .card, .panel, .box {
     background: var(--bg-elevated) !important;
@@ -223,21 +508,66 @@ input::placeholder, textarea::placeholder {
 }
 
 /* ==================== TABS ==================== */
+.tab {
+    background: var(--bg-elevated) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    cursor: pointer !important;
+}
+
 .tab.active, .tab-active {
     background: var(--tab-active-bg) !important;
     color: var(--tab-active-text) !important;
 }
 
-/* ==================== ICONOS ==================== */
-.menu-link i, .menu-item i, i, .icon,
-.fas, .far, .fab, .fa,
-button i, a i, span i {
-    color: var(--icon-color) !important;
+.tab:hover {
+    background: var(--table-row-hover) !important;
 }
 
-/* Iconos en botones y tabs */
-.tab i, .btn i, button i {
+.tab-content {
+    display: none !important;
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+.tab-content.active {
+    display: block !important;
+}
+
+.tabs {
+    display: flex !important;
+    gap: 4px !important;
+}
+
+/* ==================== ICONOS ==================== */
+/* Iconos por defecto - color primario para fondos claros */
+i, .icon, .fas, .far, .fab, .fa {
+    color: var(--icon-color, var(--primary, #2c3e50)) !important;
+}
+
+/* Iconos en menú lateral - deben ser claros */
+.menu-link i, .menu-item i,
+nav i, .sidebar i {
+    color: var(--menu-text, #ecf0f1) !important;
+}
+
+/* Iconos en headers de cards/tablas - usan el color del header-text */
+.stats-card h3 i,
+.card-header i,
+table thead i,
+.page-header i,
+.header-container i {
+    color: var(--header-text, var(--table-header-text, var(--text, #2c3e50))) !important;
+}
+
+/* Iconos en botones - heredan el color del botón */
+button i, .btn i, .tab i, a.btn i {
     color: inherit !important;
+}
+
+/* Iconos en enlaces normales */
+a:not(.btn) i {
+    color: var(--icon-color, var(--primary, #2c3e50)) !important;
 }
 
 /* ==================== PAGINACIÓN ==================== */
@@ -256,19 +586,44 @@ button i, a i, span i {
     border-radius: 8px !important;
 }
 
-/* Botones de paginación secundarios (gris oscuro - Facturas) */
+/* Botones de paginación secundarios - TAMAÑO UNIFORME PARA TODAS LAS CONSULTAS */
 .btn-secondary,
 .btn-pagination,
 #prevPageFacturas,
-#nextPageFacturas {
+#nextPageFacturas,
+#prevPageProformas,
+#nextPageProformas,
+#prevPagePresupuestos,
+#nextPagePresupuestos,
+#prevPageTickets,
+#nextPageTickets {
     background: var(--button-secondary-bg) !important;
     color: var(--button-secondary-text) !important;
     border: 1px solid var(--button-secondary-border) !important;
     padding: 4px 8px !important;
     font-size: 12px !important;
     min-width: 32px !important;
+    min-height: 28px !important;
+    line-height: 1 !important;
     border-radius: 4px !important;
     cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Iconos en botones de paginación - tamaño uniforme */
+.btn-pagination i,
+.btn-secondary i,
+#prevPageFacturas i,
+#nextPageFacturas i,
+#prevPageProformas i,
+#nextPageProformas i,
+#prevPagePresupuestos i,
+#nextPagePresupuestos i,
+#prevPageTickets i,
+#nextPageTickets i {
+    font-size: 12px !important;
 }
 
 .btn-secondary:hover,
@@ -314,4 +669,19 @@ button[onclick*="siguiente"]:disabled {
     padding: 2px 6px !important;
     font-size: 12px !important;
     border-radius: 4px !important;
+}
+
+/* ==================== CHECKBOXES EN GESTIÓN DE PRODUCTOS ==================== */
+input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    cursor: pointer !important;
+}
+
+/* Checkboxes en grids de productos */
+#productosGrid input[type="checkbox"],
+.grid input[type="checkbox"],
+table input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
 }

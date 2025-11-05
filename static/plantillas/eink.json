@@ -1,6 +1,6 @@
 {
   "name": "EInk",
-  "version": 1,
+  "version": 2,
   "meta": {
     "author": "aleph70",
     "icon": "📖",
@@ -18,7 +18,9 @@
     "gray500": "#3a3a3a",
     "gray600": "#2f2f2f",
     "gray700": "#1f1f1f",
-    "gray800": "#1f2937"
+    "gray800": "#1f2937",
+    "green700": "#1b5e20",
+    "red700": "#b71c1c"
   },
   "semantic": {
     "bg": "{palette.gray50}",
@@ -78,8 +80,7 @@
       "text": "{semantic.text}",
       "header-bg": "{palette.gray200}",
       "header-text": "{semantic.text}",
-      "row-hover": "{palette.gray100}",
-      "border": "{semantic.border}"
+      "row-hover": "{palette.gray100}"
     },
     "menu": {
       "bg": "{semantic.bg-elevated}",
@@ -104,6 +105,10 @@
     "disabled": {
       "bg": "{palette.gray100}",
       "text": "{palette.gray400}"
+    },
+    "amount": {
+      "positive": "{palette.green700}",
+      "negative": "{palette.red700}"
     }
   }
 }
