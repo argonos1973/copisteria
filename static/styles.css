@@ -2849,6 +2849,7 @@ input[type="submit"]:hover,
   justify-content: center !important;
   font-size: 16px !important;
   border-radius: 4px !important;
+  color: var(--color-button-text, #ffffff) !important;
 }
 
 #btn-agregar-detalle i {
