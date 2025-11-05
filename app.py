@@ -3060,9 +3060,9 @@ def obtener_totales_mes():
         conn.close()
 
 @app.route('/estadisticas.html')
-@login_required
+@require_admin
 def estadisticas_html():
-    """Serve estadisticas.html with corrected paths"""
+    """Serve estadisticas.html with corrected paths - Solo admin"""
     import os
     try:
         # Read the original file and fix the paths
