@@ -1,6 +1,6 @@
 {
   "name": "Dark Linux",
-  "version": 3,
+  "version": 4,
   "meta": {
     "author": "aleph70",
     "icon": "",
@@ -49,9 +49,9 @@
       "border": "{semantic.border}"
     },
     "button-card": {
-      "bg": "{palette.base900}",
+      "bg": "{palette.base700}",
       "text": "{palette.white}",
-      "hover-bg": "{palette.base800}",
+      "hover-bg": "{palette.base600}",
       "border": "{semantic.border}"
     },
     "button-table": {
