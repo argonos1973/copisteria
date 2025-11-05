@@ -303,18 +303,11 @@ def autenticar_usuario(username, password, empresa_codigo):
         session['empresa_id'] = empresa_id
         session['empresa_codigo'] = empresa_codigo
         session['empresa_nombre'] = empresa_nombre
-        session['empresa_db'] = db_path
-        session['empresa_logo'] = logo_header or 'default_header.png'
+        session['empresa_logo'] = logo_header  # Guardar logo en sesión
         session['rol'] = rol
-        session['es_admin_empresa'] = bool(es_admin_empresa)
-        session['es_superadmin'] = bool(es_superadmin)
-        session['ultimo_acceso'] = ultimo_acceso_anterior  # Último acceso previo
-        session.modified = True  # FORZAR guardado de sesión
-        
-        registrar_auditoria('login_exitoso', descripcion=f'Login a empresa {empresa_nombre}')
-        
-        logger.info(f"✅ Login exitoso: {username} → {empresa_nombre} (user_id={user_id} en sesión)")
-        logger.info(f"DEBUG: Sesión después de login: {dict(session)}")
+        session['es_admin_empresa'] = es_admin_empresa
+        session['es_superadmin'] = es_superadmin
+        session['ultimo_acceso'] = ultimo_acceso_anterior
         
         return {
             'success': True,

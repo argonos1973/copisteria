@@ -1,4 +1,35 @@
 
+// Notificaciones usando el sistema estándar de la aplicación
+function mostrarAlerta(mensaje, tipo = 'info') {
+    console.log(`[ALERTA ${tipo.toUpperCase()}] ${mensaje}`);
+    
+    let contenedor = document.getElementById('notificaciones-contenedor');
+    if (!contenedor) {
+        contenedor = document.createElement('div');
+        contenedor.id = 'notificaciones-contenedor';
+        contenedor.className = 'notificaciones-contenedor';
+        contenedor.style.cssText = 'position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 10000;';
+        document.body.appendChild(contenedor);
+    }
+
+    const notificacion = document.createElement('div');
+    notificacion.className = `notificacion ${tipo}`;
+    notificacion.textContent = mensaje;
+    contenedor.appendChild(notificacion);
+
+    setTimeout(() => notificacion.classList.add('visible'), 100);
+    
+    setTimeout(() => {
+        notificacion.classList.remove('visible');
+        setTimeout(() => {
+            notificacion.remove();
+            if (contenedor && !contenedor.hasChildNodes()) {
+                contenedor.remove();
+            }
+        }, 300);
+    }, 3000);
+}
+
 // Helper para convertir hex a rgba
 function hexToRgba(hex, alpha) {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -203,7 +234,7 @@ let modulos = [];
 document.addEventListener('DOMContentLoaded', () => {
     cargarEstadisticas();
     cargarUsuarios();
-    cargarEmpresas();
+    // cargarEmpresas(); // Eliminada gestión de empresas
     cargarModulos();
     inicializarTabs();
 });
@@ -223,8 +254,8 @@ function inicializarTabs() {
             document.getElementById(`tab-${tabName}`).classList.add('active');
             
             // Cargar datos específicos de cada pestaña
-            if (tabName === 'empresas' && empresas.length === 0) {
-                cargarEmpresas();
+            if (tabName === 'empresas') {
+                cargarConfiguracionEmpresa();
             }
         });
     });
@@ -238,10 +269,15 @@ async function cargarEstadisticas() {
         
         const stats = await response.json();
         
-        document.getElementById('total-usuarios').textContent = stats.total_usuarios || 0;
-        document.getElementById('total-empresas').textContent = stats.total_empresas || 0;
-        document.getElementById('total-modulos').textContent = stats.total_modulos || 0;
-        document.getElementById('total-permisos').textContent = stats.total_permisos || 0;
+        const totalUsuarios = document.getElementById('total-usuarios');
+        const totalEmpresas = document.getElementById('total-empresas');
+        const totalModulos = document.getElementById('total-modulos');
+        const totalPermisos = document.getElementById('total-permisos');
+        
+        if (totalUsuarios) totalUsuarios.textContent = stats.total_usuarios || 0;
+        if (totalEmpresas) totalEmpresas.textContent = stats.total_empresas || 0;
+        if (totalModulos) totalModulos.textContent = stats.total_modulos || 0;
+        if (totalPermisos) totalPermisos.textContent = stats.total_permisos || 0;
     } catch (error) {
         console.error('Error:', error);
     }
@@ -267,6 +303,35 @@ async function cargarUsuarios() {
         console.error('Error:', error);
         document.getElementById('tabla-usuarios').innerHTML = 
             '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error cargando usuarios</p></div>';
+    }
+}
+
+// Cargar empresas de un usuario para el select de permisos
+async function cargarEmpresasDeUsuario() {
+    const usuarioId = document.getElementById('select-usuario-permisos').value;
+    const selectEmpresa = document.getElementById('select-empresa-permisos');
+    
+    // Limpiar select de empresa
+    selectEmpresa.innerHTML = '<option value="">-- Seleccione --</option>';
+    
+    // Limpiar matriz de permisos
+    document.getElementById('matriz-permisos').innerHTML = '';
+    
+    if (!usuarioId) return;
+    
+    try {
+        const response = await fetch(`/api/admin/usuarios/${usuarioId}/empresas`);
+        if (!response.ok) throw new Error('Error cargando empresas del usuario');
+        
+        const empresasUsuario = await response.json();
+        
+        empresasUsuario.forEach(eu => {
+            selectEmpresa.innerHTML += `<option value="${eu.id}">${eu.nombre}</option>`;
+        });
+        
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlerta('Error cargando empresas del usuario', 'error');
     }
 }
 
@@ -438,7 +503,12 @@ async function eliminarUsuario(id, username) {
 
 // GESTIÓN EMPRESAS USUARIO
 async function gestionarEmpresas(usuarioId) {
-    document.getElementById('usuario-empresas-id').value = usuarioId;
+    const usuarioEmpresasId = document.getElementById('usuario-empresas-id');
+    if (!usuarioEmpresasId) {
+        console.log('[ADMIN] Modal de empresas no disponible');
+        return;
+    }
+    usuarioEmpresasId.value = usuarioId;
     
     try {
         const response = await fetch(`/api/admin/usuarios/${usuarioId}/empresas`);
@@ -561,17 +631,26 @@ async function cargarModulos() {
         if (!response.ok) throw new Error('Error cargando módulos');
         
         modulos = await response.json();
-        mostrarModulos(modulos);
+        
+        // Solo renderizar si el contenedor existe
+        const container = document.getElementById('tabla-modulos');
+        if (container) {
+            mostrarModulos(modulos);
+        }
         
     } catch (error) {
         console.error('Error:', error);
-        document.getElementById('tabla-modulos').innerHTML = 
-            '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error cargando módulos</p></div>';
+        const container = document.getElementById('tabla-modulos');
+        if (container) {
+            container.innerHTML = 
+                '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error cargando módulos</p></div>';
+        }
     }
 }
 
 function mostrarModulos(lista) {
     const container = document.getElementById('tabla-modulos');
+    if (!container) return;
     
     if (lista.length === 0) {
         container.innerHTML = '<div class="empty-state"><i class="fas fa-th-large"></i><p>No hay módulos registrados</p></div>';
@@ -783,7 +862,6 @@ function renderizarTablaEmpresas(empresas) {
                     <th>Nombre</th>
                     <th>CIF</th>
                     <th>BD</th>
-                    <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -803,11 +881,6 @@ function renderizarTablaEmpresas(empresas) {
                 <td><strong>${emp.nombre}</strong></td>
                 <td>${emp.cif || '-'}</td>
                 <td><code>${emp.codigo}.db</code></td>
-                <td>
-                    <span class="badge ${emp.activa ? 'badge-success' : 'badge-danger'}">
-                        ${emp.activa ? '✓ Activa' : '✗ Inactiva'}
-                    </span>
-                </td>
                 <td>
                     <button class="btn btn-sm" onclick="verDetallesEmpresa(${emp.id})" title="Ver detalles">
                         <i class="fas fa-eye"></i>
@@ -3148,4 +3221,257 @@ function inicializarAutoGuardado() {
     console.log('🎨 Auto-guardado inicializado para', colores.length, 'colores');
 }
 
+// Cargar configuración de empresa
+async function cargarConfiguracionEmpresa() {
+    try {
+        // Obtener datos de la empresa actual
+        const brandingResponse = await fetch('/api/auth/branding');
+        const branding = await brandingResponse.json();
+        const empresaId = branding.empresa_id || 1;
+        
+        // Obtener datos completos de la empresa
+        const empresaResponse = await fetch(`/api/empresas/${empresaId}`);
+        const empresa = await empresaResponse.json();
+        
+        // Obtener plantillas disponibles
+        const plantillasDisponibles = ['minimal', 'dark', 'eink', 'classic'];
+        // Usar la plantilla de la empresa (BD) en lugar de branding (puede estar cacheado)
+        const plantillaActual = empresa.plantilla || branding.plantilla || 'minimal';
+        
+        // Re-aplicar tema desde la BD actualizada
+        if (plantillaActual && typeof window.parent.loadTheme === 'function') {
+            window.parent.loadTheme(plantillaActual);
+        }
+        
+        // Renderizar contenido
+        const contenedor = document.getElementById('tab-empresas');
+        contenedor.innerHTML = `
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-building"></i> Configuración de Empresa</h2>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="display: grid; grid-template-columns: 55% 40%; gap: 20px;">
+                        <!-- Información de la empresa -->
+                        <div style="border: 1px solid var(--color-border, #ddd); border-radius: 8px; padding: 16px; background: var(--bg-elevated, rgba(255,255,255,0.5));">
+                            <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--color-texto, #333); border-bottom: 2px solid var(--color-primario, #007bff); padding-bottom: 8px;">📋 Datos de la Empresa</h3>
+                            <div style="display: grid; grid-template-columns: repeat(2, minmax(150px, 300px)); gap: 8px; max-width: 620px;">
+                                <div>
+                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Nombre Comercial:</label>
+                                    <input type="text" id="empresa-nombre" value="${empresa.nombre || ''}" 
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Razón Social:</label>
+                                    <input type="text" id="empresa-razon-social" value="${empresa.razon_social || ''}" 
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">CIF/NIF:</label>
+                                    <input type="text" id="empresa-cif" value="${empresa.cif || ''}" 
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Teléfono:</label>
+                                    <input type="text" id="empresa-telefono" value="${empresa.telefono || ''}" 
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                </div>
+                                <div style="grid-column: 1 / -1;">
+                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Dirección:</label>
+                                    <input type="text" id="empresa-direccion" value="${empresa.direccion || ''}" 
+                                           style="max-width: 620px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                </div>
+                                <div style="grid-column: 1 / -1;">
+                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Email:</label>
+                                    <input type="email" id="empresa-email" value="${empresa.email || ''}" 
+                                           style="max-width: 620px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: flex-start; margin-top: 12px;">
+                                <button class="btn btn-primary" onclick="guardarDatosEmpresa(${empresaId})" 
+                                        style="padding: 6px 14px; font-size: 12px; border-radius: 3px;">
+                                    <i class="fas fa-save"></i> Guardar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Selector de plantillas -->
+                        <div style="border: 1px solid var(--color-border, #ddd); border-radius: 8px; padding: 16px; background: var(--bg-elevated, rgba(255,255,255,0.5));">
+                            <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--color-texto, #333); border-bottom: 2px solid var(--color-primario, #007bff); padding-bottom: 8px;">
+                                🎨 Plantilla: <strong style="color: var(--color-primario);">${getPlantillaNombre(plantillaActual)}</strong>
+                            </h3>
+                            <div style="display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; border: 1px solid var(--color-border, #ddd); border-radius: 4px; padding: 6px; background: var(--bg, white);">
+                                ${plantillasDisponibles.map(plantilla => `
+                                    <div class="plantilla-card" onclick="aplicarPlantilla('${plantilla}', ${empresaId})" 
+                                         style="padding: 5px 6px; 
+                                                border: 1px solid ${plantilla === plantillaActual ? 'var(--color-primario)' : 'var(--color-border, #ddd)'}; 
+                                                border-radius: 3px; 
+                                                cursor: pointer; 
+                                                background: ${plantilla === plantillaActual ? 'var(--color-primario-light, rgba(0, 123, 255, 0.1))' : 'var(--bg-elevated, #ffffff)'};
+                                                color: var(--text, #333);
+                                                transition: all 0.2s ease;
+                                                box-shadow: ${plantilla === plantillaActual ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'};
+                                                display: flex;
+                                                align-items: center;
+                                                gap: 6px;
+                                                min-height: 32px;">
+                                        <div style="font-size: 14px; 
+                                                    min-width: 18px; 
+                                                    text-align: center;
+                                                    opacity: ${plantilla === plantillaActual ? '1' : '0.6'};
+                                                    flex-shrink: 0;">
+                                            ${getPlantillaIcon(plantilla)}
+                                        </div>
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-weight: 600; font-size: 10px; color: var(--text, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;">
+                                                ${getPlantillaNombre(plantilla)}
+                                            </div>
+                                        </div>
+                                        ${plantilla === plantillaActual ? `
+                                            <div style="background: var(--color-success, #28a745); 
+                                                        color: white; 
+                                                        padding: 2px 5px; 
+                                                        border-radius: 8px; 
+                                                        font-size: 8px; 
+                                                        font-weight: 600;
+                                                        white-space: nowrap;
+                                                        flex-shrink: 0;">
+                                                ✓
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                `).join('')}
+                            </div>
+                            <div id="plantilla-status" style="margin-top: 15px; padding: 12px; border-radius: 8px; display: none; font-weight: 500;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error cargando configuración de empresa:', error);
+        mostrarAlerta('Error cargando configuración de empresa', 'error');
+    }
+}
+
+function getPlantillaIcon(plantilla) {
+    const icons = {
+        'minimal': '✨',
+        'dark': '🌙',
+        'eink': '📄',
+        'classic': '🏛️'
+    };
+    return icons[plantilla] || '🎨';
+}
+
+function getPlantillaNombre(plantilla) {
+    const nombres = {
+        'minimal': 'Minimal',
+        'dark': 'Dark',
+        'eink': 'E-Ink',
+        'classic': 'Classic'
+    };
+    return nombres[plantilla] || plantilla;
+}
+
+function getPlantillaDesc(plantilla) {
+    const descs = {
+        'minimal': 'Minimalista y limpio',
+        'dark': 'Tema oscuro elegante',
+        'eink': 'Inspirado en e-Ink',
+        'classic': 'Profesional azul oscuro'
+    };
+    return descs[plantilla] || '';
+}
+
+async function aplicarPlantilla(plantilla, empresaId) {
+    try {
+        const statusDiv = document.getElementById('plantilla-status');
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'var(--color-warning, #ffc107)';
+        statusDiv.style.color = 'var(--color-texto)';
+        statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Aplicando plantilla <strong>${plantilla}</strong>...`;
+        
+        const response = await fetch(`/api/empresas/${empresaId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plantilla: plantilla })
+        });
+        
+        if (response.ok) {
+            statusDiv.style.background = 'var(--color-success, #28a745)';
+            statusDiv.style.color = '#fff';
+            statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> Plantilla <strong>${plantilla}</strong> guardada. Aplicando tema...`;
+            
+            // Aplicar tema inmediatamente
+            statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Aplicando tema <strong>${plantilla}</strong>...`;
+            
+            // Recargar tema usando la función cargarColoresEmpresa de branding.js
+            if (typeof window.parent.cargarColoresEmpresa === 'function') {
+                await window.parent.cargarColoresEmpresa();
+            } else if (typeof window.cargarColoresEmpresa === 'function') {
+                await window.cargarColoresEmpresa();
+            } else if (typeof cargarColoresEmpresa === 'function') {
+                await cargarColoresEmpresa();
+            }
+            
+            // Pequeña espera para asegurar que el tema se aplicó
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> ✓ Plantilla <strong>${getPlantillaNombre(plantilla)}</strong> aplicada correctamente`;
+            statusDiv.style.background = 'var(--color-success, #28a745)';
+            statusDiv.style.color = '#fff';
+            
+            // Mostrar notificación toast
+            mostrarAlerta(`Plantilla "${getPlantillaNombre(plantilla)}" aplicada correctamente`, 'success');
+            
+            // Recargar contenido del tab para mostrar la nueva activa
+            setTimeout(async () => {
+                await cargarConfiguracionEmpresa();
+                // Ocultar status después de recargar
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 2000);
+            }, 500);
+        } else {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Error aplicando plantilla');
+        }
+    } catch (error) {
+        const statusDiv = document.getElementById('plantilla-status');
+        statusDiv.style.display = 'block';
+        statusDiv.style.background = 'var(--color-error, #dc3545)';
+        statusDiv.style.color = '#fff';
+        statusDiv.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Error: ${error.message}`;
+        console.error('Error:', error);
+    }
+}
+
+async function guardarDatosEmpresa(empresaId) {
+    try {
+        const datos = {
+            nombre: document.getElementById('empresa-nombre').value,
+            razon_social: document.getElementById('empresa-razon-social').value,
+            cif: document.getElementById('empresa-cif').value,
+            direccion: document.getElementById('empresa-direccion').value,
+            telefono: document.getElementById('empresa-telefono').value,
+            email: document.getElementById('empresa-email').value
+        };
+        
+        const response = await fetch(`/api/empresas/${empresaId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datos)
+        });
+        
+        if (response.ok) {
+            mostrarAlerta('Datos de empresa guardados correctamente', 'success');
+        } else {
+            throw new Error('Error guardando datos');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        mostrarAlerta('Error guardando datos de empresa', 'error');
+    }
+}
 

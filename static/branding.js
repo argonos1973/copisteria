@@ -53,32 +53,43 @@ async function applyTheme(themeJson) {
     // 2) Construir CSS - Inyectar en :root global para que theme-consumer.css pueda usarlas
     const toVar = (k) => '--' + k.replace(/[^a-z0-9\-]/gi, '').toLowerCase();
     let css = `:root {`;
+    let varCount = 0;
     for (const [k, v] of Object.entries(vars)) {
         css += `${toVar(k)}:${v};`;
+        varCount++;
     }
+    console.log(`[BRANDING] 📊 Variables CSS generadas: ${varCount}`);
     
     // 2.1) Añadir aliases para compatibilidad con variables antiguas
     css += `
         --color-app-bg: var(--bg);
         --color-primario: var(--primary);
-        --color-secundario: var(--primary);
+        --color-secundario: var(--secondary);
         --color-texto: var(--text);
-        --color-texto-secundario: var(--text);
+        --color-texto-secundario: var(--text-muted);
         --color-fondo: var(--bg);
         --color-header-bg: var(--header-bg);
         --color-header-text: var(--header-text);
         --color-button: var(--button-bg);
         --color-button-text: var(--button-text);
-        --color-button-hover: var(--button-hover);
+        --color-button-hover: var(--button-hover-bg);
+        --color-boton-hover: var(--button-hover-bg);
+        --color-boton-active: var(--button-active-bg);
         --color-input-bg: var(--input-bg);
         --color-input-text: var(--input-text);
         --color-input-border: var(--input-border);
         --color-grid-header: var(--table-header-bg);
+        --color-grid-header-text: var(--table-header-text);
+        --color-grid-bg: var(--table-bg);
+        --color-grid-text: var(--table-text);
+        --color-menu-bg: var(--menu-bg);
+        --color-menu-text: var(--menu-text);
+        --color-menu-hover: var(--menu-hover);
         --color-grid-hover: var(--table-row-hover);
         --color-verde: var(--success);
         --color-rojo: var(--danger);
-        --color-hover: var(--menu-hover);
-        --color-shadow: rgba(0,0,0,0.2);
+        --color-hover: var(--hover);
+        --color-shadow: var(--shadow);
         --color-borde: var(--border);
     `;
     
@@ -250,12 +261,15 @@ async function cargarColoresEmpresa() {
 }
 
 // Variable global para guardar colores y reutilizarlos
-let coloresEmpresa = null;
+// Evitar re-declaración si el script se carga múltiples veces
+if (typeof window.coloresEmpresa === 'undefined') {
+    window.coloresEmpresa = null;
+}
 
 // Aplicar colores al DOM
 function aplicarColores(colores) {
     // Guardar colores globalmente para aplicarlos al iframe después
-    coloresEmpresa = colores;
+    window.coloresEmpresa = colores;
     
     // USAR SOLO VALORES DIRECTOS DEL JSON - SIN CALCULOS
     const textForBody = colores.grid_text;
@@ -375,9 +389,13 @@ function aplicarColores(colores) {
             color: ${colores.submenu_text || colores.header_text || '#000000'} !important;
         }
         
-        /* Submenú - USA COLOR SUBMENU */
-        .submenu {
+        /* Submenú - USA MISMO COLOR QUE MENÚ PRINCIPAL */
+        .submenu,
+        .menu-item .submenu,
+        .submenu-block .submenu,
+        .submenu-block > .submenu {
             background-color: ${colores.submenu_bg || colores.primario || '#ffffff'} !important;
+            background: ${colores.submenu_bg || colores.primario || '#ffffff'} !important;
         }
         
         .submenu-item {

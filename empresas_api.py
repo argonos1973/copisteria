@@ -101,74 +101,47 @@ empresas_bp = Blueprint('empresas', __name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_USUARIOS_PATH = '/var/www/html/db/usuarios_sistema.db'
 
-# SELECT estándar con TODAS las columnas (41 total)
+# SELECT estándar con TODAS las columnas (20 total - sin color_*)
 SELECT_EMPRESAS_FULL = """
-    SELECT id, codigo, nombre, cif, direccion, telefono, email, web,
+    SELECT id, codigo, nombre, razon_social, cif, direccion, telefono, email, web,
            logo_header, logo_factura,
-           color_primario, color_secundario, color_success, color_warning, color_danger, color_info,
-           color_button, color_button_hover, color_button_text,
-           color_app_bg, color_header_bg, color_header_text,
-           color_grid_header, color_grid_header_text, color_grid_hover, color_grid_bg, color_grid_text,
-           color_input_bg, color_input_text, color_input_border,
-           color_select_bg, color_select_text, color_select_border,
-           color_submenu_bg, color_submenu_text, color_submenu_hover,
-           color_icon,
-           color_disabled_bg, color_disabled_text,
-           activa, db_path
+           codigo_postal, ciudad, provincia,
+           activa, fecha_alta, fecha_modificacion,
+           plantilla, plantilla_personalizada,
+           db_path
     FROM empresas
 """
 
 def _row_to_dict_full(row):
-    """Convierte row con 41 columnas a diccionario completo"""
+    """Convierte row con 20 columnas a diccionario completo (sin color_*)"""
     if not row:
         return None
-    if len(row) != 41:
-        logger.error(f"Row tiene {len(row)} columnas, se esperaban 41")
+    if len(row) != 20:
+        logger.error(f"Row tiene {len(row)} columnas, se esperaban 20")
         return None
     
     return {
         'id': row[0],
         'codigo': row[1],
         'nombre': row[2],
-        'cif': row[3],
-        'direccion': row[4],
-        'telefono': row[5],
-        'email': row[6],
-        'web': row[7],
-        'logo_header': row[8],
-        'logo_factura': row[9],
-        'logo_url': f'/static/logos/{row[8]}' if row[8] else '/static/img/logo.png',
-        'color_primario': row[10],
-        'color_secundario': row[11],
-        'color_success': row[12],
-        'color_warning': row[13],
-        'color_danger': row[14],
-        'color_info': row[15],
-        'color_button': row[16],
-        'color_button_hover': row[17],
-        'color_button_text': row[18],
-        'color_app_bg': row[19],
-        'color_header_bg': row[20],
-        'color_header_text': row[21],
-        'color_grid_header': row[22],
-        'color_grid_header_text': row[23],
-        'color_grid_hover': row[24],
-        'color_grid_bg': row[25],
-        'color_grid_text': row[26],
-        'color_input_bg': row[27],
-        'color_input_text': row[28],
-        'color_input_border': row[29],
-        'color_select_bg': row[30],
-        'color_select_text': row[31],
-        'color_select_border': row[32],
-        'color_submenu_bg': row[33],
-        'color_submenu_text': row[34],
-        'color_submenu_hover': row[35],
-        'color_icon': row[36],
-        'color_disabled_bg': row[37],
-        'color_disabled_text': row[38],
-        'activa': row[39],
-        'db_path': row[40]
+        'razon_social': row[3],
+        'cif': row[4],
+        'direccion': row[5],
+        'telefono': row[6],
+        'email': row[7],
+        'web': row[8],
+        'logo_header': row[9],
+        'logo_factura': row[10],
+        'logo_url': f'/static/logos/{row[9]}' if row[9] else '/static/img/logo.png',
+        'codigo_postal': row[11],
+        'ciudad': row[12],
+        'provincia': row[13],
+        'activa': row[14],
+        'fecha_alta': row[15],
+        'fecha_modificacion': row[16],
+        'plantilla': row[17],
+        'plantilla_personalizada': row[18],
+        'db_path': row[19]
     }
 
 @empresas_bp.route('/api/empresas', methods=['GET'])
@@ -374,18 +347,10 @@ def actualizar_empresa(empresa_id):
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        # Construir UPDATE dinámicamente
-        campos_permitidos = ['nombre', 'cif', 'direccion', 'telefono', 'email', 'web', 
-                            'color_primario', 'color_secundario', 'color_success', 'color_warning',
-                            'color_danger', 'color_info', 'color_button', 'color_button_hover',
-                            'color_button_text', 'color_app_bg',
-                            'color_header_bg', 'color_header_text', 'color_grid_header', 'color_grid_hover',
-                            'color_input_bg', 'color_input_text', 'color_input_border',
-                            'color_submenu_bg', 'color_submenu_text', 'color_submenu_hover',
-                            'color_icon', 'color_grid_bg', 'color_grid_text', 'color_grid_header_text',
-                            'color_select_bg', 'color_select_text', 'color_select_border',
-                            'color_disabled_bg', 'color_disabled_text',
-                            'activa']
+        # Construir UPDATE dinámicamente (sin campos color_*)
+        campos_permitidos = ['nombre', 'razon_social', 'cif', 'direccion', 'telefono', 'email', 'web',
+                            'codigo_postal', 'ciudad', 'provincia',
+                            'activa', 'plantilla', 'plantilla_personalizada']
         
         campos_update = []
         valores = []
@@ -442,15 +407,9 @@ def actualizar_empresa(empresa_id):
         
         cursor.execute(sql, valores)
         conn.commit()
-        
-        # Verificar que se guardó
-        cursor.execute('SELECT color_primario, color_button, color_success FROM empresas WHERE id = ?', (empresa_id,))
-        verificacion = cursor.fetchone()
-        logger.info(f"✅ Colores guardados en BD: primario={verificacion[0]}, button={verificacion[1]}, success={verificacion[2]}")
-        
         conn.close()
         
-        logger.info(f"Empresa {empresa_id} actualizada")
+        logger.info(f"✅ Empresa {empresa_id} actualizada correctamente")
         
         return jsonify({'success': True, 'mensaje': 'Empresa actualizada'}), 200
         
@@ -551,68 +510,8 @@ def eliminar_empresa(empresa_id):
         logger.error(f"Error eliminando empresa: {e}", exc_info=True)
         return jsonify({'error': 'Error eliminando empresa'}), 500
 
-@empresas_bp.route('/api/empresas/<int:empresa_id>/emisor', methods=['PUT'])
+# ENDPOINT /colores ELIMINADO - Ya no se usan colores en BD, solo plantillas JSON
 
-@empresas_bp.route('/api/empresas/<int:empresa_id>/colores', methods=['PUT'])
-@superadmin_required
-def actualizar_colores_empresa(empresa_id):
-    """
-    Actualiza el nombre de plantilla de una empresa y devuelve el JSON de la plantilla.
-    Sistema optimizado: Backend carga y devuelve el JSON directamente.
-    """
-    try:
-        data = request.get_json()
-        
-        # Solo permitir actualizar plantilla_personalizada
-        if 'plantilla_personalizada' not in data:
-            return jsonify({'error': 'Se requiere plantilla_personalizada'}), 400
-        
-        plantilla_nombre = data['plantilla_personalizada']
-        
-        # Actualizar BD
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        cursor.execute('UPDATE empresas SET plantilla_personalizada = ? WHERE id = ?', 
-                      (plantilla_nombre, empresa_id))
-        conn.commit()
-        conn.close()
-        
-        logger.info(f"Plantilla actualizada para empresa {empresa_id}: {plantilla_nombre}")
-        
-        # Detectar plantilla base
-        plantilla_base = 'minimal'  # default
-        if 'Dark' in plantilla_nombre or 'dark' in plantilla_nombre.lower():
-            plantilla_base = 'dark'
-        elif 'e-Ink' in plantilla_nombre or 'eink' in plantilla_nombre.lower():
-            plantilla_base = 'eink'
-        elif 'Minimal' in plantilla_nombre or 'minimal' in plantilla_nombre.lower():
-            plantilla_base = 'minimal'
-        
-        # Cargar JSON de plantilla
-        plantilla_path = os.path.join(BASE_DIR, 'static', 'plantillas', f'{plantilla_base}.json')
-        
-        try:
-            with open(plantilla_path, 'r', encoding='utf-8') as f:
-                plantilla_json = json.load(f)
-            
-            logger.info(f"JSON cargado desde: {plantilla_path}")
-            logger.info(f"Devolviendo plantilla en formato nuevo (design tokens)")
-            
-            # Devolver JSON de plantilla en formato NUEVO (design tokens)
-            return jsonify({
-                'success': True,
-                'mensaje': 'Plantilla actualizada correctamente',
-                'plantilla': plantilla_base,
-                'colores': plantilla_json  # Formato nuevo directo
-            }), 200
-            
-        except FileNotFoundError:
-            logger.error(f"Plantilla no encontrada: {plantilla_path}")
-            return jsonify({'error': f'Plantilla {plantilla_base} no encontrada'}), 404
-        
-    except Exception as e:
-        logger.error(f"Error actualizando plantilla: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
 @empresas_bp.route('/api/empresas/<int:empresa_id>/emisor', methods=['PUT'])
 @superadmin_required
 def actualizar_emisor(empresa_id):

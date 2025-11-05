@@ -4,7 +4,7 @@
 let plantillasColores = {};
 
 // Lista de plantillas disponibles
-const plantillasDisponibles = ['minimal', 'dark', 'eink'];
+const plantillasDisponibles = ['minimal', 'dark', 'eink', 'classic'];
 
 // Cargar todas las plantillas
 async function cargarPlantillas() {
@@ -12,7 +12,7 @@ async function cargarPlantillas() {
     
     const promesas = plantillasDisponibles.map(async (nombre) => {
         try {
-            const response = await fetch(`/static/plantillas/${nombre}.json`);
+            const response = await fetch(`/static/plantillas/${nombre}.json?v=${Date.now()}`);
             if (response.ok) {
                 const plantilla = await response.json();
                 plantillasColores[nombre] = plantilla;

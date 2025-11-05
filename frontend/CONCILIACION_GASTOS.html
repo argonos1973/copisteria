@@ -4,11 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conciliación Bancaria</title>
-    <script src="/static/branding.js?v=1761998426"></script>
-    <script src="/static/auto_branding.js?v=1761998426"></script>
-    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762004912">
-    <script src="/static/auto_branding.js?v=1761998426"></script>
-    <script src="/static/plantilla_sync.js?v=1761938648"></script>
+    <script src="/static/branding.js?v=1762345385184"></script>
+    <script src="/static/auto_branding.js?v=1762349609304"></script>
+    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762362531">
+    <script src="/static/auto_branding.js?v=1762349609304"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="../static/page_header.css">
     <link rel="stylesheet" href="../static/styles.css?v=1761938648">
@@ -804,6 +803,34 @@
 
     <!-- Contenedor de notificaciones -->
     <div id="notificaciones-contenedor"></div>
+
+
+    <script>
+    // Manejo de pestañas
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                const targetTab = this.getAttribute('data-tab');
+                
+                // Remover active de todas las pestañas
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(tc => tc.classList.remove('active'));
+                
+                // Agregar active a la pestaña clickeada
+                this.classList.add('active');
+                
+                // Mostrar el contenido correspondiente
+                const targetContent = document.getElementById('tab-' + targetTab);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+            });
+        });
+    });
+    </script>
 
     <script type="module" src="../static/conciliacion_gastos.js?v=1761938648"></script>
 </body>

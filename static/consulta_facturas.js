@@ -289,14 +289,17 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                     hoy.setHours(0, 0, 0, 0);
                     const fechaVenc = new Date(factura.fvencimiento);
                     fechaVenc.setHours(0, 0, 0, 0);
-                    const diffTime = fechaVenc - hoy;
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const diffTime = hoy - fechaVenc;  // Invertido: hoy - vencimiento para contar días vencidos
+                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));  // Math.floor para días exactos
                     
-                    if (diffDays < 0) {
-                        tooltipText = `Vencida hace ${Math.abs(diffDays)} día${Math.abs(diffDays) !== 1 ? 's' : ''}`;
+                    
+                    if (diffDays > 0) {
+                        // Factura vencida (vencimiento en el pasado)
+                        tooltipText = `Vencida hace ${diffDays} día${diffDays !== 1 ? 's' : ''}`;
                     } else if (diffDays === 0) {
                         tooltipText = 'Vence hoy';
                     } else {
+                        // Factura por vencer (vencimiento en el futuro)
                         tooltipText = `Vence en ${diffDays} día${diffDays !== 1 ? 's' : ''}`;
                     }
                     vencimientoStyle = 'cursor: help;';

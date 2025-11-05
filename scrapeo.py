@@ -224,6 +224,74 @@ def importar_desde_excel(ruta_excel: str):
         logging.info("%d registros nuevos insertados en 'gastos'", inserted)
         logger.info(f"Registros insertados: {inserted}")
         
+        # === VALIDACIÓN Y ELIMINACIÓN DE DUPLICADOS POST-INSERCIÓN ===
+        logger.info("🔍 Verificando duplicados después de la inserción...")
+        
+        # Buscar duplicados exactos (misma fecha_valor, concepto, importe_eur)
+        cursor.execute('''
+            SELECT COUNT(*) as cnt, fecha_valor, concepto, importe_eur
+            FROM gastos
+            GROUP BY fecha_valor, concepto, importe_eur
+            HAVING COUNT(*) > 1
+        ''')
+        grupos_duplicados = cursor.fetchall()
+        
+        if grupos_duplicados:
+            # Contar cuántos registros son duplicados
+            cursor.execute('''
+                SELECT COUNT(*)
+                FROM gastos
+                WHERE id NOT IN (
+                    SELECT MIN(id)
+                    FROM gastos
+                    GROUP BY fecha_valor, concepto, importe_eur
+                )
+            ''')
+            num_duplicados = cursor.fetchone()[0]
+            
+            if num_duplicados > 0:
+                logger.warning(f"⚠️  Encontrados {num_duplicados} registros duplicados en {len(grupos_duplicados)} grupos")
+                
+                # Crear tabla de backup antes de eliminar
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                backup_table = f'gastos_backup_scrapeo_{timestamp}'
+                cursor.execute(f'''
+                    CREATE TABLE {backup_table} AS 
+                    SELECT * FROM gastos 
+                    WHERE id NOT IN (
+                        SELECT MIN(id) 
+                        FROM gastos 
+                        GROUP BY fecha_valor, concepto, importe_eur
+                    )
+                ''')
+                logger.info(f"💾 Backup creado: {backup_table}")
+                
+                # Eliminar duplicados (mantener el ID más bajo)
+                cursor.execute('''
+                    DELETE FROM gastos
+                    WHERE id NOT IN (
+                        SELECT MIN(id)
+                        FROM gastos
+                        GROUP BY fecha_valor, concepto, importe_eur
+                    )
+                ''')
+                conn.commit()
+                
+                eliminados = cursor.rowcount
+                logger.info(f"🗑️  {eliminados} duplicados eliminados (backup en {backup_table})")
+                
+                # Notificar sobre duplicados eliminados
+                guardar_notificacion(
+                    f"Se eliminaron {eliminados} registros duplicados durante la importación",
+                    tipo='warning',
+                    db_path=DB_NAME
+                )
+            else:
+                logger.info("✅ No se encontraron duplicados después de la inserción")
+        else:
+            logger.info("✅ No se encontraron duplicados después de la inserción")
+        # === FIN VALIDACIÓN DUPLICADOS ===
+        
         # Generar notificación si hubo inserciones
         if inserted > 0:
             guardar_notificacion(

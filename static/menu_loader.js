@@ -67,43 +67,42 @@ function actualizarInfoUsuario(sessionData) {
         console.log('[MENU] Logo actualizado a:', sessionData.logo);
     }
     
-    // Actualizar info en menú superior (header)
-    const topUsuario = document.getElementById('top-usuario');
-    const topEmpresa = document.getElementById('top-empresa');
+    // Actualizar info en menú (usar IDs correctos del HTML)
+    const menuUsuario = document.getElementById('menu-usuario-nombre');
+    const menuEmpresa = document.getElementById('menu-empresa-nombre');
+    const menuUltimoAcceso = document.getElementById('menu-ultimo-acceso');
     
-    if (topUsuario) {
-        topUsuario.textContent = sessionData.usuario || 'Usuario';
-    }
-    if (topEmpresa) {
-        topEmpresa.textContent = sessionData.empresa || 'Empresa';
-    }
-    
-    // Actualizar info en menú inferior
-    const bottomUsuario = document.getElementById('menu-usuario-nombre');
-    const bottomEmpresa = document.getElementById('menu-empresa-nombre');
-    const bottomTime = document.getElementById('menu-ultimo-acceso');
-    
-    if (bottomUsuario) {
-        bottomUsuario.textContent = sessionData.usuario || 'Usuario';
+    if (menuUsuario) {
+        menuUsuario.textContent = sessionData.usuario || 'Usuario';
         console.log('[MENU] Usuario actualizado:', sessionData.usuario);
+    } else {
+        console.warn('[MENU] Elemento menu-usuario-nombre NO encontrado en el DOM');
     }
-    if (bottomEmpresa) {
-        bottomEmpresa.textContent = sessionData.empresa || 'Empresa';
+    
+    if (menuEmpresa) {
+        menuEmpresa.textContent = sessionData.empresa || 'Empresa';
         console.log('[MENU] Empresa actualizada:', sessionData.empresa);
+    } else {
+        console.warn('[MENU] Elemento menu-empresa-nombre NO encontrado en el DOM');
     }
     
     // Mostrar último acceso
-    if (bottomTime && sessionData.ultimo_acceso) {
+    if (menuUltimoAcceso && sessionData.ultimo_acceso) {
         mostrarUltimoAcceso(sessionData.ultimo_acceso);
+    } else if (menuUltimoAcceso) {
+        menuUltimoAcceso.textContent = 'Primer acceso';
     }
 }
 
 function mostrarUltimoAcceso(ultimoAcceso) {
-    const bottomTime = document.getElementById('menu-ultimo-acceso');
-    if (!bottomTime) return;
+    const menuTime = document.getElementById('menu-ultimo-acceso');
+    if (!menuTime) {
+        console.warn('[MENU] Elemento menu-ultimo-acceso no encontrado');
+        return;
+    }
     
     if (!ultimoAcceso) {
-        bottomTime.textContent = 'Primer acceso';
+        menuTime.textContent = 'Primer acceso';
         return;
     }
     
@@ -113,25 +112,28 @@ function mostrarUltimoAcceso(ultimoAcceso) {
         const ayer = new Date(hoy);
         ayer.setDate(ayer.getDate() - 1);
         
-        const esMismoDia = fecha.toDateString() === hoy.toDateString();
+        const esHoy = fecha.toDateString() === hoy.toDateString();
         const esAyer = fecha.toDateString() === ayer.toDateString();
         
-        const horas = String(fecha.getHours()).padStart(2, '0');
-        const minutos = String(fecha.getMinutes()).padStart(2, '0');
-        const horaStr = `${horas}:${minutos}`;
+        const hora = fecha.toLocaleTimeString('es-ES', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
         
-        if (esMismoDia) {
-            bottomTime.textContent = `Hoy ${horaStr}`;
+        if (esHoy) {
+            menuTime.textContent = `Hoy a las ${hora}`;
         } else if (esAyer) {
-            bottomTime.textContent = `Ayer ${horaStr}`;
+            menuTime.textContent = `Ayer a las ${hora}`;
         } else {
-            const dia = String(fecha.getDate()).padStart(2, '0');
-            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-            bottomTime.textContent = `${dia}/${mes} ${horaStr}`;
+            const dia = fecha.toLocaleDateString('es-ES', { 
+                day: '2-digit', 
+                month: '2-digit' 
+            });
+            menuTime.textContent = `${dia} a las ${hora}`;
         }
     } catch (error) {
-        console.error('[MENU] Error formateando último acceso:', error);
-        bottomTime.textContent = 'No disponible';
+        console.error('[MENU] Error formateando fecha último acceso:', error);
+        menuTime.textContent = 'Hace tiempo';
     }
 }
 

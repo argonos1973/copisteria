@@ -44,7 +44,7 @@ body, html {
     margin: 0 !important;
     display: flex;
     flex-direction: column;
-    gap: 0.1rem !important; /* Reducido de 0.25rem para compactar opciones principales */
+    gap: 0 !important; /* Sin espacio entre opciones principales para diseño compacto */
 }
 
 .menu-item {
@@ -55,11 +55,10 @@ body, html {
 .menu-link {
     color: var(--menu-text) !important;
     text-decoration: none;
-    padding: 0.35rem 0.85rem !important; /* Reducido de 0.4rem para compactar opciones principales */
+    padding: 0.4rem 1rem !important; /* Reducido de 0.5rem para diseño más compacto */
     display: block;
     border-radius: 4px;
     transition: background-color 0.3s;
-    font-size: 14px;
     font-weight: normal !important;
 }
 
@@ -93,11 +92,11 @@ body, html {
 
 .submenu-item {
     display: block;
-    padding: 0.45rem 1rem !important; /* Aumentado de 0.35rem para dar más espacio a submenús */
+    padding: 0.5rem 1rem !important;
     color: var(--color-header-text);
     text-decoration: none;
     transition: background-color 0.3s;
-    font-size: 14px;
+    border-radius: 4px;
     font-weight: normal !important;
 }
 

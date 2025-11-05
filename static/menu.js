@@ -1,4 +1,13 @@
+// Variable global para evitar inicialización múltiple
+let menuEventosConfigurados = false;
+
 function inicializarEventosMenu() {
+    // Evitar inicialización múltiple
+    if (menuEventosConfigurados) {
+        console.log('[MENU] ⚠️ Eventos ya configurados, omitiendo duplicado');
+        return;
+    }
+    
     // Eliminar cualquier estado guardado de menús activos
     sessionStorage.removeItem('activeMenus');
     
@@ -11,17 +20,19 @@ function inicializarEventosMenu() {
     }
     
     console.log('[MENU] Configurando eventos para', menuItems.length, 'items');
+    menuEventosConfigurados = true;
     
     let activeMenus = [];
     
     // --- SUBMENÚS ANIDADOS ---
     // Gestionar el despliegue de los submenu-block (Tickets, Proformas, etc. dentro de Facturas Emitidas)
-    const submenuBlocks = document.querySelectorAll('.submenu-block > .submenu-item');
-    console.log('[MENU] Submenu blocks encontrados:', submenuBlocks.length);
-    submenuBlocks.forEach(link => {
-        link.addEventListener('click', function(e) {
+    // Usar .submenu-header en lugar de .submenu-block > .submenu-item para evitar conflictos
+    const submenuHeaders = document.querySelectorAll('.submenu-header');
+    console.log('[MENU] Submenu headers encontrados:', submenuHeaders.length);
+    submenuHeaders.forEach(header => {
+        header.addEventListener('click', function(e) {
             e.preventDefault();
-            const block = link.parentElement;
+            const block = header.parentElement; // El .submenu-block
             // Plegar todos los bloques hermanos
             const allBlocks = block.parentElement.querySelectorAll('.submenu-block');
             allBlocks.forEach(b => {
@@ -29,6 +40,7 @@ function inicializarEventosMenu() {
             });
             // Alternar el bloque clicado
             block.classList.toggle('active');
+            console.log('[MENU] Toggle submenu-block:', block.classList.contains('active') ? 'abierto' : 'cerrado');
         });
     });
 
@@ -50,11 +62,15 @@ function inicializarEventosMenu() {
     // Cargar página en el iframe con verificación de cambios
     async function loadPage(url) {
         if (url && url !== '#') {
+            // Agregar timestamp para evitar caché del iframe
+            const separator = url.includes('?') ? '&' : '?';
+            const urlWithCache = url + separator + '_t=' + Date.now();
+            
             // Si hay función navegarSeguro en el iframe, usarla
             try {
                 const iframeWindow = contentFrame.contentWindow;
                 if (iframeWindow && iframeWindow.navegarSeguro) {
-                    await iframeWindow.navegarSeguro(url);
+                    await iframeWindow.navegarSeguro(urlWithCache);
                 } else if (iframeWindow && iframeWindow.__verificarCambiosGlobal) {
                     const hayCambios = iframeWindow.__verificarCambiosGlobal();
                     console.log('[Menu] Verificando cambios:', hayCambios);
@@ -78,8 +94,8 @@ function inicializarEventosMenu() {
                                     console.log('[Menu] Guardado completado');
                                     // Esperar brevemente para mostrar la notificación
                                     await new Promise(resolve => setTimeout(resolve, 500));
-                                    console.log('[Menu] Navegando después de guardar a:', url);
-                                    contentFrame.src = url;
+                                    console.log('[Menu] Navegando después de guardar a:', urlWithCache);
+                                    contentFrame.src = urlWithCache;
                                     return;
                                 } catch (e) {
                                     console.log('[Menu] Usuario canceló modal de pagos o error al guardar:', e.message);
@@ -89,14 +105,14 @@ function inicializarEventosMenu() {
                             }
                         }
                     }
-                    console.log('[Menu] No hay cambios, navegando a:', url);
-                    contentFrame.src = url;
+                    console.log('[Menu] No hay cambios, navegando a:', urlWithCache);
+                    contentFrame.src = urlWithCache;
                 } else {
-                    contentFrame.src = url;
+                    contentFrame.src = urlWithCache;
                 }
             } catch (e) {
                 // Si falla, navegar normalmente
-                contentFrame.src = url;
+                contentFrame.src = urlWithCache;
             }
         }
     }
@@ -130,6 +146,7 @@ function inicializarEventosMenu() {
             
             // Si el ítem ya está activo, lo desactivamos
             if (item.classList.contains('active')) {
+                console.log('[MENU] ❌ Desactivando menú:', link.textContent);
                 item.classList.remove('active');
                 // Eliminar del array de activos
                 const index = activeMenus.indexOf(link.textContent);
@@ -137,7 +154,9 @@ function inicializarEventosMenu() {
                     activeMenus.splice(index, 1);
                 }
             } else {
+                console.log('[MENU] ✅ Activando menú:', link.textContent);
                 item.classList.add('active');
+                console.log('[MENU] Clase active añadida. classList:', item.classList.value);
                 // Añadir al array de activos
                 activeMenus.push(link.textContent);
             }
@@ -147,15 +166,15 @@ function inicializarEventosMenu() {
     });
     
     // Manejar los enlaces de submenú
-    const submenuLinks = document.querySelectorAll('.submenu-item');
+    const submenuLinks = document.querySelectorAll('.submenu-item:not(.submenu-header)');
+    console.log('[MENU] Submenu links (no headers) encontrados:', submenuLinks.length);
     submenuLinks.forEach(link => {
         link.addEventListener('click', async (e) => {
-            // Si es un submenu-block, pero tiene data-target, SÍ debe cargar la página
-            if (link.parentElement.classList.contains('submenu-block') && !link.dataset.target) return;
             e.preventDefault();
             
             // Cargar la página en el iframe si tiene un target
             if (link.dataset.target && link.dataset.target !== '#') {
+                console.log('[MENU] Cargando submenú:', link.dataset.target);
                 await loadPage(link.dataset.target);
             }
             
