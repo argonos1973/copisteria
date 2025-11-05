@@ -224,8 +224,7 @@ def obtener_menu():
             ],
             'gastos': [
                 {'nombre': 'Consultar Gastos', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_GASTOS.html'},
-                {'nombre': 'Conciliación', 'icono': 'fas fa-exchange-alt', 'ruta': '/CONCILIACION_GASTOS.html'},
-                {'nombre': 'Configuración', 'icono': 'fas fa-cog', 'ruta': '/CONFIGURACION_CONCILIACION.html'}
+                {'nombre': 'Conciliación', 'icono': 'fas fa-exchange-alt', 'ruta': '/CONCILIACION_GASTOS.html'}
             ]
         }
         
