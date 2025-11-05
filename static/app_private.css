@@ -272,7 +272,7 @@ body, html {
     right: 20px;
     width: 400px;
     max-height: 500px;
-    background: white;
+    background: var(--bg);
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     z-index: 9999;
@@ -314,13 +314,13 @@ body, html {
     grid-template-columns: 30px 1fr;
     gap: 10px;
     padding: 12px 15px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border);
     align-items: start;
     transition: background 0.2s;
 }
 
 .notif-item:hover {
-    background: #f8f9fa;
+    background: var(--hover);
 }
 
 .notif-checkbox {
@@ -371,7 +371,7 @@ body, html {
 
 .notif-footer {
     padding: 10px 15px;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border);
     text-align: center;
 }
 
