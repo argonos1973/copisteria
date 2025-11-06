@@ -64,7 +64,13 @@ function actualizarInfoUsuario(sessionData) {
     if (logoEmpresa && sessionData.logo) {
         logoEmpresa.src = sessionData.logo;
         logoEmpresa.style.display = 'block';
+        logoEmpresa.onerror = function() {
+            console.error('[MENU] Error cargando logo:', sessionData.logo);
+            this.src = '/static/logos/default_header.png';
+        };
         console.log('[MENU] Logo actualizado a:', sessionData.logo);
+    } else {
+        console.warn('[MENU] Logo no disponible en sessionData:', sessionData);
     }
     
     // Actualizar info en menú (usar IDs correctos del HTML)
