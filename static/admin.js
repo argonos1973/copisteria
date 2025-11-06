@@ -3310,68 +3310,61 @@ async function cargarConfiguracionEmpresa() {
                                     <input type="text" id="empresa-direccion" value="${empresa.direccion || ''}" 
                                            style="max-width: 620px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
                                 </div>
+                                <div>
+                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Código Postal:</label>
+                                    <input type="text" id="empresa-codigo-postal" value="${empresa.codigo_postal || ''}" 
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Ciudad:</label>
+                                    <input type="text" id="empresa-ciudad" value="${empresa.ciudad || ''}" 
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Provincia:</label>
+                                    <input type="text" id="empresa-provincia" value="${empresa.provincia || ''}" 
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                </div>
                                 <div style="grid-column: 1 / -1;">
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Email:</label>
                                     <input type="email" id="empresa-email" value="${empresa.email || ''}" 
                                            style="max-width: 620px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
                                 </div>
                             </div>
-                            <div style="display: flex; justify-content: flex-start; margin-top: 12px;">
+                            <div style="display: flex; justify-content: flex-start; margin-top: 12px; gap: 8px;">
                                 <button class="btn btn-primary" onclick="guardarDatosEmpresa(${empresaId})" 
                                         style="padding: 6px 14px; font-size: 12px; border-radius: 3px;">
-                                    <i class="fas fa-save"></i> Guardar
+                                    <i class="fas fa-save"></i> Guardar Datos de Emisor
                                 </button>
+                                <span style="font-size: 11px; color: var(--color-texto-secundario, #666); align-self: center;">💾 Se guardarán en ${empresa.codigo}_emisor.json</span>
                             </div>
                         </div>
                         
-                        <!-- Selector de plantillas -->
+                        <!-- Información sobre plantillas -->
                         <div style="border: 1px solid var(--color-border, #ddd); border-radius: 8px; padding: 16px; background: var(--bg-elevated, rgba(255,255,255,0.5));">
                             <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--color-texto, #333); border-bottom: 2px solid var(--color-primario, #007bff); padding-bottom: 8px;">
-                                🎨 Plantilla: <strong style="color: var(--color-primario);">${getPlantillaNombre(plantillaActual)}</strong>
+                                ℹ️ Información
                             </h3>
-                            <div style="display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; border: 1px solid var(--color-border, #ddd); border-radius: 4px; padding: 6px; background: var(--bg, white);">
-                                ${plantillasDisponibles.map(plantilla => `
-                                    <div class="plantilla-card" onclick="aplicarPlantilla('${plantilla}', ${empresaId})" 
-                                         style="padding: 5px 6px; 
-                                                border: 1px solid ${plantilla === plantillaActual ? 'var(--color-primario)' : 'var(--color-border, #ddd)'}; 
-                                                border-radius: 3px; 
-                                                cursor: pointer; 
-                                                background: ${plantilla === plantillaActual ? 'var(--color-primario-light, rgba(0, 123, 255, 0.1))' : 'var(--bg-elevated, #ffffff)'};
-                                                color: var(--text, #333);
-                                                transition: all 0.2s ease;
-                                                box-shadow: ${plantilla === plantillaActual ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'};
-                                                display: flex;
-                                                align-items: center;
-                                                gap: 6px;
-                                                min-height: 32px;">
-                                        <div style="font-size: 14px; 
-                                                    min-width: 18px; 
-                                                    text-align: center;
-                                                    opacity: ${plantilla === plantillaActual ? '1' : '0.6'};
-                                                    flex-shrink: 0;">
-                                            ${getPlantillaIcon(plantilla)}
-                                        </div>
-                                        <div style="flex: 1; min-width: 0;">
-                                            <div style="font-weight: 600; font-size: 10px; color: var(--text, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;">
-                                                ${getPlantillaNombre(plantilla)}
-                                            </div>
-                                        </div>
-                                        ${plantilla === plantillaActual ? `
-                                            <div style="background: var(--color-success, #28a745); 
-                                                        color: white; 
-                                                        padding: 2px 5px; 
-                                                        border-radius: 8px; 
-                                                        font-size: 8px; 
-                                                        font-weight: 600;
-                                                        white-space: nowrap;
-                                                        flex-shrink: 0;">
-                                                ✓
-                                            </div>
-                                            ` : ''}
-                                        </div>
-                                `).join('')}
+                            <div style="padding: 12px; background: var(--bg, white); border: 1px solid var(--color-border, #ddd); border-radius: 4px;">
+                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--color-texto, #333);">
+                                    <strong>📋 Datos de Emisor:</strong><br>
+                                    Los datos de la empresa se guardan en un archivo JSON individual (<code style="background: var(--bg-elevated, #f5f5f5); padding: 2px 5px; border-radius: 3px; font-size: 11px;">${empresa.codigo}_emisor.json</code>).
+                                </p>
+                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--color-texto, #333);">
+                                    Este archivo se utiliza automáticamente como datos del emisor en:
+                                </p>
+                                <ul style="margin: 5px 0 10px 20px; padding: 0; font-size: 11px; color: var(--color-texto, #666);">
+                                    <li>Facturas</li>
+                                    <li>Presupuestos</li>
+                                    <li>Proformas</li>
+                                    <li>Tickets</li>
+                                    <li>Verifactu</li>
+                                </ul>
+                                <p style="margin: 0; font-size: 12px; color: var(--color-texto, #333);">
+                                    <strong>🎨 Plantillas:</strong><br>
+                                    Cada usuario puede elegir su plantilla personal haciendo click en su nombre en el menú.
+                                </p>
                             </div>
-                            <div id="plantilla-status" style="margin-top: 15px; padding: 12px; border-radius: 8px; display: none; font-weight: 500;"></div>
                         </div>
                     </div>
                 </div>
@@ -3495,6 +3488,9 @@ async function guardarDatosEmpresa(empresaId) {
             razon_social: document.getElementById('empresa-razon-social').value,
             cif: document.getElementById('empresa-cif').value,
             direccion: document.getElementById('empresa-direccion').value,
+            codigo_postal: document.getElementById('empresa-codigo-postal').value,
+            ciudad: document.getElementById('empresa-ciudad').value,
+            provincia: document.getElementById('empresa-provincia').value,
             telefono: document.getElementById('empresa-telefono').value,
             email: document.getElementById('empresa-email').value
         };
@@ -3505,14 +3501,16 @@ async function guardarDatosEmpresa(empresaId) {
             body: JSON.stringify(datos)
         });
         
+        const result = await response.json();
+        
         if (response.ok) {
-            mostrarAlerta('Datos de empresa guardados correctamente', 'success');
+            mostrarAlerta(`✅ Datos de emisor guardados en ${result.emisor_json}`, 'success');
         } else {
-            throw new Error('Error guardando datos');
+            throw new Error(result.error || 'Error guardando datos');
         }
     } catch (error) {
         console.error('Error:', error);
-        mostrarAlerta('Error guardando datos de empresa', 'error');
+        mostrarAlerta('❌ Error: ' + error.message, 'error');
     }
 }
 

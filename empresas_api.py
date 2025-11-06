@@ -168,9 +168,9 @@ def listar_empresas():
         return jsonify({'error': 'Error listando empresas'}), 500
 
 @empresas_bp.route('/api/empresas/<int:empresa_id>', methods=['GET'])
-@superadmin_required
+@login_required
 def obtener_empresa(empresa_id):
-    """Obtiene los datos de una empresa específica"""
+    """Obtiene datos de una empresa y su JSON de emisor"""
     try:
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
@@ -185,6 +185,31 @@ def obtener_empresa(empresa_id):
         empresa = _row_to_dict_full(row)
         if not empresa:
             return jsonify({'error': 'Error procesando datos de empresa'}), 500
+        
+        # Cargar datos de emisor desde JSON
+        codigo_empresa = empresa.get('codigo', '')
+        emisor_json_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo_empresa}_emisor.json')
+        
+        if os.path.exists(emisor_json_path):
+            try:
+                with open(emisor_json_path, 'r', encoding='utf-8') as f:
+                    emisor_data = json.load(f)
+                
+                # Sobrescribir con datos del JSON (tienen prioridad)
+                empresa['cif'] = emisor_data.get('nif', empresa.get('cif', ''))
+                empresa['razon_social'] = emisor_data.get('nombre', empresa.get('razon_social', ''))
+                empresa['direccion'] = emisor_data.get('direccion', empresa.get('direccion', ''))
+                empresa['codigo_postal'] = emisor_data.get('cp', empresa.get('codigo_postal', ''))
+                empresa['ciudad'] = emisor_data.get('ciudad', empresa.get('ciudad', ''))
+                empresa['provincia'] = emisor_data.get('provincia', empresa.get('provincia', ''))
+                empresa['email'] = emisor_data.get('email', empresa.get('email', ''))
+                empresa['pais'] = emisor_data.get('pais', 'ESP')
+                
+                logger.info(f"Datos de emisor cargados desde {emisor_json_path}")
+            except Exception as e:
+                logger.error(f"Error cargando JSON de emisor: {e}")
+        else:
+            logger.info(f"JSON de emisor no encontrado, usando datos de BD: {emisor_json_path}")
         
         return jsonify(empresa), 200
         
@@ -330,7 +355,7 @@ def crear_empresa():
 @empresas_bp.route('/api/empresas/<int:empresa_id>', methods=['PUT'])
 @login_required
 def actualizar_empresa(empresa_id):
-    """Actualiza datos de una empresa, incluyendo logo"""
+    """Actualiza datos de empresa y guarda datos de emisor en JSON"""
     try:
         # SEGURIDAD: Verificar permisos
         es_superadmin = session.get('es_superadmin', False)
@@ -359,102 +384,92 @@ def actualizar_empresa(empresa_id):
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        # Extraer plantilla si viene en el request (ahora se guarda en usuario_empresa)
-        plantilla_usuario = data.pop('plantilla', None)
+        # Obtener código y nombre de empresa para el archivo JSON
+        cursor.execute('SELECT codigo, nombre FROM empresas WHERE id = ?', (empresa_id,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({'error': 'Empresa no encontrada'}), 404
         
-        # Construir UPDATE dinámicamente (sin campos color_* ni plantilla)
-        campos_permitidos = ['nombre', 'razon_social', 'cif', 'direccion', 'telefono', 'email', 'web',
-                            'codigo_postal', 'ciudad', 'provincia',
-                            'activa', 'plantilla_personalizada']
+        codigo_empresa = row[0]
+        nombre_empresa = row[1]
         
+        # Construir datos de emisor para JSON
+        emisor_data = {
+            'nif': data.get('cif', ''),
+            'nombre': data.get('razon_social', data.get('nombre', '')),
+            'direccion': data.get('direccion', ''),
+            'cp': data.get('codigo_postal', ''),
+            'ciudad': data.get('ciudad', ''),
+            'provincia': data.get('provincia', ''),
+            'pais': 'ESP',
+            'email': data.get('email', '')
+        }
+        
+        # Guardar JSON de emisor
+        emisor_json_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo_empresa}_emisor.json')
+        try:
+            with open(emisor_json_path, 'w', encoding='utf-8') as f:
+                json.dump(emisor_data, f, indent=4, ensure_ascii=False)
+            logger.info(f"Datos de emisor guardados en {emisor_json_path}")
+        except Exception as e:
+            logger.error(f"Error guardando JSON de emisor: {e}")
+            conn.close()
+            return jsonify({'error': f'Error guardando datos de emisor: {str(e)}'}), 500
+        
+        # Actualizar solo nombre y logo en BD (lo esencial para la app)
         campos_update = []
         valores = []
         
-        for campo in campos_permitidos:
-            if campo in data:
-                campos_update.append(f"{campo} = ?")
-                # Convertir el campo 'activa' a INTEGER
-                if campo == 'activa':
-                    # Convertir 'on', 'true', '1', True a 1; cualquier otra cosa a 0
-                    valor = data[campo]
-                    if valor in ('on', 'true', '1', True, 1):
-                        valores.append(1)
-                    else:
-                        valores.append(0)
-                else:
-                    valores.append(data[campo])
+        # Solo guardar nombre y activa en BD
+        if 'nombre' in data:
+            campos_update.append("nombre = ?")
+            valores.append(data['nombre'])
+        
+        if 'activa' in data:
+            campos_update.append("activa = ?")
+            valor = data['activa']
+            if valor in ('on', 'true', '1', True, 1):
+                valores.append(1)
+            else:
+                valores.append(0)
         
         # Procesar logo si viene archivo
         if logo_file and logo_file.filename:
-            # Obtener código de la empresa para nombrar el archivo
-            cursor.execute('SELECT codigo FROM empresas WHERE id = ?', (empresa_id,))
-            row = cursor.fetchone()
-            if row:
-                codigo = row[0]
+            # Validar archivo
+            if allowed_file(logo_file.filename):
+                ext = logo_file.filename.rsplit('.', 1)[1].lower()
+                filename = f"{codigo_empresa}_logo.{ext}"
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
                 
-                # Validar archivo
-                if allowed_file(logo_file.filename):
-                    ext = logo_file.filename.rsplit('.', 1)[1].lower()
-                    filename = f"{codigo}_logo.{ext}"
-                    filepath = os.path.join(UPLOAD_FOLDER, filename)
-                    
-                    # Guardar archivo
-                    logo_file.save(filepath)
-                    logger.info(f"Logo actualizado para empresa {codigo}: {filename}")
-                    
-                    # Agregar logo_header al update
-                    campos_update.append("logo_header = ?")
-                    valores.append(filename)
-                else:
-                    conn.close()
-                    return jsonify({'error': 'Formato de archivo no permitido'}), 400
+                # Guardar archivo
+                logo_file.save(filepath)
+                logger.info(f"Logo actualizado para empresa {codigo_empresa}: {filename}")
+                
+                # Agregar logo_header al update
+                campos_update.append("logo_header = ?")
+                valores.append(filename)
+            else:
+                conn.close()
+                return jsonify({'error': 'Formato de archivo no permitido'}), 400
         
-        # Ejecutar UPDATE solo si hay campos de empresa para actualizar
+        # Ejecutar UPDATE solo si hay campos para actualizar
         if campos_update:
             query = f"UPDATE empresas SET {', '.join(campos_update)} WHERE id = ?"
             valores.append(empresa_id)
             cursor.execute(query, valores)
-        else:
-            logger.info(f"No hay campos de empresa para actualizar, solo plantilla de usuario")
-        
-        # Si se actualizó la plantilla, guardarla en usuario_empresa
-        tema_json = None
-        if plantilla_usuario:
-            logger.info(f"Actualizando plantilla de usuario {user_id} en empresa {empresa_id} a: {plantilla_usuario}")
-            cursor.execute('''
-                UPDATE usuario_empresa 
-                SET plantilla = ? 
-                WHERE usuario_id = ? AND empresa_id = ?
-            ''', (plantilla_usuario, user_id, empresa_id))
+            logger.info(f"Empresa {empresa_id} actualizada en BD")
         
         conn.commit()
-        
-        # Cargar y devolver el JSON del tema
-        if plantilla_usuario:
-            try:
-                import json as json_module
-                plantilla_path = os.path.join(BASE_DIR, 'static', 'plantillas', f'{plantilla_usuario}.json')
-                if os.path.exists(plantilla_path):
-                    with open(plantilla_path, 'r', encoding='utf-8') as f:
-                        tema_json = json_module.load(f)
-                    logger.info(f"Plantilla {plantilla_usuario} cargada para usuario {user_id}")
-            except Exception as e:
-                logger.error(f"Error cargando plantilla {plantilla_usuario}: {e}")
-        
         conn.close()
         
-        logger.info(f"Empresa {empresa_id} actualizada")
+        logger.info(f"Empresa {empresa_id} y datos de emisor actualizados correctamente")
         
-        response_data = {
+        return jsonify({
             'success': True, 
-            'mensaje': 'Empresa actualizada correctamente'
-        }
-        
-        if tema_json:
-            response_data['colores'] = tema_json
-            response_data['plantilla'] = plantilla_usuario
-        
-        return jsonify(response_data), 200
+            'mensaje': 'Datos de empresa guardados correctamente',
+            'emisor_json': f'{codigo_empresa}_emisor.json'
+        }), 200
         
     except Exception as e:
         logger.error(f"Error actualizando empresa: {e}", exc_info=True)
