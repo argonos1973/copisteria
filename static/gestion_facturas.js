@@ -837,7 +837,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   </div>
                   <div class="modal-campo">
                     <label for="modal-metodo-pago">Forma de Pago:</label>
-                    <select id="modal-metodo-pago" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                    <select id="modal-metodo-pago" style="padding: 8px; border: 1px solid var(--color-borde); border-radius: 4px; background: var(--color-fondo); color: var(--color-texto);">
                       <option value="E">Efectivo</option>
                       <option value="T">Tarjeta</option>
                       <option value="R">Transferencia</option>
@@ -853,14 +853,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                            readonly />
                   </div>
                 </div>
-                <div class="modal-linea" style="background-color: #f8f9fa; padding: 10px; border-radius: 4px; border-left: 4px solid #4caf50;">
+                <div class="modal-linea" style="background-color: var(--bg-hover, #f8f9fa); padding: 10px; border-radius: 4px; border-left: 4px solid var(--color-success, #4caf50);">
                   <div class="modal-campo">
-                    <label style="color: #4caf50; font-weight: bold;">Estado:</label>
-                    <input type="text" value="Pendiente" class="readonly-field" readonly style="font-weight: bold; color: #4caf50;" />
+                    <label style="color: var(--color-success, #4caf50); font-weight: bold;">Estado:</label>
+                    <input type="text" value="Pendiente" class="readonly-field" readonly style="font-weight: bold; color: var(--color-success, #4caf50);" />
                   </div>
                   <div class="modal-campo">
-                    <label style="color: #4caf50; font-weight: bold;">Importe Cobrado:</label>
-                    <input type="text" value="0,00" class="readonly-field right-aligned" readonly style="font-weight: bold; color: #4caf50;" />
+                    <label style="color: var(--color-success, #4caf50); font-weight: bold;">Importe Cobrado:</label>
+                    <input type="text" value="0,00" class="readonly-field right-aligned" readonly style="font-weight: bold; color: var(--color-success, #4caf50);" />
                   </div>
                   <div class="modal-campo" style="visibility: hidden;">
                     <!-- Campo invisible para mantener la estructura -->
@@ -973,7 +973,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
           <div class="modal-campo">
             <label for="modal-metodo-pago">Forma de Pago:</label>
-            <select id="modal-metodo-pago" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+            <select id="modal-metodo-pago" style="padding: 8px; border: 1px solid var(--color-borde); border-radius: 4px; background: var(--color-fondo); color: var(--color-texto);">
               <option value="E">Efectivo</option>
               <option value="T">Tarjeta</option>
               <option value="R">Transferencia</option>
