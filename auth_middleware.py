@@ -303,11 +303,14 @@ def autenticar_usuario(username, password, empresa_codigo):
         session['empresa_id'] = empresa_id
         session['empresa_codigo'] = empresa_codigo
         session['empresa_nombre'] = empresa_nombre
+        session['empresa_db'] = db_path  # IMPORTANTE: BD de la empresa para conexiones
         session['empresa_logo'] = logo_header  # Guardar logo en sesión
         session['rol'] = rol
         session['es_admin_empresa'] = es_admin_empresa
         session['es_superadmin'] = es_superadmin
         session['ultimo_acceso'] = ultimo_acceso_anterior
+        
+        logger.info(f"Login exitoso: {username} → {empresa_nombre} (BD: {db_path})")
         
         return {
             'success': True,
