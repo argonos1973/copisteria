@@ -384,11 +384,11 @@ async function seleccionarPlantilla(nombre) {
 
 async function guardarNombrePlantilla(nombrePlantilla) {
     try {
-        const response = await fetch(`${API_URL}/empresas/${empresaId}/colores`, {
+        const response = await fetch(`${API_URL}/empresas/${empresaId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                plantilla_personalizada: nombrePlantilla
+                plantilla: nombrePlantilla
             })
         });
         
