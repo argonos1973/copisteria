@@ -181,9 +181,19 @@ async function cargarColoresEmpresa() {
         // Actualizar logo inmediatamente antes de cargar plantilla
         const logoEmpresa = document.getElementById('logo-empresa');
         if (logoEmpresa && branding.logo_header) {
-            logoEmpresa.src = branding.logo_header;
+            const logoUrl = branding.logo_header;
+            logoEmpresa.src = logoUrl;
             logoEmpresa.style.display = 'block';
-            console.log('[BRANDING] 🖼️ Logo actualizado:', branding.logo_header);
+            logoEmpresa.onerror = function() {
+                console.error('[BRANDING] ❌ Error cargando logo:', logoUrl);
+                this.src = '/static/logos/default_header.png';
+            };
+            logoEmpresa.onload = function() {
+                console.log('[BRANDING] ✅ Logo cargado exitosamente');
+            };
+            console.log('[BRANDING] 🖼️ Logo configurado a:', logoUrl);
+        } else {
+            console.warn('[BRANDING] ⚠️ Logo no disponible en branding:', branding);
         }
         
         if (!branding || !branding.plantilla) {
