@@ -181,7 +181,10 @@ async function cargarColoresEmpresa() {
         // Actualizar logo inmediatamente antes de cargar plantilla
         const logoEmpresa = document.getElementById('logo-empresa');
         if (logoEmpresa && branding.logo_header) {
-            const logoUrl = branding.logo_header;
+            // Construir URL completa del logo
+            const logoUrl = branding.logo_header.startsWith('/') 
+                ? branding.logo_header 
+                : `/static/logos/${branding.logo_header}`;
             logoEmpresa.src = logoUrl;
             logoEmpresa.style.display = 'block';
             logoEmpresa.onerror = function() {
@@ -189,7 +192,7 @@ async function cargarColoresEmpresa() {
                 this.src = '/static/logos/default_header.png';
             };
             logoEmpresa.onload = function() {
-                console.log('[BRANDING] ✅ Logo cargado exitosamente');
+                console.log('[BRANDING] ✅ Logo cargado exitosamente:', logoUrl);
             };
             console.log('[BRANDING] 🖼️ Logo configurado a:', logoUrl);
         } else {
