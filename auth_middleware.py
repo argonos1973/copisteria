@@ -368,12 +368,15 @@ def obtener_empresas_usuario(username):
         logger.error(f"Error obteniendo empresas de usuario: {e}", exc_info=True)
         return []
 
-def get_empresa_db():
+def get_db_empresa():
     """
     Retorna la ruta de la BD de la empresa actual según sesión
-    Función de compatibilidad con código existente
+    MULTIEMPRESA: Ya NO usa BD por defecto hardcodeada
     """
-    return session.get('empresa_db', '/var/www/html/db/aleph70.db')
+    if 'empresa_db' not in session:
+        logger.error("[MULTIEMPRESA] get_db_empresa(): session['empresa_db'] no definida")
+        raise RuntimeError("BD de empresa no definida en sesión. Usuario debe iniciar sesión.")
+    return session.get('empresa_db')
 
 def superadmin_required(f):
     """

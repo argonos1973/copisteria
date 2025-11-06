@@ -428,25 +428,14 @@ def enviar_registro_aeat(factura_id: int) -> dict:
     base_dir = BASE_DIR
 
     # --------------------------- Obtener datos factura --------------------
-    # Usar primero la ruta de constantes.DB_NAME
-    db_path = DB_NAME
-    if not os.path.exists(db_path):
-        logger.warning("%s no existe, buscando rutas alternativas", db_path)
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        for candidate in (
-            os.path.join(base_dir, 'aleph70.db'),
-            os.path.join(os.path.dirname(base_dir), 'aleph70.db'),
-        ):
-            if os.path.exists(candidate):
-                db_path = candidate
-                logger.info("Usando base de datos alternativa en %s", db_path)
-                break
-        else:
-            logger.error("Base de datos no encontrada en ninguna ruta conocida")
-            return {'success': False, 'message': 'Base de datos no encontrada'}
-
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
+    # MULTIEMPRESA: Usar get_db_connection() para obtener la BD correcta
+    try:
+        from db_utils import get_db_connection
+        conn = get_db_connection()
+        logger.info("[MULTIEMPRESA] Usando BD de sesión en enviar_registro_aeat")
+    except Exception as e:
+        logger.error("Error obteniendo conexión a BD: %s", e)
+        return {'success': False, 'message': f'Error de base de datos: {str(e)}'}
     try:
         cur = conn.cursor()
         cur.execute(
