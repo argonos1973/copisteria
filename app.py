@@ -1902,8 +1902,8 @@ def consultar_proforma_por_id(id):
         if not proforma:
             return jsonify({'error': 'Proforma no encontrada'}), 404
 
-        # Obtener los detalles de la proforma (ordenados por id)
-        cursor.execute('SELECT * FROM detalle_proforma WHERE id_proforma = ? ORDER BY id', (id,))
+        # Obtener los detalles de la proforma (ordenados de mayor a menor por total)
+        cursor.execute('SELECT * FROM detalle_proforma WHERE id_proforma = ? ORDER BY total DESC', (id,))
         detalles = cursor.fetchall()
 
         # Construir la respuesta

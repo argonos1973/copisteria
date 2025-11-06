@@ -27,7 +27,7 @@ def _formatear_detalle_proforma(detalle_row):
 
 def _obtener_detalles_formateados(cursor, proforma_id):
     detalles_rows = cursor.execute(
-        'SELECT * FROM detalle_proforma WHERE id_proforma = ? ORDER BY id', (proforma_id,)
+        'SELECT * FROM detalle_proforma WHERE id_proforma = ? ORDER BY total DESC', (proforma_id,)
     ).fetchall()
     return [_formatear_detalle_proforma(row) for row in detalles_rows]
 
