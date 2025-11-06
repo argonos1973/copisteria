@@ -8,9 +8,9 @@ consume la tabla `tickets` y usa TipoFactura = 'S'.
 
 import logging
 import os
-from constantes import DB_NAME
 import sqlite3
 from datetime import datetime
+from db_utils import get_db_connection
 
 import requests
 
@@ -25,25 +25,7 @@ from .client import crear_envelope_soap, procesar_serie_numero
 logger = logging.getLogger("verifactu")
 
 
-def _locate_db() -> str | None:
-    """Devuelve ruta absoluta de la base de datos aleph70.db o None."""
-    # Intentar primero la ruta definida en constantes.DB_NAME
-    if os.path.exists(DB_NAME):
-        return DB_NAME
-    logger.warning("%s no existe, buscando rutas alternativas", DB_NAME)
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    # Intentar rutas relativas comunes y registrar intentos
-    candidate_paths = [
-        os.path.join(base_dir, "db", "aleph70.db"),              # /var/www/html/db/aleph70.db
-        os.path.join(base_dir, "aleph70.db"),                    # /var/www/html/aleph70.db
-        os.path.join(os.path.dirname(base_dir), "aleph70.db"),   # /var/www/aleph70.db
-    ]
-    for candidate in candidate_paths:
-        # Log de nivel INFO para que salga en producción
-        logger.info("Probando ruta de BD: %s", candidate)
-        if os.path.exists(candidate):
-            return candidate
-    return None
+# REMOVIDO: _locate_db() - Ahora usamos get_db_connection() directamente
 
 
 def _load_emisor_nif() -> str:
@@ -65,12 +47,13 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
     """
     logger.info("Enviando ticket %s a AEAT (VERI*FACTU)", ticket_id)
 
-    db_path = _locate_db()
-    if not db_path:
-        logger.error("Base de datos aleph70.db no encontrada")
-        return {"success": False, "message": "Base de datos no encontrada"}
+    # MULTIEMPRESA: Usar get_db_connection() directamente
+    try:
+        conn = get_db_connection()
+    except Exception as e:
+        logger.error("Error obteniendo conexión a BD: %s", e)
+        return {"success": False, "message": f"Error de conexión: {e}"}
 
-    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.cursor()
@@ -148,12 +131,12 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
     # Localizar certificados
     cert_dir = os.environ.get("VERIFACTU_CERT_DIR")
     if not cert_dir:
-        for cand in ("/var/www/html/certs", os.path.join(os.path.dirname(db_path), "certs")):
+        for cand in ("/var/www/html/certs",):
             if os.path.exists(cand):
                 cert_dir = cand
                 break
     if not cert_dir:
-        cert_dir = os.path.join(os.path.dirname(db_path), "certs")
+        cert_dir = "/var/www/html/certs"
 
     cert_path = os.path.join(cert_dir, "cert_real.pem")
     key_path = os.path.join(cert_dir, "clave_real.pem")
