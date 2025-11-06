@@ -398,24 +398,46 @@ def actualizar_empresa(empresa_id):
             conn.close()
             return jsonify({'error': 'No hay campos para actualizar'}), 400
         
+        # Ejecutar UPDATE
+        query = f"UPDATE empresas SET {', '.join(campos_update)} WHERE id = ?"
         valores.append(empresa_id)
-        sql = f"UPDATE empresas SET {', '.join(campos_update)} WHERE id = ?"
         
-        logger.info(f"🔧 UPDATE SQL: {sql}")
-        logger.info(f"🔧 Valores: {valores}")
-        logger.info(f"🔧 Datos recibidos: {data}")
-        
-        cursor.execute(sql, valores)
+        cursor.execute(query, valores)
         conn.commit()
+        
+        # Si se actualizó la plantilla, cargar y devolver el JSON del tema
+        plantilla_actualizada = data.get('plantilla')
+        tema_json = None
+        if plantilla_actualizada:
+            try:
+                import json as json_module
+                plantilla_path = os.path.join(BASE_DIR, 'static', 'plantillas', f'{plantilla_actualizada}.json')
+                if os.path.exists(plantilla_path):
+                    with open(plantilla_path, 'r', encoding='utf-8') as f:
+                        tema_json = json_module.load(f)
+                    logger.info(f"Plantilla {plantilla_actualizada} cargada para empresa {empresa_id}")
+            except Exception as e:
+                logger.error(f"Error cargando plantilla {plantilla_actualizada}: {e}")
+        
         conn.close()
         
-        logger.info(f"✅ Empresa {empresa_id} actualizada correctamente")
+        logger.info(f"Empresa {empresa_id} actualizada")
         
-        return jsonify({'success': True, 'mensaje': 'Empresa actualizada'}), 200
+        response_data = {
+            'success': True, 
+            'mensaje': 'Empresa actualizada correctamente'
+        }
+        
+        if tema_json:
+            response_data['colores'] = tema_json
+            response_data['plantilla'] = plantilla_actualizada
+        
+        return jsonify(response_data), 200
         
     except Exception as e:
         logger.error(f"Error actualizando empresa: {e}", exc_info=True)
         return jsonify({'error': 'Error actualizando empresa'}), 500
+
 
 @empresas_bp.route('/api/empresas/generar-colores', methods=['POST'])
 @superadmin_required  # Cambiar temporalmente a login_required en lugar de superadmin_required
