@@ -3428,24 +3428,36 @@ async function aplicarPlantilla(plantilla, empresaId) {
         });
         
         if (response.ok) {
+            const data = await response.json();
+            console.log('[ADMIN] Backend devolvió:', data);
+            console.log('[ADMIN] data.colores exists:', !!data.colores);
+            
             statusDiv.style.background = 'var(--color-success, #28a745)';
             statusDiv.style.color = '#fff';
             statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> Plantilla <strong>${plantilla}</strong> guardada. Aplicando tema...`;
             
-            // Aplicar tema inmediatamente
+            // Aplicar tema inmediatamente desde la respuesta del backend
             statusDiv.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Aplicando tema <strong>${plantilla}</strong>...`;
             
-            // Recargar tema usando la función cargarColoresEmpresa de branding.js
-            if (typeof window.parent.cargarColoresEmpresa === 'function') {
-                await window.parent.cargarColoresEmpresa();
-            } else if (typeof window.cargarColoresEmpresa === 'function') {
-                await window.cargarColoresEmpresa();
-            } else if (typeof cargarColoresEmpresa === 'function') {
-                await cargarColoresEmpresa();
+            // Si el backend devolvió el tema completo, aplicarlo directamente
+            if (data.colores && typeof window.parent.applyTheme === 'function') {
+                console.log('[ADMIN] Aplicando tema desde respuesta del backend...');
+                await window.parent.applyTheme(data.colores);
+            } else if (data.colores && typeof window.applyTheme === 'function') {
+                console.log('[ADMIN] Aplicando tema (window.applyTheme)...');
+                await window.applyTheme(data.colores);
+            } else {
+                // Fallback: recargar desde API
+                console.log('[ADMIN] Fallback: recargando desde API...');
+                if (typeof window.parent.cargarColoresEmpresa === 'function') {
+                    await window.parent.cargarColoresEmpresa();
+                } else if (typeof window.cargarColoresEmpresa === 'function') {
+                    await window.cargarColoresEmpresa();
+                }
             }
             
             // Pequeña espera para asegurar que el tema se aplicó
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 300));
             
             statusDiv.innerHTML = `<i class="fas fa-check-circle"></i> ✓ Plantilla <strong>${getPlantillaNombre(plantilla)}</strong> aplicada correctamente`;
             statusDiv.style.background = 'var(--color-success, #28a745)';
