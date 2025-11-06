@@ -719,13 +719,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         detalles = [];
         actualizarTablaDetalles();
         
-        // Ocultar botones Cobrar y Anular en factura nueva
-        console.log('[CONTROL BOTONES] → Nueva factura: ocultando Cobrar y Anular');
+        // Mostrar Cobrar en factura nueva, ocultar solo Anular
+        console.log('[CONTROL BOTONES] → Nueva factura: mostrando Cobrar, ocultando Anular');
         const btnCobrarp = document.getElementById('btnCobrarp');
         const btnAnular = document.getElementById('btnAnular');
         if (btnCobrarp) {
-          btnCobrarp.style.setProperty('display', 'none', 'important');
-          console.log('[CONTROL BOTONES] → Botón Cobrar OCULTADO (nueva factura)');
+          btnCobrarp.style.display = 'inline-block';
+          console.log('[CONTROL BOTONES] → Botón Cobrar VISIBLE (nueva factura)');
         }
         if (btnAnular) {
           btnAnular.style.setProperty('display', 'none', 'important');
