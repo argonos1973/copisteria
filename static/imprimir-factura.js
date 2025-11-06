@@ -357,6 +357,7 @@ async function rellenarFactura(datos) {
     }
     
     // Insertar código QR si VERI*FACTU está disponible
+    console.log('[VERIFACTU] Intentando insertar QR. qrElement:', !!qrElement, 'verifactuDisponible:', verifactuDisponible);
     if (qrElement && verifactuDisponible) {
         // Limpiar el contenedor QR primero
         qrElement.innerHTML = '';
@@ -440,7 +441,12 @@ async function rellenarFactura(datos) {
             qrElement.innerHTML = '<div style="width:150px;height:150px;border:1px solid #ddd;display:flex;justify-content:center;align-items:center;text-align:center;">QR no disponible</div>';
         }
     } else {
-        console.error('No se encontró el elemento #qr-verifactu');
+        if (!qrElement) {
+            console.error('[VERIFACTU] No se encontró el elemento #qr-verifactu en el DOM');
+        } else {
+            console.warn('[VERIFACTU] Elemento QR existe pero no se insertó imagen: verifactuDisponible =', verifactuDisponible);
+            console.warn('[VERIFACTU] Verificar que factura.codigo_qr tenga datos válidos (longitud > 50)');
+        }
     }
 
     // Pie de página
