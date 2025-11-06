@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, session
 from auth_middleware import superadmin_required, require_admin, login_required
 import sqlite3
 import os
 import json
+import re
+import shutil
+from werkzeug.utils import secure_filename
 from logger_config import get_logger
 
 logger = get_logger(__name__)
@@ -100,6 +103,73 @@ empresas_bp = Blueprint('empresas', __name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_USUARIOS_PATH = '/var/www/html/db/usuarios_sistema.db'
+DB_DIR = os.path.join(BASE_DIR, 'db')
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'logos')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'svg'}
+
+def allowed_file(filename):
+    """Verifica si el archivo tiene una extensión permitida"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def generar_codigo_empresa(nombre):
+    """Genera código de empresa a partir del nombre (5 primeros caracteres, sin espacios)"""
+    # Quitar acentos y caracteres especiales
+    codigo = nombre.upper()
+    codigo = re.sub(r'[ÁÀÄÂ]', 'A', codigo)
+    codigo = re.sub(r'[ÉÈËÊ]', 'E', codigo)
+    codigo = re.sub(r'[ÍÌÏÎ]', 'I', codigo)
+    codigo = re.sub(r'[ÓÒÖÔ]', 'O', codigo)
+    codigo = re.sub(r'[ÚÙÜÛ]', 'U', codigo)
+    codigo = re.sub(r'[^A-Z0-9]', '', codigo)  # Solo letras y números
+    return codigo[:5]  # Primeros 5 caracteres
+
+def clonar_estructura_bd(bd_origen, bd_destino):
+    """Clona la estructura de una BD sin datos"""
+    try:
+        # Conectar a BD origen
+        conn_origen = sqlite3.connect(bd_origen)
+        cursor_origen = conn_origen.cursor()
+        
+        # Obtener esquema completo
+        cursor_origen.execute("SELECT sql FROM sqlite_master WHERE type='table' AND sql IS NOT NULL")
+        tablas = cursor_origen.fetchall()
+        
+        # Obtener índices
+        cursor_origen.execute("SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL")
+        indices = cursor_origen.fetchall()
+        
+        conn_origen.close()
+        
+        # Crear BD destino
+        if os.path.exists(bd_destino):
+            os.remove(bd_destino)
+        
+        conn_destino = sqlite3.connect(bd_destino)
+        cursor_destino = conn_destino.cursor()
+        
+        # Crear tablas
+        for tabla_sql, in tablas:
+            try:
+                cursor_destino.execute(tabla_sql)
+            except Exception as e:
+                logger.warning(f"Error creando tabla: {e}")
+        
+        # Crear índices
+        for indice_sql, in indices:
+            try:
+                cursor_destino.execute(indice_sql)
+            except Exception as e:
+                logger.warning(f"Error creando índice: {e}")
+        
+        conn_destino.commit()
+        conn_destino.close()
+        
+        logger.info(f"BD clonada exitosamente: {bd_destino}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error clonando BD: {e}", exc_info=True)
+        return False
 
 # SELECT estándar con TODAS las columnas (20 total - sin color_*)
 SELECT_EMPRESAS_FULL = """
