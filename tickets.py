@@ -361,10 +361,17 @@ def guardar_ticket():
 
             # Generar datos VERI*FACTU para el ticket (solo si está habilitado)
             if VERIFACTU_HABILITADO:
+                logger.info(f"[VERIFACTU] Generando datos VERI*FACTU para ticket {id_ticket}...")
                 try:
-                    generar_datos_verifactu_para_ticket(id_ticket)
+                    resultado = generar_datos_verifactu_para_ticket(id_ticket)
+                    if resultado:
+                        logger.info(f"[VERIFACTU] Datos generados correctamente para ticket {id_ticket}")
+                    else:
+                        logger.warning(f"[VERIFACTU] No se generaron datos para ticket {id_ticket}")
                 except Exception as vf_exc:
-                    logger.warning(f"Error generando datos VERI*FACTU para ticket {id_ticket}: {vf_exc}")
+                    logger.error(f"[VERIFACTU] Error generando datos VERI*FACTU para ticket {id_ticket}: {vf_exc}", exc_info=True)
+            else:
+                logger.info("[VERIFACTU] VERIFACTU_HABILITADO=False, omitiendo generación")
 
             return jsonify({"mensaje": "Ticket guardado correctamente", "id": id_ticket})
 
