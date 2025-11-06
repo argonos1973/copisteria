@@ -213,19 +213,19 @@
         }
         
         .btn-descargar {
-            background-
-            
+            background: var(--color-primario, #2980b9);
+            color: var(--color-text-on-primary, white);
             border: none;
-            border-radius: 4px;
-            padding: 6px 10px;
+            padding: 8px 12px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            border-radius: 4px;
             display: flex;
+            gap: 6px;
             align-items: center;
             font-size: 14px;
         }
         .btn-descargar:hover {
-            background-
+            background: var(--color-primario-hover, #3498db);
         }
         
         .btn-actualizar:disabled {
@@ -454,8 +454,9 @@
     .stats-header{display:flex;flex-direction:column;gap:0.2rem;margin-bottom:1rem;}
     .header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;}
     .header-icons{display:flex;gap:0.3rem;}
-    .header-icons button{margin:0;border:1px solid var(--color-input-border, #000000);border-radius:4px;padding:6px;}
-    .header-icons i{}
+    .header-icons button{margin:0;border:none;border-radius:4px;padding:8px 12px;background:var(--color-primario, #2980b9);color:var(--color-text-on-primary, white);}
+    .header-icons button:hover{background:var(--color-primario-hover, #3498db);}
+    .header-icons i{font-size:14px;}
     .header-controls{display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;}
 </style>
 </head>
