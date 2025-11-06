@@ -335,6 +335,7 @@ def actualizar_empresa(empresa_id):
         # SEGURIDAD: Verificar permisos
         es_superadmin = session.get('es_superadmin', False)
         empresa_id_usuario = session.get('empresa_id')
+        user_id = session.get('user_id')
         
         # Solo superadmin puede editar cualquier empresa
         # Admin de empresa solo puede editar su propia empresa
@@ -358,10 +359,13 @@ def actualizar_empresa(empresa_id):
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        # Construir UPDATE dinámicamente (sin campos color_*)
+        # Extraer plantilla si viene en el request (ahora se guarda en usuario_empresa)
+        plantilla_usuario = data.pop('plantilla', None)
+        
+        # Construir UPDATE dinámicamente (sin campos color_* ni plantilla)
         campos_permitidos = ['nombre', 'razon_social', 'cif', 'direccion', 'telefono', 'email', 'web',
                             'codigo_postal', 'ciudad', 'provincia',
-                            'activa', 'plantilla', 'plantilla_personalizada']
+                            'activa', 'plantilla_personalizada']
         
         campos_update = []
         valores = []
@@ -414,21 +418,30 @@ def actualizar_empresa(empresa_id):
         valores.append(empresa_id)
         
         cursor.execute(query, valores)
+        
+        # Si se actualizó la plantilla, guardarla en usuario_empresa
+        tema_json = None
+        if plantilla_usuario:
+            logger.info(f"Actualizando plantilla de usuario {user_id} en empresa {empresa_id} a: {plantilla_usuario}")
+            cursor.execute('''
+                UPDATE usuario_empresa 
+                SET plantilla = ? 
+                WHERE usuario_id = ? AND empresa_id = ?
+            ''', (plantilla_usuario, user_id, empresa_id))
+        
         conn.commit()
         
-        # Si se actualizó la plantilla, cargar y devolver el JSON del tema
-        plantilla_actualizada = data.get('plantilla')
-        tema_json = None
-        if plantilla_actualizada:
+        # Cargar y devolver el JSON del tema
+        if plantilla_usuario:
             try:
                 import json as json_module
-                plantilla_path = os.path.join(BASE_DIR, 'static', 'plantillas', f'{plantilla_actualizada}.json')
+                plantilla_path = os.path.join(BASE_DIR, 'static', 'plantillas', f'{plantilla_usuario}.json')
                 if os.path.exists(plantilla_path):
                     with open(plantilla_path, 'r', encoding='utf-8') as f:
                         tema_json = json_module.load(f)
-                    logger.info(f"Plantilla {plantilla_actualizada} cargada para empresa {empresa_id}")
+                    logger.info(f"Plantilla {plantilla_usuario} cargada para usuario {user_id}")
             except Exception as e:
-                logger.error(f"Error cargando plantilla {plantilla_actualizada}: {e}")
+                logger.error(f"Error cargando plantilla {plantilla_usuario}: {e}")
         
         conn.close()
         
@@ -441,7 +454,7 @@ def actualizar_empresa(empresa_id):
         
         if tema_json:
             response_data['colores'] = tema_json
-            response_data['plantilla'] = plantilla_actualizada
+            response_data['plantilla'] = plantilla_usuario
         
         return jsonify(response_data), 200
         

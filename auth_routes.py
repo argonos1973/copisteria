@@ -409,18 +409,20 @@ def obtener_branding():
     """
     try:
         empresa_id = session.get('empresa_id')
+        user_id = session.get('user_id')
         
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        # Obtener datos de empresa (logos, datos, plantilla)
+        # Obtener datos de empresa (logos, datos) y plantilla del usuario
         cursor.execute('''
-            SELECT logo_header, logo_factura, plantilla, plantilla_personalizada,
-                   nombre, cif, direccion, telefono, email, web
-            FROM empresas
-            WHERE id = ?
-        ''', (empresa_id,))
+            SELECT e.logo_header, e.logo_factura, ue.plantilla, e.plantilla_personalizada,
+                   e.nombre, e.cif, e.direccion, e.telefono, e.email, e.web
+            FROM empresas e
+            JOIN usuario_empresa ue ON ue.empresa_id = e.id
+            WHERE e.id = ? AND ue.usuario_id = ?
+        ''', (empresa_id, user_id))
         
         empresa = cursor.fetchone()
         conn.close()
