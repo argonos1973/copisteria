@@ -458,7 +458,8 @@ def actualizar_empresa(empresa_id):
         
     except Exception as e:
         logger.error(f"Error actualizando empresa: {e}", exc_info=True)
-        return jsonify({'error': 'Error actualizando empresa'}), 500
+        logger.error(f"Datos recibidos: empresa_id={empresa_id}, user_id={session.get('user_id')}, es_superadmin={session.get('es_superadmin')}")
+        return jsonify({'error': f'Error actualizando empresa: {str(e)}'}), 500
 
 
 @empresas_bp.route('/api/empresas/generar-colores', methods=['POST'])
