@@ -19,4 +19,6 @@ def get_local_ip():
 
 IP_SERVIDOR = get_local_ip()
 
-DB_NAME = '/var/www/html/db/aleph70.db'
+# Base de datos por defecto (solo para scripts sin contexto de sesión)
+# En sistema multiempresa, SIEMPRE se debe usar session['empresa_db']
+DB_NAME = None  # No hardcodear ninguna BD específica

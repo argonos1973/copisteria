@@ -13,24 +13,44 @@ logger = get_logger(__name__)
 def get_db_connection():
     """
     Crea y retorna una conexión a la base de datos SQLite.
-    En sistema multiempresa, usa la BD de la empresa activa en sesión.
-    Si no hay sesión activa o contexto de petición, usa la BD por defecto.
+    En sistema multiempresa, SIEMPRE usa la BD de la empresa activa en sesión.
+    Si no hay sesión activa, lanza un error claro.
     La conexión usa Row como row_factory para acceder a las columnas por nombre.
     """
     try:
-        db_path = DB_NAME  # Default
+        db_path = None
         
-        # Intentar obtener BD de sesión (solo en contexto de petición)
+        # Obtener BD de sesión (OBLIGATORIO en sistema multiempresa)
         try:
             from flask import has_request_context
             if has_request_context() and 'empresa_db' in session:
                 db_path = session['empresa_db']
-                logger.debug(f"Usando BD de empresa: {db_path}")
+                logger.debug(f"[MULTIEMPRESA] Usando BD de empresa: {db_path}")
+            elif has_request_context():
+                # Contexto de petición pero sin empresa_db en sesión
+                logger.error("[MULTIEMPRESA] ¡session['empresa_db'] no está definida! Usuario no autenticado o sesión corrupta")
+                raise RuntimeError("BD de empresa no definida en sesión. Usuario debe iniciar sesión.")
             else:
-                logger.debug(f"Usando BD por defecto: {db_path}")
-        except (RuntimeError, ImportError):
-            # Fuera de contexto de petición, usar BD por defecto
-            logger.debug(f"Sin contexto de petición, usando BD por defecto: {db_path}")
+                # Sin contexto de petición (scripts batch/workers)
+                # Usar DB_NAME solo si está definido (scripts legacy)
+                if DB_NAME:
+                    db_path = DB_NAME
+                    logger.warning(f"[LEGACY] Sin contexto de petición, usando DB_NAME: {db_path}")
+                else:
+                    logger.error("[MULTIEMPRESA] Sin contexto de petición y DB_NAME=None. No se puede determinar BD.")
+                    raise RuntimeError("No se puede determinar la BD: sin sesión y sin DB_NAME")
+        except (RuntimeError, ImportError) as e:
+            if "BD de empresa no definida" in str(e) or "No se puede determinar la BD" in str(e):
+                raise  # Re-lanzar errores de BD
+            # Otros errores de import, usar DB_NAME si existe
+            if DB_NAME:
+                db_path = DB_NAME
+                logger.warning(f"[LEGACY] Error en contexto Flask, usando DB_NAME: {db_path}")
+            else:
+                raise RuntimeError("No se puede determinar la BD y DB_NAME=None")
+        
+        if not db_path:
+            raise RuntimeError("[MULTIEMPRESA] No se pudo determinar la ruta de la base de datos")
         
         conn = sqlite3.connect(db_path, timeout=30)
         conn.row_factory = sqlite3.Row
