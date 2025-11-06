@@ -409,15 +409,13 @@ def actualizar_empresa(empresa_id):
                     conn.close()
                     return jsonify({'error': 'Formato de archivo no permitido'}), 400
         
-        if not campos_update:
-            conn.close()
-            return jsonify({'error': 'No hay campos para actualizar'}), 400
-        
-        # Ejecutar UPDATE
-        query = f"UPDATE empresas SET {', '.join(campos_update)} WHERE id = ?"
-        valores.append(empresa_id)
-        
-        cursor.execute(query, valores)
+        # Ejecutar UPDATE solo si hay campos de empresa para actualizar
+        if campos_update:
+            query = f"UPDATE empresas SET {', '.join(campos_update)} WHERE id = ?"
+            valores.append(empresa_id)
+            cursor.execute(query, valores)
+        else:
+            logger.info(f"No hay campos de empresa para actualizar, solo plantilla de usuario")
         
         # Si se actualizó la plantilla, guardarla en usuario_empresa
         tema_json = None
