@@ -146,28 +146,7 @@ def ingresos_gastos_totales():
         mes = request.args.get('mes', None)
         anio_anterior = anio_actual - 1
 
-        # Verificar primero si la base de datos existe
-        import os
-        from constantes import DB_NAME
-        if not os.path.exists(DB_NAME) or os.path.getsize(DB_NAME) == 0:
-            # Base de datos no existe o está vacía, devolver una respuesta con valores por defecto
-            return jsonify({
-                'año_actual': anio_actual,
-                'año_anterior': anio_anterior,
-                'ultima_actualizacion': None,
-                'ultima_actualizacion_completa': None,
-                'ingresos': {
-                    'total_actual': 0,
-                    'total_anterior': 0,
-                    'porcentaje_diferencia': 0
-                },
-                'gastos': {
-                    'total_actual': 0,
-                    'total_anterior': 0,
-                    'porcentaje_diferencia': 0
-                }
-            })
-
+        # MULTIEMPRESA: Usar get_db_connection() directamente
         conn = get_db_connection()
         cur = conn.cursor()
 
