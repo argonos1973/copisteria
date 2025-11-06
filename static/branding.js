@@ -114,6 +114,35 @@ async function applyTheme(themeJson) {
     console.log('[BRANDING] ✅ Tema aplicado:', themeJson.name);
     console.log('[BRANDING] 📊 Variables CSS generadas:', Object.keys(vars).length);
     
+    // Forzar reflow para que los estilos se apliquen inmediatamente
+    void document.documentElement.offsetHeight;
+    
+    // Aplicar también a los iframes si existen
+    const iframes = document.querySelectorAll('iframe');
+    iframes.forEach(iframe => {
+        try {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            if (iframeDoc) {
+                Object.entries(vars).forEach(([key, value]) => {
+                    iframeDoc.documentElement.style.setProperty(toVar(key), value);
+                });
+                console.log('[BRANDING] ✓ Inyectando variables CSS en iframe...');
+            }
+        } catch (e) {
+            console.log('[BRANDING] ⚠️ No se pudo acceder al iframe:', e.message);
+        }
+    });
+    
+    console.log('[BRANDING] ✅ Variables CSS aplicadas al iframe');
+    
+    // Forzar repaint de elementos que usan las variables
+    requestAnimationFrame(() => {
+        document.querySelectorAll('.btn-descargar, .header-icons button').forEach(el => {
+            el.style.display = el.style.display || 'inline-block';
+        });
+        console.log('[BRANDING] 🔄 Reflow forzado para actualizar estilos');
+    });
+    
     // 6) Aplicar también al iframe si existe
     aplicarTemaAlIframe(css);
 }
