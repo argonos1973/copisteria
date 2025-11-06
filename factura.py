@@ -2394,9 +2394,10 @@ def actualizar_factura(id, data):
                         tiene_qr = 'qr_data' in datos_verifactu and datos_verifactu['qr_data'] is not None
                         
                         if validado_aeat and tiene_qr:
-                            logger.info(f"[VERIFACTU]Factura validada por AEAT. Hash={datos_verifactu['hash'][:10]}..., ID={datos_verifactu.get('id_verificacion', 'N/A')}")
+                            hash_value = datos_verifactu.get('hash', 'NO_HASH')
+                            logger.info(f"[VERIFACTU]Factura validada por AEAT. Hash={hash_value[:10]}..., ID={datos_verifactu.get('id_verificacion', 'N/A')}")
                             respuesta['datos_adicionales'] = {
-                                'hash': datos_verifactu['hash'],
+                                'hash': hash_value,
                                 'verifactu': True,
                                 'validado_aeat': True,
                                 'id_verificacion': datos_verifactu.get('id_verificacion', ''),
@@ -2404,18 +2405,20 @@ def actualizar_factura(id, data):
                                 'mensaje': datos_verifactu.get('mensaje', 'Factura validada correctamente')
                             }
                         elif validado_aeat and not tiene_qr:
-                            logger.info(f"[VERIFACTU]Factura validada por AEAT pero sin QR generado. Hash={datos_verifactu['hash'][:10]}...")
+                            hash_value = datos_verifactu.get('hash', 'NO_HASH')
+                            logger.info(f"[VERIFACTU]Factura validada por AEAT pero sin QR generado. Hash={hash_value[:10]}...")
                             respuesta['datos_adicionales'] = {
-                                'hash': datos_verifactu['hash'],
+                                'hash': hash_value,
                                 'verifactu': True,
                                 'validado_aeat': True,
                                 'qr_disponible': False,
                                 'mensaje': "Factura validada pero sin QR generado"
                             }
                         else:
-                            logger.info(f"[VERIFACTU]Factura NO validada por AEAT. Hash={datos_verifactu['hash'][:10]}...")
+                            hash_value = datos_verifactu.get('hash', 'NO_HASH')
+                            logger.info(f"[VERIFACTU]Factura NO validada por AEAT. Hash={hash_value[:10]}...")
                             respuesta['datos_adicionales'] = {
-                                'hash': datos_verifactu['hash'],
+                                'hash': hash_value,
                                 'verifactu': True,
                                 'validado_aeat': False,
                                 'qr_disponible': False,
