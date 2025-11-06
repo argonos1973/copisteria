@@ -534,30 +534,26 @@ async function gestionarEmpresas(usuarioId) {
             return;
         }
         
+        // Usuario solo puede tener UNA empresa asignada
+        const empresaActual = empresasUsuario.length > 0 ? empresasUsuario[0] : null;
+        const empresaIdActual = empresaActual ? empresaActual.id : null;
+        const rolActual = empresaActual ? empresaActual.rol : 'usuario';
+        const esAdminActual = empresaActual ? empresaActual.es_admin_empresa : false;
+        
         let html = '<div style="max-height: 400px; overflow-y: auto;">';
+        html += '<p style="padding: 10px; background: #e3f2fd; border-left: 4px solid #2196F3; margin-bottom: 15px;"><i class="fas fa-info-circle"></i> <strong>Nota:</strong> Un usuario solo puede estar asignado a UNA empresa a la vez.</p>';
         
         todasEmpresas.forEach(empresa => {
-            const asignada = empresasUsuario.find(e => e.id === empresa.id);
-            const checked = asignada ? 'checked' : '';
-            const rol = asignada ? asignada.rol : 'usuario';
-            const admin = asignada && asignada.es_admin_empresa ? 'checked' : '';
+            const checked = empresaIdActual === empresa.id ? 'checked' : '';
             
             html += `
                 <div style="padding: 15px; border-bottom: 1px solid #ecf0f1;">
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="empresa-${empresa.id}" ${checked} 
-                            onchange="toggleEmpresa(${usuarioId}, ${empresa.id}, this.checked)">
-                        <label for="empresa-${empresa.id}"><strong>${empresa.nombre}</strong></label>
-                    </div>
-                    <div style="margin-left: 30px; margin-top: 10px;">
-                        <select id="rol-${empresa.id}" style="width: 150px; margin-right: 10px;" ${!checked ? 'disabled' : ''}>
-                            <option value="usuario" ${rol === 'usuario' ? 'selected' : ''}>Usuario</option>
-                            <option value="admin" ${rol === 'admin' ? 'selected' : ''}>Admin</option>
-                            <option value="lectura" ${rol === 'lectura' ? 'selected' : ''}>Lectura</option>
-                        </select>
-                        <label>
-                            <input type="checkbox" id="admin-${empresa.id}" ${admin} ${!checked ? 'disabled' : ''}>
-                            Admin de empresa
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="radio" name="empresa-seleccionada" id="empresa-${empresa.id}" 
+                            value="${empresa.id}" ${checked}>
+                        <label for="empresa-${empresa.id}" style="cursor: pointer; flex: 1;">
+                            <strong>${empresa.nombre}</strong>
+                            <span style="color: #666; font-size: 0.9em; margin-left: 10px;">(${empresa.codigo})</span>
                         </label>
                     </div>
                 </div>
@@ -566,8 +562,23 @@ async function gestionarEmpresas(usuarioId) {
         
         html += '</div>';
         html += `
+            <div style="margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+                <label style="display: block; margin-bottom: 10px;"><strong>Rol en la empresa:</strong></label>
+                <select id="rol-empresa" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="usuario" ${rolActual === 'usuario' ? 'selected' : ''}>Usuario</option>
+                    <option value="admin" ${rolActual === 'admin' ? 'selected' : ''}>Administrador</option>
+                    <option value="lectura" ${rolActual === 'lectura' ? 'selected' : ''}>Solo Lectura</option>
+                </select>
+                
+                <label style="display: flex; align-items: center; margin-top: 15px; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="admin-empresa" ${esAdminActual ? 'checked' : ''}>
+                    <span><strong>Administrador de empresa</strong> <span style="color: #666; font-size: 0.9em;">(puede gestionar usuarios)</span></span>
+                </label>
+            </div>
+        `;
+        html += `
             <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button class="btn btn-success" onclick="guardarEmpresasUsuario(${usuarioId})" style="flex: 1;">
+                <button class="btn btn-success" onclick="guardarEmpresaUsuario(${usuarioId})" style="flex: 1;">
                     <i class="fas fa-save"></i> Guardar
                 </button>
                 <button class="btn btn-danger" onclick="cerrarModalEmpresas()" style="flex: 1;">
@@ -585,61 +596,61 @@ async function gestionarEmpresas(usuarioId) {
     }
 }
 
-async function toggleEmpresa(usuarioId, empresaId, asignar) {
-    const rolSelect = document.getElementById(`rol-${empresaId}`);
-    const adminCheck = document.getElementById(`admin-${empresaId}`);
-    
-    if (asignar) {
-        rolSelect.disabled = false;
-        adminCheck.disabled = false;
-        
-        // Asignar empresa
-        try {
-            const response = await fetch(`/api/admin/usuarios/${usuarioId}/empresas`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    empresa_id: empresaId,
-                    rol: rolSelect.value,
-                    es_admin_empresa: adminCheck.checked ? 1 : 0
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error('Error asignando empresa');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            document.getElementById(`empresa-${empresaId}`).checked = false;
-        }
-    } else {
-        rolSelect.disabled = true;
-        adminCheck.disabled = true;
-        
-        // Desasignar empresa
-        try {
-            const response = await fetch(`/api/admin/usuarios/${usuarioId}/empresas/${empresaId}`, {
-                method: 'DELETE'
-            });
-            
-            if (!response.ok) {
-                throw new Error('Error desasignando empresa');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            document.getElementById(`empresa-${empresaId}`).checked = true;
-        }
-    }
-}
+// Función toggleEmpresa eliminada - ahora se usa radio buttons con una sola empresa
 
 function cerrarModalEmpresas() {
     document.getElementById('modalEmpresas').classList.remove('active');
     cargarUsuarios();
 }
 
-async function guardarEmpresasUsuario(usuarioId) {
-    alert('Empresas actualizadas correctamente');
-    cerrarModalEmpresas();
+async function guardarEmpresaUsuario(usuarioId) {
+    try {
+        // Obtener empresa seleccionada
+        const empresaSeleccionada = document.querySelector('input[name="empresa-seleccionada"]:checked');
+        if (!empresaSeleccionada) {
+            alert('Por favor selecciona una empresa');
+            return;
+        }
+        
+        const empresaId = parseInt(empresaSeleccionada.value);
+        const rol = document.getElementById('rol-empresa').value;
+        const esAdmin = document.getElementById('admin-empresa').checked;
+        
+        console.log('[ADMIN] Guardando asignación:', {empresaId, rol, esAdmin});
+        
+        // Primero eliminar todas las asignaciones anteriores del usuario
+        const empresasActuales = await fetch(`/api/admin/usuarios/${usuarioId}/empresas`);
+        const empresasAnt = await empresasActuales.json();
+        
+        for (const emp of empresasAnt) {
+            await fetch(`/api/admin/usuarios/${usuarioId}/empresas/${emp.id}`, {
+                method: 'DELETE'
+            });
+        }
+        
+        // Asignar la nueva empresa
+        const response = await fetch(`/api/admin/usuarios/${usuarioId}/empresas`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                empresa_id: empresaId,
+                rol: rol,
+                es_admin_empresa: esAdmin ? 1 : 0
+            })
+        });
+        
+        if (response.ok) {
+            mostrarAlerta('Empresa asignada correctamente', 'success');
+            cerrarModalEmpresas();
+        } else {
+            const error = await response.json();
+            mostrarAlerta(error.error || 'Error asignando empresa', 'error');
+        }
+        
+    } catch (error) {
+        console.error('[ADMIN] Error:', error);
+        mostrarAlerta('Error al guardar la asignación', 'error');
+    }
 }
 
 // MÓDULOS
