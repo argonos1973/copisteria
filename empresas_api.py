@@ -328,10 +328,21 @@ def crear_empresa():
 
 
 @empresas_bp.route('/api/empresas/<int:empresa_id>', methods=['PUT'])
-@superadmin_required
+@login_required
 def actualizar_empresa(empresa_id):
     """Actualiza datos de una empresa, incluyendo logo"""
     try:
+        # SEGURIDAD: Verificar permisos
+        es_superadmin = session.get('es_superadmin', False)
+        empresa_id_usuario = session.get('empresa_id')
+        
+        # Solo superadmin puede editar cualquier empresa
+        # Admin de empresa solo puede editar su propia empresa
+        if not es_superadmin:
+            if empresa_id != empresa_id_usuario:
+                logger.warning(f"Usuario {session.get('username')} intentó modificar empresa {empresa_id} sin permisos")
+                return jsonify({'error': 'No tienes permisos para modificar esta empresa'}), 403
+        
         # Detectar si es FormData (con archivo) o JSON
         content_type = request.content_type
         
