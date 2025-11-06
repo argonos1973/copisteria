@@ -1342,7 +1342,7 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
                 console.log('[CONTROL BOTONES] → Factura PENDIENTE: mostrando Guardar y Cobrar');
                 if (btnGuardar) btnGuardar.style.display = 'inline-block';
                 if (btnCobrarp) btnCobrarp.style.display = 'inline-block';
-                if (btnAnular) btnAnular.style.display = 'none';
+                if (btnAnular) btnAnular.style.setProperty('display', 'none', 'important');
                 if (btnAgregarDetalle) btnAgregarDetalle.style.display = 'inline-block';
             } else if (cobrada) {
                 // Factura Cobrada: mostrar Anular, ocultar Guardar y Cobrar
