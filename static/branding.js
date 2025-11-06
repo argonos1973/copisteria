@@ -167,25 +167,30 @@ async function aplicarColoresDirectos(plantillaData, plantillaNombre) {
 // Cargar colores de la empresa
 async function cargarColoresEmpresa() {
     try {
-        console.log("[BRANDING] Cargando colores...");
-        
-        // 1. Obtener nombre de plantilla
+        console.log('[BRANDING] Cargando colores...');
         const response = await fetch('/api/auth/branding');
         
         if (!response.ok) {
-            console.error("[BRANDING] Error:", response.status);
+            console.error('[BRANDING] ❌ No se pudo obtener branding');
             return;
         }
         
         const branding = await response.json();
-        console.log("[BRANDING] Datos recibidos:", branding);
+        console.log('[BRANDING] Datos recibidos:', branding);
         
-        if (!branding.plantilla) {
-            console.warn("[BRANDING] Sin plantilla");
+        // Actualizar logo inmediatamente antes de cargar plantilla
+        const logoEmpresa = document.getElementById('logo-empresa');
+        if (logoEmpresa && branding.logo_header) {
+            logoEmpresa.src = branding.logo_header;
+            logoEmpresa.style.display = 'block';
+            console.log('[BRANDING] 🖼️ Logo actualizado:', branding.logo_header);
+        }
+        
+        if (!branding || !branding.plantilla) {
+            console.error('[BRANDING] ❌ Datos de branding incompletos');
             return;
         }
         
-        // 2. Cargar JSON de plantilla (formato nuevo)
         console.log('[BRANDING] 📄 Cargando plantilla:', branding.plantilla);
         const plantillaResponse = await fetch(`/static/plantillas/${branding.plantilla}.json`, {
             cache: 'no-cache'
