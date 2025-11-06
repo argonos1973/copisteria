@@ -299,6 +299,11 @@ def obtener_menu():
                         'nombre': 'Gestión',
                         'icono': 'fas fa-cog',
                         'ruta': '/ADMIN_PERMISOS.html'
+                    },
+                    {
+                        'nombre': 'Gestión Empresas',
+                        'icono': 'fas fa-building',
+                        'ruta': '/ADMIN_EMPRESAS.html'
                     }
                 ]
             })
