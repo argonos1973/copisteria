@@ -516,11 +516,23 @@ async function gestionarEmpresas(usuarioId) {
         if (!empresasResponse.ok) throw new Error('Error cargando lista de empresas');
         const todasEmpresas = await empresasResponse.json();
         
+        console.log('[ADMIN] Total empresas disponibles:', todasEmpresas.length);
+        console.log('[ADMIN] Empresas:', todasEmpresas);
+        
         // Cargar empresas asignadas al usuario
         const response = await fetch(`/api/admin/usuarios/${usuarioId}/empresas`);
         if (!response.ok) throw new Error('Error cargando empresas del usuario');
         
         const empresasUsuario = await response.json();
+        
+        console.log('[ADMIN] Empresas del usuario:', empresasUsuario.length);
+        console.log('[ADMIN] Empresas asignadas:', empresasUsuario);
+        
+        if (todasEmpresas.length === 0) {
+            document.getElementById('lista-empresas-usuario').innerHTML = '<p style="padding: 20px; text-align: center; color: #999;">No hay empresas disponibles en el sistema</p>';
+            document.getElementById('modalEmpresas').classList.add('active');
+            return;
+        }
         
         let html = '<div style="max-height: 400px; overflow-y: auto;">';
         

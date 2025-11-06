@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from flask import Blueprint, request, jsonify, send_file
-from auth_middleware import superadmin_required
+from auth_middleware import superadmin_required, require_admin
 import sqlite3
 import os
 import json
@@ -145,9 +145,9 @@ def _row_to_dict_full(row):
     }
 
 @empresas_bp.route('/api/empresas', methods=['GET'])
-@superadmin_required
+@require_admin
 def listar_empresas():
-    """Lista todas las empresas del sistema"""
+    """Lista todas las empresas del sistema (requiere admin)"""
     try:
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
