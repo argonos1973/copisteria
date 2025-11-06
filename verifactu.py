@@ -916,8 +916,8 @@ def generar_datos_verifactu_para_factura(factura_id):
         # PASO 2: Obtener datos de factura y generar hash
         # Obtener datos de la factura con impuestos para el nuevo campo cuota_impuestos
         cursor.execute('''
-            SELECT f.id, f.numero, f.fecha, f.total, f.nif as nif_receptor,
-                   c.identificador as nif_emisor, f.importe_impuestos as cuota_impuestos,
+            SELECT f.id, f.numero, f.fecha, f.total, f.nif as nif_emisor,
+                   c.identificador as nif_receptor, f.importe_impuestos as cuota_impuestos,
                    f.estado, f.tipo, f.xml_path
             FROM factura f
             INNER JOIN contactos c ON f.idContacto = c.idContacto
@@ -930,7 +930,7 @@ def generar_datos_verifactu_para_factura(factura_id):
             return None
             
         # Convertir a diccionario
-        factura_dict = dict(zip(['id', 'numero', 'fecha', 'total', 'nif_receptor', 'nif_emisor',
+        factura_dict = dict(zip(['id', 'numero', 'fecha', 'total', 'nif_emisor', 'nif_receptor',
                                'cuota_impuestos', 'estado', 'tipo', 'xml_path'], factura))
         # Derivar serie de la parte no numérica del número
         numero_str = str(factura_dict.get('numero', ''))
