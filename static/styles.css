@@ -505,8 +505,8 @@
    }
 
    .fila-rectificativa {
-     background-color: var(--color-base-700, #e7f6fa) !important;
-     color: var(--color-blue-500, #138496) !important;
+     background-color: var(--color-grid-bg, #e7f6fa) !important;
+     color: var(--color-primario, #138496) !important;
    }
   
   tbody tr {
