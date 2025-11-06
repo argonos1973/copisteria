@@ -832,8 +832,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <input type="text" 
                            id="modal-total-ticket" 
                            value="${formatearImporte(totalProforma)}" 
-                           class="right-aligned readonly-field"
-                           style="background: var(--color-base-700, #2f3136); color: var(--color-white, #ffffff); border: 1px solid var(--color-borde, #3a3a3a);"
+                           class="right-aligned total-proforma-display"
+                           style="background-color: #4CAF50 !important; color: white !important; font-weight: bold;"
                            readonly />
                   </div>
                   <div class="modal-campo">
@@ -969,8 +969,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             <input type="text" 
                    id="modal-total-ticket" 
                    value="${formatearImporte(totalProforma)}" 
-                   class="right-aligned readonly-field"
-                   style="background: var(--color-base-700, #2f3136); color: var(--color-white, #ffffff); border: 1px solid var(--color-borde, #3a3a3a);" 
+                   class="right-aligned total-proforma-display"
+                   style="background-color: #4CAF50 !important; color: white !important; font-weight: bold;" 
                    readonly />
           </div>
           <div class="modal-campo">
