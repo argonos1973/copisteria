@@ -528,7 +528,8 @@
                 const grid = document.getElementById('plantillas-grid');
                 grid.innerHTML = plantillas.map(p => `
                     <div class="plantilla-card-perfil ${p.id === plantillaActual ? 'active' : ''}" 
-                         onclick="cambiarPlantillaUsuario('${p.id}')">
+                         data-plantilla="${p.id}"
+                         onclick="cambiarPlantillaUsuario('${p.id}', this)">
                         <div class="plantilla-icon">${p.icono}</div>
                         <div class="plantilla-nombre">${p.nombre}</div>
                         <div class="plantilla-check"><i class="fas fa-check-circle"></i></div>
@@ -539,7 +540,7 @@
             }
         }
         
-        async function cambiarPlantillaUsuario(plantilla) {
+        async function cambiarPlantillaUsuario(plantilla, clickedElement) {
             try {
                 const response = await fetch('/api/usuario/plantilla', {
                     method: 'PUT',
@@ -551,17 +552,25 @@
                 
                 if (response.ok && result.colores) {
                     // Aplicar tema inmediatamente
-                    if (window.parent && typeof window.parent.applyTheme === 'function') {
-                        await window.parent.applyTheme(result.colores);
+                    if (typeof applyTheme === 'function') {
+                        await applyTheme(result.colores);
                     }
                     
                     // Actualizar UI de la modal
                     document.querySelectorAll('.plantilla-card-perfil').forEach(card => {
                         card.classList.remove('active');
                     });
-                    event.target.closest('.plantilla-card-perfil').classList.add('active');
+                    
+                    // Marcar la plantilla seleccionada como activa
+                    const cardToActivate = clickedElement || document.querySelector(`.plantilla-card-perfil[data-plantilla="${plantilla}"]`);
+                    if (cardToActivate) {
+                        cardToActivate.classList.add('active');
+                    }
                     
                     alert('✅ Plantilla cambiada correctamente');
+                    
+                    // Recargar página para aplicar cambios en iframe
+                    setTimeout(() => location.reload(), 500);
                 } else {
                     alert('❌ Error: ' + (result.error || 'No se pudo cambiar la plantilla'));
                 }
