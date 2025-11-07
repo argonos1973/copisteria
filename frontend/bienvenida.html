@@ -62,32 +62,71 @@
     
     <script>
     // Detectar tema oscuro del sistema de branding
-    window.addEventListener('DOMContentLoaded', () => {
-        // Esperar a que branding.js cargue y aplique el tema
-        setTimeout(() => {
-            // Verificar variables CSS para detectar tema oscuro
-            const bgColor = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
-            const primaryColor = getComputedStyle(document.body).getPropertyValue('--primary-color').trim();
-            
-            console.log('[BIENVENIDA] Colores detectados - bg:', bgColor, 'primary:', primaryColor);
-            
-            // Si el fondo es oscuro (valores RGB bajos), aplicar clase dark
-            if (bgColor) {
-                // Extraer valores RGB del color
-                const rgb = bgColor.match(/\d+/g);
-                if (rgb && rgb.length >= 3) {
-                    const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
-                    console.log('[BIENVENIDA] Brillo del fondo:', brightness);
-                    
-                    if (brightness < 128) {
-                        document.body.classList.add('dark-theme');
-                        console.log('[BIENVENIDA] Tema oscuro detectado, imagen invertida');
-                    } else {
-                        console.log('[BIENVENIDA] Tema claro detectado, imagen normal');
-                    }
+    function detectarYAplicarTema() {
+        // Verificar variables CSS para detectar tema oscuro
+        const bgColor = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
+        const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        
+        console.log('[BIENVENIDA] Colores detectados - bg:', bgColor, 'text:', textColor);
+        
+        // Método 1: Por brillo del fondo
+        if (bgColor && bgColor.includes('rgb')) {
+            const rgb = bgColor.match(/\d+/g);
+            if (rgb && rgb.length >= 3) {
+                const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
+                console.log('[BIENVENIDA] Brillo del fondo:', brightness);
+                
+                if (brightness < 128) {
+                    document.body.classList.add('dark-theme');
+                    console.log('[BIENVENIDA] ✅ Tema oscuro detectado (por brillo), imagen invertida');
+                    return true;
                 }
             }
-        }, 500);
+        }
+        
+        // Método 2: Por color del texto (si texto es claro, fondo es oscuro)
+        if (textColor && textColor.includes('rgb')) {
+            const rgb = textColor.match(/\d+/g);
+            if (rgb && rgb.length >= 3) {
+                const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
+                console.log('[BIENVENIDA] Brillo del texto:', brightness);
+                
+                if (brightness > 200) {
+                    document.body.classList.add('dark-theme');
+                    console.log('[BIENVENIDA] ✅ Tema oscuro detectado (por texto claro), imagen invertida');
+                    return true;
+                }
+            }
+        }
+        
+        console.log('[BIENVENIDA] Tema claro detectado, imagen normal');
+        return false;
+    }
+    
+    // Intentar varias veces con diferentes timings
+    window.addEventListener('DOMContentLoaded', () => {
+        console.log('[BIENVENIDA] Iniciando detección de tema...');
+        
+        // Intento 1: Inmediato
+        setTimeout(() => detectarYAplicarTema(), 100);
+        
+        // Intento 2: Después de branding
+        setTimeout(() => detectarYAplicarTema(), 500);
+        
+        // Intento 3: Más tarde
+        setTimeout(() => detectarYAplicarTema(), 1000);
+        
+        // Intento 4: Observer para cambios en estilos
+        const observer = new MutationObserver(() => {
+            if (detectarYAplicarTema()) {
+                observer.disconnect();
+            }
+        });
+        
+        observer.observe(document.body, {
+            attributes: true,
+            attributeFilter: ['style', 'class']
+        });
     });
     </script>
 </head>
