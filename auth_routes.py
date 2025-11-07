@@ -372,6 +372,10 @@ def obtener_menu():
                 # Módulos que están dentro de otros (nunca se muestran independientemente)
                 logger.info(f"[MENU] Item omitido (está en submenu): {item['nombre']}")
                 incluir_modulo = False
+            elif codigo_modulo == 'estadisticas' and not es_admin_empresa:
+                # Estadísticas solo para administradores
+                logger.info(f"[MENU] Item omitido (solo para admins): {item['nombre']}")
+                incluir_modulo = False
             elif es_admin_empresa:
                 # Admin ve todo
                 incluir_modulo = True

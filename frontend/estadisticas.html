@@ -7,6 +7,34 @@
     <script src="/static/branding.js?v=1762360751"></script>
     <link rel="stylesheet" href="/static/theme-consumer.css?v=1762362531">
     
+    <!-- Verificación de permisos de administrador -->
+    <script>
+    (async function verificarAccesoAdmin() {
+        try {
+            const response = await fetch('/api/auth/session');
+            if (!response.ok) {
+                window.location.href = '/LOGIN.html';
+                return;
+            }
+            
+            const session = await response.json();
+            
+            // Verificar si es admin de empresa
+            if (!session.es_admin_empresa) {
+                console.error('[ESTADISTICAS] Acceso denegado: usuario no es administrador');
+                alert('Acceso denegado: Solo administradores pueden ver estadísticas');
+                window.location.href = '/';
+                return;
+            }
+            
+            console.log('[ESTADISTICAS] Acceso autorizado para admin:', session.usuario);
+        } catch (error) {
+            console.error('[ESTADISTICAS] Error verificando sesión:', error);
+            window.location.href = '/LOGIN.html';
+        }
+    })();
+    </script>
+    
     <script>
     // Variable global para el gráfico de gastos del año
     let graficoGastosAnio = null;
