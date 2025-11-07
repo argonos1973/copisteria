@@ -301,9 +301,9 @@ def obtener_menu():
                         'ruta': '/ADMIN_PERMISOS.html'
                     },
                     {
-                        'nombre': 'Gestión Empresas',
-                        'icono': 'fas fa-building',
-                        'ruta': '/ADMIN_EMPRESAS.html'
+                        'nombre': 'Nueva Empresa',
+                        'icono': 'fas fa-plus-circle',
+                        'ruta': 'javascript:abrirModalNuevaEmpresa()'
                     }
                 ]
             })
