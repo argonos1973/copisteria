@@ -43,6 +43,15 @@ async function verificarSesionYCargarMenu() {
         
         renderizarMenu(menuData, sessionData);
         
+        // Cargar página inicial en el iframe según tipo de usuario
+        const esAdmin = sessionData && sessionData.es_admin_empresa;
+        const paginaInicial = esAdmin ? '/estadisticas.html' : '/bienvenida.html';
+        const iframe = document.getElementById('content-frame');
+        if (iframe) {
+            iframe.src = paginaInicial;
+            console.log('[MENU] Cargando página inicial en iframe:', paginaInicial);
+        }
+        
         // Inicializar sistema de permisos
         if (typeof inicializarPermisos === 'function') {
             inicializarPermisos(menuData);

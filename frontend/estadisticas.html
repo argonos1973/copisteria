@@ -22,8 +22,8 @@
             // Verificar si es admin de empresa
             if (!session.es_admin_empresa) {
                 console.error('[ESTADISTICAS] Acceso denegado: usuario no es administrador');
-                alert('Acceso denegado: Solo administradores pueden ver estadísticas');
-                window.location.href = '/';
+                // Redirigir silenciosamente a página de bienvenida
+                window.location.href = '/bienvenida.html';
                 return;
             }
             
