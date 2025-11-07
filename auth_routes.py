@@ -133,14 +133,15 @@ def obtener_menu():
         user_id = session.get('user_id')
         empresa_id = session.get('empresa_id')
         es_superadmin = session.get('es_superadmin')
+        es_admin_empresa = session.get('es_admin_empresa', False)
         
-        logger.info(f"[MENU] user_id={user_id}, empresa_id={empresa_id}, es_superadmin={es_superadmin}")
+        logger.info(f"[MENU] user_id={user_id}, empresa_id={empresa_id}, es_superadmin={es_superadmin}, es_admin_empresa={es_admin_empresa}")
         
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        if es_superadmin:
-            # Superadmin ve todos los módulos
+        if es_admin_empresa:
+            # Admin de empresa ve todos los módulos de su empresa
             cursor.execute('''
                 SELECT codigo, nombre, ruta, icono, orden
                 FROM modulos
@@ -278,8 +279,8 @@ def obtener_menu():
         
         logger.info(f"[MENU] Total items en menú: {len(menu)}")
         
-        # Agregar opciones de administración si es superadmin
-        if es_superadmin:
+        # Agregar opciones de administración si es admin de empresa
+        if es_admin_empresa:
             menu.append({
                 'codigo': 'admin',
                 'nombre': 'Administración',
@@ -307,7 +308,7 @@ def obtener_menu():
                     }
                 ]
             })
-            logger.info("[MENU] Opciones de administración agregadas")
+            logger.info("[MENU] Opciones de administración agregadas para admin de empresa")
         
         conn.close()
         
