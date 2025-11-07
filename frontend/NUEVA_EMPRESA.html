@@ -10,17 +10,17 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 750px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .container { max-width: 650px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; font-size: 24px; }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold; font-size: 13px; }
-        .form-group input { padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; margin-bottom: 6px; color: #2c3e50; font-weight: bold; font-size: 13px; }
+        .form-group input { padding: 9px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
         .form-group input[type="file"] { padding: 8px; width: 100%; }
-        .form-group small { display: block; color: #7f8c8d; margin-top: 5px; font-size: 11px; }
-        .form-row { display: grid; gap: 15px; margin-bottom: 20px; }
-        .form-row-2 { grid-template-columns: 1fr 120px; }
-        .form-row-3 { grid-template-columns: 80px 1fr 1fr; }
-        .form-row-contact { grid-template-columns: 1fr 1fr 1fr; }
+        .form-group small { display: block; color: #7f8c8d; margin-top: 4px; font-size: 11px; }
+        .form-row { display: grid; gap: 12px; margin-bottom: 18px; }
+        .form-row-nombre { grid-template-columns: 2fr 1fr; }
+        .form-row-cp { grid-template-columns: 100px 1fr 1fr; }
+        .form-row-contacto { grid-template-columns: 1fr 1fr; }
         .logo-preview { margin-top: 10px; display: none; }
         .logo-preview img { max-width: 200px; max-height: 100px; border: 2px solid #ddd; border-radius: 5px; padding: 5px; background: #f9f9f9; }
         .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: 0.3s; font-weight: bold; }
@@ -28,8 +28,8 @@
         .btn-primary:hover { background: #229954; }
         .btn-secondary { background: #95a5a6; color: white; }
         .btn-secondary:hover { background: #7f8c8d; }
-        .button-group { display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px; }
-        .alert { padding: 15px; border-radius: 5px; margin-bottom: 20px; font-size: 13px; }
+        .button-group { display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px; }
+        .alert { padding: 12px 15px; border-radius: 5px; margin-bottom: 20px; font-size: 13px; }
         .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
@@ -55,12 +55,12 @@
         </div>
         
         <form id="formNuevaEmpresa" onsubmit="crearEmpresa(event)">
-            <div class="form-row form-row-2">
+            <div class="form-row form-row-nombre">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="nombre">
                         <i class="fas fa-building"></i> Nombre *
                     </label>
-                    <input type="text" id="nombre" name="nombre" required placeholder="Copistería Los Ángeles" maxlength="40" style="width: 100%;">
+                    <input type="text" id="nombre" name="nombre" required placeholder="Empresa" maxlength="40" style="width: 100%;">
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
@@ -85,7 +85,7 @@
                 <input type="text" id="direccion" name="direccion" placeholder="Calle, número" maxlength="50" style="width: 100%;">
             </div>
             
-            <div class="form-row form-row-3">
+            <div class="form-row form-row-cp">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="codigo_postal">
                         <i class="fas fa-mail-bulk"></i> C.P.
@@ -106,7 +106,7 @@
                 </div>
             </div>
             
-            <div class="form-row form-row-contact">
+            <div class="form-row form-row-contacto">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="telefono">
                         <i class="fas fa-phone"></i> Teléfono
@@ -120,13 +120,13 @@
                     </label>
                     <input type="email" id="email" name="email" placeholder="info@empresa.com" maxlength="30" style="width: 100%;">
                 </div>
-                
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="web">
-                        <i class="fas fa-globe"></i> Web
-                    </label>
-                    <input type="text" id="web" name="web" placeholder="empresa.com" maxlength="15" style="width: 100%;">
-                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="web">
+                    <i class="fas fa-globe"></i> Web
+                </label>
+                <input type="text" id="web" name="web" placeholder="www.empresa.com" maxlength="15" style="width: 100%;">
             </div>
             
             <div class="form-group">
