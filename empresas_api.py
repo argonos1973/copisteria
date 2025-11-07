@@ -396,7 +396,9 @@ def crear_empresa():
             "provincia": provincia or "",
             "telefono": telefono or "",
             "email": email or "",
-            "web": web or ""
+            "web": web or "",
+            "db_path": bd_destino,
+            "codigo": codigo
         }
         
         emisor_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo}_emisor.json')
@@ -459,8 +461,8 @@ def actualizar_empresa(empresa_id):
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        # Obtener código y nombre de empresa para el archivo JSON
-        cursor.execute('SELECT codigo, nombre FROM empresas WHERE id = ?', (empresa_id,))
+        # Obtener código, nombre y db_path de empresa para el archivo JSON
+        cursor.execute('SELECT codigo, nombre, db_path FROM empresas WHERE id = ?', (empresa_id,))
         row = cursor.fetchone()
         if not row:
             conn.close()
@@ -468,6 +470,7 @@ def actualizar_empresa(empresa_id):
         
         codigo_empresa = row[0]
         nombre_empresa = row[1]
+        db_path_empresa = row[2]
         
         # Construir datos de emisor para JSON
         emisor_data = {
@@ -478,7 +481,9 @@ def actualizar_empresa(empresa_id):
             'ciudad': data.get('ciudad', ''),
             'provincia': data.get('provincia', ''),
             'pais': 'ESP',
-            'email': data.get('email', '')
+            'email': data.get('email', ''),
+            'db_path': db_path_empresa,
+            'codigo': codigo_empresa
         }
         
         # Guardar JSON de emisor
@@ -663,7 +668,7 @@ def actualizar_emisor(empresa_id):
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        cursor.execute('SELECT codigo FROM empresas WHERE id = ?', (empresa_id,))
+        cursor.execute('SELECT codigo, db_path FROM empresas WHERE id = ?', (empresa_id,))
         row = cursor.fetchone()
         conn.close()
         
@@ -671,6 +676,7 @@ def actualizar_emisor(empresa_id):
             return jsonify({'error': 'Empresa no encontrada'}), 404
         
         codigo = row[0]
+        db_path = row[1]
         
         # Actualizar emisor.json
         emisor_data = {
@@ -682,7 +688,9 @@ def actualizar_emisor(empresa_id):
             "provincia": data.get('provincia', ''),
             "telefono": data.get('telefono', ''),
             "email": data.get('email', ''),
-            "web": data.get('web', '')
+            "web": data.get('web', ''),
+            "db_path": db_path,
+            "codigo": codigo
         }
         
         emisor_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo}_emisor.json')
