@@ -1,4 +1,3 @@
-<\!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -22,6 +21,8 @@
         .form-row-2 { grid-template-columns: 2fr 1fr; }
         .form-row-3 { grid-template-columns: 120px 1fr 1fr; }
         .form-row-equal { grid-template-columns: 1fr 1fr; }
+        .logo-preview { margin-top: 10px; display: none; }
+        .logo-preview img { max-width: 200px; max-height: 100px; border: 2px solid #ddd; border-radius: 5px; padding: 5px; background: #f9f9f9; }
         .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: 0.3s; font-weight: bold; }
         .btn-primary { background: #27ae60; color: white; }
         .btn-primary:hover { background: #229954; }
@@ -54,42 +55,38 @@
         </div>
         
         <form id="formNuevaEmpresa" onsubmit="crearEmpresa(event)">
-            <\!-- Nombre y CIF -->
             <div class="form-row form-row-2">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="nombre">
-                        <i class="fas fa-building"></i> Nombre de la Empresa *
+                        <i class="fas fa-building"></i> Nombre *
                     </label>
-                    <input type="text" id="nombre" name="nombre" required placeholder="Ej: Copistería Los Ángeles">
-                    <small>Este será el nombre visible de la empresa</small>
+                    <input type="text" id="nombre" name="nombre" required placeholder="Copistería Los Ángeles" maxlength="50">
+                    <small>Nombre visible de la empresa</small>
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="cif">
-                        <i class="fas fa-id-card"></i> CIF/NIF
+                        <i class="fas fa-id-card"></i> NIF
                     </label>
                     <input type="text" id="cif" name="cif" placeholder="B12345678" maxlength="9">
                 </div>
             </div>
             
-            <\!-- Razón Social -->
             <div class="form-group">
                 <label for="razon_social">
                     <i class="fas fa-file-signature"></i> Razón Social
                 </label>
-                <input type="text" id="razon_social" name="razon_social" placeholder="Ej: Los Ángeles S.L.">
-                <small>Si se deja vacío, se usará el nombre de la empresa</small>
+                <input type="text" id="razon_social" name="razon_social" placeholder="Los Ángeles S.L." maxlength="100">
+                <small>Si vacío, se usará el nombre</small>
             </div>
             
-            <\!-- Dirección -->
             <div class="form-group">
                 <label for="direccion">
                     <i class="fas fa-map-marker-alt"></i> Dirección
                 </label>
-                <input type="text" id="direccion" name="direccion" placeholder="Calle, número, piso">
+                <input type="text" id="direccion" name="direccion" placeholder="Calle, número" maxlength="150">
             </div>
             
-            <\!-- CP, Ciudad, Provincia -->
             <div class="form-row form-row-3">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="codigo_postal">
@@ -101,48 +98,48 @@
                     <label for="ciudad">
                         <i class="fas fa-city"></i> Ciudad
                     </label>
-                    <input type="text" id="ciudad" name="ciudad" placeholder="Madrid">
+                    <input type="text" id="ciudad" name="ciudad" placeholder="Madrid" maxlength="50">
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="provincia">
                         <i class="fas fa-map"></i> Provincia
                     </label>
-                    <input type="text" id="provincia" name="provincia" placeholder="Madrid">
+                    <input type="text" id="provincia" name="provincia" placeholder="Madrid" maxlength="50">
                 </div>
             </div>
             
-            <\!-- Teléfono y Email -->
             <div class="form-row form-row-equal">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="telefono">
                         <i class="fas fa-phone"></i> Teléfono
                     </label>
-                    <input type="text" id="telefono" name="telefono" placeholder="912345678">
+                    <input type="text" id="telefono" name="telefono" placeholder="912345678" maxlength="20">
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="email">
                         <i class="fas fa-envelope"></i> Email
                     </label>
-                    <input type="email" id="email" name="email" placeholder="info@empresa.com">
+                    <input type="email" id="email" name="email" placeholder="info@empresa.com" maxlength="100">
                 </div>
             </div>
             
-            <\!-- Web -->
             <div class="form-group">
                 <label for="web">
-                    <i class="fas fa-globe"></i> Sitio Web
+                    <i class="fas fa-globe"></i> Web
                 </label>
-                <input type="text" id="web" name="web" placeholder="www.empresa.com">
+                <input type="text" id="web" name="web" placeholder="www.empresa.com" maxlength="100">
             </div>
             
-            <\!-- Logo -->
             <div class="form-group">
                 <label for="logo">
-                    <i class="fas fa-image"></i> Logo de la Empresa
+                    <i class="fas fa-image"></i> Logo
                 </label>
-                <input type="file" id="logo" name="logo" accept="image/*">
-                <small>Formatos: PNG, JPG, SVG (máx. 2MB)</small>
+                <input type="file" id="logo" name="logo" accept="image/*" onchange="previsualizarLogo(event)">
+                <small>PNG, JPG, SVG (máx. 2MB)</small>
+                <div class="logo-preview" id="logoPreview">
+                    <img id="logoImg" src="" alt="Vista previa del logo">
+                </div>
             </div>
             
             <div class="button-group">
@@ -157,6 +154,23 @@
     </div>
     
     <script>
+        function previsualizarLogo(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('logoPreview');
+            const img = document.getElementById('logoImg');
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+        
         function mostrarAlerta(mensaje, tipo) {
             const container = document.getElementById('alert-container');
             const alert = document.createElement('div');
@@ -205,6 +219,7 @@
                     );
                     
                     document.getElementById('formNuevaEmpresa').reset();
+                    document.getElementById('logoPreview').style.display = 'none';
                 } else {
                     mostrarAlerta(
                         `<strong>❌ Error al crear la empresa</strong><br>${data.error || 'Error desconocido'}`,
@@ -226,6 +241,7 @@
         function limpiarFormulario() {
             document.getElementById('formNuevaEmpresa').reset();
             document.getElementById('alert-container').innerHTML = '';
+            document.getElementById('logoPreview').style.display = 'none';
         }
     </script>
 </body>
