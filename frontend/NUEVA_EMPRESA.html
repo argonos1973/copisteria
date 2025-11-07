@@ -20,7 +20,7 @@
         
         .w-nombre { width: 400px; }
         .w-nif { width: 110px; }
-        .w-razon { width: 400px; }
+        .w-razon { width: 520px; }
         .w-direccion { width: 500px; }
         .w-cp { width: 80px; }
         .w-ciudad { width: 160px; }
@@ -65,27 +65,27 @@
         </div>
         
         <form id="formNuevaEmpresa" onsubmit="crearEmpresa(event)">
+            <div class="form-group">
+                <label for="nombre">
+                    <i class="fas fa-building"></i> Nombre *
+                </label>
+                <input type="text" id="nombre" name="nombre" required placeholder="Empresa" maxlength="40" class="w-nombre">
+            </div>
+            
             <div class="form-row">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="nombre">
-                        <i class="fas fa-building"></i> Nombre *
-                    </label>
-                    <input type="text" id="nombre" name="nombre" required placeholder="Empresa" maxlength="40" class="w-nombre">
-                </div>
-                
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="cif">
                         <i class="fas fa-id-card"></i> NIF
                     </label>
                     <input type="text" id="cif" name="cif" placeholder="B12345678" maxlength="9" class="w-nif">
                 </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="razon_social">
-                    <i class="fas fa-file-signature"></i> Razón Social
-                </label>
-                <input type="text" id="razon_social" name="razon_social" placeholder="Razón Social S.L." maxlength="40" class="w-razon">
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="razon_social">
+                        <i class="fas fa-file-signature"></i> Razón Social
+                    </label>
+                    <input type="text" id="razon_social" name="razon_social" placeholder="Razón Social S.L." maxlength="40" class="w-razon">
+                </div>
             </div>
             
             <div class="form-group">
