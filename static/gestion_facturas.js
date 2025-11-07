@@ -1402,11 +1402,17 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
                 }
                 // Solo mostrar Anular si tiene permiso
                 if (btnAnular) {
-                    if (typeof tienePermiso !== 'undefined' && tienePermiso('facturas', 'anular')) {
+                    // Verificar si fue ocultado por el sistema de permisos
+                    const ocultoPorPermisos = btnAnular.getAttribute('data-permiso-oculto') === 'true';
+                    
+                    if (ocultoPorPermisos) {
+                        console.log('[CONTROL BOTONES] → Botón Anular ya fue OCULTADO por sistema de permisos, respetando');
+                    } else if (typeof tienePermiso !== 'undefined' && tienePermiso('facturas', 'anular')) {
                         btnAnular.style.display = 'inline-block';
                         console.log('[CONTROL BOTONES] → Botón Anular VISIBLE (tiene permiso)');
                     } else {
                         btnAnular.style.setProperty('display', 'none', 'important');
+                        btnAnular.setAttribute('data-permiso-oculto', 'true');
                         console.log('[CONTROL BOTONES] → Botón Anular OCULTADO (sin permiso)');
                     }
                 }

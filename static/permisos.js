@@ -115,7 +115,8 @@ function aplicarPermisosAElementos() {
         
         if (!tieneAcceso) {
             if (modo === 'ocultar') {
-                elemento.style.display = 'none';
+                elemento.style.setProperty('display', 'none', 'important');
+                elemento.setAttribute('data-permiso-oculto', 'true');
                 console.log(`[PERMISOS] Ocultado: ${elemento.tagName} - ${modulo}.${accion}`);
             } else if (modo === 'deshabilitar') {
                 elemento.disabled = true;
