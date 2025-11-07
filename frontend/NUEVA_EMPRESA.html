@@ -11,21 +11,24 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; font-size: 24px; }
         .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold; }
-        .form-group input, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #2c3e50; font-weight: bold; font-size: 13px; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
         .form-group input[type="file"] { padding: 8px; }
-        .form-group small { display: block; color: #7f8c8d; margin-top: 5px; font-size: 12px; }
-        .form-row { display: grid; grid-template-columns: 1fr 2fr; gap: 15px; }
-        .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: 0.3s; font-weight: bold; }
+        .form-group small { display: block; color: #7f8c8d; margin-top: 5px; font-size: 11px; }
+        .form-row { display: grid; gap: 15px; margin-bottom: 20px; }
+        .form-row-2 { grid-template-columns: 2fr 1fr; }
+        .form-row-3 { grid-template-columns: 120px 1fr 1fr; }
+        .form-row-equal { grid-template-columns: 1fr 1fr; }
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: 0.3s; font-weight: bold; }
         .btn-primary { background: #27ae60; color: white; }
         .btn-primary:hover { background: #229954; }
         .btn-secondary { background: #95a5a6; color: white; }
         .btn-secondary:hover { background: #7f8c8d; }
         .button-group { display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px; }
-        .alert { padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .alert { padding: 15px; border-radius: 5px; margin-bottom: 20px; font-size: 13px; }
         .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
@@ -51,14 +54,25 @@
         </div>
         
         <form id="formNuevaEmpresa" onsubmit="crearEmpresa(event)">
-            <div class="form-group">
-                <label for="nombre">
-                    <i class="fas fa-building"></i> Nombre de la Empresa *
-                </label>
-                <input type="text" id="nombre" name="nombre" required placeholder="Ej: Copistería Los Ángeles">
-                <small>Este será el nombre visible de la empresa</small>
+            <\!-- Nombre y CIF -->
+            <div class="form-row form-row-2">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="nombre">
+                        <i class="fas fa-building"></i> Nombre de la Empresa *
+                    </label>
+                    <input type="text" id="nombre" name="nombre" required placeholder="Ej: Copistería Los Ángeles">
+                    <small>Este será el nombre visible de la empresa</small>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="cif">
+                        <i class="fas fa-id-card"></i> CIF/NIF
+                    </label>
+                    <input type="text" id="cif" name="cif" placeholder="B12345678" maxlength="9">
+                </div>
             </div>
             
+            <\!-- Razón Social -->
             <div class="form-group">
                 <label for="razon_social">
                     <i class="fas fa-file-signature"></i> Razón Social
@@ -67,56 +81,54 @@
                 <small>Si se deja vacío, se usará el nombre de la empresa</small>
             </div>
             
-            <div class="form-group">
-                <label for="cif">
-                    <i class="fas fa-id-card"></i> CIF/NIF
-                </label>
-                <input type="text" id="cif" name="cif" placeholder="Ej: B12345678">
-            </div>
-            
+            <\!-- Dirección -->
             <div class="form-group">
                 <label for="direccion">
                     <i class="fas fa-map-marker-alt"></i> Dirección
                 </label>
-                <input type="text" id="direccion" name="direccion" placeholder="Calle, número">
+                <input type="text" id="direccion" name="direccion" placeholder="Calle, número, piso">
             </div>
             
-            <div class="form-row">
-                <div class="form-group">
+            <\!-- CP, Ciudad, Provincia -->
+            <div class="form-row form-row-3">
+                <div class="form-group" style="margin-bottom: 0;">
                     <label for="codigo_postal">
                         <i class="fas fa-mail-bulk"></i> C.P.
                     </label>
-                    <input type="text" id="codigo_postal" name="codigo_postal" placeholder="28001">
+                    <input type="text" id="codigo_postal" name="codigo_postal" placeholder="28001" maxlength="5">
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="margin-bottom: 0;">
                     <label for="ciudad">
                         <i class="fas fa-city"></i> Ciudad
                     </label>
                     <input type="text" id="ciudad" name="ciudad" placeholder="Madrid">
                 </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="provincia">
+                        <i class="fas fa-map"></i> Provincia
+                    </label>
+                    <input type="text" id="provincia" name="provincia" placeholder="Madrid">
+                </div>
             </div>
             
-            <div class="form-group">
-                <label for="provincia">
-                    <i class="fas fa-map"></i> Provincia
-                </label>
-                <input type="text" id="provincia" name="provincia" placeholder="Madrid">
+            <\!-- Teléfono y Email -->
+            <div class="form-row form-row-equal">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="telefono">
+                        <i class="fas fa-phone"></i> Teléfono
+                    </label>
+                    <input type="text" id="telefono" name="telefono" placeholder="912345678">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="email">
+                        <i class="fas fa-envelope"></i> Email
+                    </label>
+                    <input type="email" id="email" name="email" placeholder="info@empresa.com">
+                </div>
             </div>
             
-            <div class="form-group">
-                <label for="telefono">
-                    <i class="fas fa-phone"></i> Teléfono
-                </label>
-                <input type="text" id="telefono" name="telefono" placeholder="912345678">
-            </div>
-            
-            <div class="form-group">
-                <label for="email">
-                    <i class="fas fa-envelope"></i> Email
-                </label>
-                <input type="email" id="email" name="email" placeholder="info@empresa.com">
-            </div>
-            
+            <\!-- Web -->
             <div class="form-group">
                 <label for="web">
                     <i class="fas fa-globe"></i> Sitio Web
@@ -124,6 +136,7 @@
                 <input type="text" id="web" name="web" placeholder="www.empresa.com">
             </div>
             
+            <\!-- Logo -->
             <div class="form-group">
                 <label for="logo">
                     <i class="fas fa-image"></i> Logo de la Empresa
