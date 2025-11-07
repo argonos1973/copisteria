@@ -34,6 +34,10 @@
         
         .logo-container {
             text-align: center;
+            /* Aplicar mismo fondo que la plantilla */
+            background-color: var(--bg-color, #f5f5f5);
+            padding: 20px;
+            border-radius: 10px;
         }
         
         .logo-container img {
@@ -42,12 +46,10 @@
             width: auto;
             height: auto;
             object-fit: contain;
-            /* Adaptar imagen al tema */
-            filter: brightness(0.95) contrast(1.05);
             transition: filter 0.3s ease;
         }
         
-        /* Si el tema es oscuro, invertir colores de la imagen */
+        /* Si el tema es oscuro, invertir solo el símbolo */
         @media (prefers-color-scheme: dark) {
             .logo-container img {
                 filter: invert(1) hue-rotate(180deg) brightness(1.1) !important;
@@ -58,11 +60,6 @@
         body[data-theme="dark"] .logo-container img,
         body.dark-theme .logo-container img {
             filter: invert(1) hue-rotate(180deg) brightness(1.1) !important;
-        }
-        
-        /* Aplicar directamente si el fondo del body es oscuro */
-        body {
-            background-color: var(--bg-color, #f5f5f5);
         }
         
         /* Clase auxiliar para forzar inversión */
