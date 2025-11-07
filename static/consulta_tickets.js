@@ -135,6 +135,13 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     buscarTickets();
+    
+    // Aplicar permisos a los elementos después de cargar
+    setTimeout(() => {
+        if (typeof aplicarPermisosAElementos !== 'undefined') {
+            aplicarPermisosAElementos();
+        }
+    }, 500);
 });
 
 // Función para búsqueda interactiva
@@ -448,5 +455,12 @@ function imprimirFactura(idTicket) {
 }
 
 document.getElementById('btn-nuevo-ticket').addEventListener('click', function() {
+    // Verificar permiso de crear tickets
+    if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('tickets', 'crear')) {
+            return;
+        }
+    }
+    
     window.location.href = 'GESTION_TICKETS.html';
 });

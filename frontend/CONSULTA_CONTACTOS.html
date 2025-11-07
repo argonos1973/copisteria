@@ -86,7 +86,10 @@
         />
       </div>
       <div class="form-group">
-        <button @click="nuevoContacto">Nuevo Contacto</button>
+        <button 
+          data-modulo="contactos"
+          data-accion="crear"
+          @click="nuevoContacto">Nuevo Contacto</button>
       </div>
     </div>
 
@@ -156,6 +159,8 @@
               <td class="acciones-col">
                 <button
                   v-if="contacto.identificador"
+                  data-modulo="proformas"
+                  data-accion="crear"
                   class="btn-icon"
                   :title="contacto.numero_proforma_abierta ? 'Modificar Proforma' : 'Crear Proforma'"
                   @click.stop="crearProforma(contacto.idContacto)"
@@ -166,6 +171,8 @@
               <td class="acciones-col">
                 <button
                   v-if="contacto.identificador"
+                  data-modulo="facturas"
+                  data-accion="crear"
                   class="btn-icon"
                   title="Crear Factura"
                   @click.stop="crearFactura(contacto.idContacto)"
@@ -175,6 +182,8 @@
               </td>
               <td class="acciones-col">
                 <button
+                  data-modulo="contactos"
+                  data-accion="eliminar"
                   class="btn-icon"
                   title="Eliminar"
                   @click.stop="deleteContacto(contacto.idContacto)"
@@ -195,7 +204,7 @@
     import { IP_SERVER, PORT } from '../static/constantes.js?v=1761938648';
     import { mostrarNotificacion, mostrarConfirmacion } from '../static/notificaciones.js';
 
-    const { createApp, ref, reactive, onMounted } = Vue;
+    const { createApp, ref, reactive, onMounted, watch } = Vue;
 
     createApp({
       setup() {
@@ -277,6 +286,13 @@
 
         // Eliminar contacto
         const deleteContacto = async (id) => {
+          // Verificar permiso
+          if (typeof verificarPermisoConAlerta !== 'undefined') {
+            if (!verificarPermisoConAlerta('contactos', 'eliminar')) {
+              return;
+            }
+          }
+          
           try {
             const confirmado = await mostrarConfirmacion('¿Está seguro de eliminar este contacto?');
             if (confirmado) {
@@ -292,6 +308,13 @@
 
         // Crear Proforma y Factura
         const crearProforma = (id) => {
+          // Verificar permiso
+          if (typeof verificarPermisoConAlerta !== 'undefined') {
+            if (!verificarPermisoConAlerta('proformas', 'crear')) {
+              return;
+            }
+          }
+          
           // Guardar filtros antes de navegar
           guardarFiltros();
           // Asegurarnos de que el origen se guarda en sessionStorage
@@ -300,6 +323,13 @@
         };
 
         const crearFactura = (id) => {
+          // Verificar permiso
+          if (typeof verificarPermisoConAlerta !== 'undefined') {
+            if (!verificarPermisoConAlerta('facturas', 'crear')) {
+              return;
+            }
+          }
+          
           console.log(`Crear Factura para el contacto ID:&& ${id}`);
           guardarFiltros();
           // Guardar origen para volver a la lista de facturas
@@ -380,6 +410,13 @@
 
         // Nuevo contacto
         const nuevoContacto = () => {
+          // Verificar permiso
+          if (typeof verificarPermisoConAlerta !== 'undefined') {
+            if (!verificarPermisoConAlerta('contactos', 'crear')) {
+              return;
+            }
+          }
+          
           // Guardar filtros antes de navegar
           guardarFiltros();
           window.location.href = 'GESTION_CONTACTOS.html';
@@ -391,13 +428,25 @@
           restaurarFiltros();
           // Cargar contactos
           await fetchContactos();
-          // Poner el foco en el campo de razón social usando nextTick
+          // Aplicar permisos a los elementos
           Vue.nextTick(() => {
+            if (typeof aplicarPermisosAElementos !== 'undefined') {
+              aplicarPermisosAElementos();
+            }
+            // Poner el foco en el campo de razón social
             const razonSocialInput = document.getElementById('razonSocial');
             if (razonSocialInput) {
               razonSocialInput.focus();
             }
           });
+        });
+
+        // Re-aplicar permisos cuando cambian los contactos
+        watch(contactos, async () => {
+          await Vue.nextTick();
+          if (typeof aplicarPermisosAElementos !== 'undefined') {
+            aplicarPermisosAElementos();
+          }
         });
 
         // Función para validar el formulario

@@ -46,7 +46,11 @@
       </div>
       
       <div class="buttons">
-        <button type="button" id="exportar-btn">Exportar</button>
+        <button 
+            type="button" 
+            id="exportar-btn"
+            data-modulo="exportar"
+            data-accion="exportar">Exportar</button>
       </div>
     </div>
   </div>
@@ -131,6 +135,13 @@
 
     // Función para exportar las selecciones a un archivo CSV desde el backend
     async function exportarSeleccion() {
+      // Verificar permiso de exportar
+      if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('exportar', 'exportar')) {
+          return;
+        }
+      }
+      
       const ejercicio = document.getElementById('ejercicio').value;
       const trimestre = document.getElementById('trimestre').value;
 
@@ -208,6 +219,11 @@
         exportarBtn.addEventListener('click', exportarSeleccion);
       } else {
         console.error('Botón con id "exportar-btn" no encontrado.');
+      }
+      
+      // Aplicar permisos a los elementos
+      if (typeof aplicarPermisosAElementos !== 'undefined') {
+        aplicarPermisosAElementos();
       }
     });
   </script>
