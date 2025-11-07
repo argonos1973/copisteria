@@ -338,12 +338,12 @@ def crear_empresa():
         logger.info(f"Directorio creado para empresa: {empresa_dir}")
         
         # Crear BD de la empresa dentro del subdirectorio
-        bd_origen = os.path.join(DB_DIR, 'aleph70.db')
+        bd_origen = os.path.join(DB_DIR, 'plantilla.db')
         bd_destino = os.path.join(empresa_dir, f'{codigo}.db')
         
         if not os.path.exists(bd_origen):
             conn.close()
-            return jsonify({'error': 'BD de origen (aleph70.db) no encontrada'}), 500
+            return jsonify({'error': 'BD plantilla (plantilla.db) no encontrada'}), 500
         
         # Clonar estructura
         if not clonar_estructura_bd(bd_origen, bd_destino):
