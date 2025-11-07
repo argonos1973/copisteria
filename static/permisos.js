@@ -63,19 +63,28 @@ function inicializarPermisos(menuData) {
  * @returns {boolean}
  */
 function tienePermiso(modulo, accion) {
-    if (!window.usuarioPermisos) {
-        console.error(`[PERMISOS] window.usuarioPermisos NO existe`);
+    // Intentar obtener permisos del contexto actual o del padre (si estamos en iframe)
+    let permisos = window.usuarioPermisos;
+    
+    // Si no hay permisos locales y estamos en iframe, buscar en el padre
+    if (!permisos && window.parent && window.parent !== window) {
+        console.log('[PERMISOS] No hay permisos locales, buscando en window.parent');
+        permisos = window.parent.usuarioPermisos;
+    }
+    
+    if (!permisos) {
+        console.error(`[PERMISOS] window.usuarioPermisos NO existe ni en local ni en parent`);
         return false;
     }
     
-    if (!window.usuarioPermisos[modulo]) {
+    if (!permisos[modulo]) {
         console.warn(`[PERMISOS] Módulo ${modulo} no encontrado en permisos`);
-        console.warn(`[PERMISOS] Módulos disponibles:`, Object.keys(window.usuarioPermisos));
+        console.warn(`[PERMISOS] Módulos disponibles:`, Object.keys(permisos));
         return false;
     }
     
-    const tiene = window.usuarioPermisos[modulo][accion] === 1;
-    console.log(`[PERMISOS] tienePermiso('${modulo}', '${accion}') = ${tiene}`, window.usuarioPermisos[modulo]);
+    const tiene = permisos[modulo][accion] === 1;
+    console.log(`[PERMISOS] tienePermiso('${modulo}', '${accion}') = ${tiene}`, permisos[modulo]);
     return tiene;
 }
 
