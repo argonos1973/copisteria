@@ -10,17 +10,27 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 15px; }
-        .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; margin-bottom: 15px; display: flex; align-items: center; gap: 6px; font-size: 20px; }
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; margin-bottom: 4px; color: #2c3e50; font-weight: bold; font-size: 11px; }
         .form-group input { padding: 5px 8px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px; }
         .form-group input[type="file"] { padding: 4px; width: 100%; font-size: 11px; }
         .form-group small { display: block; color: #7f8c8d; margin-top: 2px; font-size: 10px; }
-        .form-row { display: grid; gap: 8px; margin-bottom: 12px; }
-        .form-row-nombre { grid-template-columns: 2fr 1fr; }
-        .form-row-cp { grid-template-columns: 70px 1fr 1fr; }
-        .form-row-contacto { grid-template-columns: 1fr 1fr; }
+        
+        .w-nombre { width: 320px; }
+        .w-nif { width: 85px; }
+        .w-razon { width: 320px; }
+        .w-direccion { width: 400px; }
+        .w-cp { width: 60px; }
+        .w-ciudad { width: 130px; }
+        .w-provincia { width: 130px; }
+        .w-telefono { width: 95px; }
+        .w-email { width: 240px; }
+        .w-web { width: 130px; }
+        
+        .form-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: flex-end; }
+        
         .logo-preview { margin-top: 6px; display: none; }
         .logo-preview img { max-width: 150px; max-height: 75px; border: 1px solid #ddd; border-radius: 3px; padding: 3px; background: #f9f9f9; }
         .btn { padding: 6px 14px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; transition: 0.3s; font-weight: bold; }
@@ -51,23 +61,23 @@
         
         <div class="alert alert-info">
             <i class="fas fa-info-circle"></i>
-            <strong>Información:</strong> El código de empresa se generará automáticamente a partir de los 5 primeros caracteres del nombre.
+            <strong>Información:</strong> El código se generará automáticamente a partir de los 5 primeros caracteres del nombre.
         </div>
         
         <form id="formNuevaEmpresa" onsubmit="crearEmpresa(event)">
-            <div class="form-row form-row-nombre">
+            <div class="form-row">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="nombre">
                         <i class="fas fa-building"></i> Nombre *
                     </label>
-                    <input type="text" id="nombre" name="nombre" required placeholder="Empresa" maxlength="40" style="width: 100%;">
+                    <input type="text" id="nombre" name="nombre" required placeholder="Empresa" maxlength="40" class="w-nombre">
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="cif">
                         <i class="fas fa-id-card"></i> NIF
                     </label>
-                    <input type="text" id="cif" name="cif" placeholder="B12345678" maxlength="9" style="width: 100%;">
+                    <input type="text" id="cif" name="cif" placeholder="B12345678" maxlength="9" class="w-nif">
                 </div>
             </div>
             
@@ -75,50 +85,50 @@
                 <label for="razon_social">
                     <i class="fas fa-file-signature"></i> Razón Social
                 </label>
-                <input type="text" id="razon_social" name="razon_social" placeholder="Razón Social S.L." maxlength="40" style="width: 100%;">
+                <input type="text" id="razon_social" name="razon_social" placeholder="Razón Social S.L." maxlength="40" class="w-razon">
             </div>
             
             <div class="form-group">
                 <label for="direccion">
                     <i class="fas fa-map-marker-alt"></i> Dirección
                 </label>
-                <input type="text" id="direccion" name="direccion" placeholder="Calle, número" maxlength="50" style="width: 100%;">
+                <input type="text" id="direccion" name="direccion" placeholder="Calle, número" maxlength="50" class="w-direccion">
             </div>
             
-            <div class="form-row form-row-cp">
+            <div class="form-row">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="codigo_postal">
                         <i class="fas fa-mail-bulk"></i> C.P.
                     </label>
-                    <input type="text" id="codigo_postal" name="codigo_postal" placeholder="28001" maxlength="5" style="width: 100%;">
+                    <input type="text" id="codigo_postal" name="codigo_postal" placeholder="28001" maxlength="5" class="w-cp">
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="ciudad">
                         <i class="fas fa-city"></i> Ciudad
                     </label>
-                    <input type="text" id="ciudad" name="ciudad" placeholder="Madrid" maxlength="15" style="width: 100%;">
+                    <input type="text" id="ciudad" name="ciudad" placeholder="Madrid" maxlength="15" class="w-ciudad">
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="provincia">
                         <i class="fas fa-map"></i> Provincia
                     </label>
-                    <input type="text" id="provincia" name="provincia" placeholder="Madrid" maxlength="15" style="width: 100%;">
+                    <input type="text" id="provincia" name="provincia" placeholder="Madrid" maxlength="15" class="w-provincia">
                 </div>
             </div>
             
-            <div class="form-row form-row-contacto">
+            <div class="form-row">
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="telefono">
                         <i class="fas fa-phone"></i> Teléfono
                     </label>
-                    <input type="text" id="telefono" name="telefono" placeholder="912345678" maxlength="10" style="width: 100%;">
+                    <input type="text" id="telefono" name="telefono" placeholder="912345678" maxlength="10" class="w-telefono">
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="email">
                         <i class="fas fa-envelope"></i> Email
                     </label>
-                    <input type="email" id="email" name="email" placeholder="info@empresa.com" maxlength="30" style="width: 100%;">
+                    <input type="email" id="email" name="email" placeholder="info@empresa.com" maxlength="30" class="w-email">
                 </div>
             </div>
             
@@ -126,7 +136,7 @@
                 <label for="web">
                     <i class="fas fa-globe"></i> Web
                 </label>
-                <input type="text" id="web" name="web" placeholder="www.empresa.com" maxlength="15" style="width: 100%;">
+                <input type="text" id="web" name="web" placeholder="www.empresa.com" maxlength="15" class="w-web">
             </div>
             
             <div class="form-group">
