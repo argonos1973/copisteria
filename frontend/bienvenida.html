@@ -44,19 +44,30 @@
             object-fit: contain;
             /* Adaptar imagen al tema */
             filter: brightness(0.95) contrast(1.05);
+            transition: filter 0.3s ease;
         }
         
         /* Si el tema es oscuro, invertir colores de la imagen */
         @media (prefers-color-scheme: dark) {
             .logo-container img {
-                filter: invert(1) hue-rotate(180deg) brightness(1.1);
+                filter: invert(1) hue-rotate(180deg) brightness(1.1) !important;
             }
         }
         
         /* Detectar tema oscuro por variable CSS */
         body[data-theme="dark"] .logo-container img,
         body.dark-theme .logo-container img {
-            filter: invert(1) hue-rotate(180deg) brightness(1.1);
+            filter: invert(1) hue-rotate(180deg) brightness(1.1) !important;
+        }
+        
+        /* Aplicar directamente si el fondo del body es oscuro */
+        body {
+            background-color: var(--bg-color, #f5f5f5);
+        }
+        
+        /* Clase auxiliar para forzar inversión */
+        .invert-image img {
+            filter: invert(1) hue-rotate(180deg) brightness(1.1) !important;
         }
     </style>
     
@@ -66,41 +77,71 @@
         // Verificar variables CSS para detectar tema oscuro
         const bgColor = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
         const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
+        const bodyBgColor = getComputedStyle(document.body).backgroundColor;
         
-        console.log('[BIENVENIDA] Colores detectados - bg:', bgColor, 'text:', textColor);
+        console.log('[BIENVENIDA] === DETECCIÓN DE TEMA ===');
+        console.log('[BIENVENIDA] --bg-color:', bgColor);
+        console.log('[BIENVENIDA] --text-color:', textColor);
+        console.log('[BIENVENIDA] body backgroundColor:', bodyBgColor);
         
-        // Método 1: Por brillo del fondo
+        let temaOscuro = false;
+        
+        // Método 1: Por brillo del fondo (--bg-color)
         if (bgColor && bgColor.includes('rgb')) {
             const rgb = bgColor.match(/\d+/g);
             if (rgb && rgb.length >= 3) {
                 const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
-                console.log('[BIENVENIDA] Brillo del fondo:', brightness);
+                console.log('[BIENVENIDA] Brillo --bg-color:', brightness);
                 
                 if (brightness < 128) {
-                    document.body.classList.add('dark-theme');
-                    console.log('[BIENVENIDA] ✅ Tema oscuro detectado (por brillo), imagen invertida');
-                    return true;
+                    temaOscuro = true;
+                    console.log('[BIENVENIDA] ✅ TEMA OSCURO detectado por --bg-color');
                 }
             }
         }
         
-        // Método 2: Por color del texto (si texto es claro, fondo es oscuro)
-        if (textColor && textColor.includes('rgb')) {
+        // Método 2: Por backgroundColor directo del body
+        if (!temaOscuro && bodyBgColor && bodyBgColor.includes('rgb')) {
+            const rgb = bodyBgColor.match(/\d+/g);
+            if (rgb && rgb.length >= 3) {
+                const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
+                console.log('[BIENVENIDA] Brillo backgroundColor:', brightness);
+                
+                if (brightness < 128) {
+                    temaOscuro = true;
+                    console.log('[BIENVENIDA] ✅ TEMA OSCURO detectado por backgroundColor');
+                }
+            }
+        }
+        
+        // Método 3: Por color del texto (si texto es claro, fondo es oscuro)
+        if (!temaOscuro && textColor && textColor.includes('rgb')) {
             const rgb = textColor.match(/\d+/g);
             if (rgb && rgb.length >= 3) {
                 const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
                 console.log('[BIENVENIDA] Brillo del texto:', brightness);
                 
                 if (brightness > 200) {
-                    document.body.classList.add('dark-theme');
-                    console.log('[BIENVENIDA] ✅ Tema oscuro detectado (por texto claro), imagen invertida');
-                    return true;
+                    temaOscuro = true;
+                    console.log('[BIENVENIDA] ✅ TEMA OSCURO detectado por texto claro');
                 }
             }
         }
         
-        console.log('[BIENVENIDA] Tema claro detectado, imagen normal');
-        return false;
+        // Aplicar clase
+        if (temaOscuro) {
+            document.body.classList.add('dark-theme');
+            document.querySelector('.logo-container').classList.add('invert-image');
+            console.log('[BIENVENIDA] 🎨 Clases aplicadas: dark-theme + invert-image');
+            console.log('[BIENVENIDA] 🔄 Imagen debe estar INVERTIDA (fondo oscuro, símbolo blanco)');
+        } else {
+            document.body.classList.remove('dark-theme');
+            document.querySelector('.logo-container')?.classList.remove('invert-image');
+            console.log('[BIENVENIDA] ☀️ Tema claro - imagen normal');
+        }
+        
+        console.log('[BIENVENIDA] === FIN DETECCIÓN ===');
+        return temaOscuro;
     }
     
     // Intentar varias veces con diferentes timings
