@@ -394,7 +394,7 @@ def crear_empresa():
             "web": web or ""
         }
         
-        emisor_path = os.path.join(BASE_DIR, 'emisores', f'{codigo}_emisor.json')
+        emisor_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo}_emisor.json')
         os.makedirs(os.path.dirname(emisor_path), exist_ok=True)
         
         with open(emisor_path, 'w', encoding='utf-8') as f:
@@ -622,7 +622,7 @@ def eliminar_empresa(empresa_id):
                 logger.info(f"Logo eliminado: {logo_path}")
         
         # Eliminar emisor.json
-        emisor_path = os.path.join(BASE_DIR, 'emisores', f'{codigo}_emisor.json')
+        emisor_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo}_emisor.json')
         if os.path.exists(emisor_path):
             os.remove(emisor_path)
             archivos_eliminados.append(f'Emisor: {codigo}_emisor.json')
@@ -674,7 +674,7 @@ def actualizar_emisor(empresa_id):
             "web": data.get('web', '')
         }
         
-        emisor_path = os.path.join(BASE_DIR, 'emisores', f'{codigo}_emisor.json')
+        emisor_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo}_emisor.json')
         
         with open(emisor_path, 'w', encoding='utf-8') as f:
             json.dump(emisor_data, f, ensure_ascii=False, indent=4)
