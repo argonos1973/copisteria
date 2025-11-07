@@ -291,8 +291,9 @@ def obtener_menu():
                 else:
                     # Filtrar según permisos
                     submenu_filtrado = []
+                    
                     for submenu_item in submenu_completo:
-                        # Mapeo de nombres a códigos de módulo
+                        # Mapeo de nombres de submenús a códigos de módulo (para facturas_emitidas)
                         nombre_modulo_map = {
                             'Tickets': 'tickets',
                             'Facturas': 'facturas',
@@ -303,28 +304,42 @@ def obtener_menu():
                         nombre_sub = submenu_item.get('nombre', '')
                         modulo_codigo_sub = nombre_modulo_map.get(nombre_sub)
                         
-                        # Si no tiene mapeo o si tiene permiso de ver, incluir
-                        if not modulo_codigo_sub or permisos_usuario.get(modulo_codigo_sub, {}).get('puede_ver', 0) == 1:
-                            # Filtrar sub-submenús si existen
-                            if 'submenu' in submenu_item and modulo_codigo_sub:
-                                submenu_interno = submenu_item['submenu']
-                                submenu_interno_filtrado = []
-                                
-                                for subsub in submenu_interno:
-                                    nombre_subsub = subsub.get('nombre', '')
-                                    # Filtrar "Nuevo" si no tiene permiso de crear
-                                    if nombre_subsub == 'Nuevo':
-                                        if permisos_usuario.get(modulo_codigo_sub, {}).get('puede_crear', 0) == 1:
+                        # Si es un submódulo de facturas_emitidas (tiene mapeo)
+                        if modulo_codigo_sub:
+                            # Verificar permiso de ver para este submódulo
+                            if permisos_usuario.get(modulo_codigo_sub, {}).get('puede_ver', 0) == 1:
+                                # Filtrar sub-submenús si existen
+                                if 'submenu' in submenu_item:
+                                    submenu_interno = submenu_item['submenu']
+                                    submenu_interno_filtrado = []
+                                    
+                                    for subsub in submenu_interno:
+                                        nombre_subsub = subsub.get('nombre', '')
+                                        # Filtrar "Nuevo" si no tiene permiso de crear
+                                        if nombre_subsub == 'Nuevo':
+                                            if permisos_usuario.get(modulo_codigo_sub, {}).get('puede_crear', 0) == 1:
+                                                submenu_interno_filtrado.append(subsub)
+                                        else:
+                                            # Consultar y otros siempre se muestran si tiene ver
                                             submenu_interno_filtrado.append(subsub)
-                                    else:
-                                        # Consultar y otros siempre se muestran si tiene ver
-                                        submenu_interno_filtrado.append(subsub)
-                                
-                                if submenu_interno_filtrado:
-                                    submenu_item_copia = submenu_item.copy()
-                                    submenu_item_copia['submenu'] = submenu_interno_filtrado
-                                    submenu_filtrado.append(submenu_item_copia)
+                                    
+                                    if submenu_interno_filtrado:
+                                        submenu_item_copia = submenu_item.copy()
+                                        submenu_item_copia['submenu'] = submenu_interno_filtrado
+                                        submenu_filtrado.append(submenu_item_copia)
+                                else:
+                                    submenu_filtrado.append(submenu_item)
+                        else:
+                            # Para módulos simples (productos, contactos, presupuestos)
+                            # Usar el código del módulo padre
+                            nombre_subsub = submenu_item.get('nombre', '')
+                            
+                            # Filtrar "Nuevo" si no tiene permiso de crear en el módulo padre
+                            if nombre_subsub == 'Nuevo':
+                                if permisos_usuario.get(codigo_modulo, {}).get('puede_crear', 0) == 1:
+                                    submenu_filtrado.append(submenu_item)
                             else:
+                                # Consultar, Franjas, etc. - siempre incluir si tiene ver
                                 submenu_filtrado.append(submenu_item)
                     
                     item['submenu'] = submenu_filtrado
@@ -352,14 +367,20 @@ def obtener_menu():
                 
                 if 'submenu' in item and len(item['submenu']) > 0:
                     # Tiene submenús - verificar si alguno es de acción (no solo consulta)
-                    # Si todos los submenús son de solo lectura Y no tiene acciones, NO incluir
-                    submenu_tiene_accion = False
-                    for sub in item['submenu']:
-                        nombre_sub = sub.get('nombre', '').lower()
-                        # Submenús de acción: Nuevo, Editar, etc (no Consultar)
-                        if 'nuevo' in nombre_sub or 'editar' in nombre_sub or 'crear' in nombre_sub:
-                            submenu_tiene_accion = True
-                            break
+                    # Buscar recursivamente en todos los niveles de submenús
+                    def tiene_accion_en_submenu(submenu_lista):
+                        for sub in submenu_lista:
+                            nombre_sub = sub.get('nombre', '').lower()
+                            # Submenús de acción: Nuevo, Editar, etc (no Consultar)
+                            if 'nuevo' in nombre_sub or 'editar' in nombre_sub or 'crear' in nombre_sub:
+                                return True
+                            # Buscar recursivamente en sub-submenús
+                            if 'submenu' in sub and len(sub['submenu']) > 0:
+                                if tiene_accion_en_submenu(sub['submenu']):
+                                    return True
+                        return False
+                    
+                    submenu_tiene_accion = tiene_accion_en_submenu(item['submenu'])
                     
                     if submenu_tiene_accion or tiene_accion:
                         incluir_modulo = True
