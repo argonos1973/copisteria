@@ -288,7 +288,7 @@ def obtener_empresa(empresa_id):
         return jsonify({'error': 'Error obteniendo empresa'}), 500
 
 @empresas_bp.route('/api/empresas', methods=['POST'])
-@superadmin_required
+@login_required
 def crear_empresa():
     """
     Crea una nueva empresa con su BD independiente
@@ -408,6 +408,59 @@ def crear_empresa():
             json.dump(emisor_data, f, ensure_ascii=False, indent=4)
         
         logger.info(f"Emisor JSON creado: {emisor_path}")
+        
+        # Crear usuario admin automático para la empresa
+        import hashlib
+        username_admin = f'admin_{codigo.lower()}'
+        password_admin = codigo.lower()  # Contraseña inicial = código de empresa
+        password_hash = hashlib.sha256(password_admin.encode('utf-8')).hexdigest()
+        
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        
+        try:
+            # Crear usuario admin (es_superadmin = 0, ya no hay superadmins)
+            cursor.execute('''
+                INSERT INTO usuarios (username, password_hash, nombre_completo, email, es_superadmin, activo)
+                VALUES (?, ?, ?, ?, 0, 1)
+            ''', (username_admin, password_hash, f'Administrador {nombre}', email or ''))
+            
+            usuario_admin_id = cursor.lastrowid
+            
+            # Asignar empresa al usuario admin
+            cursor.execute('''
+                INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
+                VALUES (?, ?, 'admin', 1)
+            ''', (usuario_admin_id, empresa_id))
+            
+            # Asignar TODOS los permisos al admin
+            modulos = ['facturas', 'tickets', 'proformas', 'productos', 'contactos', 'presupuestos']
+            permisos_completos = ['ver', 'crear', 'editar', 'eliminar', 'anular', 'exportar']
+            
+            for modulo in modulos:
+                # Crear permisos completos para cada módulo
+                permisos_dict = {permiso: 1 for permiso in permisos_completos}
+                cursor.execute('''
+                    INSERT INTO permisos_usuario_modulo 
+                    (usuario_id, empresa_id, modulo_codigo, ver, crear, editar, eliminar, anular, exportar)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (usuario_admin_id, empresa_id, modulo,
+                      permisos_dict.get('ver', 1),
+                      permisos_dict.get('crear', 1),
+                      permisos_dict.get('editar', 1),
+                      permisos_dict.get('eliminar', 1),
+                      permisos_dict.get('anular', 1),
+                      permisos_dict.get('exportar', 1)))
+            
+            conn.commit()
+            logger.info(f"Usuario admin creado: {username_admin} para empresa {codigo}")
+            logger.info(f"Contraseña inicial: {password_admin}")
+            
+        except sqlite3.IntegrityError:
+            logger.warning(f"Usuario {username_admin} ya existe, saltando creación")
+        finally:
+            conn.close()
+        
         logger.info(f"Empresa creada: {nombre} ({codigo}) - BD: {bd_destino}")
         
         return jsonify({
@@ -416,7 +469,9 @@ def crear_empresa():
             'codigo': codigo,
             'nombre': nombre,
             'db_path': bd_destino,
-            'mensaje': f'Empresa "{nombre}" creada exitosamente'
+            'usuario_admin': username_admin,
+            'password_admin': password_admin,
+            'mensaje': f'Empresa "{nombre}" creada exitosamente. Usuario admin: {username_admin} / {password_admin}'
         }), 201
         
     except Exception as e:
@@ -558,7 +613,7 @@ def actualizar_empresa(empresa_id):
 
 
 @empresas_bp.route('/api/empresas/generar-colores', methods=['POST'])
-@superadmin_required  # Cambiar temporalmente a login_required en lugar de superadmin_required
+@login_required
 def generar_colores_automaticos():
     """Genera una paleta de colores armónica basada en el color primario"""
     try:
@@ -578,7 +633,7 @@ def generar_colores_automaticos():
 
 
 @empresas_bp.route('/api/empresas/<int:empresa_id>', methods=['DELETE'])
-@superadmin_required
+@login_required
 def eliminar_empresa(empresa_id):
     """
     Elimina una empresa físicamente: BD, logo y emisor.json
@@ -659,7 +714,7 @@ def eliminar_empresa(empresa_id):
 # ENDPOINT /colores ELIMINADO - Ya no se usan colores en BD, solo plantillas JSON
 
 @empresas_bp.route('/api/empresas/<int:empresa_id>/emisor', methods=['PUT'])
-@superadmin_required
+@login_required
 def actualizar_emisor(empresa_id):
     """Actualiza el archivo emisor.json de una empresa"""
     try:

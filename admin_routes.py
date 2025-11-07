@@ -31,44 +31,29 @@ def hash_password(password):
 @login_required
 @require_admin
 def listar_usuarios():
-    """Lista usuarios: todos (si superadmin) o solo de la empresa del admin"""
+    """Lista solo usuarios de la empresa del admin"""
     try:
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        es_superadmin = session.get('es_superadmin', False)
         empresa_id_admin = session.get('empresa_id')
         
-        if es_superadmin:
-            # Superadmin: ver todos los usuarios
-            cursor.execute('''
-                SELECT 
-                    u.id, u.username, u.nombre_completo, u.email, u.telefono,
-                    u.activo, u.es_superadmin, u.fecha_alta, u.ultimo_acceso,
-                    GROUP_CONCAT(DISTINCT e.nombre) as empresas,
-                    GROUP_CONCAT(DISTINCT e.codigo) as empresas_codigos
-                FROM usuarios u
-                LEFT JOIN usuario_empresa ue ON u.id = ue.usuario_id
-                LEFT JOIN empresas e ON ue.empresa_id = e.id
-                GROUP BY u.id
-                ORDER BY u.username
-            ''')
-        else:
-            # Admin de empresa: solo usuarios de su empresa
-            cursor.execute('''
-                SELECT 
-                    u.id, u.username, u.nombre_completo, u.email, u.telefono,
-                    u.activo, u.es_superadmin, u.fecha_alta, u.ultimo_acceso,
-                    GROUP_CONCAT(DISTINCT e.nombre) as empresas,
-                    GROUP_CONCAT(DISTINCT e.codigo) as empresas_codigos
-                FROM usuarios u
-                INNER JOIN usuario_empresa ue ON u.id = ue.usuario_id
-                INNER JOIN empresas e ON ue.empresa_id = e.id
-                WHERE ue.empresa_id = ?
-                GROUP BY u.id
-                ORDER BY u.username
-            ''', (empresa_id_admin,))
+        # Admin de empresa: solo usuarios de su empresa
+        cursor.execute('''
+            SELECT 
+                u.id, u.username, u.nombre_completo, u.email, u.telefono,
+                u.activo, u.fecha_alta, u.ultimo_acceso,
+                ue.rol, ue.es_admin_empresa,
+                GROUP_CONCAT(DISTINCT e.nombre) as empresas,
+                GROUP_CONCAT(DISTINCT e.codigo) as empresas_codigos
+            FROM usuarios u
+            INNER JOIN usuario_empresa ue ON u.id = ue.usuario_id
+            INNER JOIN empresas e ON ue.empresa_id = e.id
+            WHERE ue.empresa_id = ?
+            GROUP BY u.id
+            ORDER BY u.username
+        ''', (empresa_id_admin,))
         
         usuarios = [dict(row) for row in cursor.fetchall()]
         conn.close()
@@ -92,43 +77,35 @@ def crear_usuario():
         nombre_completo = data.get('nombre_completo', '').strip()
         email = data.get('email', '').strip()
         telefono = data.get('telefono', '').strip()
-        es_superadmin = data.get('es_superadmin', 0)
         
         if not username or not password or not nombre_completo:
             return jsonify({'error': 'Faltan campos requeridos'}), 400
         
-        # Restricciones para admin de empresa
-        es_superadmin_creador = session.get('es_superadmin', False)
+        # Verificar que el creador tenga empresa asignada
         empresa_id_creador = session.get('empresa_id')
         
-        if not es_superadmin_creador:
-            # Admin de empresa NO puede crear superadmins
-            if es_superadmin:
-                return jsonify({'error': 'No tienes permisos para crear superadministradores'}), 403
-            
-            # Verificar que tenga empresa asignada
-            if not empresa_id_creador:
-                return jsonify({'error': 'Tu cuenta no tiene empresa asignada'}), 403
+        if not empresa_id_creador:
+            return jsonify({'error': 'Tu cuenta no tiene empresa asignada'}), 403
         
         password_hash = hash_password(password)
         
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
+        # es_superadmin siempre 0 (ya no hay superadmins)
         cursor.execute('''
             INSERT INTO usuarios (username, password_hash, nombre_completo, email, telefono, es_superadmin, activo)
-            VALUES (?, ?, ?, ?, ?, ?, 1)
-        ''', (username, password_hash, nombre_completo, email, telefono, es_superadmin))
+            VALUES (?, ?, ?, ?, ?, 0, 1)
+        ''', (username, password_hash, nombre_completo, email, telefono))
         
         usuario_id = cursor.lastrowid
         
-        # Si es admin de empresa, asignar automáticamente el usuario a su empresa
-        if not es_superadmin_creador and empresa_id_creador:
-            cursor.execute('''
-                INSERT INTO usuario_empresa (usuario_id, empresa_id)
-                VALUES (?, ?)
-            ''', (usuario_id, empresa_id_creador))
-            logger.info(f"Usuario {username} asignado automáticamente a empresa ID {empresa_id_creador}")
+        # Asignar automáticamente el usuario a la empresa del creador
+        cursor.execute('''
+            INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
+            VALUES (?, ?, 'usuario', 0)
+        ''', (usuario_id, empresa_id_creador))
+        logger.info(f"Usuario {username} asignado automáticamente a empresa ID {empresa_id_creador}")
         
         conn.commit()
         conn.close()
@@ -154,25 +131,17 @@ def actualizar_usuario(usuario_id):
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        # Restricciones para admin de empresa
-        es_superadmin_editor = session.get('es_superadmin', False)
+        # Verificar que el usuario pertenece a la empresa del admin
         empresa_id_editor = session.get('empresa_id')
         
-        if not es_superadmin_editor:
-            # Verificar que el usuario pertenece a la empresa del admin
-            cursor.execute('''
-                SELECT COUNT(*) FROM usuario_empresa 
-                WHERE usuario_id = ? AND empresa_id = ?
-            ''', (usuario_id, empresa_id_editor))
-            
-            if cursor.fetchone()[0] == 0:
-                conn.close()
-                return jsonify({'error': 'No tienes permisos para modificar este usuario'}), 403
-            
-            # Admin de empresa NO puede modificar el campo es_superadmin
-            if 'es_superadmin' in data:
-                conn.close()
-                return jsonify({'error': 'No tienes permisos para cambiar el rol de superadministrador'}), 403
+        cursor.execute('''
+            SELECT COUNT(*) FROM usuario_empresa 
+            WHERE usuario_id = ? AND empresa_id = ?
+        ''', (usuario_id, empresa_id_editor))
+        
+        if cursor.fetchone()[0] == 0:
+            conn.close()
+            return jsonify({'error': 'No tienes permisos para modificar este usuario'}), 403
         
         # Construir query dinámicamente
         campos = []
@@ -193,11 +162,6 @@ def actualizar_usuario(usuario_id):
         if 'activo' in data:
             campos.append('activo = ?')
             valores.append(data['activo'])
-        
-        if 'es_superadmin' in data and es_superadmin_editor:
-            # Solo superadmin puede modificar es_superadmin
-            campos.append('es_superadmin = ?')
-            valores.append(data['es_superadmin'])
         
         if 'password' in data and data['password']:
             campos.append('password_hash = ?')
@@ -236,20 +200,17 @@ def eliminar_usuario(usuario_id):
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        # Restricciones para admin de empresa
-        es_superadmin_eliminador = session.get('es_superadmin', False)
+        # Verificar que el usuario pertenece a la empresa del admin
         empresa_id_eliminador = session.get('empresa_id')
         
-        if not es_superadmin_eliminador:
-            # Verificar que el usuario pertenece a la empresa del admin
-            cursor.execute('''
-                SELECT COUNT(*) FROM usuario_empresa 
-                WHERE usuario_id = ? AND empresa_id = ?
-            ''', (usuario_id, empresa_id_eliminador))
-            
-            if cursor.fetchone()[0] == 0:
-                conn.close()
-                return jsonify({'error': 'No tienes permisos para eliminar este usuario'}), 403
+        cursor.execute('''
+            SELECT COUNT(*) FROM usuario_empresa 
+            WHERE usuario_id = ? AND empresa_id = ?
+        ''', (usuario_id, empresa_id_eliminador))
+        
+        if cursor.fetchone()[0] == 0:
+            conn.close()
+            return jsonify({'error': 'No tienes permisos para eliminar este usuario'}), 403
         
         cursor.execute('DELETE FROM usuarios WHERE id = ?', (usuario_id,))
         
