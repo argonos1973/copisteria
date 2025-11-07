@@ -1,0 +1,12 @@
+{
+    "nif": "44007535W",
+    "nombre": "CASTANYAS S.L.",
+    "direccion": "LEGALITAT, 70",
+    "cp": "",
+    "ciudad": "",
+    "provincia": "",
+    "pais": "ESP",
+    "email": "info@copisteria.com",
+    "db_path": "/var/www/html/db/aleph70.db",
+    "codigo": "copisteria"
+}

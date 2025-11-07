@@ -178,9 +178,11 @@ PLANTILLAS_PERMISOS = {
 
 def obtener_db_empresa(empresa_id=None):
     """
-    Obtiene la ruta de la BD de una empresa específica
+    Obtiene la ruta de la BD de una empresa desde el emisor.json
+    Si no existe, hace fallback a la tabla empresas (compatibilidad)
     """
     import sqlite3
+    import json
     from flask import session
     
     if empresa_id is None:
@@ -193,15 +195,42 @@ def obtener_db_empresa(empresa_id=None):
     try:
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
-        cursor.execute('SELECT db_path FROM empresas WHERE id = ? AND activa = 1', (empresa_id,))
+        cursor.execute('SELECT codigo, db_path FROM empresas WHERE id = ? AND activa = 1', (empresa_id,))
         result = cursor.fetchone()
         conn.close()
         
-        if result:
-            return result[0]
-        else:
+        if not result:
             logger.error(f"No se encontró empresa con id={empresa_id}")
             return None
+        
+        codigo = result[0]
+        db_path_tabla = result[1]
+        
+        # Intentar leer db_path desde emisor.json (método principal)
+        emisor_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo}_emisor.json')
+        
+        if os.path.exists(emisor_path):
+            try:
+                with open(emisor_path, 'r', encoding='utf-8') as f:
+                    emisor_data = json.load(f)
+                    db_path_json = emisor_data.get('db_path')
+                    
+                    if db_path_json and os.path.exists(db_path_json):
+                        logger.debug(f"BD obtenida desde emisor.json: {db_path_json}")
+                        return db_path_json
+                    else:
+                        logger.warning(f"db_path en emisor.json no existe o es inválido, usando fallback")
+            except Exception as e:
+                logger.warning(f"Error leyendo emisor.json: {e}, usando fallback")
+        
+        # Fallback: usar db_path de la tabla (compatibilidad con estructura antigua)
+        if db_path_tabla and os.path.exists(db_path_tabla):
+            logger.debug(f"BD obtenida desde tabla (fallback): {db_path_tabla}")
+            return db_path_tabla
+        
+        logger.error(f"No se encontró BD válida para empresa {codigo} (id={empresa_id})")
+        return None
+        
     except Exception as e:
         logger.error(f"Error obteniendo BD de empresa: {e}", exc_info=True)
         return None
