@@ -305,8 +305,6 @@ def crear_empresa():
         telefono = request.form.get('telefono', '')
         email = request.form.get('email', '')
         web = request.form.get('web', '')
-        color_primario = request.form.get('color_primario', '#2c3e50')
-        color_secundario = request.form.get('color_secundario', '#3498db')
         
         if not nombre:
             return jsonify({'error': 'El nombre de la empresa es obligatorio'}), 400
@@ -365,14 +363,13 @@ def crear_empresa():
             INSERT INTO empresas (
                 codigo, nombre, razon_social, cif, direccion, codigo_postal, ciudad, provincia,
                 telefono, email, web,
-                logo_header, logo_factura, color_primario, color_secundario,
+                logo_header, logo_factura,
                 db_path, activa, fecha_alta
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'))
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'))
         ''', (
             codigo, nombre, razon_social, cif, direccion, codigo_postal, ciudad, provincia,
             telefono, email, web,
-            logo_filename or 'default_header.png', logo_filename or 'default_header.png', 
-            color_primario, color_secundario,
+            logo_filename or 'default_header.png', logo_filename or 'default_header.png',
             bd_destino
         ))
         empresa_id = cursor.lastrowid
