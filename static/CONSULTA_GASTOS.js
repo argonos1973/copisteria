@@ -223,6 +223,13 @@ async function buscarGastos() {
  * Descarga un CSV con los resultados actuales de la consulta.
  */
 async function descargarCSV() {
+    // Verificar permiso de exportar gastos
+    if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('gastos', 'exportar')) {
+            return;
+        }
+    }
+    
     const params = new URLSearchParams();
     if (fechaInicioInput.value) params.append('fecha_inicio', fechaInicioInput.value);
     if (fechaFinInput.value) params.append('fecha_fin', fechaFinInput.value);
@@ -364,6 +371,13 @@ document.addEventListener('DOMContentLoaded', () => {
     buscarGastos();
     document.getElementById('btn-descargar-csv')?.addEventListener('click', descargarCSV);
     graficoBtn?.addEventListener('click', () => mostrarGrafico(datosConsulta));
+    
+    // Aplicar permisos a los elementos
+    setTimeout(() => {
+        if (typeof aplicarPermisosAElementos !== 'undefined') {
+            aplicarPermisosAElementos();
+        }
+    }, 500);
     // Control de visibilidad de totales
     const toggle = document.querySelector('.fixed-footer-gastos .toggle-totals');
     let totalsVisible = sessionStorage.getItem('totalsVisibleGastos');

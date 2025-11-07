@@ -322,6 +322,20 @@ function restaurarFiltros() {
   // Selector de registros por página
   document.getElementById('pageSizeSelectPresupuestos').addEventListener('change', () => { guardarFiltros(); buscarPresupuestos(); });
   document.getElementById('nuevoPresupuesto').addEventListener('click', () => {
+    // Verificar permiso de crear presupuestos
+    if (typeof verificarPermisoConAlerta !== 'undefined') {
+      if (!verificarPermisoConAlerta('presupuestos', 'crear')) {
+        return;
+      }
+    }
+    
     window.location.href = 'GESTION_PRESUPUESTOS.html';
   });
+  
+  // Aplicar permisos a los elementos
+  setTimeout(() => {
+    if (typeof aplicarPermisosAElementos !== 'undefined') {
+      aplicarPermisosAElementos();
+    }
+  }, 500);
 });
