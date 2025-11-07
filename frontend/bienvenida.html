@@ -46,132 +46,22 @@
             width: auto;
             height: auto;
             object-fit: contain;
-            transition: filter 0.3s ease;
-        }
-        
-        /* Si el tema es oscuro, invertir solo el símbolo */
-        @media (prefers-color-scheme: dark) {
-            .logo-container img {
-                filter: invert(1) hue-rotate(180deg) brightness(1.1) !important;
-            }
-        }
-        
-        /* Detectar tema oscuro por variable CSS */
-        body[data-theme="dark"] .logo-container img,
-        body.dark-theme .logo-container img {
-            filter: invert(1) hue-rotate(180deg) brightness(1.1) !important;
-        }
-        
-        /* Clase auxiliar para forzar inversión */
-        .invert-image img {
-            filter: invert(1) hue-rotate(180deg) brightness(1.1) !important;
         }
     </style>
     
     <script>
-    // Detectar tema oscuro del sistema de branding
-    function detectarYAplicarTema() {
-        // Verificar variables CSS para detectar tema oscuro
-        const bgColor = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
-        const textColor = getComputedStyle(document.body).getPropertyValue('--text-color').trim();
-        const bodyBgColor = getComputedStyle(document.body).backgroundColor;
-        
-        console.log('[BIENVENIDA] === DETECCIÓN DE TEMA ===');
-        console.log('[BIENVENIDA] --bg-color:', bgColor);
-        console.log('[BIENVENIDA] --text-color:', textColor);
-        console.log('[BIENVENIDA] body backgroundColor:', bodyBgColor);
-        
-        let temaOscuro = false;
-        
-        // Método 1: Por brillo del fondo (--bg-color)
-        if (bgColor && bgColor.includes('rgb')) {
-            const rgb = bgColor.match(/\d+/g);
-            if (rgb && rgb.length >= 3) {
-                const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
-                console.log('[BIENVENIDA] Brillo --bg-color:', brightness);
-                
-                if (brightness < 128) {
-                    temaOscuro = true;
-                    console.log('[BIENVENIDA] ✅ TEMA OSCURO detectado por --bg-color');
-                }
-            }
-        }
-        
-        // Método 2: Por backgroundColor directo del body
-        if (!temaOscuro && bodyBgColor && bodyBgColor.includes('rgb')) {
-            const rgb = bodyBgColor.match(/\d+/g);
-            if (rgb && rgb.length >= 3) {
-                const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
-                console.log('[BIENVENIDA] Brillo backgroundColor:', brightness);
-                
-                if (brightness < 128) {
-                    temaOscuro = true;
-                    console.log('[BIENVENIDA] ✅ TEMA OSCURO detectado por backgroundColor');
-                }
-            }
-        }
-        
-        // Método 3: Por color del texto (si texto es claro, fondo es oscuro)
-        if (!temaOscuro && textColor && textColor.includes('rgb')) {
-            const rgb = textColor.match(/\d+/g);
-            if (rgb && rgb.length >= 3) {
-                const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
-                console.log('[BIENVENIDA] Brillo del texto:', brightness);
-                
-                if (brightness > 200) {
-                    temaOscuro = true;
-                    console.log('[BIENVENIDA] ✅ TEMA OSCURO detectado por texto claro');
-                }
-            }
-        }
-        
-        // Aplicar clase
-        if (temaOscuro) {
-            document.body.classList.add('dark-theme');
-            document.querySelector('.logo-container').classList.add('invert-image');
-            console.log('[BIENVENIDA] 🎨 Clases aplicadas: dark-theme + invert-image');
-            console.log('[BIENVENIDA] 🔄 Imagen debe estar INVERTIDA (fondo oscuro, símbolo blanco)');
-        } else {
-            document.body.classList.remove('dark-theme');
-            document.querySelector('.logo-container')?.classList.remove('invert-image');
-            console.log('[BIENVENIDA] ☀️ Tema claro - imagen normal');
-        }
-        
-        console.log('[BIENVENIDA] === FIN DETECCIÓN ===');
-        return temaOscuro;
-    }
-    
-    // Intentar varias veces con diferentes timings
+    // Ya no necesitamos detectar tema ni invertir imagen
+    // La imagen transparente se adapta automáticamente a cualquier fondo
     window.addEventListener('DOMContentLoaded', () => {
-        console.log('[BIENVENIDA] Iniciando detección de tema...');
-        
-        // Intento 1: Inmediato
-        setTimeout(() => detectarYAplicarTema(), 100);
-        
-        // Intento 2: Después de branding
-        setTimeout(() => detectarYAplicarTema(), 500);
-        
-        // Intento 3: Más tarde
-        setTimeout(() => detectarYAplicarTema(), 1000);
-        
-        // Intento 4: Observer para cambios en estilos
-        const observer = new MutationObserver(() => {
-            if (detectarYAplicarTema()) {
-                observer.disconnect();
-            }
-        });
-        
-        observer.observe(document.body, {
-            attributes: true,
-            attributeFilter: ['style', 'class']
-        });
+        console.log('[BIENVENIDA] Imagen con fondo transparente cargada');
+        console.log('[BIENVENIDA] Se adapta automáticamente al color de fondo de la plantilla');
     });
     </script>
 </head>
 <body>
     <div class="container">
         <div class="logo-container">
-            <img src="/static/logos/fondo.png" alt="">
+            <img src="/static/logos/fondo_transparente.png" alt="">
         </div>
     </div>
 </body>
