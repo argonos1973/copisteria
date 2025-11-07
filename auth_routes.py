@@ -303,7 +303,7 @@ def obtener_menu():
                     {
                         'nombre': 'Nueva Empresa',
                         'icono': 'fas fa-plus-circle',
-                        'ruta': 'javascript:abrirModalNuevaEmpresa()'
+                        'ruta': '/NUEVA_EMPRESA.html'
                     }
                 ]
             })
