@@ -66,13 +66,21 @@ function tienePermiso(modulo, accion) {
     // Intentar obtener permisos del contexto actual o del padre (si estamos en iframe)
     let permisos = window.usuarioPermisos;
     
+    // Verificar si permisos está vacío o no existe
+    const permisosVacios = !permisos || Object.keys(permisos).length === 0;
+    
     // Si no hay permisos locales y estamos en iframe, buscar en el padre
-    if (!permisos && window.parent && window.parent !== window) {
-        console.log('[PERMISOS] No hay permisos locales, buscando en window.parent');
-        permisos = window.parent.usuarioPermisos;
+    if (permisosVacios && window.parent && window.parent !== window) {
+        console.log('[PERMISOS] No hay permisos locales (vacío o undefined), buscando en window.parent');
+        try {
+            permisos = window.parent.usuarioPermisos;
+            console.log('[PERMISOS] Permisos obtenidos del padre:', permisos ? Object.keys(permisos) : 'undefined');
+        } catch (e) {
+            console.error('[PERMISOS] Error accediendo a window.parent.usuarioPermisos:', e.message);
+        }
     }
     
-    if (!permisos) {
+    if (!permisos || Object.keys(permisos).length === 0) {
         console.error(`[PERMISOS] window.usuarioPermisos NO existe ni en local ni en parent`);
         return false;
     }
