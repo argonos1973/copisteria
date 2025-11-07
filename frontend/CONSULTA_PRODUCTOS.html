@@ -93,7 +93,10 @@
         />
       </div>
       <div class="form-group">
-        <button @click="nuevoProducto">Nuevo Producto</button>
+        <button 
+          data-modulo="productos" 
+          data-accion="crear"
+          @click="nuevoProducto">Nuevo Producto</button>
       </div>
     </div>
 
@@ -159,6 +162,8 @@
               </td>
               <td class="acciones-col">
                 <button
+                  data-modulo="productos"
+                  data-accion="eliminar"
                   class="btn-icon"
                   title="Eliminar"
                   @click.stop="eliminarProducto(producto.id)"

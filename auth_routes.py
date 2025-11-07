@@ -177,6 +177,20 @@ def obtener_menu():
         rows = cursor.fetchall()
         logger.info(f"[MENU] Encontrados {len(rows)} módulos")
         
+        # Obtener todos los permisos del usuario para filtrar submenús
+        permisos_usuario = {}
+        if not es_admin_empresa:
+            cursor.execute('''
+                SELECT modulo_codigo, puede_ver, puede_crear
+                FROM permisos_usuario_modulo
+                WHERE usuario_id = ? AND empresa_id = ?
+            ''', (user_id, empresa_id))
+            for perm_row in cursor.fetchall():
+                permisos_usuario[perm_row[0]] = {
+                    'puede_ver': perm_row[1],
+                    'puede_crear': perm_row[2]
+                }
+        
         # Definir submódulos fuera del loop
         submenu_map = {
             'facturas_emitidas': [
@@ -267,8 +281,54 @@ def obtener_menu():
             # Agregar submódulos según el código del módulo
             codigo_modulo = item['codigo']
             if codigo_modulo in submenu_map:
-                item['submenu'] = submenu_map[codigo_modulo]
-                logger.info(f"[MENU] Submódulos agregados a {codigo_modulo}")
+                # Filtrar submenús según permisos del usuario
+                submenu_completo = submenu_map[codigo_modulo]
+                
+                if es_admin_empresa:
+                    # Admin ve todo
+                    item['submenu'] = submenu_completo
+                else:
+                    # Filtrar según permisos
+                    submenu_filtrado = []
+                    for submenu_item in submenu_completo:
+                        # Mapeo de nombres a códigos de módulo
+                        nombre_modulo_map = {
+                            'Tickets': 'tickets',
+                            'Facturas': 'facturas',
+                            'Proformas': 'proformas',
+                            'Exportar': 'exportar'
+                        }
+                        
+                        nombre_sub = submenu_item.get('nombre', '')
+                        modulo_codigo_sub = nombre_modulo_map.get(nombre_sub)
+                        
+                        # Si no tiene mapeo o si tiene permiso de ver, incluir
+                        if not modulo_codigo_sub or permisos_usuario.get(modulo_codigo_sub, {}).get('puede_ver', 0) == 1:
+                            # Filtrar sub-submenús si existen
+                            if 'submenu' in submenu_item and modulo_codigo_sub:
+                                submenu_interno = submenu_item['submenu']
+                                submenu_interno_filtrado = []
+                                
+                                for subsub in submenu_interno:
+                                    nombre_subsub = subsub.get('nombre', '')
+                                    # Filtrar "Nuevo" si no tiene permiso de crear
+                                    if nombre_subsub == 'Nuevo':
+                                        if permisos_usuario.get(modulo_codigo_sub, {}).get('puede_crear', 0) == 1:
+                                            submenu_interno_filtrado.append(subsub)
+                                    else:
+                                        # Consultar y otros siempre se muestran si tiene ver
+                                        submenu_interno_filtrado.append(subsub)
+                                
+                                if submenu_interno_filtrado:
+                                    submenu_item_copia = submenu_item.copy()
+                                    submenu_item_copia['submenu'] = submenu_interno_filtrado
+                                    submenu_filtrado.append(submenu_item_copia)
+                            else:
+                                submenu_filtrado.append(submenu_item)
+                    
+                    item['submenu'] = submenu_filtrado
+                
+                logger.info(f"[MENU] Submódulos agregados a {codigo_modulo}: {len(item.get('submenu', []))} items")
             
             # Solo agregar si NO está en un submenu
             if codigo_modulo not in modulos_en_submenu:

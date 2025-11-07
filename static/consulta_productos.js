@@ -1,7 +1,7 @@
 import { API_URL_PRIMARY, API_URL_FALLBACK } from './constantes.js';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 
-const { createApp, ref, reactive, onMounted } = Vue;
+const { createApp, ref, reactive, onMounted, watch, nextTick } = Vue;
 
 createApp({
   setup() {
@@ -122,6 +122,14 @@ createApp({
 
     const eliminarProducto = async (id) => {
       console.debug('[eliminarProducto] ID recibido:', id, 'tipo:', typeof id);
+      
+      // Verificar permiso de eliminar productos
+      if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('productos', 'eliminar')) {
+          return;
+        }
+      }
+      
       const confirmado = await mostrarConfirmacion('¿Está seguro de eliminar este producto?');
       if (!confirmado) return;
       // Validación adicional del ID para evitar peticiones /null
@@ -166,6 +174,12 @@ createApp({
     };
 
     const nuevoProducto = () => {
+      // Verificar permiso de crear productos
+      if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('productos', 'crear')) {
+          return;
+        }
+      }
       guardarFiltros();
       window.location.href = 'GESTION_PRODUCTOS.html';
     };
@@ -182,6 +196,19 @@ createApp({
 
     onMounted(async () => {
       restaurarFiltros();
+      // Aplicar permisos al cargar la página
+      await nextTick();
+      if (typeof aplicarPermisosAElementos !== 'undefined') {
+        aplicarPermisosAElementos();
+      }
+    });
+
+    // Re-aplicar permisos cada vez que cambian los productos
+    watch(productos, async () => {
+      await nextTick();
+      if (typeof aplicarPermisosAElementos !== 'undefined') {
+        aplicarPermisosAElementos();
+      }
     });
 
     return {
