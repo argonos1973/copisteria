@@ -1400,7 +1400,16 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
                         }
                     }, 1000);
                 }
-                if (btnAnular) btnAnular.style.display = 'inline-block';
+                // Solo mostrar Anular si tiene permiso
+                if (btnAnular) {
+                    if (typeof tienePermiso !== 'undefined' && tienePermiso('facturas', 'anular')) {
+                        btnAnular.style.display = 'inline-block';
+                        console.log('[CONTROL BOTONES] → Botón Anular VISIBLE (tiene permiso)');
+                    } else {
+                        btnAnular.style.setProperty('display', 'none', 'important');
+                        console.log('[CONTROL BOTONES] → Botón Anular OCULTADO (sin permiso)');
+                    }
+                }
                 if (btnAgregarDetalle) {
                     btnAgregarDetalle.style.setProperty('display', 'none', 'important');
                     btnAgregarDetalle.setAttribute('data-estado-bloqueado', 'true');
