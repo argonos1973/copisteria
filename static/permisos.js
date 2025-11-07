@@ -33,10 +33,13 @@ function inicializarPermisos(menuData) {
                     exportar: modulo.permisos.exportar || 0
                 };
                 console.log(`[PERMISOS] ${modulo.codigo}:`, window.usuarioPermisos[modulo.codigo]);
+            } else if (modulo.codigo && !modulo.permisos) {
+                console.warn(`[PERMISOS] ⚠️ Módulo ${modulo.codigo} sin permisos:`, modulo);
             }
             
             // Procesar submódulos recursivamente
             if (modulo.submenu && Array.isArray(modulo.submenu)) {
+                console.log(`[PERMISOS] Procesando ${modulo.submenu.length} submódulos de ${modulo.codigo || modulo.nombre}`);
                 extraerPermisos(modulo.submenu);
             }
         });
@@ -46,6 +49,8 @@ function inicializarPermisos(menuData) {
     extraerPermisos(menuData);
     
     console.log('[PERMISOS] Permisos cargados:', window.usuarioPermisos);
+    console.log('[PERMISOS] Total módulos cargados:', Object.keys(window.usuarioPermisos).length);
+    console.log('[PERMISOS] Módulos:', Object.keys(window.usuarioPermisos));
     
     // Aplicar permisos a la página actual
     aplicarPermisosAElementos();
@@ -58,12 +63,20 @@ function inicializarPermisos(menuData) {
  * @returns {boolean}
  */
 function tienePermiso(modulo, accion) {
-    if (!window.usuarioPermisos || !window.usuarioPermisos[modulo]) {
-        console.warn(`[PERMISOS] Módulo ${modulo} no encontrado en permisos`);
+    if (!window.usuarioPermisos) {
+        console.error(`[PERMISOS] window.usuarioPermisos NO existe`);
         return false;
     }
     
-    return window.usuarioPermisos[modulo][accion] === 1;
+    if (!window.usuarioPermisos[modulo]) {
+        console.warn(`[PERMISOS] Módulo ${modulo} no encontrado en permisos`);
+        console.warn(`[PERMISOS] Módulos disponibles:`, Object.keys(window.usuarioPermisos));
+        return false;
+    }
+    
+    const tiene = window.usuarioPermisos[modulo][accion] === 1;
+    console.log(`[PERMISOS] tienePermiso('${modulo}', '${accion}') = ${tiene}`, window.usuarioPermisos[modulo]);
+    return tiene;
 }
 
 /**
