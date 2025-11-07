@@ -338,12 +338,11 @@ def obtener_menu():
                 # Módulos que están dentro de otros (nunca se muestran independientemente)
                 logger.info(f"[MENU] Item omitido (está en submenu): {item['nombre']}")
                 incluir_modulo = False
-            elif 'submenu' in item and len(item['submenu']) > 0:
-                # Si tiene submenús, incluir solo si quedó al menos 1 submenú después de filtrar
+            elif es_admin_empresa:
+                # Admin ve todo
                 incluir_modulo = True
-                logger.info(f"[MENU] Item con submenús incluido: {item['nombre']}")
-            elif not es_admin_empresa:
-                # Si NO tiene submenús, incluir solo si tiene Ver + alguna otra acción
+            else:
+                # Usuario normal - verificar permisos
                 permisos = item.get('permisos', {})
                 tiene_accion = (permisos.get('crear', 0) == 1 or 
                                permisos.get('editar', 0) == 1 or 
@@ -351,14 +350,29 @@ def obtener_menu():
                                permisos.get('anular', 0) == 1 or 
                                permisos.get('exportar', 0) == 1)
                 
-                if tiene_accion:
-                    incluir_modulo = True
-                    logger.info(f"[MENU] Item sin submenús incluido (tiene acciones): {item['nombre']}")
+                if 'submenu' in item and len(item['submenu']) > 0:
+                    # Tiene submenús - verificar si alguno es de acción (no solo consulta)
+                    # Si todos los submenús son de solo lectura Y no tiene acciones, NO incluir
+                    submenu_tiene_accion = False
+                    for sub in item['submenu']:
+                        nombre_sub = sub.get('nombre', '').lower()
+                        # Submenús de acción: Nuevo, Editar, etc (no Consultar)
+                        if 'nuevo' in nombre_sub or 'editar' in nombre_sub or 'crear' in nombre_sub:
+                            submenu_tiene_accion = True
+                            break
+                    
+                    if submenu_tiene_accion or tiene_accion:
+                        incluir_modulo = True
+                        logger.info(f"[MENU] Item con submenús incluido (tiene acciones): {item['nombre']}")
+                    else:
+                        logger.info(f"[MENU] Item con submenús omitido (solo consulta, sin acciones): {item['nombre']}")
                 else:
-                    logger.info(f"[MENU] Item sin submenús omitido (solo Ver, sin acciones): {item['nombre']}")
-            else:
-                # Admin ve todo
-                incluir_modulo = True
+                    # Sin submenús - incluir solo si tiene acciones
+                    if tiene_accion:
+                        incluir_modulo = True
+                        logger.info(f"[MENU] Item sin submenús incluido (tiene acciones): {item['nombre']}")
+                    else:
+                        logger.info(f"[MENU] Item sin submenús omitido (solo Ver, sin acciones): {item['nombre']}")
             
             if incluir_modulo:
                 menu.append(item)
