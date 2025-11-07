@@ -182,20 +182,26 @@ def obtener_menu():
         permisos_usuario = {}
         if not es_admin_empresa:
             cursor.execute('''
-                SELECT modulo_codigo, puede_ver, puede_crear
+                SELECT modulo_codigo, puede_ver, puede_crear, puede_editar, 
+                       puede_eliminar, puede_anular, puede_exportar
                 FROM permisos_usuario_modulo
                 WHERE usuario_id = ? AND empresa_id = ?
             ''', (user_id, empresa_id))
             for perm_row in cursor.fetchall():
                 permisos_usuario[perm_row[0]] = {
                     'puede_ver': perm_row[1],
-                    'puede_crear': perm_row[2]
+                    'puede_crear': perm_row[2],
+                    'puede_editar': perm_row[3],
+                    'puede_eliminar': perm_row[4],
+                    'puede_anular': perm_row[5],
+                    'puede_exportar': perm_row[6]
                 }
         
         # Definir submódulos fuera del loop
         submenu_map = {
             'facturas_emitidas': [
                 {
+                    'codigo': 'tickets',
                     'nombre': 'Tickets',
                     'icono': 'fas fa-receipt',
                     'ruta': '#',
@@ -205,6 +211,7 @@ def obtener_menu():
                     ]
                 },
                 {
+                    'codigo': 'facturas',
                     'nombre': 'Facturas',
                     'icono': 'fas fa-file-invoice',
                     'ruta': '#',
@@ -213,6 +220,7 @@ def obtener_menu():
                     ]
                 },
                 {
+                    'codigo': 'proformas',
                     'nombre': 'Proformas',
                     'icono': 'fas fa-file-contract',
                     'ruta': '#',
@@ -308,6 +316,18 @@ def obtener_menu():
                         if modulo_codigo_sub:
                             # Verificar permiso de ver para este submódulo
                             if permisos_usuario.get(modulo_codigo_sub, {}).get('puede_ver', 0) == 1:
+                                # Crear copia del submódulo y agregar permisos
+                                submenu_item_copia = submenu_item.copy()
+                                perms = permisos_usuario.get(modulo_codigo_sub, {})
+                                submenu_item_copia['permisos'] = {
+                                    'ver': perms.get('puede_ver', 0),
+                                    'crear': perms.get('puede_crear', 0),
+                                    'editar': perms.get('puede_editar', 0),
+                                    'eliminar': perms.get('puede_eliminar', 0),
+                                    'anular': perms.get('puede_anular', 0),
+                                    'exportar': perms.get('puede_exportar', 0)
+                                }
+                                
                                 # Filtrar sub-submenús si existen
                                 if 'submenu' in submenu_item:
                                     submenu_interno = submenu_item['submenu']
@@ -324,11 +344,10 @@ def obtener_menu():
                                             submenu_interno_filtrado.append(subsub)
                                     
                                     if submenu_interno_filtrado:
-                                        submenu_item_copia = submenu_item.copy()
                                         submenu_item_copia['submenu'] = submenu_interno_filtrado
                                         submenu_filtrado.append(submenu_item_copia)
                                 else:
-                                    submenu_filtrado.append(submenu_item)
+                                    submenu_filtrado.append(submenu_item_copia)
                         else:
                             # Para módulos simples (productos, contactos, presupuestos)
                             # Usar el código del módulo padre

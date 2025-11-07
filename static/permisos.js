@@ -20,20 +20,30 @@ function inicializarPermisos(menuData) {
         return;
     }
     
-    // Extraer permisos de cada módulo
-    menuData.forEach(modulo => {
-        if (modulo.codigo && modulo.permisos) {
-            window.usuarioPermisos[modulo.codigo] = {
-                ver: modulo.permisos.ver || 0,
-                crear: modulo.permisos.crear || 0,
-                editar: modulo.permisos.editar || 0,
-                eliminar: modulo.permisos.eliminar || 0,
-                anular: modulo.permisos.anular || 0,
-                exportar: modulo.permisos.exportar || 0
-            };
-            console.log(`[PERMISOS] ${modulo.codigo}:`, window.usuarioPermisos[modulo.codigo]);
-        }
-    });
+    // Función recursiva para extraer permisos de módulos y submódulos
+    function extraerPermisos(items) {
+        items.forEach(modulo => {
+            if (modulo.codigo && modulo.permisos) {
+                window.usuarioPermisos[modulo.codigo] = {
+                    ver: modulo.permisos.ver || 0,
+                    crear: modulo.permisos.crear || 0,
+                    editar: modulo.permisos.editar || 0,
+                    eliminar: modulo.permisos.eliminar || 0,
+                    anular: modulo.permisos.anular || 0,
+                    exportar: modulo.permisos.exportar || 0
+                };
+                console.log(`[PERMISOS] ${modulo.codigo}:`, window.usuarioPermisos[modulo.codigo]);
+            }
+            
+            // Procesar submódulos recursivamente
+            if (modulo.submenu && Array.isArray(modulo.submenu)) {
+                extraerPermisos(modulo.submenu);
+            }
+        });
+    }
+    
+    // Extraer permisos de todos los módulos y submódulos
+    extraerPermisos(menuData);
     
     console.log('[PERMISOS] Permisos cargados:', window.usuarioPermisos);
     
