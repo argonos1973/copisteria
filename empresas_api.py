@@ -332,9 +332,14 @@ def crear_empresa():
                 file.save(os.path.join(UPLOAD_FOLDER, logo_filename))
                 logger.info(f"Logo guardado: {logo_filename}")
         
-        # Crear BD de la empresa
+        # Crear directorio para la empresa
+        empresa_dir = os.path.join(DB_DIR, codigo)
+        os.makedirs(empresa_dir, exist_ok=True)
+        logger.info(f"Directorio creado para empresa: {empresa_dir}")
+        
+        # Crear BD de la empresa dentro del subdirectorio
         bd_origen = os.path.join(DB_DIR, 'aleph70.db')
-        bd_destino = os.path.join(DB_DIR, f'{codigo}.db')
+        bd_destino = os.path.join(empresa_dir, f'{codigo}.db')
         
         if not os.path.exists(bd_origen):
             conn.close()
@@ -346,17 +351,20 @@ def crear_empresa():
             return jsonify({'error': 'Error clonando estructura de BD'}), 500
         
         
-        # Establecer permisos correctos en la BD recién creada
+        # Establecer permisos correctos en directorio y BD
         import subprocess
         try:
-            # Cambiar propietario a www-data:www-data usando sudo
-            subprocess.run(['sudo', 'chown', 'www-data:www-data', bd_destino], check=True)
-            # Establecer permisos 664 (rw-rw-r--)
+            # Cambiar propietario del directorio a www-data:www-data
+            subprocess.run(['sudo', 'chown', '-R', 'www-data:www-data', empresa_dir], check=True)
+            # Establecer permisos 775 al directorio (rwxrwxr-x)
+            subprocess.run(['sudo', 'chmod', '775', empresa_dir], check=True)
+            # Establecer permisos 664 a la BD (rw-rw-r--)
             subprocess.run(['sudo', 'chmod', '664', bd_destino], check=True)
+            logger.info(f"Permisos establecidos correctamente para directorio: {empresa_dir}")
             logger.info(f"Permisos establecidos correctamente para BD: {bd_destino}")
         except Exception as perm_error:
             logger.warning(f"No se pudieron establecer permisos automáticamente: {perm_error}")
-            logger.warning(f"Por favor, ejecute manualmente: sudo chown www-data:www-data {bd_destino} && sudo chmod 664 {bd_destino}")
+            logger.warning(f"Por favor, ejecute manualmente: sudo chown -R www-data:www-data {empresa_dir} && sudo chmod 775 {empresa_dir} && sudo chmod 664 {bd_destino}")
         
         # Insertar empresa en BD de usuarios
         cursor.execute('''
@@ -604,11 +612,17 @@ def eliminar_empresa(empresa_id):
         # Eliminar archivos físicos
         archivos_eliminados = []
         
-        # Eliminar BD
-        if db_path and os.path.exists(db_path):
+        # Eliminar directorio completo de la empresa (incluye BD y otros archivos)
+        empresa_dir = os.path.join(DB_DIR, codigo)
+        if os.path.exists(empresa_dir) and os.path.isdir(empresa_dir):
+            shutil.rmtree(empresa_dir)
+            archivos_eliminados.append(f'Directorio: {codigo}/')
+            logger.info(f"Directorio de empresa eliminado: {empresa_dir}")
+        elif db_path and os.path.exists(db_path):
+            # Fallback: si no existe el directorio pero existe la BD antigua (migración)
             os.remove(db_path)
             archivos_eliminados.append(f'BD: {os.path.basename(db_path)}')
-            logger.info(f"BD eliminada: {db_path}")
+            logger.info(f"BD eliminada (antigua estructura): {db_path}")
         
         # Eliminar logo
         if logo_header and not logo_header.startswith('default_'):
