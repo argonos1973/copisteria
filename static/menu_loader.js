@@ -46,10 +46,37 @@ async function verificarSesionYCargarMenu() {
         // Cargar página inicial en el iframe según tipo de usuario
         const esAdmin = sessionData && sessionData.es_admin_empresa;
         const paginaInicial = esAdmin ? '/estadisticas.html' : '/bienvenida.html';
+        
+        console.log('[MENU] sessionData completo:', sessionData);
+        console.log('[MENU] es_admin_empresa:', sessionData?.es_admin_empresa);
+        console.log('[MENU] Usuario es admin:', esAdmin);
+        console.log('[MENU] Página a cargar:', paginaInicial);
+        
         const iframe = document.getElementById('content-frame');
         if (iframe) {
             iframe.src = paginaInicial;
-            console.log('[MENU] Cargando página inicial en iframe:', paginaInicial);
+            console.log('[MENU] ✅ Iframe src configurado a:', iframe.src);
+            
+            // Verificar que se cargó correctamente
+            iframe.addEventListener('load', () => {
+                console.log('[MENU] ✅ Iframe cargado correctamente:', iframe.contentWindow.location.href);
+            });
+            
+            iframe.addEventListener('error', (e) => {
+                console.error('[MENU] ❌ Error cargando iframe:', e);
+                console.error('[MENU] Intentando cargar página alternativa...');
+                iframe.src = '/bienvenida.html';
+            });
+        } else {
+            console.error('[MENU] ❌ Iframe content-frame no encontrado');
+            // Reintentar después de un momento
+            setTimeout(() => {
+                const iframeRetry = document.getElementById('content-frame');
+                if (iframeRetry) {
+                    iframeRetry.src = paginaInicial;
+                    console.log('[MENU] ✅ Iframe encontrado en reintento, cargando:', paginaInicial);
+                }
+            }, 500);
         }
         
         // Inicializar sistema de permisos
