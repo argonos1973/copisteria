@@ -752,6 +752,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       btnAnular.replaceWith(btnAnular.cloneNode(true));
       const btnAnularActual = document.getElementById("btnAnular");
       btnAnularActual.addEventListener('click', async () => {
+        // Verificar permiso de anular facturas
+        if (typeof verificarPermisoConAlerta !== 'undefined') {
+          if (!verificarPermisoConAlerta('facturas', 'anular')) {
+            return;
+          }
+        }
+        
         if (!idFactura) {
           mostrarNotificacion('No se puede anular una factura que aún no ha sido guardada', 'warning');
           return;
@@ -1167,6 +1174,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.log(`[Facturas] Verificar cambios: ${hayCambios} (inicial: ${totalInicial}, actual: ${totalActual})`);
       return hayCambios;
     });
+    
+    // Aplicar permisos a los botones después de que todo esté cargado
+    if (typeof aplicarPermisosAElementos !== 'undefined') {
+      aplicarPermisosAElementos();
+    }
     
   } catch (error) {
     console.error("Error durante la inicialización:", error);

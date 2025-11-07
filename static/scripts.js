@@ -152,6 +152,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (btnAnular && idTicket && estadoTicket === 'P') {
       btnAnular.classList.remove('hidden');
       btnAnular.addEventListener('click', async () => {
+        // Verificar permiso de anular tickets
+        if (typeof verificarPermisoConAlerta !== 'undefined') {
+          if (!verificarPermisoConAlerta('tickets', 'anular')) {
+            return;
+          }
+        }
+        
         const confirmado = await mostrarConfirmacion('¿Está seguro de anular este ticket? Se creará un ticket rectificativo.');
         if (!confirmado) return;
         try {
@@ -219,6 +226,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.log(`[Tickets] Verificar cambios: ${hayCambios} (inicial: ${totalInicial}, actual: ${totalActual})`);
     return hayCambios;
   });
+
+  // Aplicar permisos a los botones después de que todo esté cargado
+  if (typeof aplicarPermisosAElementos !== 'undefined') {
+    aplicarPermisosAElementos();
+  }
 
 });
 
