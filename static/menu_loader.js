@@ -43,6 +43,11 @@ async function verificarSesionYCargarMenu() {
         
         renderizarMenu(menuData);
         
+        // Inicializar sistema de permisos
+        if (typeof inicializarPermisos === 'function') {
+            inicializarPermisos(menuData);
+        }
+        
     } catch (error) {
         console.error('[MENU] Error cargando menú:', error);
         document.querySelector('.menu-list').innerHTML = `
