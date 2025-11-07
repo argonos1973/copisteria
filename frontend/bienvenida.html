@@ -42,8 +42,54 @@
             width: auto;
             height: auto;
             object-fit: contain;
+            /* Adaptar imagen al tema */
+            filter: brightness(0.95) contrast(1.05);
+        }
+        
+        /* Si el tema es oscuro, invertir colores de la imagen */
+        @media (prefers-color-scheme: dark) {
+            .logo-container img {
+                filter: invert(1) hue-rotate(180deg) brightness(1.1);
+            }
+        }
+        
+        /* Detectar tema oscuro por variable CSS */
+        body[data-theme="dark"] .logo-container img,
+        body.dark-theme .logo-container img {
+            filter: invert(1) hue-rotate(180deg) brightness(1.1);
         }
     </style>
+    
+    <script>
+    // Detectar tema oscuro del sistema de branding
+    window.addEventListener('DOMContentLoaded', () => {
+        // Esperar a que branding.js cargue y aplique el tema
+        setTimeout(() => {
+            // Verificar variables CSS para detectar tema oscuro
+            const bgColor = getComputedStyle(document.body).getPropertyValue('--bg-color').trim();
+            const primaryColor = getComputedStyle(document.body).getPropertyValue('--primary-color').trim();
+            
+            console.log('[BIENVENIDA] Colores detectados - bg:', bgColor, 'primary:', primaryColor);
+            
+            // Si el fondo es oscuro (valores RGB bajos), aplicar clase dark
+            if (bgColor) {
+                // Extraer valores RGB del color
+                const rgb = bgColor.match(/\d+/g);
+                if (rgb && rgb.length >= 3) {
+                    const brightness = (parseInt(rgb[0]) + parseInt(rgb[1]) + parseInt(rgb[2])) / 3;
+                    console.log('[BIENVENIDA] Brillo del fondo:', brightness);
+                    
+                    if (brightness < 128) {
+                        document.body.classList.add('dark-theme');
+                        console.log('[BIENVENIDA] Tema oscuro detectado, imagen invertida');
+                    } else {
+                        console.log('[BIENVENIDA] Tema claro detectado, imagen normal');
+                    }
+                }
+            }
+        }, 500);
+    });
+    </script>
 </head>
 <body>
     <div class="container">
