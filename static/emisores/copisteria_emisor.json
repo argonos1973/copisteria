@@ -7,6 +7,6 @@
     "provincia": "",
     "pais": "ESP",
     "email": "info@copisteria.com",
-    "db_path": "/var/www/html/db/aleph70.db",
+    "db_path": "/var/www/html/db/copisteria/copisteria.db",
     "codigo": "copisteria"
 }

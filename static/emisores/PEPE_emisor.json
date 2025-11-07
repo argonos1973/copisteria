@@ -8,6 +8,6 @@
     "telefono": "678876344",
     "email": "aleph70copisteria@gmail.com",
     "web": "",
-    "db_path": "/var/www/html/db/PEPE.db",
+    "db_path": "/var/www/html/db/PEPE/PEPE.db",
     "codigo": "PEPE"
 }
