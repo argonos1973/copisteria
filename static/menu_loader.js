@@ -41,7 +41,7 @@ async function verificarSesionYCargarMenu() {
             return;
         }
         
-        renderizarMenu(menuData);
+        renderizarMenu(menuData, sessionData);
         
         // Inicializar sistema de permisos
         if (typeof inicializarPermisos === 'function') {
@@ -148,7 +148,7 @@ function mostrarUltimoAcceso(ultimoAcceso) {
     }
 }
 
-function renderizarMenu(menuItems) {
+function renderizarMenu(menuItems, sessionData) {
     const menuList = document.querySelector('.menu-list');
     if (!menuList) {
         console.error('[MENU] Contenedor .menu-list no encontrado');
@@ -157,8 +157,14 @@ function renderizarMenu(menuItems) {
     
     menuList.innerHTML = '';
     
+    // Determinar página de inicio según tipo de usuario
+    const esAdmin = sessionData && sessionData.es_admin_empresa;
+    const paginaInicio = esAdmin ? '/estadisticas.html' : '/bienvenida.html';
+    
+    console.log(`[MENU] Usuario es admin: ${esAdmin}, página inicio: ${paginaInicio}`);
+    
     // Siempre añadir "Inicio" primero
-    const inicioItem = crearMenuItem('Inicio', 'fas fa-home', '/estadisticas.html', null);
+    const inicioItem = crearMenuItem('Inicio', 'fas fa-home', paginaInicio, null);
     menuList.appendChild(inicioItem);
     console.log('[MENU] Item "Inicio" añadido');
     
