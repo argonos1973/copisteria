@@ -599,7 +599,6 @@ function mostrarMatrizPermisos(usuarioId, empresaId, permisos) {
             <div style="text-align: center;">Ver</div>
             <div style="text-align: center;">Crear</div>
             <div style="text-align: center;">Editar</div>
-            <div style="text-align: center;">Eliminar</div>
             <div style="text-align: center;">Anular</div>
             <div style="text-align: center;">Exportar</div>
         </div>
@@ -623,10 +622,6 @@ function mostrarMatrizPermisos(usuarioId, empresaId, permisos) {
                 <div style="text-align: center;">
                     <input type="checkbox" ${permiso.puede_editar ? 'checked' : ''} 
                         onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_editar', this.checked)">
-                </div>
-                <div style="text-align: center;">
-                    <input type="checkbox" ${permiso.puede_eliminar ? 'checked' : ''} 
-                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_eliminar', this.checked)">
                 </div>
                 <div style="text-align: center;">
                     <input type="checkbox" ${permiso.puede_anular ? 'checked' : ''} 
@@ -760,9 +755,6 @@ function renderizarTablaEmpresas(empresas) {
                     </button>
                     <button class="btn btn-sm btn-primary" onclick="window.location.href='EDITAR_EMPRESA_COLORES_SIMPLE.html?id=${emp.id}'"  title="Editar">
                         <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="eliminarEmpresaCompleta(${emp.id})" title="Eliminar">
-                        <i class="fas fa-trash"></i>
                     </button>
                 </td>
         `;
@@ -2005,44 +1997,45 @@ async function actualizarEmisorJson(empresaId, data) {
     }
 }
 
-async function eliminarEmpresaCompleta(empresaId) {
-    const empresa = empresas.find(e => e.id === empresaId);
-    if (!empresa) return;
-    
-    const confirmacion = confirm(
-        `¿ELIMINAR COMPLETAMENTE la empresa "${empresa.nombre}"?\n\n` +
-        `Se eliminarán:\n` +
-        `• Base de datos: ${empresa.codigo}.db\n` +
-        `• Logo de la empresa\n` +
-        `• Archivo emisor.json\n` +
-        `• Todos los permisos asociados\n\n` +
-        `Esta acción NO se puede deshacer.\n\n` +
-        `¿Está seguro?`
-    );
-    
-    if (!confirmacion) return;
-    
-    try {
-        const response = await fetch(`/api/empresas/${empresaId}`, {
-            method: 'DELETE'
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            mostrarNotificacion(
-                `Empresa eliminada: ${data.archivos_eliminados.join(', ')}`, 
-                'success'
-            );
-            cargarEmpresas();
-        } else {
-            mostrarNotificacion(data.error || 'Error eliminando empresa', 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarNotificacion('Error de conexión', 'error');
-    }
-}
+// FUNCIÓN DESHABILITADA - No se permite eliminar empresas
+// async function eliminarEmpresaCompleta(empresaId) {
+//     const empresa = empresas.find(e => e.id === empresaId);
+//     if (!empresa) return;
+//     
+//     const confirmacion = confirm(
+//         `¿ELIMINAR COMPLETAMENTE la empresa "${empresa.nombre}"?\n\n` +
+//         `Se eliminarán:\n` +
+//         `• Base de datos: ${empresa.codigo}.db\n` +
+//         `• Logo de la empresa\n` +
+//         `• Archivo emisor.json\n` +
+//         `• Todos los permisos asociados\n\n` +
+//         `Esta acción NO se puede deshacer.\n\n` +
+//         `¿Está seguro?`
+//     );
+//     
+//     if (!confirmacion) return;
+//     
+//     try {
+//         const response = await fetch(`/api/empresas/${empresaId}`, {
+//             method: 'DELETE'
+//         });
+//         
+//         const data = await response.json();
+//         
+//         if (response.ok) {
+//             mostrarNotificacion(
+//                 `Empresa eliminada: ${data.archivos_eliminados.join(', ')}`, 
+//                 'success'
+//             );
+//             cargarEmpresas();
+//         } else {
+//             mostrarNotificacion(data.error || 'Error eliminando empresa', 'error');
+//         }
+//     } catch (error) {
+//         console.error('Error:', error);
+//         mostrarNotificacion('Error de conexión', 'error');
+//     }
+// }
 
 // Función para generar colores armónicos basados en el color primario
 async function generarColoresArmonicos() {

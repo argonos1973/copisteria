@@ -284,7 +284,7 @@ th {
 
 .permission-row {
     display: grid;
-    grid-template-columns: 200px repeat(6, 1fr);
+    grid-template-columns: 200px repeat(5, 1fr);
     gap: 10px;
     padding: 15px;
     border-radius: 8px;
