@@ -96,8 +96,9 @@
 
     <link rel="stylesheet" href="/static/notificaciones.css">
     <script type="module">
-        import { mostrarConfirmacion } from '/static/notificaciones.js';
+        import { mostrarConfirmacion, mostrarNotificacion } from '/static/notificaciones.js';
         window.mostrarConfirmacion = mostrarConfirmacion;
+        window.mostrarNotificacion = mostrarNotificacion;
     </script>
     
     <!-- Cargador de menú dinámico -->
@@ -502,14 +503,14 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    alert('✅ Contraseña cambiada correctamente');
+                    mostrarNotificacion('Contraseña cambiada correctamente', 'success');
                     document.getElementById('form-password').reset();
                 } else {
-                    alert('❌ Error: ' + (result.error || 'No se pudo cambiar la contraseña'));
+                    mostrarNotificacion('Error: ' + (result.error || 'No se pudo cambiar la contraseña'), 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('❌ Error al cambiar contraseña');
+                mostrarNotificacion('Error al cambiar contraseña', 'error');
             }
         }
         
@@ -525,7 +526,8 @@
                     { id: 'minimal', nombre: 'Minimal', icono: '🌟' },
                     { id: 'dark', nombre: 'Dark', icono: '🌙' },
                     { id: 'classic', nombre: 'Classic', icono: '💼' },
-                    { id: 'eink', nombre: 'E-Ink', icono: '📄' }
+                    { id: 'eink', nombre: 'E-Ink', icono: '📄' },
+                    { id: 'porsche_le_mans', nombre: 'Porsche Le Mans', icono: '🏁' }
                 ];
                 
                 const grid = document.getElementById('plantillas-grid');
@@ -570,16 +572,16 @@
                         cardToActivate.classList.add('active');
                     }
                     
-                    alert('✅ Plantilla cambiada correctamente');
+                    mostrarNotificacion('Plantilla cambiada correctamente', 'success');
                     
                     // Recargar página para aplicar cambios en iframe
                     setTimeout(() => location.reload(), 500);
                 } else {
-                    alert('❌ Error: ' + (result.error || 'No se pudo cambiar la plantilla'));
+                    mostrarNotificacion('Error: ' + (result.error || 'No se pudo cambiar la plantilla'), 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('❌ Error al cambiar plantilla');
+                mostrarNotificacion('Error al cambiar plantilla', 'error');
             }
         }
         
