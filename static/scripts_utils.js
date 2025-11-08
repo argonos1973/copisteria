@@ -254,7 +254,7 @@ function crearOverlay() {
   overlayDiv.style.left = '0';
   overlayDiv.style.width = '100%';
   overlayDiv.style.height = '100%';
-  overlayDiv.style.background = 'rgba(0,0,0,0.7)';
+  overlayDiv.style.background = 'transparent';
   overlayDiv.style.display = 'flex';
   overlayDiv.style.alignItems = 'center';
   overlayDiv.style.justifyContent = 'center';
