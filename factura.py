@@ -1611,21 +1611,29 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             ).replace(
                 'id="fecha-vencimiento" style="font-weight:700;color:#000;"></span>',
                 f'id="fecha-vencimiento" style="font-weight:700;color:#000;">{datetime.strptime(factura_dict["fvencimiento"], "%Y-%m-%d").strftime("%d/%m/%Y") if factura_dict.get("fvencimiento") else ""}</span>'
-            ).replace(
+            )
+            
+            # Obtener datos del emisor desde JSON de la empresa
+            from utils_emisor import cargar_datos_emisor
+            emisor = cargar_datos_emisor()
+            logger.info(f"[FACTURA.PY] Datos del emisor cargados: {emisor.get('nombre')} - {emisor.get('nif')}")
+            
+            # Reemplazar datos del emisor con los valores del JSON
+            html_modificado = html_modificado.replace(
                 '<p id="emisor-nombre"></p>',
-                '<p>SAMUEL RODRIGUEZ MIQUEL</p>'
+                f'<p>{emisor.get("nombre", "")}</p>'
             ).replace(
                 '<p id="emisor-direccion"></p>',
-                '<p>LEGALITAT, 70</p>'
+                f'<p>{emisor.get("direccion", "")}</p>'
             ).replace(
                 '<p id="emisor-cp-ciudad"></p>',
-                '<p>BARCELONA (08024), BARCELONA, España</p>'
+                f'<p>{emisor.get("ciudad", "")} ({emisor.get("cp", "")}), {emisor.get("provincia", "")}, {emisor.get("pais", "España")}</p>'
             ).replace(
                 '<p id="emisor-nif"></p>',
-                '<p>44007535W</p>'
+                f'<p>{emisor.get("nif", "")}</p>'
             ).replace(
                 '<p id="emisor-email"></p>',
-                '<p>info@aleph70.com</p>'
+                f'<p>{emisor.get("email", "")}</p>'
             ).replace(
                 '<p id="razonsocial"></p>',
                 f'<p>{factura_dict["razonsocial"]}</p>'
@@ -1676,12 +1684,15 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             ])))
             html_modificado = set_p(html_modificado, 'nif', factura_dict.get('identificador', ''))
 
-            # Emisor (por si cambian atributos en plantilla)
-            html_modificado = set_p(html_modificado, 'emisor-nombre', 'SAMUEL RODRIGUEZ MIQUEL')
-            html_modificado = set_p(html_modificado, 'emisor-direccion', 'LEGALITAT, 70')
-            html_modificado = set_p(html_modificado, 'emisor-cp-ciudad', 'BARCELONA (08024), BARCELONA, España')
-            html_modificado = set_p(html_modificado, 'emisor-nif', '44007535W')
-            html_modificado = set_p(html_modificado, 'emisor-email', 'info@aleph70.com')
+            # Emisor (por si cambian atributos en plantilla) - obtener datos del JSON
+            from utils_emisor import cargar_datos_emisor
+            emisor = cargar_datos_emisor()
+            html_modificado = set_p(html_modificado, 'emisor-nombre', emisor.get('nombre', ''))
+            html_modificado = set_p(html_modificado, 'emisor-direccion', emisor.get('direccion', ''))
+            cp_ciudad = f"{emisor.get('ciudad', '')} ({emisor.get('cp', '')}), {emisor.get('provincia', '')}, {emisor.get('pais', 'España')}"
+            html_modificado = set_p(html_modificado, 'emisor-cp-ciudad', cp_ciudad)
+            html_modificado = set_p(html_modificado, 'emisor-nif', emisor.get('nif', ''))
+            html_modificado = set_p(html_modificado, 'emisor-email', emisor.get('email', ''))
 
             # Totales y fechas (span)
             html_modificado = set_span(html_modificado, 'numero', factura_dict["numero"])

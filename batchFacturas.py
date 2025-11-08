@@ -248,14 +248,18 @@ def generar_factura_pdf(id_factura):
                     """
                 
                 # Reemplazar placeholders con datos reales
+                # Obtener datos del emisor desde JSON de la empresa
+                from utils_emisor import cargar_datos_emisor
+                emisor = cargar_datos_emisor()
+                
                 replacements = {
                     'id="numero"></span>': f'id="numero">{factura_dict["numero"]}</span>',
                     'id="fecha"></span>': f'id="fecha">{fecha_formateada}</span>',
-                    '<p id="emisor-nombre"></p>': '<p>SAMUEL RODRIGUEZ MIQUEL</p>',
-                    '<p id="emisor-direccion"></p>': '<p>LEGALITAT, 70</p>',
-                    '<p id="emisor-cp-ciudad"></p>': '<p>BARCELONA (08024), BARCELONA, España</p>',
-                    '<p id="emisor-nif"></p>': '<p>44007535W</p>',
-                    '<p id="emisor-email"></p>': '<p>info@aleph70.com</p>',
+                    '<p id="emisor-nombre"></p>': f'<p>{emisor.get("nombre", "")}</p>',
+                    '<p id="emisor-direccion"></p>': f'<p>{emisor.get("direccion", "")}</p>',
+                    '<p id="emisor-cp-ciudad"></p>': f'<p>{emisor.get("ciudad", "")} ({emisor.get("cp", "")}), {emisor.get("provincia", "")}, {emisor.get("pais", "España")}</p>',
+                    '<p id="emisor-nif"></p>': f'<p>{emisor.get("nif", "")}</p>',
+                    '<p id="emisor-email"></p>': f'<p>{emisor.get("email", "")}</p>',
                     '<p id="razonsocial"></p>': f'<p>{factura_dict["razonsocial"]}</p>',
                     '<p id="direccion"></p>': f'<p>{factura_dict["direccion"] or ""}</p>',
                     '<p id="cp-localidad"></p>': f'<p>{", ".join(filter(None, [factura_dict["cp"], factura_dict["localidad"], factura_dict["provincia"]]))}</p>',

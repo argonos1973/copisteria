@@ -390,21 +390,29 @@ def generar_factura_pdf(id_factura):
             ).replace(
                 'id="fecha-vencimiento" style="font-weight:700;color:#000;"></span>',
                 f'id="fecha-vencimiento" style="font-weight:700;color:#000;">{datetime.strptime(factura_dict["fvencimiento"], "%Y-%m-%d").strftime("%d/%m/%Y") if factura_dict.get("fvencimiento") else ""}</span>'
-            ).replace(
+            )
+            
+            # Obtener datos del emisor desde JSON de la empresa
+            from utils_emisor import cargar_datos_emisor
+            emisor = cargar_datos_emisor()
+            logger.info(f"Datos del emisor cargados: {emisor.get('nombre')} - {emisor.get('nif')}")
+            
+            # Reemplazar datos del emisor con los valores del JSON
+            html_modificado = html_modificado.replace(
                 '<p id="emisor-nombre"></p>',
-                '<p>SAMUEL RODRIGUEZ MIQUEL</p>'
+                f'<p>{emisor.get("nombre", "")}</p>'
             ).replace(
                 '<p id="emisor-direccion"></p>',
-                '<p>LEGALITAT, 70</p>'
+                f'<p>{emisor.get("direccion", "")}</p>'
             ).replace(
                 '<p id="emisor-cp-ciudad"></p>',
-                '<p>BARCELONA (08024), BARCELONA, España</p>'
+                f'<p>{emisor.get("ciudad", "")} ({emisor.get("cp", "")}), {emisor.get("provincia", "")}, {emisor.get("pais", "España")}</p>'
             ).replace(
                 '<p id="emisor-nif"></p>',
-                '<p>44007535W</p>'
+                f'<p>{emisor.get("nif", "")}</p>'
             ).replace(
                 '<p id="emisor-email"></p>',
-                '<p>info@aleph70.com</p>'
+                f'<p>{emisor.get("email", "")}</p>'
             ).replace(
                 '<p id="razonsocial"></p>',
                 f'<p>{factura_dict.get("razonsocial") or ""}</p>'

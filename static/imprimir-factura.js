@@ -3,12 +3,46 @@ import { formatearImporte, formatearFecha, formatearFechaSoloDia } from './scrip
 import { mostrarNotificacion } from './notificaciones.js';
 
 /**
+ * Obtiene los datos del emisor desde el endpoint de branding
+ * @returns {Promise<Object>} Una promesa que resuelve con los datos del emisor
+ */
+async function obtenerDatosEmisor() {
+    try {
+        const response = await fetch('/api/auth/branding');
+        if (!response.ok) {
+            throw new Error('No se pudo obtener datos del emisor');
+        }
+        const branding = await response.json();
+        console.log('Datos emisor cargados:', branding);
+        return branding;
+    } catch (error) {
+        console.error('Error al obtener datos del emisor:', error);
+        // Retornar datos vacíos en caso de error
+        return {
+            razon_social: '',
+            direccion: '',
+            ciudad: '',
+            codigo_postal: '',
+            provincia: '',
+            pais: 'España',
+            cif: '',
+            email: ''
+        };
+    }
+}
+
+/**
  * Función principal que se ejecuta al cargar la página.
  */
 window.onload = function() {
     const idFactura = obtenerIdFactura(); // Obtener el ID de la factura desde la URL
-    obtenerDatosDeLaFactura(idFactura).then(datos => {
-        rellenarFactura(datos);
+    
+    // Cargar datos del emisor y de la factura en paralelo
+    Promise.all([
+        obtenerDatosEmisor(),
+        obtenerDatosDeLaFactura(idFactura)
+    ]).then(([emisor, datos]) => {
+        rellenarFactura(datos, emisor);
         
         // Retraso para asegurar que el QR se cargue completamente antes de imprimir
         console.log('Esperando a que se cargue el código QR antes de imprimir...');
@@ -17,7 +51,7 @@ window.onload = function() {
             window.print();
         }, 2000); // Esperar 2 segundos para que se cargue el QR (aumentado de 1,5 a 2 segundos para mayor seguridad)
     }).catch(error => {
-        console.error('Error al obtener los datos de la factura:', error);
+        console.error('Error al obtener los datos:', error);
         mostrarNotificacion('Hubo un problema al obtener los datos de la factura.', 'error');
     });
 };
@@ -157,8 +191,9 @@ function decodificarFormaPago(formaPago) {
 /**
  * Rellena la factura con los datos proporcionados.
  * @param {Object} datos - Objeto con los datos de la factura.
+ * @param {Object} emisor - Objeto con los datos del emisor.
  */
-async function rellenarFactura(datos) {
+async function rellenarFactura(datos, emisor) {
     console.log('Iniciando rellenado de factura con datos:', datos);
 
     if (!datos || !datos.factura) {
@@ -180,12 +215,21 @@ async function rellenarFactura(datos) {
         document.getElementById('fecha-vencimiento').textContent = formatearFechaSoloDia(factura.fvencimiento);
     }
 
-    // Datos del emisor (hardcodeados por ahora)
-    document.getElementById('emisor-nombre').textContent = 'SAMUEL RODRIGUEZ MIQUEL';
-    document.getElementById('emisor-direccion').textContent = 'LEGALITAT, 70';
-    document.getElementById('emisor-cp-ciudad').textContent = 'BARCELONA (08024), BARCELONA, España';
-    document.getElementById('emisor-nif').textContent = '44007535W';
-    document.getElementById('emisor-email').textContent = 'info@aleph70.com';
+    // Datos del emisor desde branding API
+    document.getElementById('emisor-nombre').textContent = emisor.razon_social || '';
+    document.getElementById('emisor-direccion').textContent = emisor.direccion || '';
+    const cpCiudad = [emisor.ciudad, `(${emisor.codigo_postal})`, emisor.provincia, emisor.pais]
+        .filter(Boolean)
+        .join(', ');
+    document.getElementById('emisor-cp-ciudad').textContent = cpCiudad;
+    document.getElementById('emisor-nif').textContent = emisor.cif || '';
+    document.getElementById('emisor-email').textContent = emisor.email || '';
+    
+    console.log('Datos del emisor aplicados:', {
+        nombre: emisor.razon_social,
+        nif: emisor.cif,
+        direccion: emisor.direccion
+    });
 
     // Datos del cliente
     if (factura.contacto) {

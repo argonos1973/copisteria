@@ -12,11 +12,43 @@ import { mostrarNotificacion } from './notificaciones.js';
 
 console.log('[TICKET] Script imprimir-ticket.js cargado');
 
+/**
+ * Obtiene los datos del emisor desde el endpoint de branding
+ * @returns {Promise<Object>} Una promesa que resuelve con los datos del emisor
+ */
+async function obtenerDatosEmisor() {
+    try {
+        const response = await fetch('/api/auth/branding');
+        if (!response.ok) {
+            throw new Error('No se pudo obtener datos del emisor');
+        }
+        const branding = await response.json();
+        console.log('[TICKET] Datos emisor cargados:', branding);
+        return branding;
+    } catch (error) {
+        console.error('[TICKET] Error al obtener datos del emisor:', error);
+        // Retornar datos vacíos en caso de error
+        return {
+            razon_social: '',
+            direccion: '',
+            ciudad: '',
+            codigo_postal: '',
+            cif: '',
+            email: ''
+        };
+    }
+}
+
 window.onload = function() {
     console.log('[TICKET] window.onload ejecutado');
     const idTicket = obtenerIdTicket(); // Obtener el ID del ticket desde la URL
-    obtenerDatosDelTicket(idTicket).then(datos => {
-        rellenarFactura(datos).then(() => {
+    
+    // Cargar datos del emisor y del ticket en paralelo
+    Promise.all([
+        obtenerDatosEmisor(),
+        obtenerDatosDelTicket(idTicket)
+    ]).then(([emisor, datos]) => {
+        rellenarFactura(datos, emisor).then(() => {
             // Esperar 1 segundo adicional antes de imprimir para asegurar que todo se renderice
             console.log('[TICKET] Esperando 1 segundo antes de imprimir...');
             setTimeout(() => {
@@ -25,7 +57,7 @@ window.onload = function() {
             }, 1000);
         });
     }).catch(error => {
-        console.error('Error al obtener los datos del ticket:', error);
+        console.error('[TICKET] Error al obtener los datos:', error);
         mostrarNotificacion('Hubo un problema al obtener los datos del ticket.', 'error');
     });
 };
@@ -75,8 +107,9 @@ function capitalizarPrimeraLetra(texto) {
 /**
  * Rellena la factura con los datos proporcionados.
  * @param {Object} datos - Objeto con los datos del ticket.
+ * @param {Object} emisor - Objeto con los datos del emisor.
  */
-async function rellenarFactura(datos) {
+async function rellenarFactura(datos, emisor) {
     // Procesamos la información y, al final, esperamos a que el QR (si existe) acabe de cargar
     // Asegurarnos de que 'datos' tiene la estructura esperada
     if (!datos.ticket || !datos.detalles) {
@@ -150,11 +183,20 @@ async function rellenarFactura(datos) {
     }
     document.getElementById('estado').textContent = textoEstado;
 
-    // Datos del emisor en mayúsculas
-    document.getElementById('emisor-nombre').textContent = 'SAMUEL RODRIGUEZ MIQUEL';
-    document.getElementById('emisor-direccion').textContent = 'LEGALITAT, 70, BARCELONA (08024)';
-    document.getElementById('emisor-nif').textContent = '44007535W';
-    document.getElementById('emisor-email').textContent = 'info@aleph70.com';
+    // Datos del emisor desde branding API (en mayúsculas)
+    document.getElementById('emisor-nombre').textContent = (emisor.razon_social || '').toUpperCase();
+    const direccionCompleta = [emisor.direccion, emisor.ciudad, `(${emisor.codigo_postal})`]
+        .filter(Boolean)
+        .join(', ');
+    document.getElementById('emisor-direccion').textContent = direccionCompleta.toUpperCase();
+    document.getElementById('emisor-nif').textContent = (emisor.cif || '').toUpperCase();
+    document.getElementById('emisor-email').textContent = (emisor.email || '').toLowerCase();
+    
+    console.log('[TICKET] Datos del emisor aplicados:', {
+        nombre: emisor.razon_social,
+        nif: emisor.cif,
+        direccion: emisor.direccion
+    });
 
     // Si hay un campo para la forma de pago, lo capitalizamos
     if (ticket.forma_pago) {
