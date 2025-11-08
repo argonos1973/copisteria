@@ -116,6 +116,7 @@ def obtener_sesion():
             'logo': f"/static/logos/{session.get('empresa_logo', 'default_header.png')}",
             'rol': session.get('rol'),
             'es_admin': session.get('es_admin_empresa') or session.get('es_superadmin'),
+            'es_admin_empresa': session.get('es_admin_empresa', False),
             'es_superadmin': session.get('es_superadmin'),
             'ultimo_acceso': session.get('ultimo_acceso')
         }), 200
