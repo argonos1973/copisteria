@@ -529,21 +529,24 @@
   
   /* Botones de acción sin fondo - estilo igual que facturas */
   .btn-icon {
-    width: auto;
-    height: auto;
-    padding: 0;
-    margin: 0;
-    border: none;
-    background-color: transparent;
-    color: var(--text-color, #333);
-    cursor: pointer;
-    font-size: 16px;
-    display: inline;
-    transition: color 0.2s ease;
+    width: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background-color: transparent !important;
+    background: transparent !important;
+    color: var(--text-color, #333) !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    display: inline !important;
+    transition: color 0.2s ease !important;
   }
   
   .btn-icon:hover {
-    color: var(--primary-color, #007bff);
+    color: var(--primary-color, #007bff) !important;
+    background-color: transparent !important;
+    background: transparent !important;
   }
   
   /* Sortable (flecha de ordenación) */
