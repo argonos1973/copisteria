@@ -1,0 +1,115 @@
+{
+  "name": "Porsche Le Mans",
+  "version": 3,
+  "meta": {
+    "author": "aleph70",
+    "icon": "🏁",
+    "dark": false,
+    "description": "Tema inspirado en el Porsche 917K Gulf: azul claro con acentos naranja"
+  },
+  "palette": {
+    "black": "#000000",
+    "white": "#ffffff",
+    "gray50": "#fafafa",
+    "gray100": "#f5f5f5",
+    "gray200": "#e5e5e5",
+    "gray300": "#d4d4d4",
+    "gray400": "#999999",
+    "success-light": "#e8f5e9",
+    "warning-light": "#fff3e0",
+    "danger-light": "#ffebee",
+    "info-light": "#e3f2fd",
+    "green600": "#2e7d32",
+    "red600": "#c62828",
+    "gulfBlue": "#74C2E1",
+    "gulfOrange": "#FF6A13"
+  },
+  "semantic": {
+    "bg": "{palette.white}",
+    "bg-elevated": "{palette.gray50}",
+    "text": "{palette.black}",
+    "text-muted": "{palette.gray400}",
+    "primary": "{palette.gulfBlue}",
+    "success": "{palette.success-light}",
+    "warning": "{palette.warning-light}",
+    "danger": "{palette.danger-light}",
+    "info": "{palette.info-light}",
+    "border": "{palette.gray200}"
+  },
+  "components": {
+    "button": {
+      "bg": "{palette.white}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.gray100}",
+      "border": "{semantic.primary}"
+    },
+    "input": {
+      "bg": "{palette.white}",
+      "text": "{semantic.text}",
+      "border": "{semantic.primary}",
+      "placeholder": "{semantic.text-muted}"
+    },
+    "select": {
+      "bg": "{palette.white}",
+      "text": "{semantic.text}",
+      "border": "{semantic.primary}"
+    },
+    "modal": {
+      "bg": "{palette.white}",
+      "text": "{semantic.text}",
+      "overlay": "#00000080",
+      "border": "{semantic.primary}",
+      "border-width": "2px",
+      "border-radius": "8px",
+      "shadow": "0 8px 24px #0000004d",
+      "header-bg": "{semantic.primary}",
+      "header-text": "{palette.white}",
+      "body-bg": "{palette.white}",
+      "body-text": "{semantic.text}",
+      "label-color": "{semantic.text}",
+      "input-bg": "{palette.white}",
+      "input-text": "{semantic.text}",
+      "input-border": "{semantic.border}"
+    },
+    "button-secondary": {
+      "bg": "{palette.gray200}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.gray300}",
+      "border": "{semantic.border}"
+    },
+    "table": {
+      "bg": "{palette.white}",
+      "text": "{semantic.text}",
+      "header-bg": "{palette.gulfBlue}",
+      "header-text": "{palette.white}",
+      "row-hover": "{palette.gray100}"
+    },
+    "menu": {
+      "bg": "{palette.white}",
+      "text": "{semantic.text}",
+      "hover": "{palette.gray100}"
+    },
+    "header": {
+      "bg": "{palette.gulfBlue}",
+      "text": "{palette.white}"
+    },
+    "icon": {
+      "color": "{semantic.text}"
+    },
+    "spinner": {
+      "border": "{palette.gulfOrange}"
+    },
+    "tab": {
+      "active-bg": "{palette.gulfOrange}",
+      "active-text": "{palette.white}"
+    },
+    "disabled": {
+      "bg": "{palette.gray100}",
+      "text": "{semantic.text-muted}"
+    },
+    "amount": {
+      "positive": "{palette.green600}",
+      "negative": "{palette.red600}"
+    }
+  }
+}
