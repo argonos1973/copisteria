@@ -521,14 +521,17 @@
                 const branding = await brandingResponse.json();
                 const plantillaActual = branding.plantilla || 'dark';
                 
-                // Plantillas disponibles
-                const plantillas = [
-                    { id: 'minimal', nombre: 'Minimal', icono: '🌟' },
-                    { id: 'dark', nombre: 'Dark', icono: '🌙' },
-                    { id: 'classic', nombre: 'Classic', icono: '💼' },
-                    { id: 'eink', nombre: 'E-Ink', icono: '📄' },
-                    { id: 'porsche_le_mans', nombre: 'Porsche Le Mans', icono: '🏁' }
-                ];
+                // Obtener plantillas disponibles desde el backend (dinámico)
+                const plantillasResponse = await fetch('/api/usuario/plantillas');
+                const plantillasData = await plantillasResponse.json();
+                
+                if (!plantillasData.success || !plantillasData.plantillas) {
+                    console.error('Error obteniendo plantillas:', plantillasData.error);
+                    mostrarNotificacion('Error cargando plantillas', 'error');
+                    return;
+                }
+                
+                const plantillas = plantillasData.plantillas;
                 
                 const grid = document.getElementById('plantillas-grid');
                 grid.innerHTML = plantillas.map(p => `
@@ -540,8 +543,11 @@
                         <div class="plantilla-check"><i class="fas fa-check-circle"></i></div>
                     </div>
                 `).join('');
+                
+                console.log(`✅ ${plantillas.length} plantillas cargadas dinámicamente`);
             } catch (error) {
                 console.error('Error cargando plantillas:', error);
+                mostrarNotificacion('Error cargando plantillas', 'error');
             }
         }
         

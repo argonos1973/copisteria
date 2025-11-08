@@ -106,3 +106,50 @@ def cambiar_plantilla_usuario():
     except Exception as e:
         logger.error(f"Error cambiando plantilla: {e}", exc_info=True)
         return jsonify({'error': f'Error cambiando plantilla: {str(e)}'}), 500
+
+
+@usuario_bp.route('/api/usuario/plantillas', methods=['GET'])
+@login_required
+def obtener_plantillas_disponibles():
+    """Obtiene la lista de plantillas disponibles leyendo el directorio"""
+    try:
+        plantillas_dir = os.path.join(BASE_DIR, 'static', 'plantillas')
+        plantillas = []
+        
+        # Leer todos los archivos .json del directorio
+        if os.path.exists(plantillas_dir):
+            for filename in os.listdir(plantillas_dir):
+                if filename.endswith('.json'):
+                    plantilla_id = filename[:-5]  # Quitar extensión .json
+                    plantilla_path = os.path.join(plantillas_dir, filename)
+                    
+                    try:
+                        with open(plantilla_path, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            
+                            # Extraer información del JSON
+                            nombre = data.get('name', plantilla_id.replace('_', ' ').title())
+                            icono = data.get('meta', {}).get('icon', '🎨')
+                            
+                            plantillas.append({
+                                'id': plantilla_id,
+                                'nombre': nombre,
+                                'icono': icono
+                            })
+                    except Exception as e:
+                        logger.warning(f"Error leyendo plantilla {filename}: {e}")
+                        continue
+        
+        # Ordenar alfabéticamente por nombre
+        plantillas.sort(key=lambda x: x['nombre'])
+        
+        logger.info(f"Plantillas disponibles: {len(plantillas)}")
+        
+        return jsonify({
+            'success': True,
+            'plantillas': plantillas
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo plantillas: {e}", exc_info=True)
+        return jsonify({'error': f'Error obteniendo plantillas: {str(e)}'}), 500
