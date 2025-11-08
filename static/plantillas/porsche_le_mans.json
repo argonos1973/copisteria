@@ -30,6 +30,8 @@
     "text": "{palette.black}",
     "text-muted": "{palette.gray400}",
     "primary": "{palette.gulfBlue}",
+    "primary-hover": "{palette.gulfOrange}",
+    "accent": "{palette.gulfOrange}",
     "success": "{palette.success-light}",
     "warning": "{palette.warning-light}",
     "danger": "{palette.danger-light}",
@@ -38,10 +40,10 @@
   },
   "components": {
     "button": {
-      "bg": "{palette.white}",
-      "text": "{semantic.text}",
-      "hover-bg": "{palette.gray100}",
-      "border": "{semantic.primary}"
+      "bg": "{palette.gulfOrange}",
+      "text": "{palette.white}",
+      "hover-bg": "#FF8A40",
+      "border": "{palette.gulfOrange}"
     },
     "input": {
       "bg": "{palette.white}",
@@ -87,7 +89,9 @@
     "menu": {
       "bg": "{palette.white}",
       "text": "{semantic.text}",
-      "hover": "{palette.gray100}"
+      "hover": "#FFF5EF",
+      "active-bg": "{palette.gulfOrange}",
+      "active-text": "{palette.white}"
     },
     "header": {
       "bg": "{palette.gulfBlue}",
