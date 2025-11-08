@@ -13,28 +13,31 @@ import { mostrarNotificacion } from './notificaciones.js';
 console.log('[TICKET] Script imprimir-ticket.js cargado');
 
 /**
- * Obtiene los datos del emisor desde el endpoint de branding
+ * Obtiene los datos del emisor desde el endpoint específico
  * @returns {Promise<Object>} Una promesa que resuelve con los datos del emisor
  */
 async function obtenerDatosEmisor() {
     try {
-        const response = await fetch('/api/auth/branding');
+        const response = await fetch('/api/auth/emisor');
         if (!response.ok) {
             throw new Error('No se pudo obtener datos del emisor');
         }
-        const branding = await response.json();
-        console.log('[TICKET] Datos emisor cargados:', branding);
-        return branding;
+        const data = await response.json();
+        console.log('[TICKET] Datos emisor cargados:', data);
+        return data.emisor || {};
     } catch (error) {
         console.error('[TICKET] Error al obtener datos del emisor:', error);
         // Retornar datos vacíos en caso de error
         return {
-            razon_social: '',
+            nombre: '',
+            nif: '',
             direccion: '',
+            cp: '',
             ciudad: '',
-            codigo_postal: '',
-            cif: '',
-            email: ''
+            provincia: '',
+            pais: 'ESP',
+            email: '',
+            telefono: ''
         };
     }
 }
@@ -183,19 +186,24 @@ async function rellenarFactura(datos, emisor) {
     }
     document.getElementById('estado').textContent = textoEstado;
 
-    // Datos del emisor desde branding API (en mayúsculas)
-    document.getElementById('emisor-nombre').textContent = (emisor.razon_social || '').toUpperCase();
-    const direccionCompleta = [emisor.direccion, emisor.ciudad, `(${emisor.codigo_postal})`]
+    // Datos del emisor desde JSON del emisor (en mayúsculas)
+    document.getElementById('emisor-nombre').textContent = (emisor.nombre || '').toUpperCase();
+    
+    // Construir dirección completa: DIRECCION, CIUDAD (CP)
+    const direccionCompleta = [emisor.direccion, emisor.ciudad, `(${emisor.cp})`]
         .filter(Boolean)
         .join(', ');
     document.getElementById('emisor-direccion').textContent = direccionCompleta.toUpperCase();
-    document.getElementById('emisor-nif').textContent = (emisor.cif || '').toUpperCase();
+    document.getElementById('emisor-nif').textContent = (emisor.nif || '').toUpperCase();
     document.getElementById('emisor-email').textContent = (emisor.email || '').toLowerCase();
     
     console.log('[TICKET] Datos del emisor aplicados:', {
-        nombre: emisor.razon_social,
-        nif: emisor.cif,
-        direccion: emisor.direccion
+        nombre: emisor.nombre,
+        nif: emisor.nif,
+        direccion: emisor.direccion,
+        ciudad: emisor.ciudad,
+        cp: emisor.cp,
+        email: emisor.email
     });
 
     // Si hay un campo para la forma de pago, lo capitalizamos

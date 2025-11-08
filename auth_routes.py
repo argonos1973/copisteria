@@ -606,6 +606,31 @@ def obtener_branding():
         logger.error(f"Error obteniendo branding: {e}", exc_info=True)
         return jsonify({'error': 'Error obteniendo branding'}), 500
 
+@auth_bp.route('/emisor', methods=['GET'])
+@login_required
+def obtener_datos_emisor():
+    """
+    Retorna los datos completos del emisor desde el JSON de la empresa.
+    Usado para impresión de facturas, tickets, etc.
+    """
+    try:
+        from utils_emisor import cargar_datos_emisor
+        emisor = cargar_datos_emisor()
+        
+        logger.info(f"[EMISOR] Datos cargados: {emisor.get('nombre')} - {emisor.get('nif')}")
+        
+        return jsonify({
+            'success': True,
+            'emisor': emisor
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo datos del emisor: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': 'Error obteniendo datos del emisor'
+        }), 500
+
 @auth_bp.route('/cambiar-password', methods=['POST'])
 @login_required
 def cambiar_password():

@@ -3,30 +3,31 @@ import { formatearImporte, formatearFecha, formatearFechaSoloDia } from './scrip
 import { mostrarNotificacion } from './notificaciones.js';
 
 /**
- * Obtiene los datos del emisor desde el endpoint de branding
+ * Obtiene los datos del emisor desde el endpoint específico
  * @returns {Promise<Object>} Una promesa que resuelve con los datos del emisor
  */
 async function obtenerDatosEmisor() {
     try {
-        const response = await fetch('/api/auth/branding');
+        const response = await fetch('/api/auth/emisor');
         if (!response.ok) {
             throw new Error('No se pudo obtener datos del emisor');
         }
-        const branding = await response.json();
-        console.log('Datos emisor cargados:', branding);
-        return branding;
+        const data = await response.json();
+        console.log('Datos emisor cargados:', data);
+        return data.emisor || {};
     } catch (error) {
         console.error('Error al obtener datos del emisor:', error);
         // Retornar datos vacíos en caso de error
         return {
-            razon_social: '',
+            nombre: '',
+            nif: '',
             direccion: '',
+            cp: '',
             ciudad: '',
-            codigo_postal: '',
             provincia: '',
-            pais: 'España',
-            cif: '',
-            email: ''
+            pais: 'ESP',
+            email: '',
+            telefono: ''
         };
     }
 }
@@ -215,20 +216,25 @@ async function rellenarFactura(datos, emisor) {
         document.getElementById('fecha-vencimiento').textContent = formatearFechaSoloDia(factura.fvencimiento);
     }
 
-    // Datos del emisor desde branding API
-    document.getElementById('emisor-nombre').textContent = emisor.razon_social || '';
+    // Datos del emisor desde JSON del emisor
+    document.getElementById('emisor-nombre').textContent = emisor.nombre || '';
     document.getElementById('emisor-direccion').textContent = emisor.direccion || '';
-    const cpCiudad = [emisor.ciudad, `(${emisor.codigo_postal})`, emisor.provincia, emisor.pais]
+    
+    // Construir CP-Ciudad-Provincia
+    const cpCiudad = [emisor.ciudad, `(${emisor.cp})`, emisor.provincia]
         .filter(Boolean)
         .join(', ');
     document.getElementById('emisor-cp-ciudad').textContent = cpCiudad;
-    document.getElementById('emisor-nif').textContent = emisor.cif || '';
+    document.getElementById('emisor-nif').textContent = emisor.nif || '';
     document.getElementById('emisor-email').textContent = emisor.email || '';
     
     console.log('Datos del emisor aplicados:', {
-        nombre: emisor.razon_social,
-        nif: emisor.cif,
-        direccion: emisor.direccion
+        nombre: emisor.nombre,
+        nif: emisor.nif,
+        direccion: emisor.direccion,
+        ciudad: emisor.ciudad,
+        cp: emisor.cp,
+        email: emisor.email
     });
 
     // Datos del cliente
