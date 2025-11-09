@@ -1,12 +1,12 @@
 {
     "nif": "44007535W",
-    "nombre": "CASTANYAS S.L.",
+    "nombre": "SAMUEL RODRIGUEZ MIQUEL ",
     "direccion": "LEGALITAT, 70",
-    "cp": "",
-    "ciudad": "",
-    "provincia": "",
+    "cp": "08024",
+    "ciudad": "Barcelona",
+    "provincia": "Barcelona",
     "pais": "ESP",
-    "email": "info@copisteria.com",
+    "email": "aleph70copisteria@gmail.com",
     "db_path": "/var/www/html/db/copisteria/copisteria.db",
     "codigo": "copisteria"
 }
