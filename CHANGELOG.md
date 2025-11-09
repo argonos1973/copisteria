@@ -1,5 +1,23 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.2.2] - 2025-11-09
+
+### Corrección: Fondo de Modales Transparente
+- ✅ Cambiado fondo de modales de rgba(0,0,0,0.5) a transparent
+- ✅ Modificado styles.css: .modal background-color: transparent
+- ✅ Modificado modales.css: .modal background-color: transparent !important
+- ✅ Elimina el fondo oscuro semi-transparente de los modales
+- ✅ Los modales ahora tienen fondo completamente transparente
+
+**Archivos modificados**:
+- static/styles.css (línea 837)
+- static/modales.css (línea 125)
+
+**Antes**: background-color: rgba(0, 0, 0, 0.5) - fondo oscuro semi-transparente
+**Ahora**: background-color: transparent - completamente transparente
+
+---
+
 ## [1.2.1] - 2025-11-09
 
 ### Corrección: Mayor Especificidad en Estilos de Botones
