@@ -224,9 +224,9 @@
         }
         
         .btn-actualizar {
-            background-
-            
-            border: none;
+            background: var(--button-secondary-bg, var(--button-bg, var(--primary, #2c3e50))) !important;
+            color: var(--button-secondary-text, var(--button-text, #ffffff)) !important;
+            border: 1px solid var(--button-secondary-border, var(--button-secondary-bg, var(--button-bg, var(--primary, #2c3e50)))) !important;
             border-radius: 4px;
             padding: 6px 12px;
             cursor: pointer;
@@ -237,13 +237,14 @@
         }
         
         .btn-actualizar:hover {
-            background-
+            background: var(--button-secondary-hover-bg, var(--button-hover-bg, var(--secondary, #34495e))) !important;
+            color: var(--button-secondary-text, var(--button-text, #ffffff)) !important;
         }
         
         .btn-descargar {
-            background: var(--color-primario, #2980b9);
-            color: var(--color-text-on-primary, white);
-            border: none;
+            background: var(--button-card-bg, var(--button-bg, var(--primary, #2c3e50))) !important;
+            color: var(--button-card-text, var(--button-text, #ffffff)) !important;
+            border: 1px solid var(--button-card-border, var(--button-card-bg, var(--button-bg, var(--primary, #2c3e50)))) !important;
             padding: 8px 12px;
             cursor: pointer;
             border-radius: 4px;
@@ -253,11 +254,14 @@
             font-size: 14px;
         }
         .btn-descargar:hover {
-            background: var(--color-primario-hover, #3498db);
+            background: var(--button-card-hover-bg, var(--button-hover-bg, var(--secondary, #34495e))) !important;
+            color: var(--button-card-text, var(--button-text, #ffffff)) !important;
         }
         
         .btn-actualizar:disabled {
-            background-
+            background: var(--disabled-bg, #dee2e6) !important;
+            color: var(--disabled-text, #6c757d) !important;
+            border: 1px solid var(--disabled-bg, #dee2e6) !important;
             cursor: not-allowed;
         }
         
@@ -364,15 +368,15 @@
         }
         
         .stats-table th {
-            background-
-            
+            background: var(--table-header-bg, #e9ecef) !important;
+            color: var(--table-header-text, #2c3e50) !important;
             font-weight: bold;
             font-size: 0.68rem;
             text-transform: uppercase;
         }
         
         .stats-table tr:hover {
-            background-
+            background: var(--table-row-hover, var(--hover, #f8f9fa)) !important;
         }
         
         .stats-table tbody tr {
@@ -474,7 +478,7 @@
 
 <style>
     /* Modal para gráficos */
-    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background-} 
+    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background: var(--modal-overlay, rgba(0,0,0,0.5))} 
     .modal-content{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px;border-radius:8px;width:90%;max-width:900px;cursor:move;}
     .cerrar-modal{float:right;font-size:28px;font-weight:bold;cursor:pointer;}
     .cerrar-modal:hover{}
@@ -482,8 +486,8 @@
     .stats-header{display:flex;flex-direction:column;gap:0.2rem;margin-bottom:1rem;}
     .header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;}
     .header-icons{display:flex;gap:0.3rem;}
-    .header-icons button{margin:0;border:none;border-radius:4px;padding:8px 12px;background:var(--color-primario, #2980b9);color:var(--color-text-on-primary, white);}
-    .header-icons button:hover{background:var(--color-primario-hover, #3498db);}
+    .header-icons button{margin:0;border:1px solid var(--button-card-border, var(--button-card-bg, var(--button-bg, var(--primary, #2c3e50)))) !important;border-radius:4px;padding:8px 12px;background:var(--button-card-bg, var(--button-bg, var(--primary, #2c3e50))) !important;color:var(--button-card-text, var(--button-text, #ffffff)) !important;}
+    .header-icons button:hover{background:var(--button-card-hover-bg, var(--button-hover-bg, var(--secondary, #34495e))) !important;color:var(--button-card-text, var(--button-text, #ffffff)) !important;}
     .header-icons i{font-size:14px;}
     .header-controls{display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;}
 </style>

@@ -412,8 +412,8 @@ button.btn-icon[type="button"]:hover {
     color: #ffffff !important;
     transform: scale(1.05) !important;
     opacity: 0.85 !important;
-}
     filter: brightness(1.1) !important;
+}
 
 /* ==================== IMPORTES POSITIVOS Y NEGATIVOS ==================== */
 /* Valores positivos en verde */
@@ -483,18 +483,32 @@ button:not(.icono-info-precio) i,
     color: var(--text) !important;
 }
 
-/* Reducir iconos de botones en estadísticas y headers */
+/* Botones en estadísticas y headers - tamaño normal */
 .btn-descargar,
 .header-icons button {
-    padding: 3px 5px !important;
-    min-width: 24px !important;
-    min-height: 24px !important;
-    font-size: 11px !important;
+    padding: 8px 12px !important;
+    min-width: auto !important;
+    min-height: 32px !important;
+    font-size: 14px !important;
+    background: var(--button-bg, var(--primary, #2c3e50)) !important;
+    color: var(--button-text, #ffffff) !important;
+    border: 1px solid var(--button-border, var(--button-bg, var(--primary, #2c3e50))) !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+.btn-descargar:hover,
+.header-icons button:hover {
+    background: var(--button-hover-bg, var(--secondary, #34495e)) !important;
+    color: var(--button-text, #ffffff) !important;
 }
 
 .btn-descargar i,
 .header-icons button i {
-    font-size: 10px !important;
+    font-size: 14px !important;
     margin: 0 !important;
 }
 
@@ -544,6 +558,7 @@ input::placeholder, textarea::placeholder {
 
 /* ==================== MODALES ==================== */
 .modal, .modal-content,
+.modal-perfil-content,
 .confirmacion-dialog,
 .dropdown-menu,
 .info-precio-popup,
@@ -567,22 +582,84 @@ input::placeholder, textarea::placeholder {
 
 /* Header de modales */
 .modal-header {
-    background: var(--modal-header-bg) !important;
-    color: var(--modal-header-text) !important;
-    border-top-left-radius: var(--modal-border-radius) !important;
-    border-top-right-radius: var(--modal-border-radius) !important;
+    background: var(--modal-header-bg, var(--primary, #2c3e50)) !important;
+    color: var(--modal-header-text, #ffffff) !important;
+    border-top-left-radius: var(--modal-border-radius, 8px) !important;
+    border-top-right-radius: var(--modal-border-radius, 8px) !important;
+    padding: 15px 20px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin: -20px -20px 20px -20px !important;
 }
 
 .modal-header h2,
 .modal-header h3 {
-    color: var(--modal-header-text) !important;
+    color: var(--modal-header-text, #ffffff) !important;
+    margin: 0 !important;
+    font-size: 20px !important;
+    font-weight: 600 !important;
 }
 
-.modal-header .close {
-    color: var(--modal-header-text) !important;
+.modal-header .close,
+.modal-header .cerrar {
+    color: var(--modal-header-text, #ffffff) !important;
+    font-size: 28px !important;
+    cursor: pointer !important;
+    line-height: 1 !important;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
 }
 
-.modal-header .close:hover {
+.modal-header .close:hover,
+.modal-header .cerrar:hover {
+    opacity: 0.8 !important;
+}
+
+/* Títulos directos en modal-content (sin modal-header) */
+.modal-content > h2:first-of-type,
+.modal-content > h3:first-of-type {
+    background: var(--modal-header-bg, var(--primary, #000000)) !important;
+    color: var(--modal-header-text, #ffffff) !important;
+    margin: -20px -20px 20px -20px !important;
+    padding: 15px 20px !important;
+    border-top-left-radius: var(--modal-border-radius, 8px) !important;
+    border-top-right-radius: var(--modal-border-radius, 8px) !important;
+}
+
+/* Headers específicos de modales - Unificar estilos */
+.modal-perfil-header,
+.modal-header-custom,
+.modal-title-bar {
+    background: var(--modal-header-bg, var(--primary, #2c3e50)) !important;
+    color: var(--modal-header-text, #ffffff) !important;
+    padding: 15px 20px !important;
+    border-top-left-radius: var(--modal-border-radius, 8px) !important;
+    border-top-right-radius: var(--modal-border-radius, 8px) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.modal-perfil-header h2,
+.modal-perfil-header h3,
+.modal-header-custom h2,
+.modal-header-custom h3 {
+    color: var(--modal-header-text, #ffffff) !important;
+    margin: 0 !important;
+}
+
+.modal-perfil-close,
+.modal-header-custom .close {
+    color: var(--modal-header-text, #ffffff) !important;
+    font-size: 28px !important;
+    cursor: pointer !important;
+    line-height: 1 !important;
+}
+
+.modal-perfil-close:hover,
+.modal-header-custom .close:hover {
     opacity: 0.8 !important;
 }
 
@@ -590,6 +667,24 @@ input::placeholder, textarea::placeholder {
 .modal-body {
     background: var(--modal-body-bg) !important;
     color: var(--modal-body-text) !important;
+}
+
+/* Contenido interno del modal */
+.modal-content {
+    padding: 20px !important;
+}
+
+/* Específico para modal de pagos y tickets */
+#modal-pagos .modal-header,
+.modal-tickets .modal-header {
+    background: var(--modal-header-bg, var(--primary, #2c3e50)) !important;
+    color: var(--modal-header-text, #ffffff) !important;
+}
+
+#modal-pagos .modal-content,
+.modal-tickets .modal-content {
+    background: var(--modal-bg, #ffffff) !important;
+    color: var(--modal-text, #333333) !important;
 }
 
 /* Labels en modales */
