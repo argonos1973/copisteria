@@ -1,5 +1,45 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.2.3] - 2025-11-09
+
+### Corrección: Tamaño Consistente de Botones Nuevo en Consultas
+- ✅ Aumentada especificidad CSS para `.form-group .btn-icon`
+- ✅ Agregados selectores `button.btn-icon[type="button"]` en form-group
+- ✅ Forzado `display: inline-flex` para alineación perfecta
+- ✅ Asegurado `font-size: 18px` para iconos dentro de botones
+- ✅ Todos los botones "Nuevo" en consultas (Tickets, Contactos, Productos) tienen el mismo tamaño
+- ✅ Agregadas reglas para iconos `i` dentro de `.btn-icon` en formularios
+
+**Problema resuelto**:
+Los botones "Nuevo" en CONSULTA_CONTACTOS y CONSULTA_PRODUCTOS no tenían el 
+mismo tamaño que el botón en CONSULTA_TICKETS debido a falta de especificidad CSS.
+
+**Selectores agregados**:
+```css
+.form-group button.btn-icon,
+.form-group button.btn-icon[type="button"] {
+    padding: 8px 12px !important;
+    font-size: 18px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.form-group .btn-icon i {
+    font-size: 18px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+```
+
+**Archivos modificados**:
+- static/theme-consumer.css (líneas 300-328)
+
+**Resultado**: Todos los botones "Nuevo" en consultas tienen exactamente el mismo 
+tamaño, padding y apariencia, independientemente de la página.
+
+---
+
 ## [1.2.2] - 2025-11-09
 
 ### Corrección: Fondo de Modales Transparente

@@ -298,13 +298,33 @@ tbody .btn-icon {
 
 /* Estilos específicos para btn-icon en formularios (SIN BORDE, solo icono) */
 .form-group .btn-icon,
-.form-inline .btn-icon {
+.form-inline .btn-icon,
+.form-group button.btn-icon,
+.form-inline button.btn-icon,
+.form-group button.btn-icon[type="button"],
+.form-inline button.btn-icon[type="button"] {
     border: none !important;
     padding: 8px 12px !important;
     border-radius: 6px !important;
     font-size: 18px !important;
     width: auto !important;
     min-width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Iconos dentro de btn-icon en formularios */
+.form-group .btn-icon i,
+.form-inline .btn-icon i,
+.form-group button.btn-icon i,
+.form-inline button.btn-icon i {
+    font-size: 18px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: inherit !important;
 }
 
 /* Evitar que form-group con solo btn-icon tenga min-width */
