@@ -1,5 +1,16 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.0.2] - 2025-11-09
+
+### Mejoras en UI/UX Bienvenida
+- ✅ Logo sin texto "El origen de todo..." (imagen limpia)
+- ✅ Versión mostrada al lado del logo (layout horizontal)
+- ✅ Logo + versión en línea con flexbox (mejor proporción)
+- ✅ Fuente más grande y ligera para versión (2rem, font-weight: 300)
+- ✅ Formato "Aleph [versión]" → Logo "Aleph" + "1.0.2" al lado
+
+---
+
 ## [1.0.1] - 2025-11-09
 
 ### Mejoras en UI/UX Login

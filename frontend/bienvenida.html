@@ -33,24 +33,25 @@
         }
         
         .logo-container {
-            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
             /* Sin fondo - la imagen ya es transparente */
         }
         
         .logo-container img {
-            max-width: 80%;
-            max-height: 70vh;
+            max-width: 400px;
+            max-height: 60vh;
             width: auto;
             height: auto;
             object-fit: contain;
-            margin-bottom: 20px;
         }
         
         .version-text {
-            font-size: 1.2rem;
+            font-size: 2rem;
             color: var(--text-color, #333);
-            font-weight: 500;
-            margin-top: 20px;
+            font-weight: 300;
             opacity: 0.8;
         }
     </style>
@@ -66,7 +67,7 @@
             const data = await response.json();
             const versionElement = document.getElementById('version-text');
             if (versionElement && data.version) {
-                versionElement.textContent = `Aleph ${data.version}`;
+                versionElement.textContent = data.version;
             }
         } catch (error) {
             console.error('[BIENVENIDA] Error cargando versión:', error);
@@ -77,8 +78,8 @@
 <body>
     <div class="container">
         <div class="logo-container">
-            <img src="/static/logos/aleph_completo.png?v=20251108134400" alt="Aleph">
-            <div id="version-text" class="version-text">Aleph 1.0.0</div>
+            <img src="/static/logos/aleph_sin_origen.png?v=20251109001" alt="Aleph">
+            <div id="version-text" class="version-text">1.0.1</div>
         </div>
     </div>
 </body>
