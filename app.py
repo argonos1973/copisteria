@@ -75,7 +75,7 @@ from proforma import obtener_proforma_abierta
 from verifactu.core import generar_datos_verifactu_para_ticket
 
 # Versión de la aplicación
-APP_VERSION = '1.0.4'
+APP_VERSION = '1.0.5'
 
 def _to_decimal(val, default='0'):
     """Convierte un valor a Decimal de forma segura"""

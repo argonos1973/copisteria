@@ -1,5 +1,12 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.0.5] - 2025-11-09
+
+### Ajuste de Alineación
+- ✅ Versión en menú lateral alineada a la izquierda (text-align: left)
+
+---
+
 ## [1.0.4] - 2025-11-09
 
 ### Mejoras en Visualización de Versión
