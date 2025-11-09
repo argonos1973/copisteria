@@ -141,18 +141,33 @@ async function applyTheme(themeJson) {
     
     // Forzar repaint de elementos que usan las variables
     requestAnimationFrame(() => {
-        // Forzar actualización de botones que usan --primary
+        // Forzar actualización de botones en documento principal
         document.querySelectorAll('.btn-icon').forEach(el => {
-            const currentColor = getComputedStyle(el).color;
             el.style.color = '';  // Limpiar estilo inline
             void el.offsetHeight; // Forzar reflow
+        });
+        
+        // Forzar actualización de botones en IFRAMES
+        document.querySelectorAll('iframe').forEach(iframe => {
+            try {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc) {
+                    iframeDoc.querySelectorAll('.btn-icon').forEach(el => {
+                        el.style.color = '';  // Limpiar estilo inline
+                        void el.offsetHeight; // Forzar reflow
+                    });
+                    console.log('[BRANDING] 🔄 .btn-icon actualizado en iframe');
+                }
+            } catch (e) {
+                console.log('[BRANDING] ⚠️ No se pudo acceder a botones en iframe:', e.message);
+            }
         });
         
         document.querySelectorAll('.btn-descargar, .header-icons button').forEach(el => {
             el.style.display = el.style.display || 'inline-block';
         });
         
-        console.log('[BRANDING] 🔄 Reflow forzado para actualizar estilos (.btn-icon incluido)');
+        console.log('[BRANDING] 🔄 Reflow forzado para actualizar estilos (.btn-icon incluido en main + iframes)');
     });
     
     // 6) Aplicar también al iframe si existe
