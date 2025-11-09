@@ -1,5 +1,15 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.0.1] - 2025-11-09
+
+### Mejoras en UI/UX Login
+- ✅ Logo completo de Aleph en pantalla de login (en lugar de favicon)
+- ✅ Botón "Aceptar" en lugar de "Siguiente →" para mejor UX
+- ✅ Logo más grande y mejor proporcionado (200px ancho)
+- ✅ Eliminado título "Aleph70" (ya está en el logo)
+
+---
+
 ## [1.0.0] - 2025-11-09
 
 ### Sistema Multiempresa
