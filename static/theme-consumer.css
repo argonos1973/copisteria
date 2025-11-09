@@ -303,6 +303,13 @@ tbody .btn-icon {
     min-width: auto !important;
 }
 
+/* Evitar que form-group con solo btn-icon tenga min-width */
+.form-group:has(> .btn-icon:only-child),
+.form-group:has(> button.btn-icon:only-child) {
+    min-width: auto !important;
+    width: auto !important;
+}
+
 /* Hover para btn-icon en tablas */
 table .btn-icon:hover,
 .tabla-consulta .btn-icon:hover,

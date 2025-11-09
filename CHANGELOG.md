@@ -1,5 +1,19 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.1.2] - 2025-11-09
+
+### Corrección: Ancho de Botones + en Formularios
+- ✅ Agregada regla para form-group con solo btn-icon
+- ✅ Evita que .form-group tenga min-width cuando solo contiene un botón
+- ✅ Botón "Nuevo Ticket" ahora es compacto (mismo ancho que "Nuevo Detalle")
+- ✅ Usa selector :has() para detectar form-group con solo btn-icon
+- ✅ width: auto y min-width: auto para form-group con btn-icon
+
+**Antes**: Botón + ocupaba min-width: 150px del form-group
+**Ahora**: Botón + solo ocupa su ancho natural (padding + icono)
+
+---
+
 ## [1.1.1] - 2025-11-09
 
 ### Corrección: Tamaño de Iconos en Tablas
