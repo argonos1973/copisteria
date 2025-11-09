@@ -1,5 +1,16 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.0.8] - 2025-11-09
+
+### Corrección de Iconos de Acción en Tablas
+- ✅ Iconos .btn-icon ahora usan var(--primary-color) en lugar de var(--text-color)
+- ✅ Se adaptan correctamente a todas las plantillas (Classic, Porsche, etc.)
+- ✅ Hover mejorado con efecto de escala (scale 1.2) y opacity
+- ✅ Transición suave para todas las propiedades (all 0.2s ease)
+- ✅ Corrección aplicada a iconos de consultas: ✎ ⚡ ✕
+
+---
+
 ## [1.0.7] - 2025-11-09
 
 ### Ajuste de Botones + en Consultas

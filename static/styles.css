@@ -536,17 +536,19 @@
     border: none !important;
     background-color: transparent !important;
     background: transparent !important;
-    color: var(--text-color, #333) !important;
+    color: var(--primary-color, #007bff) !important;
     cursor: pointer !important;
     font-size: 16px !important;
     display: inline !important;
-    transition: color 0.2s ease !important;
+    transition: all 0.2s ease !important;
   }
   
   .btn-icon:hover {
     color: var(--primary-color, #007bff) !important;
     background-color: transparent !important;
     background: transparent !important;
+    transform: scale(1.2);
+    opacity: 0.8;
   }
   
   /* Sortable (flecha de ordenación) */
