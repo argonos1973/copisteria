@@ -57,6 +57,10 @@ async function applyTheme(themeJson) {
     for (const [k, v] of Object.entries(vars)) {
         css += `${toVar(k)}:${v};`;
         varCount++;
+        // Debug: Log variable --primary
+        if (k === 'primary') {
+            console.log(`[BRANDING] 🎯 Variable --primary generada: ${v}`);
+        }
     }
     console.log(`[BRANDING] 📊 Variables CSS generadas: ${varCount}`);
     
