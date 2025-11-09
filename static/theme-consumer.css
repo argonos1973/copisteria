@@ -297,12 +297,15 @@ tbody .btn-icon {
 }
 
 /* Estilos específicos para btn-icon en formularios (SIN BORDE, solo icono) */
+/* MÁXIMA ESPECIFICIDAD para sobrescribir styles.css */
 .form-group .btn-icon,
 .form-inline .btn-icon,
 .form-group button.btn-icon,
 .form-inline button.btn-icon,
 .form-group button.btn-icon[type="button"],
-.form-inline button.btn-icon[type="button"] {
+.form-inline button.btn-icon[type="button"],
+div.form-group > button.btn-icon,
+div.form-inline > button.btn-icon {
     background: transparent !important;
     background-color: transparent !important;
     border: none !important;
@@ -320,17 +323,21 @@ tbody .btn-icon {
     justify-content: center !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
+    opacity: 1 !important;
 }
 
 /* Iconos dentro de btn-icon en formularios */
 .form-group .btn-icon i,
 .form-inline .btn-icon i,
 .form-group button.btn-icon i,
-.form-inline button.btn-icon i {
+.form-inline button.btn-icon i,
+div.form-group > button.btn-icon > i,
+div.form-inline > button.btn-icon > i {
     font-size: 18px !important;
     margin: 0 !important;
     padding: 0 !important;
     color: inherit !important;
+    opacity: 1 !important;
 }
 
 /* Evitar que form-group con solo btn-icon tenga min-width */
@@ -393,14 +400,16 @@ tbody .btn-icon:hover {
 .form-inline .btn-icon:hover,
 .form-group button.btn-icon:hover,
 .form-inline button.btn-icon:hover,
+div.form-group > button.btn-icon:hover,
+div.form-inline > button.btn-icon:hover,
 button.btn-icon:hover,
 button.btn-icon[type="button"]:hover {
     background: transparent !important;
     background-color: transparent !important;
     border-color: transparent !important;
     color: var(--primary-color, #007bff) !important;
-    transform: scale(1.1);
-    opacity: 0.8;
+    transform: scale(1.1) !important;
+    opacity: 0.8 !important;
 }
 
 /* ==================== IMPORTES POSITIVOS Y NEGATIVOS ==================== */

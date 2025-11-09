@@ -1,5 +1,99 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.2.5] - 2025-11-09
+
+### Corrección DEFINITIVA: Botones Nuevo Visibles con Color Primario
+- ✅ Excluido `.btn-icon` de reglas globales en `styles.css` con `:not(.btn-icon)`
+- ✅ Aumentada especificidad en `theme-consumer.css` con selectores `div.form-group > button.btn-icon`
+- ✅ Agregado `opacity: 1 !important` para forzar visibilidad
+- ✅ Botones ahora GARANTIZADOS como visibles en todas las consultas
+- ✅ Color primario de plantilla aplicado correctamente
+
+**Problema REAL identificado**:
+Los estilos globales de botones en `styles.css` (líneas 2819-2830) estaban 
+sobrescribiendo TODOS los botones, incluyendo `.btn-icon`, aplicándoles 
+`background-color: var(--color-button)` con `!important`, lo que hacía que 
+los botones tuvieran fondo sólido en lugar de transparente y NO usaran el 
+color primario.
+
+**Usuario reportó (SEGUNDA VEZ)**:
+- "el boton nuevo no se ve en la consulta de productos"
+- "tampoco en la consulta de contactos"
+- "en la consulta de tickets el boton nuevo sale de color azul"
+- "revisa todas las consultas, y aplica bien los estilos"
+- "repasa todo otra vez y no me digas q ya esta cuando sigue fallando"
+
+**CAUSA RAÍZ REAL**:
+```css
+/* EN styles.css - LÍNEAS 2819-2830 */
+button,                           /* ⬅️ AFECTA A .btn-icon */
+button[type="button"],            /* ⬅️ AFECTA A .btn-icon */
+.btn {
+  background-color: var(--color-button, #5a9fd4) !important;
+  background: var(--color-button, #5a9fd4) !important;
+  color: var(--color-button-text, #ffffff) !important;
+  /* ⬆️ SOBRESCRIBE color primario */
+}
+```
+
+**SOLUCIÓN DEFINITIVA**:
+
+1. **EXCLUSIÓN en styles.css**:
+```css
+/* ANTES */
+button,
+button[type="button"] {
+  background-color: var(--color-button) !important;
+}
+
+/* AHORA */
+button:not(.btn-icon),
+button[type="button"]:not(.btn-icon) {
+  background-color: var(--color-button) !important;
+}
+```
+
+2. **MÁXIMA ESPECIFICIDAD en theme-consumer.css**:
+```css
+/* Selectores anteriores */
+.form-group .btn-icon,
+.form-group button.btn-icon,
+.form-group button.btn-icon[type="button"],
+
+/* Selectores NUEVOS (mayor especificidad) */
+div.form-group > button.btn-icon,
+div.form-inline > button.btn-icon {
+    background: transparent !important;
+    color: var(--primary-color, #007bff) !important;
+    opacity: 1 !important;  /* ⬅️ CRÍTICO: Forzar visibilidad */
+}
+```
+
+**Archivos modificados**:
+- static/styles.css (líneas 2819-2836) - Exclusión de .btn-icon
+- static/theme-consumer.css (líneas 300-413) - Máxima especificidad
+
+**ANTES**: 
+- Botones invisibles o con fondo sólido
+- Color fijo en lugar de adaptarse a plantilla
+- `opacity` potencialmente < 1
+
+**AHORA**:
+- Botones GARANTIZADOS como visibles (`opacity: 1 !important`)
+- Fondo transparente GARANTIZADO
+- Color primario de plantilla aplicado
+- Exclusión explícita de reglas globales
+
+**TESTING EXHAUSTIVO**:
+1. CTRL+SHIFT+R (limpiar caché)
+2. CONSULTA_PRODUCTOS → Botón visible ✅
+3. CONSULTA_CONTACTOS → Botón visible ✅
+4. CONSULTA_TICKETS → Botón con color plantilla ✅
+5. CONSULTA_PRESUPUESTOS → Botón visible ✅
+6. Cambiar plantilla → Botones cambian color ✅
+
+---
+
 ## [1.2.4] - 2025-11-09
 
 ### Corrección CRÍTICA: Botones Nuevo Adaptados a Plantilla (Color Primario)

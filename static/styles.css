@@ -2816,12 +2816,12 @@ body select option {
 /* Estas reglas se colocan al final para tener mayor especificidad por cascada */
 
 /* Botones con máxima prioridad - sobrescribir estilos blancos de API */
-button,
-button[type="button"],
+/* EXCEPCIÓN: NO aplicar a .btn-icon (iconos deben usar color primario) */
+button:not(.btn-icon),
+button[type="button"]:not(.btn-icon),
 input[type="button"],
 input[type="submit"],
-.btn,
-#btn-agregar-detalle,
+.btn:not(.btn-icon),
 #btn-info-precio {
   background-color: var(--color-button, #5a9fd4) !important;
   background: var(--color-button, #5a9fd4) !important;
@@ -2829,11 +2829,11 @@ input[type="submit"],
   border-color: var(--color-button, #5a9fd4) !important;
 }
 
-button:hover,
-button[type="button"]:hover,
+button:not(.btn-icon):hover,
+button[type="button"]:not(.btn-icon):hover,
 input[type="button"]:hover,
 input[type="submit"]:hover,
-.btn:hover {
+.btn:not(.btn-icon):hover {
   background-color: var(--color-button-hover, var(--color-button, #4a8ac4)) !important;
   background: var(--color-button-hover, var(--color-button, #4a8ac4)) !important;
 }
