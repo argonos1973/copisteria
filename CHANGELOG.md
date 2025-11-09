@@ -1,5 +1,18 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.0.7] - 2025-11-09
+
+### Ajuste de Botones + en Consultas
+- ✅ Botones + ahora son compactos (padding: 8px 12px)
+- ✅ Se adaptan a la plantilla activa (var(--primary-color))
+- ✅ Borde de 2px con color primario
+- ✅ Fondo transparente
+- ✅ Border-radius 6px
+- ✅ Tamaño de icono 18px
+- ✅ Clase btn-icon agregada para consistencia
+
+---
+
 ## [1.0.6] - 2025-11-09
 
 ### Mejoras en UI/UX Consultas
