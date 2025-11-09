@@ -1,5 +1,79 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.2.6] - 2025-11-09
+
+### Corrección CRÍTICA: Variable CSS Incorrecta (--primary en lugar de --primary-color)
+- ✅ Corregido uso de variable CSS inexistente `--primary-color`
+- ✅ Cambiado a `--primary` que es la variable real generada por branding.js
+- ✅ Agregado fallback a `--color-primario` (alias) y luego #007bff
+- ✅ Botones ahora SÍ usan el color primario de la plantilla activa
+- ✅ Corregido en styles.css y theme-consumer.css
+
+**PROBLEMA REAL IDENTIFICADO**:
+Todos los botones `.btn-icon` estaban usando `var(--primary-color, #007bff)`, 
+pero esta variable CSS **NO EXISTE** en el sistema.
+
+**ANÁLISIS DE branding.js**:
+El archivo `/var/www/html/static/branding.js` (líneas 26-96) genera las 
+variables CSS desde los archivos JSON de plantillas. La estructura es:
+
+```javascript
+// Líneas 51-60: Generación de variables
+walk({ semantic: flat.semantic, components: flat.components });
+
+// Línea 66: Alias de compatibilidad
+--color-primario: var(--primary);
+```
+
+Las plantillas (ejemplo `dark.json`) definen:
+```json
+"semantic": {
+    "primary": "{palette.blue500}"  // ⬅️ Se convierte en --primary
+}
+```
+
+Por lo tanto, la variable generada es:
+- `--primary` (variable real)
+- `--color-primario` (alias de compatibilidad)
+
+**NO EXISTE** `--primary-color` ❌
+
+**SOLUCIÓN**:
+```css
+/* ANTES (INCORRECTO) */
+color: var(--primary-color, #007bff) !important;
+        ^^^^^^^^^^^^^^^ NO EXISTE
+
+/* AHORA (CORRECTO) */
+color: var(--primary, var(--color-primario, #007bff)) !important;
+        ^^^^^^^^^^ EXISTE     ^^^^^^^^^^^^^^^ FALLBACK
+```
+
+**Archivos corregidos**:
+- static/styles.css (líneas 539, 547)
+- static/theme-consumer.css (líneas 281, 313, 357, 410)
+
+**ANTES**: 
+- Botones usaban color por defecto #007bff (azul fijo)
+- NO se adaptaban a plantilla porque variable no existía
+
+**AHORA**:
+- Botones usan `--primary` de la plantilla activa
+- Fallback a `--color-primario` si `--primary` no existe
+- Fallback final a #007bff si ninguna variable existe
+- Adaptación automática a plantilla Dark, Classic, Modern, etc.
+
+**TESTING**:
+1. CTRL+SHIFT+R (limpiar caché CSS)
+2. Abrir DevTools → Console → escribir:
+   ```javascript
+   getComputedStyle(document.documentElement).getPropertyValue('--primary')
+   ```
+   Debe devolver el color de la plantilla (ej: "#3584e4" en Dark)
+3. Verificar botones en consultas adaptan a ese color
+
+---
+
 ## [1.2.5] - 2025-11-09
 
 ### Corrección DEFINITIVA: Botones Nuevo Visibles con Color Primario

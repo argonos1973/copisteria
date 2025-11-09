@@ -278,7 +278,7 @@ button.btn-icon,
 button.btn-icon[type="button"] {
     background: transparent !important;
     background-color: transparent !important;
-    color: var(--primary-color, #007bff) !important;
+    color: var(--primary, var(--color-primario, #007bff)) !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     border-color: transparent !important;
@@ -310,7 +310,7 @@ div.form-inline > button.btn-icon {
     background-color: transparent !important;
     border: none !important;
     border-color: transparent !important;
-    color: var(--primary-color, #007bff) !important;
+    color: var(--primary, var(--color-primario, #007bff)) !important;
     padding: 8px 12px !important;
     border-radius: 6px !important;
     font-size: 18px !important;
@@ -354,7 +354,7 @@ button#btn-agregar-detalle,
     background-color: transparent !important;
     border: none !important;
     border-color: transparent !important;
-    color: var(--primary-color, #007bff) !important;
+    color: var(--primary, var(--color-primario, #007bff)) !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     padding: 8px 12px !important;
@@ -407,7 +407,7 @@ button.btn-icon[type="button"]:hover {
     background: transparent !important;
     background-color: transparent !important;
     border-color: transparent !important;
-    color: var(--primary-color, #007bff) !important;
+    color: var(--primary, var(--color-primario, #007bff)) !important;
     transform: scale(1.1) !important;
     opacity: 0.8 !important;
 }
