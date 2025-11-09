@@ -38,46 +38,19 @@
         }
         
         .logo-container img {
-            max-width: 300px;
-            max-height: 50vh;
+            max-width: 400px;
+            max-height: 60vh;
             width: auto;
             height: auto;
             object-fit: contain;
-            margin-bottom: 20px;
         }
         
-        .version-text {
-            font-size: 1.5rem;
-            color: var(--text-color, #333);
-            font-weight: 300;
-            opacity: 0.8;
-        }
     </style>
-    
-    <script>
-    // Cargar versión de la aplicación
-    window.addEventListener('DOMContentLoaded', async () => {
-        console.log('[BIENVENIDA] Imagen con fondo transparente cargada');
-        console.log('[BIENVENIDA] Se adapta automáticamente al color de fondo de la plantilla');
-        
-        try {
-            const response = await fetch('/api/version');
-            const data = await response.json();
-            const versionElement = document.getElementById('version-text');
-            if (versionElement && data.version) {
-                versionElement.textContent = data.version;
-            }
-        } catch (error) {
-            console.error('[BIENVENIDA] Error cargando versión:', error);
-        }
-    });
-    </script>
 </head>
 <body>
     <div class="container">
         <div class="logo-container">
-            <img src="/static/logos/aleph_simbolo.png?v=20251109002" alt="Aleph">
-            <div id="version-text" class="version-text">1.0.2</div>
+            <img src="/static/logos/aleph_completo.png?v=20251108134400" alt="Aleph">
         </div>
     </div>
 </body>

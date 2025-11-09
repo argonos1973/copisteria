@@ -62,6 +62,14 @@
                     <i class="fas fa-spinner fa-spin"></i> Cargando menú...
                 </li>
             </ul>
+            
+            <!-- Versión de la aplicación -->
+            <div id="menu-version" style="padding: 0.5rem 1rem; border-top: 1px solid rgba(255,255,255,0.1); margin-top: auto; text-align: center;">
+                <div style="color: rgba(255,255,255,0.5); font-size: 10px;">
+                    <i class="fas fa-code-branch" style="margin-right: 5px;"></i>
+                    <span id="app-version">v1.0.3</span>
+                </div>
+            </div>
         </nav>
         
         <div class="content-container" style="flex-grow: 1; height: 100vh; overflow: hidden;">
@@ -115,6 +123,22 @@
 
     <!-- Funciones principales de la aplicación -->
     <script src="/static/app_private.js?v=1761938648"></script>
+
+    <!-- Cargar versión de la aplicación -->
+    <script>
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/version');
+                const data = await response.json();
+                const versionElement = document.getElementById('app-version');
+                if (versionElement && data.version) {
+                    versionElement.textContent = `v${data.version}`;
+                }
+            } catch (error) {
+                console.error('[MENU] Error cargando versión:', error);
+            }
+        });
+    </script>
 
     <!-- Modal de Perfil de Usuario -->
     <div id="modal-perfil" class="modal-perfil" style="display: none;">

@@ -35,7 +35,8 @@ body, html {
     box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     flex-shrink: 0;
     position: relative;
-    padding-bottom: 140px; /* Espacio para user-info-bottom */
+    display: flex;
+    flex-direction: column;
 }
 
 .menu-list {

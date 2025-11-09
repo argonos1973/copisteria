@@ -1,5 +1,16 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.0.4] - 2025-11-09
+
+### Mejoras en Visualización de Versión
+- ✅ Logo completo en bienvenida (igual que login: aleph_completo.png)
+- ✅ Versión movida al menú lateral (abajo del todo, pequeña)
+- ✅ Versión dinámica en menú: se carga desde /api/version
+- ✅ Estilo discreto: v1.0.4 con icono, tamaño 10px
+- ✅ Menú con flexbox para posicionar versión al final (margin-top: auto)
+
+---
+
 ## [1.0.3] - 2025-11-09
 
 ### Mejoras en UI/UX Bienvenida
