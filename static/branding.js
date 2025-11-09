@@ -137,10 +137,18 @@ async function applyTheme(themeJson) {
     
     // Forzar repaint de elementos que usan las variables
     requestAnimationFrame(() => {
+        // Forzar actualización de botones que usan --primary
+        document.querySelectorAll('.btn-icon').forEach(el => {
+            const currentColor = getComputedStyle(el).color;
+            el.style.color = '';  // Limpiar estilo inline
+            void el.offsetHeight; // Forzar reflow
+        });
+        
         document.querySelectorAll('.btn-descargar, .header-icons button').forEach(el => {
             el.style.display = el.style.display || 'inline-block';
         });
-        console.log('[BRANDING] 🔄 Reflow forzado para actualizar estilos');
+        
+        console.log('[BRANDING] 🔄 Reflow forzado para actualizar estilos (.btn-icon incluido)');
     });
     
     // 6) Aplicar también al iframe si existe
