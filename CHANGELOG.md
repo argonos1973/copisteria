@@ -1,5 +1,19 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.0.6] - 2025-11-09
+
+### Mejoras en UI/UX Consultas
+- ✅ Botones "Nuevo" reemplazados por icono + únicamente (fa-plus)
+- ✅ Cambio aplicado en todas las consultas:
+  - CONSULTA_CONTACTOS.html: "Nuevo Contacto" → <i class="fas fa-plus"></i>
+  - CONSULTA_PRESUPUESTOS.html: "Nuevo" → <i class="fas fa-plus"></i>
+  - CONSULTA_TICKETS.html: "Nuevo Ticket" → <i class="fas fa-plus"></i>
+  - CONSULTA_PRODUCTOS.html: "Nuevo Producto" → <i class="fas fa-plus"></i>
+- ✅ Todos los botones mantienen tooltip con texto descriptivo
+- ✅ Diseño más limpio y compacto
+
+---
+
 ## [1.0.5] - 2025-11-09
 
 ### Ajuste de Alineación
