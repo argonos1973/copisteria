@@ -1,5 +1,19 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.1.1] - 2025-11-09
+
+### Corrección: Tamaño de Iconos en Tablas
+- ✅ Separados estilos de .btn-icon: tablas vs formularios
+- ✅ Iconos en tablas ahora son pequeños (16px, sin borde, sin padding)
+- ✅ Iconos ✎ ⚡ ✕ ahora tienen mismo tamaño que en consulta de facturas
+- ✅ Botones + en formularios mantienen estilo con borde (18px, padding, borde)
+- ✅ Hover diferenciado: scale 1.2 en tablas, scale 1.1 en formularios
+
+**Antes**: Iconos en tablas con borde y padding (parecían botones grandes)
+**Ahora**: Iconos en tablas sin borde, tamaño 16px (como en facturas)
+
+---
+
 ## [1.1.0] - 2025-11-09
 
 ### Mejora: Estilos de Botones + Centralizados en CSS

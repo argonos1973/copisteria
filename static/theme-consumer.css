@@ -272,15 +272,30 @@ tbody .btn:hover {
 }
 
 /* Excepción para btn-icon: mantener fondo transparente */
+/* Estilos base para todos los btn-icon */
+.btn-icon {
+    background: transparent !important;
+    color: var(--primary-color, #007bff) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Estilos específicos para btn-icon en tablas (iconos pequeños sin borde) */
 table .btn-icon,
 .tabla-consulta .btn-icon,
 .grid .btn-icon,
-tbody .btn-icon,
+tbody .btn-icon {
+    border: none !important;
+    padding: 0 !important;
+    font-size: 16px !important;
+    width: auto !important;
+    min-width: auto !important;
+}
+
+/* Estilos específicos para btn-icon en formularios (botones con borde) */
 .form-group .btn-icon,
 .form-inline .btn-icon {
-    background: transparent !important;
     border: 2px solid var(--primary-color, #007bff) !important;
-    color: var(--primary-color, #007bff) !important;
     padding: 8px 12px !important;
     border-radius: 6px !important;
     font-size: 18px !important;
@@ -288,14 +303,21 @@ tbody .btn-icon,
     min-width: auto !important;
 }
 
+/* Hover para btn-icon en tablas */
 table .btn-icon:hover,
 .tabla-consulta .btn-icon:hover,
 .grid .btn-icon:hover,
-tbody .btn-icon:hover,
+tbody .btn-icon:hover {
+    background: transparent !important;
+    transform: scale(1.2);
+    opacity: 0.8;
+}
+
+/* Hover para btn-icon en formularios */
 .form-group .btn-icon:hover,
 .form-inline .btn-icon:hover {
     background: transparent !important;
-    transform: scale(1.2);
+    transform: scale(1.1);
     opacity: 0.8;
 }
 
