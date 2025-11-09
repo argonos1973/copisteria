@@ -1,5 +1,62 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.2.4] - 2025-11-09
+
+### Corrección CRÍTICA: Botones Nuevo Adaptados a Plantilla (Color Primario)
+- ✅ Agregado `color: var(--primary-color) !important` a `.form-group .btn-icon`
+- ✅ Botones "Nuevo" ahora usan el color primario de la plantilla activa
+- ✅ Corregido problema donde botones no se veían en consultas (Productos, Contactos, Tickets)
+- ✅ Agregado color primario al hover de botones
+- ✅ Agregados `background: transparent` y `border-color: transparent` explícitos
+
+**Problema resuelto**:
+Los botones "Nuevo Producto", "Nuevo Contacto" y "Nuevo Ticket" NO se adaptaban 
+al color primario de la plantilla. Aparecían en azul (#007bff) o no se veían 
+porque el selector `.form-group .btn-icon` no tenía `color: var(--primary-color)` 
+explícito, causando que heredaran colores incorrectos.
+
+**Usuario reportó**:
+- "en consulta prodcutos el boton nuevo no se ve, no se adapta a la plantilla"
+- "en consulta contactos pasa lo mismo"
+- "en la consulta de tickets el boton de nuevo ticket sale de color azul"
+
+**Solución**:
+```css
+.form-group .btn-icon,
+.form-group button.btn-icon,
+.form-group button.btn-icon[type="button"] {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-color: transparent !important;
+    color: var(--primary-color, #007bff) !important;  /* ⬅️ CRÍTICO */
+    padding: 8px 12px !important;
+    font-size: 18px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+/* Hover también con color primario */
+.form-group .btn-icon:hover {
+    color: var(--primary-color, #007bff) !important;  /* ⬅️ CRÍTICO */
+    transform: scale(1.1);
+    opacity: 0.8;
+}
+```
+
+**Archivos modificados**:
+- static/theme-consumer.css (líneas 300-404)
+
+**ANTES**: Botones en azul fijo (#007bff) o invisibles
+**AHORA**: Botones adaptan al color primario de la plantilla activa
+
+**Resultado**: 
+- Plantilla Dark → Botones en color primario de Dark
+- Plantilla Classic → Botones en color primario de Classic
+- Plantilla Modern → Botones en color primario de Modern
+
+---
+
 ## [1.2.3] - 2025-11-09
 
 ### Corrección: Tamaño Consistente de Botones Nuevo en Consultas

@@ -303,7 +303,11 @@ tbody .btn-icon {
 .form-inline button.btn-icon,
 .form-group button.btn-icon[type="button"],
 .form-inline button.btn-icon[type="button"] {
+    background: transparent !important;
+    background-color: transparent !important;
     border: none !important;
+    border-color: transparent !important;
+    color: var(--primary-color, #007bff) !important;
     padding: 8px 12px !important;
     border-radius: 6px !important;
     font-size: 18px !important;
@@ -314,6 +318,8 @@ tbody .btn-icon {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
 }
 
 /* Iconos dentro de btn-icon en formularios */
@@ -385,11 +391,14 @@ tbody .btn-icon:hover {
 /* Hover para btn-icon en formularios */
 .form-group .btn-icon:hover,
 .form-inline .btn-icon:hover,
+.form-group button.btn-icon:hover,
+.form-inline button.btn-icon:hover,
 button.btn-icon:hover,
 button.btn-icon[type="button"]:hover {
     background: transparent !important;
     background-color: transparent !important;
     border-color: transparent !important;
+    color: var(--primary-color, #007bff) !important;
     transform: scale(1.1);
     opacity: 0.8;
 }
