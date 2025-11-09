@@ -1,5 +1,17 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.0.9] - 2025-11-09
+
+### Corrección Crítica: Fondo de Iconos en Tablas
+- ✅ Agregadas excepciones en theme-consumer.css para .btn-icon
+- ✅ Los iconos de acción en tablas ahora mantienen fondo transparente
+- ✅ Sobrescribe reglas de .grid button y tbody button
+- ✅ Fondo transparente garantizado con !important
+- ✅ Color adaptativo mantenido (var(--primary-color))
+- ✅ Hover con scale y opacity preservado
+
+---
+
 ## [1.0.8] - 2025-11-09
 
 ### Corrección de Iconos de Acción en Tablas

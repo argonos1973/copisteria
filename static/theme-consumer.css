@@ -271,6 +271,25 @@ tbody .btn:hover {
     background: var(--button-table-hover-bg) !important;
 }
 
+/* Excepción para btn-icon: mantener fondo transparente */
+table .btn-icon,
+.tabla-consulta .btn-icon,
+.grid .btn-icon,
+tbody .btn-icon {
+    background: transparent !important;
+    border: none !important;
+    color: var(--primary-color, #007bff) !important;
+}
+
+table .btn-icon:hover,
+.tabla-consulta .btn-icon:hover,
+.grid .btn-icon:hover,
+tbody .btn-icon:hover {
+    background: transparent !important;
+    transform: scale(1.2);
+    opacity: 0.8;
+}
+
 /* ==================== IMPORTES POSITIVOS Y NEGATIVOS ==================== */
 /* Valores positivos en verde */
 .amount-positive,
