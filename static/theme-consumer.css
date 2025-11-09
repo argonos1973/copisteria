@@ -308,8 +308,8 @@ div.form-group > button.btn-icon,
 div.form-inline > button.btn-icon {
     background: transparent !important;
     background-color: transparent !important;
-    border: none !important;
-    border-color: transparent !important;
+    border: 1px solid var(--primary, var(--color-primario, #3584e4)) !important;
+    border-color: var(--primary, var(--color-primario, #3584e4)) !important;
     color: var(--primary, var(--color-primario, #3584e4)) !important;
     padding: 8px 12px !important;
     border-radius: 6px !important;
