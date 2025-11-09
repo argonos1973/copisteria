@@ -1,5 +1,26 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.1.0] - 2025-11-09
+
+### Mejora: Estilos de Botones + Centralizados en CSS
+- ✅ Estilos de .btn-icon movidos a theme-consumer.css
+- ✅ Eliminados estilos inline de todos los botones + en consultas
+- ✅ Agregados selectores .form-group y .form-inline para btn-icon
+- ✅ Botones + ahora se adaptan correctamente a plantilla Classic
+- ✅ Tamaño compacto garantizado: padding 8px 12px
+- ✅ Borde adaptativo: 2px solid var(--primary-color)
+- ✅ Width auto y min-width auto para evitar anchos excesivos
+- ✅ Mantenibilidad mejorada: estilos en un solo lugar
+
+**Archivos modificados**:
+- theme-consumer.css: Estilos centralizados para .btn-icon
+- CONSULTA_CONTACTOS.html: Estilos inline eliminados
+- CONSULTA_PRESUPUESTOS.html: Estilos inline eliminados
+- CONSULTA_TICKETS.html: Estilos inline eliminados
+- CONSULTA_PRODUCTOS.html: Estilos inline eliminados
+
+---
+
 ## [1.0.9] - 2025-11-09
 
 ### Corrección Crítica: Fondo de Iconos en Tablas
