@@ -310,7 +310,7 @@ div.form-inline > button.btn-icon {
     background-color: transparent !important;
     border: none !important;
     border-color: transparent !important;
-    color: var(--primary, var(--color-primario, #007bff)) !important;
+    color: var(--primary, var(--color-primario, #3584e4)) !important;
     padding: 8px 12px !important;
     border-radius: 6px !important;
     font-size: 18px !important;
@@ -324,6 +324,7 @@ div.form-inline > button.btn-icon {
     cursor: pointer !important;
     transition: all 0.2s ease !important;
     opacity: 1 !important;
+    visibility: visible !important;
 }
 
 /* Iconos dentro de btn-icon en formularios */
@@ -338,6 +339,7 @@ div.form-inline > button.btn-icon > i {
     padding: 0 !important;
     color: inherit !important;
     opacity: 1 !important;
+    visibility: visible !important;
 }
 
 /* Evitar que form-group con solo btn-icon tenga min-width */

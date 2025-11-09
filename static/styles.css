@@ -528,7 +528,11 @@
   }
   
   /* Botones de acción sin fondo - estilo igual que facturas */
-  .btn-icon {
+  /* SOLO PARA TABLAS - NO aplicar a .form-group */
+  table .btn-icon,
+  tbody .btn-icon,
+  .grid .btn-icon,
+  .tabla-consulta .btn-icon {
     width: auto !important;
     height: auto !important;
     padding: 0 !important;
@@ -543,7 +547,10 @@
     transition: all 0.2s ease !important;
   }
   
-  .btn-icon:hover {
+  table .btn-icon:hover,
+  tbody .btn-icon:hover,
+  .grid .btn-icon:hover,
+  .tabla-consulta .btn-icon:hover {
     color: var(--primary, var(--color-primario, #007bff)) !important;
     background-color: transparent !important;
     background: transparent !important;

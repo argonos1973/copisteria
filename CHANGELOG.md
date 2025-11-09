@@ -1,5 +1,74 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.2.7] - 2025-11-09
+
+### FIX DEFINITIVO: Cascada CSS - styles.css sobrescribía theme-consumer.css
+- ✅ Limitadas reglas `.btn-icon` en styles.css a tablas solamente
+- ✅ Reglas de formularios ya NO son sobrescritas por styles.css
+- ✅ Botones en CONSULTA_PRODUCTOS y CONSULTA_CONTACTOS ahora VISIBLES
+
+**PROBLEMA REAL - CASCADA CSS**:
+El problema NO era de variables CSS ni de especificidad, sino de **orden de carga**.
+
+```html
+<!-- Orden de carga en _app_private.html -->
+<link rel="stylesheet" href="/static/theme-consumer.css">
+<link rel="stylesheet" href="/static/styles.css">  ⬅️ SE CARGA DESPUÉS
+```
+
+Al cargar `styles.css` DESPUÉS de `theme-consumer.css`, las reglas en 
+`styles.css` sobrescriben las de `theme-consumer.css` incluso con la misma 
+especificidad (por el principio de cascada CSS: última regla gana).
+
+**Reglas problemáticas en styles.css (líneas 531-552)**:
+```css
+/* ANTES - GENÉRICO (afectaba a TODO) */
+.btn-icon {
+    padding: 0 !important;        /* ⬅️ Sobrescribía padding: 8px 12px */
+    display: inline !important;   /* ⬅️ Sobrescribía display: inline-flex */
+    font-size: 16px !important;   /* ⬅️ Sobrescribía font-size: 18px */
+}
+```
+
+Estos estilos se aplicaban a:
+- Botones en tablas ✅ (correcto)
+- Botones en formularios ❌ (incorrecto - necesitan padding)
+
+**SOLUCIÓN IMPLEMENTADA**:
+Hacer que las reglas en `styles.css` solo apliquen a tablas:
+
+```css
+/* AHORA - ESPECÍFICO PARA TABLAS */
+table .btn-icon,
+tbody .btn-icon,
+.grid .btn-icon,
+.tabla-consulta .btn-icon {
+    padding: 0 !important;
+    display: inline !important;
+    font-size: 16px !important;
+}
+```
+
+Ahora:
+- Botones en tablas: padding 0, font-size 16px (iconos pequeños)
+- Botones en formularios: padding 8px 12px, font-size 18px (botones normales)
+
+**RESULTADO**:
+- CONSULTA_PRODUCTOS: Botón "Nuevo Producto" VISIBLE ✅
+- CONSULTA_CONTACTOS: Botón "Nuevo Contacto" VISIBLE ✅
+- CONSULTA_TICKETS: Botón "Nuevo Ticket" VISIBLE ✅
+- Tablas: Iconos pequeños sin padding ✅
+- Formularios: Botones con padding visible ✅
+
+**Archivos modificados**:
+- /var/www/html/static/styles.css (líneas 531-559)
+  * Cambiado `.btn-icon` a `table .btn-icon, tbody .btn-icon, .grid .btn-icon`
+- /var/www/html/static/theme-consumer.css
+  * Eliminado selector de emergencia temporal
+- /var/www/html/app.py (APP_VERSION = '1.2.7')
+
+---
+
 ## [1.2.6] - 2025-11-09
 
 ### Corrección CRÍTICA: Variable CSS Incorrecta (--primary en lugar de --primary-color)
