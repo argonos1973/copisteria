@@ -1,5 +1,16 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.0.3] - 2025-11-09
+
+### Mejoras en UI/UX Bienvenida
+- ✅ Logo solo con símbolo ℵ (sin texto "Aleph" ni "El origen de todo...")
+- ✅ Versión debajo del símbolo (layout vertical)
+- ✅ Diseño minimalista: solo símbolo + versión
+- ✅ Logo más compacto (300px ancho, 50vh alto)
+- ✅ Fuente versión 1.5rem (equilibrada con símbolo)
+
+---
+
 ## [1.0.2] - 2025-11-09
 
 ### Mejoras en UI/UX Bienvenida
