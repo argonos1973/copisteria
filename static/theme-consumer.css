@@ -292,10 +292,10 @@ tbody .btn-icon {
     min-width: auto !important;
 }
 
-/* Estilos específicos para btn-icon en formularios (botones con borde) */
+/* Estilos específicos para btn-icon en formularios (SIN BORDE, solo icono) */
 .form-group .btn-icon,
 .form-inline .btn-icon {
-    border: 2px solid var(--primary-color, #007bff) !important;
+    border: none !important;
     padding: 8px 12px !important;
     border-radius: 6px !important;
     font-size: 18px !important;
@@ -308,6 +308,31 @@ tbody .btn-icon {
 .form-group:has(> button.btn-icon:only-child) {
     min-width: auto !important;
     width: auto !important;
+}
+
+/* Botón agregar detalle - mismo estilo que btn-icon */
+#btn-agregar-detalle {
+    background: transparent !important;
+    border: none !important;
+    color: var(--primary-color, #007bff) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    padding: 8px 12px !important;
+    border-radius: 6px !important;
+    font-size: 18px !important;
+    width: auto !important;
+    min-width: auto !important;
+    max-width: none !important;
+}
+
+#btn-agregar-detalle i {
+    color: inherit !important;
+}
+
+#btn-agregar-detalle:hover {
+    background: transparent !important;
+    transform: scale(1.1);
+    opacity: 0.8;
 }
 
 /* Hover para btn-icon en tablas */

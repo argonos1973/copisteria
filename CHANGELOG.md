@@ -1,5 +1,26 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.2.0] - 2025-11-09
+
+### Mejora: Botones Sin Bordes - Diseño Unificado
+- ✅ Eliminados bordes de botones + en formularios (Nuevo Ticket, Contactos, etc.)
+- ✅ Botón agregar detalle (#btn-agregar-detalle) ahora usa mismo estilo que btn-icon
+- ✅ Todos los botones de acción ahora son sin borde, solo icono con color primario
+- ✅ Botones adaptados a todas las plantillas (var(--primary-color))
+- ✅ Diseño más limpio y minimalista
+- ✅ Hover consistente con scale 1.1 y opacity 0.8
+
+**Cambios específicos**:
+- Botón Nuevo Ticket: sin borde, solo icono
+- Botón Nuevo Contacto: sin borde, adaptado a plantilla
+- Botón Nuevo Detalle: sin borde, color primario
+- Todos los botones + en consultas: sin borde
+
+**Antes**: Botones con borde 2px solid var(--primary-color)
+**Ahora**: Botones sin borde, fondo transparente, solo color primario
+
+---
+
 ## [1.1.2] - 2025-11-09
 
 ### Corrección: Ancho de Botones + en Formularios
