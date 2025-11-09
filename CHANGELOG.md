@@ -1,5 +1,31 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.2.1] - 2025-11-09
+
+### Corrección: Mayor Especificidad en Estilos de Botones
+- ✅ Botón Nuevo Contacto ahora sobrescribe estilos de styles.css
+- ✅ Botón Agregar Detalle con mayor especificidad (button#btn-agregar-detalle)
+- ✅ Agregados selectores button.btn-icon[type="button"] para mayor especificidad
+- ✅ Sobrescrito background-color y border-color con !important
+- ✅ Todos los botones ahora muestran correctamente el color primario de la plantilla
+- ✅ Eliminado fondo amarillo/naranja del botón Nuevo Contacto
+
+**Problema resuelto**:
+Los estilos de `styles.css` (líneas 2820-2830) que afectan a `button[type="button"]`
+estaban sobrescribiendo los estilos de `.btn-icon` porque tenían `!important` y
+mayor especificidad. Ahora `button.btn-icon[type="button"]` tiene mayor especificidad
+y sobrescribe correctamente.
+
+**Antes**: 
+- Botón Nuevo Contacto: fondo amarillo/naranja (var(--color-button))
+- Botón Agregar Detalle: fondo amarillo/naranja, tamaño 40x40px
+
+**Ahora**: 
+- Botón Nuevo Contacto: fondo transparente, color primario
+- Botón Agregar Detalle: fondo transparente, color primario, ancho automático
+
+---
+
 ## [1.2.0] - 2025-11-09
 
 ### Mejora: Botones Sin Bordes - Diseño Unificado

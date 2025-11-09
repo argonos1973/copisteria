@@ -273,11 +273,15 @@ tbody .btn:hover {
 
 /* Excepción para btn-icon: mantener fondo transparente */
 /* Estilos base para todos los btn-icon */
-.btn-icon {
+.btn-icon,
+button.btn-icon,
+button.btn-icon[type="button"] {
     background: transparent !important;
+    background-color: transparent !important;
     color: var(--primary-color, #007bff) !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
+    border-color: transparent !important;
 }
 
 /* Estilos específicos para btn-icon en tablas (iconos pequeños sin borde) */
@@ -311,9 +315,12 @@ tbody .btn-icon {
 }
 
 /* Botón agregar detalle - mismo estilo que btn-icon */
+button#btn-agregar-detalle,
 #btn-agregar-detalle {
     background: transparent !important;
+    background-color: transparent !important;
     border: none !important;
+    border-color: transparent !important;
     color: var(--primary-color, #007bff) !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
@@ -323,14 +330,24 @@ tbody .btn-icon {
     width: auto !important;
     min-width: auto !important;
     max-width: none !important;
+    height: auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
+button#btn-agregar-detalle i,
 #btn-agregar-detalle i {
     color: inherit !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
+button#btn-agregar-detalle:hover,
 #btn-agregar-detalle:hover {
     background: transparent !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
     transform: scale(1.1);
     opacity: 0.8;
 }
@@ -347,8 +364,12 @@ tbody .btn-icon:hover {
 
 /* Hover para btn-icon en formularios */
 .form-group .btn-icon:hover,
-.form-inline .btn-icon:hover {
+.form-inline .btn-icon:hover,
+button.btn-icon:hover,
+button.btn-icon[type="button"]:hover {
     background: transparent !important;
+    background-color: transparent !important;
+    border-color: transparent !important;
     transform: scale(1.1);
     opacity: 0.8;
 }
