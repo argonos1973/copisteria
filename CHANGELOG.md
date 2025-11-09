@@ -1,5 +1,50 @@
 # CHANGELOG - Aleph70 Sistema de Gestión
 
+## [1.2.8] - 2025-11-09
+
+### FIX DEFINITIVO: Botones Nuevo visibles con Font Awesome y fondo de color
+- ✅ Agregado Font Awesome a CONSULTA_PRODUCTOS.html y CONSULTA_CONTACTOS.html
+- ✅ Cambiado estilo de botones: fondo de color primario con icono blanco
+- ✅ Border de 2px para mejor visibilidad
+- ✅ Ahora los botones son idénticos a CONSULTA_TICKETS
+
+**PROBLEMA FINAL IDENTIFICADO**:
+Después de múltiples intentos (versiones 1.2.5, 1.2.6, 1.2.7), el problema real era:
+
+1. **Font Awesome NO estaba cargado** en CONSULTA_PRODUCTOS.html ni CONSULTA_CONTACTOS.html
+2. **CONSULTA_TICKETS.html SÍ tenía Font Awesome**, por eso funcionaba
+3. **Contraste insuficiente**: color azul claro (#74C2E1) sobre fondo blanco
+
+**SOLUCIÓN DEFINITIVA**:
+
+1. **Agregado Font Awesome en ambos archivos**:
+```html
+<!-- Font Awesome para iconos -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+```
+
+2. **Cambiado estilo de botones en theme-consumer.css**:
+```css
+div.form-group > button.btn-icon {
+    background: var(--primary, #3584e4) !important;  /* Fondo de color */
+    color: #ffffff !important;                        /* Icono blanco */
+    border: 2px solid var(--primary, #3584e4) !important;
+}
+```
+
+**RESULTADO**:
+- ✅ Icono + visible en todos los botones
+- ✅ Fondo del color primario de la plantilla
+- ✅ Icono blanco con buen contraste
+- ✅ Mismo aspecto que CONSULTA_TICKETS
+
+**Archivos modificados**:
+- frontend/CONSULTA_PRODUCTOS.html (línea 10-11: Font Awesome)
+- frontend/CONSULTA_CONTACTOS.html (línea 10-12: Font Awesome)
+- static/theme-consumer.css (líneas 309-313, 340: fondo + icono blanco)
+
+---
+
 ## [1.2.7] - 2025-11-09
 
 ### FIX DEFINITIVO: Cascada CSS - styles.css sobrescribía theme-consumer.css
