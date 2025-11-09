@@ -406,13 +406,14 @@ div.form-group > button.btn-icon:hover,
 div.form-inline > button.btn-icon:hover,
 button.btn-icon:hover,
 button.btn-icon[type="button"]:hover {
-    background: transparent !important;
-    background-color: transparent !important;
-    border-color: transparent !important;
-    color: var(--primary, var(--color-primario, #007bff)) !important;
-    transform: scale(1.1) !important;
-    opacity: 0.8 !important;
+    background: var(--primary, var(--color-primario, #3584e4)) !important;
+    background-color: var(--primary, var(--color-primario, #3584e4)) !important;
+    border: 2px solid var(--primary, var(--color-primario, #3584e4)) !important;
+    color: #ffffff !important;
+    transform: scale(1.05) !important;
+    opacity: 0.85 !important;
 }
+    filter: brightness(1.1) !important;
 
 /* ==================== IMPORTES POSITIVOS Y NEGATIVOS ==================== */
 /* Valores positivos en verde */
