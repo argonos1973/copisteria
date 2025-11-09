@@ -243,7 +243,7 @@
         
         .modal-perfil-header {
             padding: 20px 25px;
-            background: linear-gradient(135deg, var(--color-primario, #3498db), var(--color-primario-hover, #2980b9));
+            background: var(--primary, var(--color-primario, #3498db));
             color: white;
             border-radius: 12px 12px 0 0;
             display: flex;
@@ -290,13 +290,13 @@
         }
         
         .tab-btn:hover {
-            background: rgba(var(--color-primario-rgb, 52, 152, 219), 0.1);
-            color: var(--color-primario, #3498db);
+            background: var(--bg-hover, #f0f0f0);
+            color: var(--primary, var(--color-primario, #3498db));
         }
         
         .tab-btn.active {
-            color: var(--color-primario, #3498db);
-            border-bottom-color: var(--color-primario, #3498db);
+            color: var(--primary, var(--color-primario, #3498db));
+            border-bottom-color: var(--primary, var(--color-primario, #3498db));
             background: var(--bg-card, #fff);
         }
         
@@ -324,7 +324,7 @@
         
         .form-group label i {
             margin-right: 8px;
-            color: var(--color-primario, #3498db);
+            color: var(--primary, var(--color-primario, #3498db));
         }
         
         .form-group input {
@@ -341,8 +341,8 @@
         
         .form-group input:focus {
             outline: none;
-            border-color: var(--color-primario, #3498db);
-            box-shadow: 0 0 0 3px rgba(var(--color-primario-rgb, 52, 152, 219), 0.1);
+            border-color: var(--primary, var(--color-primario, #3498db));
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
         }
         
         .form-group input:disabled {
@@ -354,7 +354,7 @@
         .btn-guardar {
             width: 100%;
             padding: 14px;
-            background: linear-gradient(135deg, var(--color-primario, #3498db), var(--color-primario-hover, #2980b9));
+            background: var(--primary, var(--color-primario, #3498db));
             color: white;
             border: none;
             border-radius: 8px;
@@ -367,7 +367,7 @@
         
         .btn-guardar:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(var(--color-primario-rgb, 52, 152, 219), 0.4);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         }
         
         .btn-guardar:active {
@@ -393,13 +393,13 @@
         .plantilla-card-perfil:hover {
             transform: translateY(-4px);
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-            border-color: var(--color-primario, #3498db);
+            border-color: var(--primary, var(--color-primario, #3498db));
         }
         
         .plantilla-card-perfil.active {
-            border-color: var(--color-primario, #3498db);
-            background: rgba(var(--color-primario-rgb, 52, 152, 219), 0.1);
-            box-shadow: 0 4px 15px rgba(var(--color-primario-rgb, 52, 152, 219), 0.3);
+            border-color: var(--primary, var(--color-primario, #3498db));
+            background: var(--bg-hover, #f0f0f0);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
         }
         
         .plantilla-card-perfil .plantilla-icon {
@@ -415,7 +415,7 @@
         
         .plantilla-card-perfil .plantilla-check {
             display: none;
-            color: var(--color-primario, #3498db);
+            color: var(--primary, var(--color-primario, #3498db));
             font-size: 20px;
             margin-top: 8px;
         }
