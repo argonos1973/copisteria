@@ -74,6 +74,9 @@ from estadisticas_gastos_routes import estadisticas_gastos_bp
 from proforma import obtener_proforma_abierta
 from verifactu.core import generar_datos_verifactu_para_ticket
 
+# Versión de la aplicación
+APP_VERSION = '1.0.0'
+
 def _to_decimal(val, default='0'):
     """Convierte un valor a Decimal de forma segura"""
     try:
@@ -144,6 +147,15 @@ def servir_config_json():
         return send_file(ruta, mimetype='application/json')
     except Exception as e:
         return jsonify({'verifactu_enabled': False}), 200
+
+# ================== VERSION ================== #
+@app.route('/api/version', methods=['GET'])
+def obtener_version():
+    """Retorna la versión de la aplicación"""
+    return jsonify({
+        'version': APP_VERSION,
+        'nombre': 'Aleph70 - Sistema de Gestión'
+    }), 200
 
 # ================== HTML: imprimir ticket ================== #
 @login_required

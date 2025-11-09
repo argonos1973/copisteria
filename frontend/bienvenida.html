@@ -39,26 +39,46 @@
         
         .logo-container img {
             max-width: 80%;
-            max-height: 80vh;
+            max-height: 70vh;
             width: auto;
             height: auto;
             object-fit: contain;
+            margin-bottom: 20px;
+        }
+        
+        .version-text {
+            font-size: 1.2rem;
+            color: var(--text-color, #333);
+            font-weight: 500;
+            margin-top: 20px;
+            opacity: 0.8;
         }
     </style>
     
     <script>
-    // Ya no necesitamos detectar tema ni invertir imagen
-    // La imagen transparente se adapta automáticamente a cualquier fondo
-    window.addEventListener('DOMContentLoaded', () => {
+    // Cargar versión de la aplicación
+    window.addEventListener('DOMContentLoaded', async () => {
         console.log('[BIENVENIDA] Imagen con fondo transparente cargada');
         console.log('[BIENVENIDA] Se adapta automáticamente al color de fondo de la plantilla');
+        
+        try {
+            const response = await fetch('/api/version');
+            const data = await response.json();
+            const versionElement = document.getElementById('version-text');
+            if (versionElement && data.version) {
+                versionElement.textContent = `Versión ${data.version}`;
+            }
+        } catch (error) {
+            console.error('[BIENVENIDA] Error cargando versión:', error);
+        }
     });
     </script>
 </head>
 <body>
     <div class="container">
         <div class="logo-container">
-            <img src="/static/logos/aleph_completo.png?v=20251108134400" alt="Aleph - El origen de todo...">
+            <img src="/static/logos/aleph_completo.png?v=20251108134400" alt="Aleph">
+            <div id="version-text" class="version-text">Cargando versión...</div>
         </div>
     </div>
 </body>
