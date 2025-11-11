@@ -487,11 +487,6 @@ def obtener_menu():
                 },
                 'submenu': [
                     {
-                        'nombre': 'Usuarios',
-                        'icono': 'fas fa-users',
-                        'ruta': '/ADMIN_USUARIOS.html'
-                    },
-                    {
                         'nombre': 'Permisos',
                         'icono': 'fas fa-cog',
                         'ruta': '/ADMIN_PERMISOS.html'
