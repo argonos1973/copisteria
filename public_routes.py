@@ -7,11 +7,16 @@ import os
 import sqlite3
 import secrets
 import smtplib
+import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from auth_middleware import hash_password
+from dotenv import load_dotenv
 import logging
+
+# Cargar variables de entorno
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -100,13 +105,15 @@ def serve_assets(filename):
     return send_from_directory(os.path.join(PUBLIC_DIR, 'assets'), filename)
 
 
-# Configuración de email
+# Configuración de email (usando las mismas variables que email_utils.py)
 EMAIL_CONFIG = {
-    'smtp_server': 'smtp.gmail.com',
-    'smtp_port': 587,
-    'sender_email': os.getenv('EMAIL_SENDER', 'noreply@aleph70.com'),
-    'sender_password': os.getenv('EMAIL_PASSWORD', ''),
-    'enabled': os.getenv('EMAIL_ENABLED', 'false').lower() == 'true'
+    'smtp_server': os.getenv('SMTP_SERVER', 'smtp.ionos.es'),
+    'smtp_port': int(os.getenv('SMTP_PORT', '465')),
+    'smtp_username': os.getenv('SMTP_USERNAME', 'info@aleph70.com'),
+    'smtp_password': os.getenv('SMTP_PASSWORD', ''),
+    'sender_email': os.getenv('SMTP_FROM', 'info@aleph70.com'),
+    'enabled': os.getenv('EMAIL_ENABLED', 'true').lower() == 'true',
+    'use_ssl': True  # IONOS usa SSL en puerto 465
 }
 
 DB_USUARIOS_PATH = 'db/usuarios_sistema.db'
@@ -161,10 +168,10 @@ def enviar_email_verificacion(email, nombre, token):
         part = MIMEText(html, 'html')
         msg.attach(part)
         
-        # Enviar email
-        with smtplib.SMTP(EMAIL_CONFIG['smtp_server'], EMAIL_CONFIG['smtp_port']) as server:
-            server.starttls()
-            server.login(EMAIL_CONFIG['sender_email'], EMAIL_CONFIG['sender_password'])
+        # Enviar email usando SSL (como email_utils.py)
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(EMAIL_CONFIG['smtp_server'], EMAIL_CONFIG['smtp_port'], context=context) as server:
+            server.login(EMAIL_CONFIG['smtp_username'], EMAIL_CONFIG['smtp_password'])
             server.send_message(msg)
         
         logger.info(f"Email de verificación enviado a {email}")
