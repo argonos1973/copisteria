@@ -114,9 +114,9 @@ h4 {
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, var(--secondary, #764ba2) 0%, var(--primary, #667eea) 100%);
+    background: linear-gradient(135deg, var(--primary-dark, #5568d3) 0%, var(--secondary-dark, #6a3f8f) 100%);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
 .btn-primary:disabled {
@@ -223,6 +223,47 @@ h4 {
 
 .text-center {
     text-align: center;
+}
+
+/* Logo upload styles */
+.logo-upload-container {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    padding: 20px;
+    border: 2px dashed var(--border-color, #ddd);
+    border-radius: 8px;
+    background: var(--bg-light, #f9f9f9);
+}
+
+.logo-preview {
+    width: 150px;
+    height: 150px;
+    border: 2px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    overflow: hidden;
+}
+
+.logo-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.logo-upload-controls {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.logo-upload-controls .btn {
+    width: fit-content;
 }
 
 hr {

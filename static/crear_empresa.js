@@ -1,5 +1,45 @@
 // crear_empresa.js - Gestión de creación de empresa
 
+// Preview del logo
+document.getElementById('logoInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Validar tamaño (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        mostrarAlerta('El logo no puede superar 5MB', 'danger');
+        this.value = '';
+        return;
+    }
+    
+    // Validar tipo
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+        mostrarAlerta('Formato no válido. Use PNG, JPG, JPEG, GIF o WEBP', 'danger');
+        this.value = '';
+        return;
+    }
+    
+    // Mostrar preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const preview = document.getElementById('logoPreview');
+        preview.innerHTML = `<img src="${e.target.result}" alt="Logo preview">`;
+        document.getElementById('removeLogo').style.display = 'inline-block';
+    };
+    reader.readAsDataURL(file);
+});
+
+// Función para quitar el logo
+window.removeLogoPreview = function() {
+    document.getElementById('logoInput').value = '';
+    document.getElementById('logoPreview').innerHTML = `
+        <i class="fas fa-building" style="font-size: 48px; color: #ccc;"></i>
+        <p style="margin-top: 10px; color: #999;">Sin logo</p>
+    `;
+    document.getElementById('removeLogo').style.display = 'none';
+};
+
 // Enviar formulario
 document.getElementById('createCompanyForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -13,7 +53,6 @@ document.getElementById('createCompanyForm').addEventListener('submit', async (e
     formData.append('nombre', document.getElementById('nombreEmpresa').value.trim());
     formData.append('razon_social', document.getElementById('nombreEmpresa').value.trim());
     formData.append('cif', document.getElementById('nif').value.trim());
-    formData.append('sector', document.getElementById('sector').value.trim());
     formData.append('direccion', document.getElementById('direccion').value.trim());
     formData.append('codigo_postal', document.getElementById('codigoPostal').value.trim());
     formData.append('ciudad', document.getElementById('ciudad').value.trim());
@@ -21,6 +60,12 @@ document.getElementById('createCompanyForm').addEventListener('submit', async (e
     formData.append('telefono', document.getElementById('telefono').value.trim());
     formData.append('email', document.getElementById('email').value.trim());
     formData.append('web', document.getElementById('web').value.trim());
+    
+    // Agregar logo si se seleccionó
+    const logoInput = document.getElementById('logoInput');
+    if (logoInput.files.length > 0) {
+        formData.append('logo', logoInput.files[0]);
+    }
     
     try {
         const response = await fetch('/api/empresas', {
