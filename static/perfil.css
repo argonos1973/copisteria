@@ -20,6 +20,10 @@ body {
     text-align: center;
 }
 
+.profile-header h2 {
+    display: none;
+}
+
 .avatar-container {
     position: relative;
     width: 120px;

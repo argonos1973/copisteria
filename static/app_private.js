@@ -357,12 +357,47 @@ async function marcarTodasLeidas() {
 }
 
 // ============================================================================
+// OCULTAR ICONOS PARA USUARIOS SIN EMPRESA
+// ============================================================================
+
+async function ocultarIconosSinEmpresa() {
+    try {
+        const response = await fetch('/api/auth/session', { credentials: 'include' });
+        if (!response.ok) return;
+        
+        const sessionData = await response.json();
+        const tieneEmpresa = sessionData && sessionData.empresa && sessionData.empresa !== 'Sin Empresa';
+        
+        if (!tieneEmpresa) {
+            // Ocultar icono de notificaciones
+            const notifIcon = document.getElementById('notificaciones-icon');
+            if (notifIcon) {
+                notifIcon.style.display = 'none';
+                console.log('[APP] Icono de notificaciones oculto (sin empresa)');
+            }
+            
+            // Ocultar icono de engranaje (plantillas)
+            const cogIcons = document.querySelectorAll('.fa-cog');
+            cogIcons.forEach(icon => {
+                icon.style.display = 'none';
+                console.log('[APP] Icono de engranaje oculto (sin empresa)');
+            });
+        }
+    } catch (error) {
+        console.error('[APP] Error al verificar empresa:', error);
+    }
+}
+
+// ============================================================================
 // INICIALIZACIÓN DE LA APLICACIÓN
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[INIT] Iniciando aplicación...');
     await verificarSesionYCargarMenu();
+    
+    // Ocultar iconos para usuarios sin empresa
+    ocultarIconosSinEmpresa();
     
     const iframe = document.getElementById('content-frame');
     iframe.addEventListener('load', () => {
