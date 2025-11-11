@@ -123,12 +123,19 @@ def login_required(f):
 
 def require_admin(f):
     """
-    Decorador para rutas que requieren permisos de administrador
+    Decorador para rutas que requieren permisos de administrador Y empresa asignada
     """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
             return jsonify({'error': 'No autenticado'}), 401
+        
+        # Verificar si tiene empresa asignada
+        empresa_id = session.get('empresa_id')
+        if not empresa_id:
+            logger.warning(f"Acceso denegado (sin empresa) para usuario {session.get('username')} a: {request.path}")
+            registrar_auditoria('acceso_denegado_sin_empresa', descripcion=f'Intento acceso a {request.path} sin empresa')
+            return redirect('/bienvenida.html')
         
         # Verificar si es superadmin o admin de empresa
         es_admin_empresa = session.get('es_admin_empresa', False)
