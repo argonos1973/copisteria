@@ -211,8 +211,8 @@ def register_user():
         telefono = data['telefono'].strip()
         password = data['password']
         
-        # Generar username único basado en el email
-        username = email.split('@')[0]
+        # Generar username único basado en el nombre (sin espacios, en minúsculas)
+        username = data['nombre'].lower().strip().replace(' ', '')
         
         # Conectar a la base de datos
         conn = sqlite3.connect(DB_USUARIOS_PATH)
