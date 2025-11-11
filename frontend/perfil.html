@@ -3,134 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Perfil - Aleph70</title>
-    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <title>Mi Perfil - Aleph</title>
+    
+    <!-- Sistema de branding -->
+    <script src="/static/branding.js?v=1762757322"></script>
+    <script src="/static/auto_branding.js?v=1762757322"></script>
+    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762757322">
+    <link rel="stylesheet" href="/static/perfil.css">
+    
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background: #f5f5f5;
-            padding: 20px;
-        }
-        .profile-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            padding: 30px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .profile-header {
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        .avatar {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 40px;
-            margin: 0 auto 20px;
-        }
-        .info-row {
-            display: flex;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .info-label {
-            font-weight: bold;
-            width: 200px;
-            color: #666;
-        }
-        .info-value {
-            flex: 1;
-            color: #333;
-        }
-        .badge-warning {
-            background-color: #ffc107;
-            color: #212529;
-            padding: 5px 10px;
-            border-radius: 5px;
-        }
-    </style>
 </head>
 <body>
     <div class="profile-card">
         <div class="profile-header">
-            <div class="avatar">
-                <i class="fas fa-user"></i>
+            <div class="avatar-container">
+                <div class="avatar" id="avatarImage">
+                    <i class="fas fa-user"></i>
+                </div>
+                <label class="avatar-upload" title="Cambiar avatar">
+                    <i class="fas fa-camera"></i>
+                    <input type="file" accept="image/*" onchange="subirAvatar(event)">
+                </label>
             </div>
-            <h2 class="text-center">Mi Perfil</h2>
+            <h2>Mi Perfil</h2>
         </div>
 
         <div id="profileInfo">
-            <div class="text-center">
+            <div class="loading">
                 <i class="fas fa-spinner fa-spin fa-2x"></i>
                 <p>Cargando información...</p>
             </div>
         </div>
     </div>
 
-    <script>
-        // Cargar información del perfil
-        async function cargarPerfil() {
-            try {
-                const response = await fetch('/api/auth/session');
-                if (!response.ok) throw new Error('Error al cargar perfil');
-                
-                const data = await response.json();
-                
-                let empresaInfo = data.empresa || 'Sin Empresa';
-                if (empresaInfo === 'Sin Empresa') {
-                    empresaInfo = '<span class="badge badge-warning">Sin empresa asignada</span>';
-                }
-                
-                document.getElementById('profileInfo').innerHTML = `
-                    <div class="info-row">
-                        <div class="info-label">Nombre Completo:</div>
-                        <div class="info-value">${data.usuario || 'No disponible'}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Usuario:</div>
-                        <div class="info-value">${data.username || 'No disponible'}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Empresa:</div>
-                        <div class="info-value">${empresaInfo}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Rol:</div>
-                        <div class="info-value">${data.rol || 'usuario'}</div>
-                    </div>
-                    <div class="info-row">
-                        <div class="info-label">Estado:</div>
-                        <div class="info-value"><span class="badge badge-success">Activo</span></div>
-                    </div>
-                    ${!data.empresa || data.empresa === 'Sin Empresa' ? `
-                    <div class="alert alert-info mt-4">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Cuenta limitada:</strong> No tienes una empresa asignada. 
-                        Puedes solicitar acceso a una empresa desde el menú de Gestión.
-                    </div>
-                    ` : ''}
-                `;
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('profileInfo').innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Error al cargar la información del perfil
-                    </div>
-                `;
-            }
-        }
-
-        // Cargar al iniciar
-        cargarPerfil();
-    </script>
+    <script src="/static/perfil.js"></script>
 </body>
 </html>

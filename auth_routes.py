@@ -10,6 +10,8 @@ Fecha: 2025-10-21
 """
 
 import os
+import uuid
+from werkzeug.utils import secure_filename
 from flask import Blueprint, request, jsonify, session, render_template_string, Response, make_response
 from logger_config import get_logger
 from auth_middleware import (
@@ -18,6 +20,13 @@ from auth_middleware import (
 )
 import sqlite3
 from multiempresa_config import DB_USUARIOS_PATH
+
+# Configuración de avatares
+AVATAR_FOLDER = 'static/avatars'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 logger = get_logger(__name__)
 
@@ -131,12 +140,26 @@ def obtener_sesion():
     Obtiene información de la sesión actual
     """
     try:
+        user_id = session.get('user_id')
+        
+        # Obtener avatar de la base de datos
+        avatar = None
+        if user_id:
+            conn = sqlite3.connect(DB_USUARIOS_PATH)
+            cursor = conn.cursor()
+            cursor.execute('SELECT avatar FROM usuarios WHERE id = ?', (user_id,))
+            result = cursor.fetchone()
+            if result and result[0]:
+                avatar = result[0]
+            conn.close()
+        
         return jsonify({
             'usuario': session.get('nombre_completo'),
             'username': session.get('username'),
             'empresa': session.get('empresa_nombre'),
             'empresa_codigo': session.get('empresa_codigo'),
             'logo': f"/static/logos/{session.get('empresa_logo', 'default_header.png')}",
+            'avatar': avatar,
             'rol': session.get('rol'),
             'es_admin': session.get('es_admin_empresa') or session.get('es_superadmin'),
             'es_admin_empresa': session.get('es_admin_empresa', False),
@@ -165,15 +188,10 @@ def obtener_menu():
         if not empresa_id:
             logger.info(f"[MENU] Usuario sin empresa - mostrando menú de gestión inicial")
             menu_limitado = [{
-                'codigo': 'inicio',
-                'nombre': 'Inicio', 
-                'icono': 'fas fa-home',
-                'ruta': '/bienvenida.html'
-            }, {
                 'codigo': 'gestion',
                 'nombre': 'Mi Empresa',
                 'icono': 'fas fa-building',
-                'ruta': '#',
+                'ruta': '/bienvenida.html',  # Página de inicio por defecto
                 'submenu': [
                     {'nombre': 'Crear Mi Empresa', 'icono': 'fas fa-plus-circle', 'ruta': '/crear_empresa'},
                     {'nombre': 'Mi Perfil', 'icono': 'fas fa-user', 'ruta': '/perfil'},
@@ -721,3 +739,46 @@ def cambiar_password():
     except Exception as e:
         logger.error(f"Error cambiando contraseña: {e}", exc_info=True)
         return jsonify({'error': 'Error cambiando contraseña'}), 500
+
+
+@auth_bp.route('/upload-avatar', methods=['POST'])
+@login_required
+def upload_avatar():
+    """Subir avatar de usuario"""
+    try:
+        user_id = session.get('user_id')
+        
+        if 'avatar' not in request.files:
+            return jsonify({'error': 'No se envió ningún archivo'}), 400
+        
+        file = request.files['avatar']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No se seleccionó ningún archivo'}), 400
+        
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Tipo de archivo no permitido. Use: PNG, JPG, JPEG, GIF, WEBP'}), 400
+        
+        # Generar nombre único para el archivo
+        extension = file.filename.rsplit('.', 1)[1].lower()
+        filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{extension}"
+        filepath = os.path.join(AVATAR_FOLDER, filename)
+        
+        # Guardar archivo
+        file.save(filepath)
+        
+        # Actualizar base de datos
+        avatar_url = f"/static/avatars/{filename}"
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        cursor.execute('UPDATE usuarios SET avatar = ? WHERE id = ?', (avatar_url, user_id))
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Usuario {session.get('username')} actualizó su avatar")
+        
+        return jsonify({'success': True, 'avatar_url': avatar_url}), 200
+        
+    except Exception as e:
+        logger.error(f"Error subiendo avatar: {e}", exc_info=True)
+        return jsonify({'error': 'Error al subir avatar'}), 500
