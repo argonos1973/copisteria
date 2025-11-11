@@ -218,12 +218,6 @@ def register_user():
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        # Verificar si el email ya existe
-        cursor.execute('SELECT id FROM usuarios WHERE email = ?', (email,))
-        if cursor.fetchone():
-            conn.close()
-            return jsonify({'error': 'Este email ya está registrado'}), 400
-        
         # Verificar si el username ya existe, si es así, agregar número
         base_username = username
         counter = 1
