@@ -203,3 +203,84 @@ def enviar_email_con_adjuntos(destinatario, asunto, cuerpo, archivos_adjuntos, n
                 logger.error(f"Error: {e}", exc_info=True)
                 pass
         return False, f"Error al enviar el correo: {str(e)}"
+
+def enviar_email_bienvenida_empresa(destinatario, nombre_empresa, codigo_empresa, usuario_admin, password_admin):
+    """
+    Enviar email de bienvenida con las credenciales de acceso de la empresa creada
+    """
+    server = None
+    try:
+        # Configurar el servidor SMTP
+        smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
+        smtp_port = int(os.getenv('SMTP_PORT', '465'))
+        smtp_username = os.getenv('SMTP_USERNAME', 'info@aleph70.com')
+        smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
+        smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
+
+        logger.info(f"Enviando email de bienvenida a {destinatario} para empresa {nombre_empresa}")
+        
+        # Crear el mensaje
+        msg = MIMEMultipart()
+        msg['From'] = smtp_from
+        msg['To'] = destinatario
+        msg['Subject'] = str(Header(f'Bienvenido a {nombre_empresa} - Credenciales de Acceso', 'utf-8'))
+
+        # Cuerpo del mensaje
+        cuerpo = f"""
+¡Bienvenido a {nombre_empresa}\!
+
+Tu empresa ha sido creada exitosamente en nuestro sistema.
+
+INFORMACIÓN DE LA EMPRESA:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Nombre: {nombre_empresa}
+• Código: {codigo_empresa}
+
+CREDENCIALES DE ACCESO:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Usuario: {usuario_admin}
+• Contraseña: {password_admin}
+
+IMPORTANTE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  Por seguridad, te recomendamos cambiar tu contraseña en el primer acceso.
+⚠️  Guarda estas credenciales en un lugar seguro.
+
+Puedes acceder al sistema en:
+🔗 http://192.168.1.23:5001/LOGIN.html
+
+Si tienes alguna pregunta o necesitas ayuda, no dudes en contactarnos.
+
+¡Gracias por confiar en nosotros\!
+
+Saludos,
+El equipo de Aleph70
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+
+        # Añadir el cuerpo del mensaje
+        msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
+
+        # Conectar al servidor SMTP con SSL
+        context = ssl.create_default_context()
+        server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
+        server.login(smtp_username, smtp_password)
+
+        # Enviar email
+        destinatarios = [destinatario, 'info@aleph70.com']  # Incluir copia a info@
+        from email import policy
+        msg_bytes = msg.as_bytes(policy=policy.SMTP)
+        server.sendmail(smtp_from, destinatarios, msg_bytes)
+        
+        server.quit()
+        logger.info(f"Email de bienvenida enviado correctamente a {destinatario}")
+        return True, "Email enviado correctamente"
+        
+    except Exception as e:
+        logger.error(f"Error al enviar email de bienvenida: {str(e)}", exc_info=True)
+        if server:
+            try:
+                server.quit()
+            except:
+                pass
+        return False, f"Error al enviar el correo: {str(e)}"

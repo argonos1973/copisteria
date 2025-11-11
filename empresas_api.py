@@ -8,6 +8,7 @@ import re
 import shutil
 from werkzeug.utils import secure_filename
 from logger_config import get_logger
+from email_utils import enviar_email_bienvenida_empresa
 
 logger = get_logger(__name__)
 
@@ -497,6 +498,23 @@ def crear_empresa():
             conn.close()
         
         logger.info(f"Empresa creada: {nombre} ({codigo}) - BD: {bd_destino}")
+        
+        # Enviar email de bienvenida con las credenciales
+        try:
+            exito_email, mensaje_email = enviar_email_bienvenida_empresa(
+                destinatario=email,
+                nombre_empresa=nombre,
+                codigo_empresa=codigo,
+                usuario_admin=username_admin,
+                password_admin=password_admin
+            )
+            if exito_email:
+                logger.info(f"Email de bienvenida enviado a {email}")
+            else:
+                logger.warning(f"No se pudo enviar email de bienvenida: {mensaje_email}")
+        except Exception as email_error:
+            logger.error(f"Error al enviar email de bienvenida: {email_error}")
+            # No fallar la creación de empresa si el email falla
         
         return jsonify({
             'success': True,
