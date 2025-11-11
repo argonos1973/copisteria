@@ -294,6 +294,10 @@ def crear_empresa():
     Crea una nueva empresa con su BD independiente
     """
     try:
+        # Debug: log de datos recibidos
+        logger.info(f"[CREAR EMPRESA] Form data recibido: {dict(request.form)}")
+        logger.info(f"[CREAR EMPRESA] Files recibidos: {list(request.files.keys())}")
+        
         # Obtener datos del formulario
         nombre = request.form.get('nombre')
         cif = request.form.get('cif', '')
@@ -306,7 +310,10 @@ def crear_empresa():
         email = request.form.get('email', '')
         web = request.form.get('web', '')
         
+        logger.info(f"[CREAR EMPRESA] Nombre recibido: '{nombre}'")
+        
         if not nombre:
+            logger.warning(f"[CREAR EMPRESA] Nombre vacío o None")
             return jsonify({'error': 'El nombre de la empresa es obligatorio'}), 400
         
         # Generar código de empresa

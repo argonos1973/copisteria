@@ -50,8 +50,18 @@ document.getElementById('createCompanyForm').addEventListener('submit', async (e
     
     // Usar FormData para el endpoint existente
     const formData = new FormData();
-    formData.append('nombre', document.getElementById('nombreEmpresa').value.trim());
-    formData.append('razon_social', document.getElementById('nombreEmpresa').value.trim());
+    const nombreEmpresa = document.getElementById('nombreEmpresa').value.trim();
+    
+    // Validar que el nombre no esté vacío
+    if (!nombreEmpresa) {
+        mostrarAlerta('El nombre de la empresa es obligatorio', 'danger');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Crear Empresa y Empezar';
+        return;
+    }
+    
+    formData.append('nombre', nombreEmpresa);
+    formData.append('razon_social', nombreEmpresa);
     formData.append('cif', document.getElementById('nif').value.trim());
     formData.append('direccion', document.getElementById('direccion').value.trim());
     formData.append('codigo_postal', document.getElementById('codigoPostal').value.trim());
@@ -65,6 +75,12 @@ document.getElementById('createCompanyForm').addEventListener('submit', async (e
     const logoInput = document.getElementById('logoInput');
     if (logoInput.files.length > 0) {
         formData.append('logo', logoInput.files[0]);
+    }
+    
+    // Debug: mostrar datos que se envían
+    console.log('[CREAR EMPRESA] Datos a enviar:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}:`, value instanceof File ? `File(${value.name})` : value);
     }
     
     try {
