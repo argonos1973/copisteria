@@ -296,8 +296,10 @@ def crear_empresa():
     conn = None  # Inicializar conn al principio
     try:
         # Debug: log de datos recibidos
+        print(f"[DEBUG] Iniciando crear_empresa", flush=True)
         logger.info(f"[CREAR EMPRESA] Form data recibido: {dict(request.form)}")
         logger.info(f"[CREAR EMPRESA] Files recibidos: {list(request.files.keys())}")
+        print(f"[DEBUG] Datos recibidos OK", flush=True)
         
         # Obtener datos del formulario
         nombre = request.form.get('nombre')
@@ -493,6 +495,9 @@ def crear_empresa():
         }), 201
         
     except Exception as e:
+        print(f"[DEBUG ERROR] {type(e).__name__}: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
         logger.error(f"Error creando empresa: {e}", exc_info=True)
         # Hacer rollback de la transacción si hay error
         try:
