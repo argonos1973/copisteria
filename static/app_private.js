@@ -382,6 +382,19 @@ async function ocultarIconosSinEmpresa() {
                 icon.style.display = 'none';
                 console.log('[APP] Icono de engranaje oculto (sin empresa)');
             });
+            
+            // Desactivar link del perfil de usuario
+            const userProfileLink = document.getElementById('user-profile-link');
+            if (userProfileLink) {
+                userProfileLink.style.cursor = 'default';
+                userProfileLink.style.pointerEvents = 'none';
+                userProfileLink.style.opacity = '0.6';
+                userProfileLink.removeAttribute('onclick');
+                userProfileLink.removeAttribute('onmouseover');
+                userProfileLink.removeAttribute('onmouseout');
+                userProfileLink.removeAttribute('title');
+                console.log('[APP] Link de perfil desactivado (sin empresa)');
+            }
         }
     } catch (error) {
         console.error('[APP] Error al verificar empresa:', error);
