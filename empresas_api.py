@@ -258,7 +258,7 @@ def obtener_empresa(empresa_id):
         
         # Cargar datos de emisor desde JSON
         codigo_empresa = empresa.get('codigo', '')
-        emisor_json_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo_empresa}_emisor.json')
+        emisor_json_path = os.path.join(BASE_DIR, 'emisores', f'{codigo_empresa}_emisor.json')
         
         if os.path.exists(emisor_json_path):
             try:
@@ -410,7 +410,7 @@ def crear_empresa():
             "codigo": codigo
         }
         
-        emisor_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo}_emisor.json')
+        emisor_path = os.path.join(BASE_DIR, 'emisores', f'{codigo}_emisor.json')
         os.makedirs(os.path.dirname(emisor_path), exist_ok=True)
         
         with open(emisor_path, 'w', encoding='utf-8') as f:
@@ -562,7 +562,7 @@ def actualizar_empresa(empresa_id):
         }
         
         # Guardar JSON de emisor
-        emisor_json_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo_empresa}_emisor.json')
+        emisor_json_path = os.path.join(BASE_DIR, 'emisores', f'{codigo_empresa}_emisor.json')
         try:
             with open(emisor_json_path, 'w', encoding='utf-8') as f:
                 json.dump(emisor_data, f, indent=4, ensure_ascii=False)
@@ -713,7 +713,7 @@ def eliminar_empresa(empresa_id):
                 logger.info(f"Logo eliminado: {logo_path}")
         
         # Eliminar emisor.json
-        emisor_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo}_emisor.json')
+        emisor_path = os.path.join(BASE_DIR, 'emisores', f'{codigo}_emisor.json')
         if os.path.exists(emisor_path):
             os.remove(emisor_path)
             archivos_eliminados.append(f'Emisor: {codigo}_emisor.json')
@@ -768,7 +768,7 @@ def actualizar_emisor(empresa_id):
             "codigo": codigo
         }
         
-        emisor_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo}_emisor.json')
+        emisor_path = os.path.join(BASE_DIR, 'emisores', f'{codigo}_emisor.json')
         
         with open(emisor_path, 'w', encoding='utf-8') as f:
             json.dump(emisor_data, f, ensure_ascii=False, indent=4)
