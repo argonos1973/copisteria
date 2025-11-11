@@ -28,6 +28,11 @@ function injectHeader(doc) {
         return;
     }
     
+    // NO inyectar header en página de bienvenida
+    if (doc.title && doc.title.includes('Bienvenido')) {
+        return;
+    }
+    
     let header = doc.querySelector('.page-header');
     if (!header) {
         const firstH1 = doc.querySelector('h1');
