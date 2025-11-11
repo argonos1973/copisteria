@@ -287,6 +287,12 @@ def obtener_empresa(empresa_id):
         logger.error(f"Error obteniendo empresa: {e}", exc_info=True)
         return jsonify({'error': 'Error obteniendo empresa'}), 500
 
+@empresas_bp.route('/api/empresas/test', methods=['GET'])
+def test_empresa():
+    """Ruta de prueba sin decorador"""
+    print("[DEBUG TEST] Ruta de test ejecutada", flush=True)
+    return jsonify({'success': True, 'message': 'Test OK'}), 200
+
 @empresas_bp.route('/api/empresas', methods=['POST'])
 @login_required
 def crear_empresa():
@@ -294,12 +300,13 @@ def crear_empresa():
     Crea una nueva empresa con su BD independiente
     """
     conn = None  # Inicializar conn al principio
+    logger.error(f"[DEBUG CRITICAL] Función crear_empresa llamada - inicio")
     try:
         # Debug: log de datos recibidos
-        print(f"[DEBUG] Iniciando crear_empresa", flush=True)
+        logger.error(f"[DEBUG] Dentro del try - Iniciando crear_empresa")
         logger.info(f"[CREAR EMPRESA] Form data recibido: {dict(request.form)}")
         logger.info(f"[CREAR EMPRESA] Files recibidos: {list(request.files.keys())}")
-        print(f"[DEBUG] Datos recibidos OK", flush=True)
+        logger.error(f"[DEBUG] Datos recibidos OK")
         
         # Obtener datos del formulario
         nombre = request.form.get('nombre')
