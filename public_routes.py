@@ -127,7 +127,7 @@ def enviar_email_verificacion(email, nombre, token):
     
     try:
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = 'Verifica tu cuenta en Aleph70'
+        msg['Subject'] = 'Verifica tu cuenta en Aleph'
         msg['From'] = EMAIL_CONFIG['sender_email']
         msg['To'] = email
         
@@ -140,7 +140,7 @@ def enviar_email_verificacion(email, nombre, token):
         <html>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
             <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2 style="color: #667eea;">¡Bienvenido a Aleph70, {nombre}!</h2>
+              <h2 style="color: #667eea;">¡Bienvenido a Aleph, {nombre}!</h2>
               <p>Gracias por registrarte en nuestro sistema de gestión empresarial.</p>
               <p>Para activar tu cuenta, por favor haz clic en el siguiente enlace:</p>
               <p style="text-align: center; margin: 30px 0;">
