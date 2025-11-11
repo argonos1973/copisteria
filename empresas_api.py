@@ -125,7 +125,7 @@ def generar_codigo_empresa(nombre):
     return codigo[:5]  # Primeros 5 caracteres
 
 def clonar_estructura_bd(bd_origen, bd_destino):
-    """Clona la estructura de una BD sin datos"""
+    """Clona la estructura de una BD y copia datos maestros (provincia, codipostal)"""
     try:
         # Conectar a BD origen
         conn_origen = sqlite3.connect(bd_origen)
@@ -138,8 +138,6 @@ def clonar_estructura_bd(bd_origen, bd_destino):
         # Obtener índices
         cursor_origen.execute("SELECT sql FROM sqlite_master WHERE type='index' AND sql IS NOT NULL")
         indices = cursor_origen.fetchall()
-        
-        conn_origen.close()
         
         # Crear BD destino
         if os.path.exists(bd_destino):
@@ -162,10 +160,34 @@ def clonar_estructura_bd(bd_origen, bd_destino):
             except Exception as e:
                 logger.warning(f"Error creando índice: {e}")
         
+        # Copiar datos de tablas maestras
+        tablas_maestras = ['provincia', 'codipostal']
+        for tabla in tablas_maestras:
+            try:
+                # Obtener datos de la tabla
+                cursor_origen.execute(f"SELECT * FROM {tabla}")
+                datos = cursor_origen.fetchall()
+                
+                if datos:
+                    # Obtener nombres de columnas
+                    cursor_origen.execute(f"PRAGMA table_info({tabla})")
+                    columnas = [col[1] for col in cursor_origen.fetchall()]
+                    placeholders = ','.join(['?' for _ in columnas])
+                    
+                    # Insertar datos
+                    cursor_destino.executemany(
+                        f"INSERT INTO {tabla} VALUES ({placeholders})",
+                        datos
+                    )
+                    logger.info(f"Copiados {len(datos)} registros de tabla {tabla}")
+            except Exception as e:
+                logger.warning(f"Error copiando datos de tabla {tabla}: {e}")
+        
         conn_destino.commit()
         conn_destino.close()
+        conn_origen.close()
         
-        logger.info(f"BD clonada exitosamente: {bd_destino}")
+        logger.info(f"BD clonada exitosamente con datos maestros: {bd_destino}")
         return True
         
     except Exception as e:
