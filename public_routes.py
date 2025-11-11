@@ -289,30 +289,58 @@ def verify_email():
         token = request.args.get('token')
         
         if not token:
-            return jsonify({'error': 'Token no proporcionado'}), 400
+            return '''
+            <html>
+                <head><title>Error - Verificación de Email</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h2>❌ Error</h2>
+                    <p>Token de verificación no proporcionado.</p>
+                    <a href="/LOGIN.html">Ir al Login</a>
+                </body>
+            </html>
+            ''', 400
         
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
         # Buscar usuario por token
         cursor.execute('''
-            SELECT id, username, email, token_expiry
+            SELECT id, username, email, token_expiry, nombre_completo
             FROM usuarios
-            WHERE verification_token = ? AND activo = 0
+            WHERE verification_token = ?
         ''', (token,))
         
         user = cursor.fetchone()
         
         if not user:
             conn.close()
-            return jsonify({'error': 'Token inválido o usuario ya verificado'}), 400
+            return '''
+            <html>
+                <head><title>Error - Verificación de Email</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h2>❌ Token Inválido</h2>
+                    <p>El token de verificación es inválido o el usuario ya ha sido verificado.</p>
+                    <a href="/LOGIN.html" style="display: inline-block; margin-top: 20px; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">Ir al Login</a>
+                </body>
+            </html>
+            ''', 400
         
-        user_id, username, email, token_expiry = user
+        user_id, username, email, token_expiry, nombre_completo = user
         
         # Verificar si el token ha expirado
         if datetime.now() > datetime.fromisoformat(token_expiry):
             conn.close()
-            return jsonify({'error': 'El token ha expirado. Solicita un nuevo enlace de verificación'}), 400
+            return '''
+            <html>
+                <head><title>Error - Token Expirado</title></head>
+                <body style="font-family: Arial; text-align: center; padding: 50px;">
+                    <h2>⏰ Token Expirado</h2>
+                    <p>El token de verificación ha expirado (24 horas).</p>
+                    <p>Por favor, contacta con el administrador para solicitar un nuevo enlace.</p>
+                    <a href="/LOGIN.html" style="display: inline-block; margin-top: 20px; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">Ir al Login</a>
+                </body>
+            </html>
+            ''', 400
         
         # Activar usuario
         cursor.execute('''
@@ -326,9 +354,42 @@ def verify_email():
         
         logger.info(f"Usuario verificado: {username} ({email})")
         
-        # Redirigir al login con mensaje de éxito
-        return redirect('/LOGIN.html?verified=true')
+        # Página de éxito con redirección automática
+        return f'''
+        <html>
+            <head>
+                <title>✅ Cuenta Verificada</title>
+                <meta http-equiv="refresh" content="5;url=/LOGIN.html">
+            </head>
+            <body style="font-family: Arial; text-align: center; padding: 50px;">
+                <div style="max-width: 500px; margin: 0 auto;">
+                    <h1 style="color: #28a745;">✅ ¡Cuenta Verificada!</h1>
+                    <p style="font-size: 18px; margin: 20px 0;">
+                        Hola <strong>{nombre_completo}</strong>, tu cuenta ha sido activada correctamente.
+                    </p>
+                    <p style="color: #666;">
+                        Tu nombre de usuario es: <strong>{username}</strong>
+                    </p>
+                    <p style="color: #666; margin-top: 30px;">
+                        Serás redirigido al login en 5 segundos...
+                    </p>
+                    <a href="/LOGIN.html" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                        Ir al Login Ahora
+                    </a>
+                </div>
+            </body>
+        </html>
+        ''', 200
         
     except Exception as e:
         logger.error(f"Error verificando email: {e}", exc_info=True)
-        return jsonify({'error': 'Error al verificar email'}), 500
+        return '''
+        <html>
+            <head><title>Error - Verificación de Email</title></head>
+            <body style="font-family: Arial; text-align: center; padding: 50px;">
+                <h2>❌ Error</h2>
+                <p>Ocurrió un error al verificar tu email. Por favor, intenta de nuevo o contacta con soporte.</p>
+                <a href="/LOGIN.html">Ir al Login</a>
+            </body>
+        </html>
+        ''', 500
