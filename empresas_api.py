@@ -483,15 +483,9 @@ def crear_empresa():
                 permisos_dict = {permiso: 1 for permiso in permisos_completos}
                 cursor.execute('''
                     INSERT INTO permisos_usuario_modulo 
-                    (usuario_id, empresa_id, modulo_codigo, ver, crear, editar, eliminar, anular, exportar)
+                    (usuario_id, empresa_id, modulo_codigo, puede_ver, puede_crear, puede_editar, puede_eliminar, puede_anular, puede_exportar)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (usuario_admin_id, empresa_id, modulo,
-                      permisos_dict.get('ver', 1),
-                      permisos_dict.get('crear', 1),
-                      permisos_dict.get('editar', 1),
-                      permisos_dict.get('eliminar', 1),
-                      permisos_dict.get('anular', 1),
-                      permisos_dict.get('exportar', 1)))
+                ''', (usuario_admin_id, empresa_id, modulo, 1, 1, 1, 1, 1, 1))
             
             conn.commit()
             logger.info(f"Usuario admin creado: {username_admin} para empresa {codigo}")
