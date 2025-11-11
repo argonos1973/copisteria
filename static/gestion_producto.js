@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import { mostrarCargando, ocultarCargando, inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar } from './scripts_utils.js';
 
@@ -15,7 +15,9 @@ const convertirComaAPunto = (valor) => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  const API_BASE = `http://${IP_SERVER}:${PORT}/api`;
+  // Usar API_URL que detecta automáticamente el protocolo
+  const API_BASE = `${API_URL}/api`;
+  console.log('[PRODUCTO] API_BASE configurada como:', API_BASE);
 
   // Elementos
   const titulo = document.getElementById('tituloFormulario');
@@ -268,7 +270,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const lista = Array.isArray(resFranjas.data?.franjas) ? resFranjas.data.franjas : [];
         const n = lista.length;
         if (bloqueFranjasEdicion && franjasResumen) {
-          bloqueFranjasEdicion.style.display = '';
+          bloqueFranjasEdicion.classList.remove('hidden');
+          bloqueFranjasEdicion.style.display = 'block';
           if (n === 0) {
             franjasResumen.textContent = 'Sin franjas definidas';
           } else {
@@ -286,13 +289,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (btnGestionarFranjas) {
           btnGestionarFranjas.onclick = () => {
-            // Abrir la pantalla dedicada con el producto preseleccionado
-            window.location.href = `FRANJAS_DESCUENTO.html?producto_id=${encodeURIComponent(pid)}`;
+            // Abrir la pantalla dedicada con el producto preseleccionado, indicando que venimos de gestión
+            window.location.href = `FRANJAS_DESCUENTO.html?producto_id=${encodeURIComponent(pid)}&from=gestion`;
           };
         }
       } catch (eFran) {
         if (bloqueFranjasEdicion && franjasResumen) {
-          bloqueFranjasEdicion.style.display = '';
+          bloqueFranjasEdicion.classList.remove('hidden');
+          bloqueFranjasEdicion.style.display = 'block';
           franjasResumen.textContent = 'No se pudieron cargar las franjas';
         }
         console.warn('No se pudieron cargar las franjas:', eFran);

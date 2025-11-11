@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Mi Empresa - Aleph70</title>
+    <link rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .create-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            margin: -30px -30px 30px -30px;
+            text-align: center;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 40px;
+            font-size: 16px;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+        .info-box {
+            background: #e8f4ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .success-message {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        .success-message i {
+            font-size: 60px;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="create-card">
+        <div class="card-header">
+            <h3><i class="fas fa-building"></i> Crear Mi Empresa</h3>
+        </div>
+
+        <div id="alertContainer"></div>
+
+        <div id="formContainer">
+            <div class="info-box">
+                <h5><i class="fas fa-info-circle"></i> Configura tu empresa</h5>
+                <p>Como administrador de tu empresa, podrás:</p>
+                <ul>
+                    <li>Gestionar usuarios y permisos</li>
+                    <li>Configurar módulos y funcionalidades</li>
+                    <li>Personalizar el sistema según tus necesidades</li>
+                    <li>Acceder a todos los módulos disponibles</li>
+                </ul>
+            </div>
+
+            <form id="createCompanyForm">
+                <h4>Datos de la Empresa</h4>
+                <div class="form-row">
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label><i class="fas fa-building"></i> Nombre de la Empresa *</label>
+                        <input type="text" class="form-control" id="nombreEmpresa" required 
+                               placeholder="Ej: Mi Empresa S.A.">
+                        <small class="text-muted">El sistema generará automáticamente un código único basado en el nombre</small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-id-card"></i> NIF/CIF</label>
+                        <input type="text" class="form-control" id="nif" 
+                               placeholder="Ej: B12345678">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-industry"></i> Sector</label>
+                        <select class="form-control" id="sector">
+                            <option value="">Seleccionar...</option>
+                            <option value="comercio">Comercio</option>
+                            <option value="servicios">Servicios</option>
+                            <option value="industria">Industria</option>
+                            <option value="tecnologia">Tecnología</option>
+                            <option value="educacion">Educación</option>
+                            <option value="salud">Salud</option>
+                            <option value="otros">Otros</option>
+                        </select>
+                    </div>
+                </div>
+
+                <h4 class="mt-4">Información de Contacto</h4>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-map-marker-alt"></i> Dirección</label>
+                        <input type="text" class="form-control" id="direccion" 
+                               placeholder="Calle, número, ciudad">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-mail-bulk"></i> Código Postal</label>
+                        <input type="text" class="form-control" id="codigoPostal" 
+                               placeholder="28001" maxlength="5">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label><i class="fas fa-phone"></i> Teléfono</label>
+                        <input type="tel" class="form-control" id="telefono" 
+                               placeholder="91 123 45 67">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> Email Corporativo</label>
+                        <input type="email" class="form-control" id="email" 
+                               placeholder="info@miempresa.com">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-globe"></i> Sitio Web</label>
+                    <input type="url" class="form-control" id="web" 
+                           placeholder="https://www.miempresa.com">
+                </div>
+
+                <hr>
+                
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-check-circle"></i> Crear Empresa y Empezar
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="successMessage" class="success-message">
+            <i class="fas fa-check-circle"></i>
+            <h3>¡Empresa Creada Exitosamente!</h3>
+            <p>Tu empresa ha sido configurada correctamente.</p>
+            <p>El sistema se está actualizando...</p>
+            <div class="spinner-border text-primary mt-3" role="status">
+                <span class="sr-only">Cargando...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enviar formulario
+        document.getElementById('createCompanyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando empresa...';
+            
+            // Usar FormData para el endpoint existente
+            const formData = new FormData();
+            formData.append('nombre', document.getElementById('nombreEmpresa').value.trim());
+            formData.append('razon_social', document.getElementById('nombreEmpresa').value.trim());
+            formData.append('cif', document.getElementById('nif').value.trim());
+            formData.append('direccion', document.getElementById('direccion').value.trim());
+            formData.append('codigo_postal', document.getElementById('codigoPostal').value.trim());
+            formData.append('ciudad', ''); // Añadir campo ciudad si es necesario
+            formData.append('provincia', ''); // Añadir campo provincia si es necesario
+            formData.append('telefono', document.getElementById('telefono').value.trim());
+            formData.append('email', document.getElementById('email').value.trim());
+            formData.append('web', document.getElementById('web').value.trim());
+            
+            try {
+                const response = await fetch('/api/empresas', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    // Mostrar mensaje de éxito con información del usuario admin
+                    document.getElementById('formContainer').style.display = 'none';
+                    const successDiv = document.getElementById('successMessage');
+                    successDiv.innerHTML = `
+                        <i class="fas fa-check-circle" style="font-size: 60px; color: #28a745; margin-bottom: 20px;"></i>
+                        <h3>¡Empresa Creada Exitosamente!</h3>
+                        <p>${result.mensaje}</p>
+                        <div class="alert alert-info mt-3">
+                            <strong>Usuario Admin:</strong> ${result.usuario_admin}<br>
+                            <strong>Contraseña:</strong> ${result.password_admin}<br>
+                            <small>Guarda estos datos, los necesitarás para el primer acceso.</small>
+                        </div>
+                        <p>Redirigiendo al login...</p>
+                        <div class="spinner-border text-primary mt-3" role="status">
+                            <span class="sr-only">Cargando...</span>
+                        </div>
+                    `;
+                    successDiv.style.display = 'block';
+                    
+                    // Cerrar sesión actual y redirigir al login después de 5 segundos
+                    setTimeout(async () => {
+                        // Cerrar sesión actual
+                        await fetch('/api/auth/logout', { method: 'POST' });
+                        // Redirigir al login
+                        window.parent.location.href = '/frontend/LOGIN.html';
+                    }, 5000);
+                } else {
+                    mostrarAlerta(result.error || 'Error al crear la empresa', 'danger');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Crear Empresa y Empezar';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                mostrarAlerta('Error al crear la empresa', 'danger');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Crear Empresa y Empezar';
+            }
+        });
+        
+        function mostrarAlerta(mensaje, tipo) {
+            const container = document.getElementById('alertContainer');
+            container.innerHTML = `
+                <div class="alert alert-${tipo} alert-dismissible fade show">
+                    ${mensaje}
+                    <button type="button" class="close" data-dismiss="alert">
+                        <span>&times;</span>
+                    </button>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

@@ -37,7 +37,7 @@ async function cargarPlantillas() {
         }
         
         // 2. Cargar plantillas personalizadas desde BD
-        const response = await fetch('/api/plantillas/personalizadas', {
+        const response = await fetch('/api/plantillas/personalizadas', { credentials: 'include' }, {
             credentials: 'include',
             cache: 'no-cache'
         });
@@ -113,7 +113,7 @@ async function guardarPlantillaPersonalizada(colores, basadaEn, nombreCustom = '
     console.log('💾 Guardando plantilla personalizada...');
     
     try {
-        const response = await fetch('/api/plantillas/guardar', {
+        const response = await fetch('/api/plantillas/guardar', { credentials: 'include' }, {
             method: 'POST',
             credentials: 'include',
             headers: {

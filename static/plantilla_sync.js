@@ -16,7 +16,7 @@
     async function obtenerPlantillaActiva() {
         try {
             // Obtener nombre de plantilla activa
-            const response = await fetch('/api/auth/branding');
+            const response = await fetch('/api/auth/branding', { credentials: 'include' });
             if (!response.ok) return null;
             
             const data = await response.json();

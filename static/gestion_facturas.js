@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { 
     PRODUCTO_ID_LIBRE,
     formatearImporte,
@@ -37,7 +37,7 @@ import {
     seleccionarProducto as seleccionarProductoCommon,
     validarDetalle,
     volverSegunOrigen
-} from './common.js';
+} from './common.js?v=1762757322';
 
 // Variables globales
 let detalles = [];

@@ -48,10 +48,10 @@ def login():
         
         username = data.get('username', '').strip()
         password = data.get('password', '')
-        empresa_codigo = data.get('empresa', '').strip()
+        empresa_codigo = data.get('empresa', '').strip() if data.get('empresa') else None
         
-        if not username or not password or not empresa_codigo:
-            return jsonify({'error': 'Usuario, contraseña y empresa son requeridos'}), 400
+        if not username or not password:
+            return jsonify({'error': 'Usuario y contraseña son requeridos'}), 400
         
         logger.info(f"Intento de login: {username} → {empresa_codigo}")
         
@@ -66,8 +66,17 @@ def login():
         
         # IMPORTANTE: Usar make_response para asegurar que la cookie se envíe
         response = make_response(jsonify(resultado), 200)
+        
         # Forzar que Flask guarde la sesión
+        session.permanent = True
         session.modified = True
+        
+        # Agregar headers CORS para cookies
+        origin = request.headers.get('Origin')
+        if origin and 'trycloudflare.com' in origin:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+        
         return response
         
     except Exception as e:
@@ -100,6 +109,20 @@ def obtener_empresas(username):
     except Exception as e:
         logger.error(f"Error obteniendo empresas: {e}", exc_info=True)
         return jsonify({'error': 'Error obteniendo empresas'}), 500
+
+@auth_bp.route('/verify-session', methods=['GET', 'POST'])
+@login_required
+def verificar_sesion():
+    """Verifica si la sesión actual es válida"""
+    try:
+        return jsonify({
+            'valid': True,
+            'usuario': session.get('nombre_completo'),
+            'username': session.get('username'),
+            'empresa': session.get('empresa_nombre')
+        }), 200
+    except Exception as e:
+        return jsonify({'valid': False, 'error': str(e)}), 401
 
 @auth_bp.route('/session', methods=['GET'])
 @login_required
@@ -137,6 +160,27 @@ def obtener_menu():
         es_admin_empresa = session.get('es_admin_empresa', False)
         
         logger.info(f"[MENU] user_id={user_id}, empresa_id={empresa_id}, es_superadmin={es_superadmin}, es_admin_empresa={es_admin_empresa}")
+        
+        # Si el usuario no tiene empresa asignada, solo mostrar menú de gestión
+        if not empresa_id:
+            logger.info(f"[MENU] Usuario sin empresa - mostrando menú de gestión inicial")
+            menu_limitado = [{
+                'codigo': 'inicio',
+                'nombre': 'Inicio', 
+                'icono': 'fas fa-home',
+                'ruta': '/bienvenida.html'
+            }, {
+                'codigo': 'gestion',
+                'nombre': 'Mi Empresa',
+                'icono': 'fas fa-building',
+                'ruta': '#',
+                'submenu': [
+                    {'nombre': 'Crear Mi Empresa', 'icono': 'fas fa-plus-circle', 'ruta': '/crear_empresa'},
+                    {'nombre': 'Mi Perfil', 'icono': 'fas fa-user', 'ruta': '/perfil'},
+                    {'nombre': 'Cambiar Contraseña', 'icono': 'fas fa-key', 'ruta': '/cambiar_password'}
+                ]
+            }]
+            return jsonify(menu_limitado), 200
         
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
@@ -443,7 +487,12 @@ def obtener_menu():
                 },
                 'submenu': [
                     {
-                        'nombre': 'Gestión',
+                        'nombre': 'Usuarios',
+                        'icono': 'fas fa-users',
+                        'ruta': '/ADMIN_USUARIOS.html'
+                    },
+                    {
+                        'nombre': 'Permisos',
                         'icono': 'fas fa-cog',
                         'ruta': '/ADMIN_PERMISOS.html'
                     },
@@ -632,6 +681,7 @@ def obtener_datos_emisor():
         }), 500
 
 @auth_bp.route('/cambiar-password', methods=['POST'])
+@auth_bp.route('/change-password', methods=['POST'])
 @login_required
 def cambiar_password():
     """
@@ -639,8 +689,9 @@ def cambiar_password():
     """
     try:
         data = request.json
-        password_actual = data.get('password_actual')
-        password_nueva = data.get('password_nueva')
+        # Aceptar ambos formatos
+        password_actual = data.get('password_actual') or data.get('current_password')
+        password_nueva = data.get('password_nueva') or data.get('new_password')
         
         if not password_actual or not password_nueva:
             return jsonify({'error': 'Contraseñas requeridas'}), 400

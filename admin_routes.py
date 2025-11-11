@@ -65,6 +65,7 @@ def listar_usuarios():
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/usuarios', methods=['POST'])
+@admin_bp.route('/usuarios/crear', methods=['POST'])
 @login_required
 @require_admin
 def crear_usuario():
@@ -84,7 +85,10 @@ def crear_usuario():
         # Verificar que el creador tenga empresa asignada
         empresa_id_creador = session.get('empresa_id')
         
-        if not empresa_id_creador:
+        # Permitir crear usuarios sin empresa si así se especifica
+        asignar_empresa = data.get('asignar_empresa', True)  # Por defecto asigna empresa
+        
+        if not empresa_id_creador and asignar_empresa:
             return jsonify({'error': 'Tu cuenta no tiene empresa asignada'}), 403
         
         password_hash = hash_password(password)
@@ -100,12 +104,15 @@ def crear_usuario():
         
         usuario_id = cursor.lastrowid
         
-        # Asignar automáticamente el usuario a la empresa del creador
-        cursor.execute('''
-            INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
-            VALUES (?, ?, 'usuario', 0)
-        ''', (usuario_id, empresa_id_creador))
-        logger.info(f"Usuario {username} asignado automáticamente a empresa ID {empresa_id_creador}")
+        # Asignar a empresa solo si se especifica y hay empresa
+        if asignar_empresa and empresa_id_creador:
+            cursor.execute('''
+                INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
+                VALUES (?, ?, 'usuario', 0)
+            ''', (usuario_id, empresa_id_creador))
+            logger.info(f"Usuario {username} asignado automáticamente a empresa ID {empresa_id_creador}")
+        else:
+            logger.info(f"Usuario {username} creado sin empresa asignada")
         
         conn.commit()
         conn.close()

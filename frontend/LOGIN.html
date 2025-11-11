@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Aleph70 Multiempresa</title>
+    <!-- SessionManager para Cloudflare -->
+    <script src="/static/session_manager.js?v=1762757322"></script>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="shortcut icon" type="image/png" href="/static/favicon.png">
@@ -285,12 +287,11 @@
                 const empresas = await response.json();
                 
                 if (empresas.length === 0) {
-                    mostrarAlerta('Usuario sin empresas asignadas', 'error');
-                    mostrarCargando(false);
-                    return;
-                }
-                
-                if (empresas.length === 1) {
+                    // Usuario sin empresas asignadas - permitir acceso limitado
+                    mostrarAlerta('Usuario sin empresas asignadas', 'warning');
+                    // Login sin empresa - acceso limitado solo a gestión
+                    await realizarLogin(null);
+                } else if (empresas.length === 1) {
                     // Solo una empresa, login directo
                     await realizarLogin(empresas[0].codigo);
                 } else {
@@ -409,26 +410,23 @@
             });
             
             try {
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(loginData)
-                });
+                // Usar SessionManager para login (compatible con Cloudflare)
+                const result = await window.sessionManager.login(
+                    loginData.username,
+                    loginData.password,
+                    loginData.empresa
+                );
                 
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    mostrarAlerta(`✅ Bienvenido ${data.usuario}`, 'success');
+                if (result.success) {
+                    mostrarAlerta(`✅ Bienvenido ${result.data.usuario}`, 'success');
                     
-                    // Esperar 1 segundo para que la cookie se establezca
+                    // Esperar 1 segundo para que la sesión se guarde
                     setTimeout(() => {
                         // Todos los usuarios van a la aplicación principal
                         window.location.href = "/api/auth/app";
                     }, 1500);
                 } else {
-                    mostrarAlerta(data.error || 'Error en el login', 'error');
+                    mostrarAlerta(result.error || 'Error en el login', 'error');
                     volverLogin();
                 }
                 
@@ -471,6 +469,6 @@
             }
         });
     </script>
-    <script src="/static/auto_branding.js?v=1762349609304"></script>
+    <script src="/static/auto_branding.js?v=1762757322"></script>
 </body>
 </html>

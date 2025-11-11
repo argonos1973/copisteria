@@ -2,14 +2,17 @@
 // FUNCIONES PRINCIPALES DE LA APLICACIÓN
 // ============================================================================
 
-const API_URL = `http://${window.location.hostname}:5001/api`;
+// Detectar protocolo automáticamente para Cloudflare
+const PROTOCOL = window.location.protocol;
+const USE_PORT = (PROTOCOL === 'https:' || window.location.hostname.includes('cloudflare')) ? '' : ':5001';
+const API_URL = `${PROTOCOL}//${window.location.hostname}${USE_PORT}/api`;
 let notificacionesActuales = [];
 
 // Función para cerrar sesión
 async function cerrarSesion() {
     if (!confirm('¿Cerrar sesión?')) return;
     try {
-        await fetch('/api/auth/logout', { method: 'POST' });
+        await fetch('/api/auth/logout', { credentials: 'include' }, { method: 'POST' });
     } catch (error) {
         console.error('Error al cerrar sesión:', error);
     }

@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { formatearImporte, formatearFecha, formatearFechaSoloDia } from './scripts_utils.js';
 import { mostrarNotificacion } from './notificaciones.js';
 
@@ -8,7 +8,7 @@ import { mostrarNotificacion } from './notificaciones.js';
  */
 async function obtenerDatosEmisor() {
     try {
-        const response = await fetch('/api/auth/emisor');
+        const response = await fetch('/api/auth/emisor', { credentials: 'include' });
         if (!response.ok) {
             throw new Error('No se pudo obtener datos del emisor');
         }
@@ -126,7 +126,7 @@ async function obtenerDatosDeLaFactura(idFactura) {
         console.log('Obteniendo datos de la factura:', idFactura);
         
         // Volver a usar la ruta original que funciona
-        const url = `http://${IP_SERVER}:${PORT}/api/facturas/consulta/${idFactura}`;
+        const url = `${API_URL}/api/facturas/consulta/${idFactura}`;
         console.log('URL de la solicitud:', url);
         
         const response = await fetch(url);
@@ -309,7 +309,7 @@ async function rellenarFactura(datos, emisor) {
             if (factura.id_factura_rectificada) {
                 try {
                     // Obtener directamente del backend número y fecha
-                    const respOrig = await fetch(`http://${IP_SERVER}:${PORT}/api/facturas/consulta/${factura.id_factura_rectificada}`);
+                    const respOrig = await fetch(`${API_URL}/api/facturas/consulta/${factura.id_factura_rectificada}`);
                     if (respOrig.ok) {
                         const datosOrig = await respOrig.json();
                         if (datosOrig && datosOrig.factura) {

@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { mostrarNotificacion } from './notificaciones.js';
 import { formatearImporte, formatearFechaSoloDia, mostrarCargando, ocultarCargando, debounce, getEstadoFormateado as getEstadoFormateadoFactura, getEstadoClass as getEstadoClassFactura, parsearImporte } from './scripts_utils.js';
 
@@ -222,7 +222,9 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         const url = `/api/facturas/paginado?${params.toString()}`;
         console.log('URL de búsqueda:', url);
 
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            credentials: 'include'  // Incluir cookies en la petición
+        });
         if (!response.ok) {
             throw new Error('Error al buscar facturas');
         }
@@ -397,7 +399,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 
                 try {
                     showOverlay();
-                    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/facturas/email/${facturaId}`, {
+                    const response = await fetch(`${API_URL}/api/facturas/email/${facturaId}`, {
                         method: 'POST'
                     });
                     
@@ -445,7 +447,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                     const numeroFactura = cartaIcon.getAttribute('data-numero');
                     
                     // Abrir la carta en una nueva ventana/pestaña
-                    const url = `http://${IP_SERVER}:${PORT}/api/carta-reclamacion/${numeroFactura}`;
+                    const url = `${API_URL}/api/carta-reclamacion/${numeroFactura}`;
                     window.open(url, '_blank');
                 });
             }

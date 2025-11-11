@@ -1,4 +1,4 @@
-import { API_URL_PRIMARY, API_URL_FALLBACK } from './constantes.js';
+import { API_URL_PRIMARY, API_URL_FALLBACK } from './constantes.js?v=1762757322';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 
 const { createApp, ref, reactive, onMounted, watch, nextTick } = Vue;
@@ -59,11 +59,15 @@ createApp({
 
         let response;
         try {
-          response = await fetch(endpointPrimary);
+          response = await fetch(endpointPrimary, {
+              credentials: 'include'  // Incluir cookies en la petición
+          });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
         } catch (e) {
           // Fallback al mismo origen (Apache)
-          response = await fetch(endpointFallback);
+          response = await fetch(endpointFallback, {
+              credentials: 'include'  // Incluir cookies en la petición
+          });
         }
         const responseText = await response.text();
 

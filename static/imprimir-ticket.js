@@ -1,7 +1,7 @@
 /**
  * Función principal que se ejecuta al cargar la página.
  */
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import {
     formatearImporte,
     formatearImporteVariable,
@@ -18,7 +18,7 @@ console.log('[TICKET] Script imprimir-ticket.js cargado');
  */
 async function obtenerDatosEmisor() {
     try {
-        const response = await fetch('/api/auth/emisor');
+        const response = await fetch('/api/auth/emisor', { credentials: 'include' });
         if (!response.ok) {
             throw new Error('No se pudo obtener datos del emisor');
         }
@@ -84,7 +84,7 @@ function obtenerIdTicket() {
  * @returns {Promise<Object>} Una promesa que resuelve con los datos del ticket.
  */
 function obtenerDatosDelTicket(idTicket) {
-    const url = `http://${IP_SERVER}:${PORT}/api/tickets/obtenerTicket/${encodeURIComponent(idTicket)}`;
+    const url = `${API_URL}/api/tickets/obtenerTicket/${encodeURIComponent(idTicket)}`;
     console.log('[TICKET] Obteniendo datos de:', url);
     return fetch(url)
         .then(response => {

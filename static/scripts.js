@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { 
   PRODUCTO_ID_LIBRE,
   truncarDecimales,
@@ -42,7 +42,7 @@ import {
   limpiarCamposDetalle,
   seleccionarProducto as seleccionarProductoCommon,
   validarDetalle
-} from './common.js';
+} from './common.js?v=1762757322';
 
 // Variable global para detectar cambios
 let totalInicial = 0;
@@ -162,7 +162,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const confirmado = await mostrarConfirmacion('¿Está seguro de anular este ticket? Se creará un ticket rectificativo.');
         if (!confirmado) return;
         try {
-          const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/tickets/anular/${idTicket}`, { method: 'POST' });
+          const resp = await fetch(`${API_URL}/api/tickets/anular/${idTicket}`, { method: 'POST' });
           const data = await resp.json();
           if (!resp.ok || !data.exito) {
             throw new Error(data.error || 'Error al anular el ticket');
@@ -929,7 +929,7 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
     console.log('Datos del ticket a guardar:', JSON.stringify(ticketData, null, 2));
 
     // Construir la URL base y endpoint según si es crear o actualizar
-    const baseUrl = `http://${IP_SERVER}:${PORT}/api`;
+    const baseUrl = `${API_URL}/api`;
     const url = idticket 
       ? `${baseUrl}/tickets/actualizar`
       : `${baseUrl}/tickets/guardar`;
@@ -1017,7 +1017,7 @@ export function limpiarFormularios() {
  */
 export async function cargarTicket(idTicket) {
   try {
-    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/tickets/obtenerTicket/${idTicket}`);
+    const response = await fetch(`${API_URL}/api/tickets/obtenerTicket/${idTicket}`);
     if (!response.ok) {
       throw new Error(`Error al obtener el ticket: ${response.statusText}`);
     }
@@ -1273,7 +1273,7 @@ export function procesarPago() {
  */
 export async function inicializarNuevoTicket() {
   try {
-    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/tickets/obtener_numerador/T`);
+    const response = await fetch(`${API_URL}/api/tickets/obtener_numerador/T`);
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error || 'Error al obtener el numerador.');

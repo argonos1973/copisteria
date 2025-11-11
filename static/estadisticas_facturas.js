@@ -86,8 +86,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       abrirModalGraficos();
     }
   });
-  document.getElementById('cerrar-modal')?.addEventListener('click', () => {
-    document.getElementById('modal-graficos').style.display = 'none';
+  document.getElementById('cerrar-modal')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const modal = document.getElementById('modal-graficos');
+    if (modal) modal.style.display = 'none';
   });
   document.getElementById('tipo-datos')?.addEventListener('change', abrirModalGraficos);
 
@@ -1014,7 +1016,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isDragging = false, startX, startY, initialLeft, initialTop;
   
     dialog.addEventListener('mousedown', e => {
-      if(e.target.classList.contains('cerrar-modal')) return;
+      // SOLO iniciar drag si se clickea directamente en modal-content (no en hijos)
+      if(e.target !== dialog) return;
       isDragging = true;
       startX = e.clientX; startY = e.clientY;
       const rect = dialog.getBoundingClientRect();
@@ -1073,6 +1076,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
   
   async function abrirModalGraficos() {
+    // Limpiar duplicados del modal si existen (bug de DOM corrupto)
+    const allModals = document.querySelectorAll('#modal-graficos');
+    if (allModals.length > 1) {
+      console.warn(`[MODAL] Detectados ${allModals.length} modales duplicados, limpiando...`);
+      for (let i = 1; i < allModals.length; i++) {
+        allModals[i].remove();
+      }
+    }
+    
     // Si existe gráfico de cliente, destruirlo antes de crear el general
     if (chartCliente) { chartCliente.destroy(); chartCliente = null; }
     if (chartProducto) { chartProducto.destroy(); chartProducto = null; }
@@ -1297,8 +1309,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   
   window.addEventListener('click', e => {
-    if (e.target === document.getElementById('modal-graficos')) document.getElementById('modal-graficos').style.display = 'none';
-  });
+    const modal = document.getElementById('modal-graficos');
+    if (e.target === modal) {
+      modal.style.display = 'none';
+    }
+  }, true);
   
   // ==============================
   // FETCH WRAPPER

@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { 
     PRODUCTO_ID_LIBRE,
     formatearImporte,
@@ -39,7 +39,7 @@ import {
     seleccionarProducto as seleccionarProductoCommon,
     validarDetalle,
     volverSegunOrigen
-} from './common.js';
+} from './common.js?v=1762757322';
 // Eliminado: cálculos legacy reemplazados por calculo_totales_unificado.js
 
 // Variables globales
@@ -442,7 +442,7 @@ function inicializarEventDelegation() {
 
 async function cargarPresupuesto(id) {
   try {
-    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/consulta/${id}`);
+    const response = await fetch(`${API_URL}/api/presupuestos/consulta/${id}`);
     if (!response.ok) throw new Error(`Error al cargar el presupuesto: ${response.statusText}`);
     const data = await response.json();
     const importes = normalizarImportesBackend(data);
@@ -542,7 +542,7 @@ async function cargarPresupuesto(id) {
 
 async function buscarPresupuestoAbierto(idContacto) {
   try {
-    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuesto/abierta/${idContacto}`);
+    const response = await fetch(`${API_URL}/api/presupuesto/abierta/${idContacto}`);
     if (!response.ok) throw new Error(`Error al buscar presupuesto abierto: ${response.statusText}`);
     const data = await response.json();
     const importes = normalizarImportesBackend(data);
@@ -627,7 +627,7 @@ async function buscarPresupuestoAbierto(idContacto) {
     } else {
       // Nuevo
       try {
-        const numResponse = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuesto/numero`);
+        const numResponse = await fetch(`${API_URL}/api/presupuesto/numero`);
         if (!numResponse.ok) throw new Error('Error al obtener el número de presupuesto');
         const numData = await numResponse.json();
         const fecha = new Date();
@@ -672,7 +672,7 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='B') {
 
     // Si no hay id, asegurar número fresco por si ha cambiado el numerador
     if (!idPresupuesto) {
-      const numResponse = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuesto/numero`);
+      const numResponse = await fetch(`${API_URL}/api/presupuesto/numero`);
       if (!numResponse.ok) throw new Error('Error al obtener nuevo número de presupuesto');
       const numData = await numResponse.json();
       const fecha = new Date();
@@ -703,8 +703,8 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='B') {
     };
 
     const url = idPresupuesto 
-      ? `http://${IP_SERVER}:${PORT}/api/presupuestos/actualizar`
-      : `http://${IP_SERVER}:${PORT}/api/presupuesto`;
+      ? `${API_URL}/api/presupuestos/actualizar`
+      : `${API_URL}/api/presupuesto`;
 
     const response = await fetch(url, {
       method: idPresupuesto ? 'PATCH' : 'POST',
@@ -764,7 +764,7 @@ async function cargarContactos(page = 1) {
       nif: filtrosContactos.nif
     });
 
-    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/contactos/paginado?${params}`);
+    const response = await fetch(`${API_URL}/api/contactos/paginado?${params}`);
     if (!response.ok) throw new Error('Error al cargar contactos');
     
     const data = await response.json();
@@ -999,7 +999,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await buscarPresupuestoAbierto(idContacto);
     } else {
       // Inicializar nuevo presupuesto
-      const response = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuesto/numero`);
+      const response = await fetch(`${API_URL}/api/presupuesto/numero`);
       if (!response.ok) throw new Error('Error al obtener el número de presupuesto');
       const numData = await response.json();
       const fecha = new Date();

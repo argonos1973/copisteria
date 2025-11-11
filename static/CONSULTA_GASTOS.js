@@ -171,7 +171,7 @@ async function buscarGastos() {
         params.append('tipo', tipoMovimientoInput.value);
     }
     try {
-        const response = await fetch(`${API_GASTOS}?${params.toString()}`);
+        const response = await fetch(`${API_GASTOS}?${params.toString()}`, { credentials: "include" });
         if (!response.ok) {
             throw new Error('Error al consultar los gastos');
         }
@@ -238,7 +238,7 @@ async function descargarCSV() {
         params.append('tipo', tipoMovimientoInput.value);
     }
     try {
-        const res = await fetch(`${API_GASTOS}?${params.toString()}`);
+        const res = await fetch(`${API_GASTOS}?${params.toString()}`, { credentials: "include" });
         if (!res.ok) throw new Error('Error al generar CSV');
         const data = await res.json();
         const gastos = data.gastos || [];

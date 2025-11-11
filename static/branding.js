@@ -224,7 +224,7 @@ async function aplicarColoresDirectos(plantillaData, plantillaNombre) {
 async function cargarColoresEmpresa() {
     try {
         console.log('[BRANDING] Cargando colores...');
-        const response = await fetch('/api/auth/branding');
+        const response = await fetch('/api/auth/branding', { credentials: 'include' }, { credentials: 'include' });
         
         if (!response.ok) {
             console.error('[BRANDING] ❌ No se pudo obtener branding');
@@ -280,7 +280,7 @@ async function cargarColoresEmpresa() {
         // Ahora se respeta la plantilla configurada en la empresa
         // let username = null;
         // try {
-        //     const s = await fetch('/api/auth/session', { credentials: 'include', cache: 'no-cache' });
+        //     const s = await fetch('/api/auth/session', { credentials: 'include' }, { credentials: 'include' }, { credentials: 'include', cache: 'no-cache' });
         //     if (s.ok) {
         //         const js = await s.json();
         //         username = js?.username || js?.user || null;
@@ -480,9 +480,18 @@ function aplicarColores(colores) {
             background-color: ${colores.submenu_hover || colores.secundario} !important;
         }
         
-        /* Menu activo */
-        .menu-item.active > .menu-link {
-            background-color: ${colores.secundario || '#f5f5f5'} !important;
+        /* Menu activo - sin resalte */
+        .menu-item.active,
+        .menu-item.active:hover,
+        .menu-item.active:focus,
+        .menu-item.active:focus-within,
+        .menu-item.active > .menu-link,
+        .menu-item.active > .menu-link:hover {
+            background: transparent !important;
+            background-color: transparent !important;
+            color: ${colores.submenu_text || colores.header_text || '#000000'} !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
         }
         
         /* Botones - Especificidad máxima */

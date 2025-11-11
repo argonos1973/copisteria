@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * Verifica el estado inicial del scraping al cargar la página
      */
     function verificarEstadoScrapingInicial() {
-        fetch('/api/scraping/estado_scraping')
+        fetch('/api/scraping/estado_scraping', { credentials: 'include' })
             .then(response => response.json())
             .then(data => {
                 if (data.exito && data.en_ejecucion) {
@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mostrarNotificacion("Iniciando actualización de datos bancarios...", "info");
         
         // Verificar si hay un proceso en ejecución antes de iniciar
-        fetch('/api/scraping/estado_scraping')
+        fetch('/api/scraping/estado_scraping', { credentials: 'include' })
             .then(response => response.json())
             .then(estadoData => {
                 if (estadoData.exito && estadoData.en_ejecucion) {
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // No hay proceso en ejecución, iniciar uno nuevo
-                fetch('/api/scraping/ejecutar_scrapeo', {
+                fetch('/api/scraping/ejecutar_scrapeo', { credentials: 'include' }, {
                     method: 'POST'
                 })
                 .then(response => response.json())
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error al verificar estado:', error);
                 // Intentar iniciar de todos modos
-                fetch('/api/scraping/ejecutar_scrapeo', { method: 'POST' })
+                fetch('/api/scraping/ejecutar_scrapeo', { credentials: 'include' }, { method: 'POST' })
                     .then(response => response.json())
                     .then(data => {
                         if (data.exito) {
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const interval = setInterval(function() {
             console.log(`Verificando estado del proceso (intento ${intentos + 1})...`);
             
-            fetch('/api/scraping/estado_scraping')
+            fetch('/api/scraping/estado_scraping', { credentials: 'include' })
                 .then(response => response.json())
                 .then(data => {
                     console.log('Estado del scraping:', data);

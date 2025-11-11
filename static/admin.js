@@ -264,7 +264,7 @@ function inicializarTabs() {
 // Estadísticas
 async function cargarEstadisticas() {
     try {
-        const response = await fetch('/api/admin/stats');
+        const response = await fetch('/api/admin/stats', { credentials: 'include' });
         if (!response.ok) throw new Error('Error cargando estadísticas');
         
         const stats = await response.json();
@@ -286,7 +286,7 @@ async function cargarEstadisticas() {
 // USUARIOS
 async function cargarUsuarios() {
     try {
-        const response = await fetch('/api/admin/usuarios');
+        const response = await fetch('/api/admin/usuarios', { credentials: 'include' });
         if (!response.ok) throw new Error('Error cargando usuarios');
         
         usuarios = await response.json();
@@ -500,7 +500,7 @@ async function eliminarUsuario(id, username) {
 // MÓDULOS
 async function cargarModulos() {
     try {
-        const response = await fetch('/api/admin/modulos');
+        const response = await fetch('/api/admin/modulos', { credentials: 'include' });
         if (!response.ok) throw new Error('Error cargando módulos');
         
         modulos = await response.json();
@@ -683,7 +683,7 @@ async function actualizarPermiso(usuarioId, empresaId, moduloCodigo, campo, valo
 
 async function cargarEmpresas() {
     try {
-        const response = await fetch('/api/empresas');
+        const response = await fetch('/api/empresas', { credentials: 'include' });
         if (!response.ok) throw new Error('Error cargando empresas');
         
         empresas = await response.json();
@@ -922,7 +922,7 @@ async function crearEmpresa(form) {
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
     
     try {
-        const response = await fetch('/api/empresas', {
+        const response = await fetch('/api/empresas', { credentials: 'include' }, {
             method: 'POST',
             body: formData
         });
@@ -2044,7 +2044,7 @@ async function generarColoresArmonicos() {
         
         mostrarNotificacion('Generando paleta de colores armónica...', 'info');
         
-        const response = await fetch('/api/empresas/generar-colores', {
+        const response = await fetch('/api/empresas/generar-colores', { credentials: 'include' }, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -2784,7 +2784,7 @@ async function crearPlantillaPersonalizada(prefijo = '') {
     
     // Guardar en la base de datos
     try {
-        const response = await fetch('/api/plantillas/personalizadas', {
+        const response = await fetch('/api/plantillas/personalizadas', { credentials: 'include' }, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -2949,7 +2949,7 @@ function guardarPlantillaPersonalizada() {
     };
     
     // Enviar a la API
-    fetch('/api/plantillas/personalizadas', {
+    fetch('/api/plantillas/personalizadas', { credentials: 'include' }, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -3036,7 +3036,7 @@ function autoGuardarPlantillaModificada() {
         console.log('💾 Auto-guardando plantilla:', nombrePlantilla);
         
         // Enviar a la API
-        fetch('/api/plantillas/personalizadas', {
+        fetch('/api/plantillas/personalizadas', { credentials: 'include' }, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -3091,7 +3091,7 @@ function inicializarAutoGuardado() {
 async function cargarConfiguracionEmpresa() {
     try {
         // Obtener datos de la empresa actual
-        const brandingResponse = await fetch('/api/auth/branding');
+        const brandingResponse = await fetch('/api/auth/branding', { credentials: 'include' });
         const branding = await brandingResponse.json();
         const empresaId = branding.empresa_id || 1;
         

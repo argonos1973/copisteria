@@ -433,6 +433,17 @@ def crear_empresa():
                 VALUES (?, ?, 'admin', 1)
             ''', (usuario_admin_id, empresa_id))
             
+            # También asignar empresa al usuario actual si no tiene empresa
+            usuario_actual_id = session.get('user_id')
+            empresa_actual = session.get('empresa_id')
+            if usuario_actual_id and not empresa_actual:
+                # Asignar la nueva empresa al usuario actual como admin
+                cursor.execute('''
+                    INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
+                    VALUES (?, ?, 'admin', 1)
+                ''', (usuario_actual_id, empresa_id))
+                logger.info(f"Empresa {codigo} asignada al usuario actual {session.get('username')}")
+            
             # Asignar TODOS los permisos al admin
             modulos = ['facturas', 'tickets', 'proformas', 'productos', 'contactos', 'presupuestos']
             permisos_completos = ['ver', 'crear', 'editar', 'eliminar', 'anular', 'exportar']

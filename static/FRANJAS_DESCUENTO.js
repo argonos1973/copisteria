@@ -1,4 +1,4 @@
-import { API_URL_PRIMARY, API_URL_FALLBACK } from './constantes.js';
+import { API_URL_PRIMARY, API_URL_FALLBACK } from './constantes.js?v=1762757322';
 import { fetchConManejadorErrores, debounce, norm, parsearImporte } from './scripts_utils.js';
 import { mostrarConfirmacion } from './notificaciones.js';
 
@@ -8,6 +8,9 @@ const btnAñadir = document.getElementById('btnAñadir');
 const btnGuardar = document.getElementById('btnGuardar');
 const statusSpan = document.getElementById('status');
 const btnVolver = document.getElementById('btnVolver');
+if (btnVolver) {
+  btnVolver.style.setProperty('display', 'none', 'important'); // Ocultar por defecto
+}
 const tbody = document.querySelector('#tablaFranjas tbody');
 const precioUnitIvaSpan = document.getElementById('precioUnitIva');
 const ivaUnitSpan = document.getElementById('ivaUnit');
@@ -504,6 +507,13 @@ btnGuardar.addEventListener('click', async () => {
 
     const params = new URLSearchParams(window.location.search);
     const pid = Number(params.get('producto_id') || 0);
+    const fromGestion = params.get('from') === 'gestion';
+    
+    // Asegurar que el botón esté oculto por defecto (forzar prioridad)
+    if (btnVolver) {
+      btnVolver.style.setProperty('display', 'none', 'important');
+    }
+    
     if (pid) {
       productoSelect.value = String(pid);
       
@@ -514,12 +524,23 @@ btnGuardar.addEventListener('click', async () => {
         productoSearch.placeholder = 'Gestionando producto específico';
       }
       
-      // Mostrar botón Volver y configurar destino
-      if (btnVolver) {
-        btnVolver.style.display = '';
+      // Mostrar botón Volver SOLO si venimos de gestión de productos
+      if (btnVolver && fromGestion) {
+        console.log('[FRANJAS] Mostrando botón Volver - from=gestion detectado');
+        btnVolver.style.setProperty('display', 'inline-flex', 'important');
         btnVolver.addEventListener('click', () => {
           window.location.href = `GESTION_PRODUCTOS.html?id=${encodeURIComponent(pid)}`;
         });
+      } else {
+        console.log('[FRANJAS] Ocultando botón Volver - from=gestion NO detectado');
+        if (btnVolver) {
+          btnVolver.style.setProperty('display', 'none', 'important');
+        }
+      }
+    } else {
+      console.log('[FRANJAS] No hay producto_id - botón Volver permanece oculto');
+      if (btnVolver) {
+        btnVolver.style.setProperty('display', 'none', 'important');
       }
     }
     setStatus('');

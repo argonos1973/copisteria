@@ -1,4 +1,8 @@
-const API_URL = 'http://192.168.1.23:5001/api';
+// Detectar protocolo y host automáticamente
+const PROTOCOL = window.location.protocol;
+const HOST = window.location.hostname;
+const USE_PORT = (PROTOCOL === 'https:' || HOST.includes('cloudflare')) ? '' : ':5001';
+const API_URL = `${PROTOCOL}//${HOST}${USE_PORT}/api`;
 let empresaId = null;
 let plantillaActual = null;
 

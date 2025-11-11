@@ -787,14 +787,20 @@ with sync_playwright() as p:
                     logger.info("Buscando botón 'Descargar' visible en página de movimientos…")
                     modal_abierto = False
                     
-                    # Intento 0: Selector directo por texto visible "Descargar" (más simple y directo)
+                    # Intento 0: Buscar por el nuevo formato con slot (Web Components)
                     try:
-                        btn_descargar_simple = page.locator("button:has-text('Descargar')").first
-                        if btn_descargar_simple and btn_descargar_simple.count() > 0:
-                            if btn_descargar_simple.is_visible():
-                                logger.info("Botón 'Descargar' encontrado por texto, haciendo clic...")
-                                btn_descargar_simple.click()
-                                page.wait_for_timeout(1000)
+                        # Buscar elementos que contengan slot con texto "Descargar"
+                        btn_slot = page.locator("span:has(slot:text('Descargar'))").first
+                        if btn_slot and btn_slot.count() > 0:
+                            if btn_slot.is_visible():
+                                logger.info("✅ Botón 'Descargar' encontrado (formato slot), haciendo clic...")
+                                # Hacer clic en el elemento padre si existe
+                                parent = btn_slot.locator("..")
+                                if parent.count() > 0:
+                                    parent.click()
+                                else:
+                                    btn_slot.click()
+                                page.wait_for_timeout(1500)
                                 # Verificar si se abrió modal
                                 try:
                                     dlg = page.locator(":is([role=dialog], san-modal, .modal, .cdk-overlay-container, .mat-dialog-container)")
@@ -804,7 +810,27 @@ with sync_playwright() as p:
                                 except Exception:
                                     pass
                     except Exception as e:
-                        logger.warning(f"Intento simple por texto falló: {e}")
+                        logger.warning(f"Intento con slot falló: {e}")
+                    
+                    # Intento 1: Selector directo por texto visible "Descargar" (método anterior)
+                    if not modal_abierto:
+                        try:
+                            btn_descargar_simple = page.locator("button:has-text('Descargar')").first
+                            if btn_descargar_simple and btn_descargar_simple.count() > 0:
+                                if btn_descargar_simple.is_visible():
+                                    logger.info("Botón 'Descargar' encontrado por texto, haciendo clic...")
+                                    btn_descargar_simple.click()
+                                    page.wait_for_timeout(1000)
+                                    # Verificar si se abrió modal
+                                    try:
+                                        dlg = page.locator(":is([role=dialog], san-modal, .modal, .cdk-overlay-container, .mat-dialog-container)")
+                                        if dlg and dlg.count() > 0:
+                                            logger.info("✅ Modal de opciones de descarga abierto correctamente")
+                                            modal_abierto = True
+                                    except Exception:
+                                        pass
+                        except Exception as e:
+                            logger.warning(f"Intento simple por texto falló: {e}")
                     
                     if not modal_abierto:
                         # Intento 1: por rol y nombre accesible
@@ -1119,6 +1145,11 @@ with sync_playwright() as p:
                     except Exception:
                         pass
                     sel_lista = [
+                        # Nuevo formato con slot (Web Components)
+                        "span:has(slot:text('Descargar'))",
+                        "*:has(slot:text('Descargar'))",
+                        "slot:text('Descargar')",
+                        # Formatos anteriores
                         "button:has-text('Descargar')",
                         "button:has-text('Download')",
                         "[role='button']:has-text('Descargar')",

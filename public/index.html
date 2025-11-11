@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Aleph70 - Sistema de Gestión Empresarial completo para copisterías y empresas de impresión">
+    <meta name="keywords" content="gestión empresarial, copistería, facturas, tickets, inventario, CRM">
+    <title>Aleph70 | Sistema de Gestión Empresarial</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/animations.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loader" class="loader">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="container">
+            <div class="nav-wrapper">
+                <div class="logo">
+                    <img src="assets/logo.png" alt="Aleph70" class="logo-img">
+                    <span class="logo-text">Aleph70</span>
+                </div>
+                <ul class="nav-menu" id="navMenu">
+                    <li><a href="#inicio" class="nav-link">Inicio</a></li>
+                    <li><a href="#caracteristicas" class="nav-link">Características</a></li>
+                    <li><a href="#capturas" class="nav-link">Capturas</a></li>
+                    <li><a href="#planes" class="nav-link">Planes</a></li>
+                    <li><a href="#contacto" class="nav-link">Contacto</a></li>
+                    <li><a href="/LOGIN.html" class="nav-link btn-login">Acceder</a></li>
+                </ul>
+                <div class="hamburger" id="hamburger">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="inicio" class="hero">
+        <div class="hero-bg">
+            <div class="bg-shape bg-shape-1"></div>
+            <div class="bg-shape bg-shape-2"></div>
+        </div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1 class="hero-title animate-fade-up">
+                        Sistema de Gestión <span class="gradient-text">Empresarial</span>
+                    </h1>
+                    <p class="hero-description animate-fade-up-delay">
+                        La solución completa para copisterías y empresas de impresión. 
+                        Gestiona tickets, facturas, inventario, clientes y mucho más desde un solo lugar.
+                    </p>
+                    <div class="hero-buttons animate-fade-up-delay-2">
+                        <button class="btn btn-primary" onclick="openRegisterModal()">
+                            <i class="fas fa-rocket"></i> Empezar Gratis
+                        </button>
+                        <a href="#caracteristicas" class="btn btn-outline">
+                            <i class="fas fa-info-circle"></i> Más Información
+                        </a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <span class="stat-number">500+</span>
+                            <span class="stat-label">Empresas Activas</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">50K+</span>
+                            <span class="stat-label">Facturas Procesadas</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">99.9%</span>
+                            <span class="stat-label">Disponibilidad</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <img src="images/dashboard-preview.png" alt="Dashboard Aleph70" class="dashboard-img">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="caracteristicas" class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Características Principales</h2>
+                <p class="section-subtitle">Todo lo que necesitas para gestionar tu negocio</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                    <h3>Gestión de Tickets</h3>
+                    <p>Sistema completo de tickets con numeración automática, búsqueda avanzada y anulaciones.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <h3>Facturación Electrónica</h3>
+                    <p>Genera facturas electrónicas con FacturaE, gestión de series y envío automático por email.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>CRM de Clientes</h3>
+                    <p>Base de datos completa de clientes con histórico, estadísticas y gestión de créditos.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                    <h3>Control de Inventario</h3>
+                    <p>Gestión de productos, precios por franjas, control de stock y alertas automáticas.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Estadísticas en Tiempo Real</h3>
+                    <p>Dashboards interactivos con métricas de ventas, comparativas y análisis de rentabilidad.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-cloud"></i>
+                    </div>
+                    <h3>100% en la Nube</h3>
+                    <p>Acceso desde cualquier dispositivo, backups automáticos y actualizaciones continuas.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Screenshots Section -->
+    <section id="capturas" class="screenshots">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Capturas de Pantalla</h2>
+                <p class="section-subtitle">Conoce la interfaz intuitiva de Aleph70</p>
+            </div>
+            <div class="screenshots-carousel">
+                <div class="screenshot-item active">
+                    <img src="images/screenshot-dashboard.png" alt="Dashboard Principal">
+                    <div class="screenshot-info">
+                        <h4>Dashboard Principal</h4>
+                        <p>Vista general con métricas clave y accesos rápidos</p>
+                    </div>
+                </div>
+                <div class="screenshot-item">
+                    <img src="images/screenshot-tickets.png" alt="Gestión de Tickets">
+                    <div class="screenshot-info">
+                        <h4>Gestión de Tickets</h4>
+                        <p>Interface moderna para crear y gestionar tickets</p>
+                    </div>
+                </div>
+                <div class="screenshot-item">
+                    <img src="images/screenshot-stats.png" alt="Estadísticas">
+                    <div class="screenshot-info">
+                        <h4>Estadísticas Avanzadas</h4>
+                        <p>Gráficos interactivos y reportes detallados</p>
+                    </div>
+                </div>
+            </div>
+            <div class="screenshot-nav">
+                <button class="screenshot-btn prev" onclick="changeScreenshot(-1)">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="screenshot-btn next" onclick="changeScreenshot(1)">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="planes" class="pricing">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Planes y Precios</h2>
+                <p class="section-subtitle">Elige el plan que mejor se adapte a tu negocio</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Básico</h3>
+                        <div class="price">
+                            <span class="currency">€</span>
+                            <span class="amount">29</span>
+                            <span class="period">/mes</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Hasta 100 tickets/mes</li>
+                        <li><i class="fas fa-check"></i> 1 usuario</li>
+                        <li><i class="fas fa-check"></i> Soporte por email</li>
+                        <li><i class="fas fa-check"></i> Backup diario</li>
+                        <li><i class="fas fa-times"></i> Facturación electrónica</li>
+                        <li><i class="fas fa-times"></i> API access</li>
+                    </ul>
+                    <button class="btn btn-outline-full" onclick="selectPlan('basico')">Elegir Plan</button>
+                </div>
+                <div class="pricing-card featured">
+                    <div class="badge">Más Popular</div>
+                    <div class="pricing-header">
+                        <h3>Profesional</h3>
+                        <div class="price">
+                            <span class="currency">€</span>
+                            <span class="amount">59</span>
+                            <span class="period">/mes</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Tickets ilimitados</li>
+                        <li><i class="fas fa-check"></i> 5 usuarios</li>
+                        <li><i class="fas fa-check"></i> Soporte prioritario</li>
+                        <li><i class="fas fa-check"></i> Backup cada hora</li>
+                        <li><i class="fas fa-check"></i> Facturación electrónica</li>
+                        <li><i class="fas fa-check"></i> Integraciones</li>
+                    </ul>
+                    <button class="btn btn-primary-full" onclick="selectPlan('profesional')">Elegir Plan</button>
+                </div>
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Empresa</h3>
+                        <div class="price">
+                            <span class="currency">€</span>
+                            <span class="amount">99</span>
+                            <span class="period">/mes</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Todo ilimitado</li>
+                        <li><i class="fas fa-check"></i> Usuarios ilimitados</li>
+                        <li><i class="fas fa-check"></i> Soporte 24/7</li>
+                        <li><i class="fas fa-check"></i> Backup continuo</li>
+                        <li><i class="fas fa-check"></i> Multi-empresa</li>
+                        <li><i class="fas fa-check"></i> Personalización</li>
+                    </ul>
+                    <button class="btn btn-outline-full" onclick="selectPlan('empresa')">Elegir Plan</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contacto" class="contact">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">¿Tienes dudas?</h2>
+                <p class="section-subtitle">Estamos aquí para ayudarte</p>
+            </div>
+            <div class="contact-content">
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <h4>Email</h4>
+                            <p>info@aleph70.com</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <h4>Teléfono</h4>
+                            <p>+34 900 123 456</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <h4>Horario</h4>
+                            <p>Lun-Vie: 9:00 - 19:00</p>
+                        </div>
+                    </div>
+                </div>
+                <form class="contact-form" id="contactForm">
+                    <div class="form-group">
+                        <input type="text" placeholder="Tu nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" placeholder="Tu email" required>
+                    </div>
+                    <div class="form-group">
+                        <textarea placeholder="Tu mensaje" rows="5" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary-full">
+                        <i class="fas fa-paper-plane"></i> Enviar Mensaje
+                    </button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h3>Aleph70</h3>
+                    <p>Sistema de gestión empresarial líder para copisterías y empresas de impresión.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="footer-column">
+                    <h4>Enlaces Rápidos</h4>
+                    <ul>
+                        <li><a href="#caracteristicas">Características</a></li>
+                        <li><a href="#planes">Precios</a></li>
+                        <li><a href="#capturas">Capturas</a></li>
+                        <li><a href="/LOGIN.html">Acceder</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Términos y Condiciones</a></li>
+                        <li><a href="#">Política de Privacidad</a></li>
+                        <li><a href="#">Cookies</a></li>
+                        <li><a href="#">LOPD</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h4>Newsletter</h4>
+                    <p>Recibe las últimas novedades y actualizaciones</p>
+                    <form class="newsletter-form">
+                        <input type="email" placeholder="Tu email">
+                        <button type="submit" class="btn btn-primary">Suscribir</button>
+                    </form>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Aleph70. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeRegisterModal()">&times;</span>
+            <h2>Crear Cuenta Gratis</h2>
+            <p class="modal-subtitle">Empieza tu prueba gratuita de 30 días</p>
+            
+            <form id="registerForm" class="register-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <input type="text" id="regName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Apellidos</label>
+                        <input type="text" id="regSurname" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Empresa</label>
+                    <input type="text" id="regCompany" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="regEmail" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="tel" id="regPhone" required>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Contraseña</label>
+                        <input type="password" id="regPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmar Contraseña</label>
+                        <input type="password" id="regPasswordConfirm" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="regTerms" required>
+                        Acepto los <a href="#">términos y condiciones</a>
+                    </label>
+                </div>
+                
+                <!-- Google reCAPTCHA -->
+                <div class="g-recaptcha" data-sitekey="your-recaptcha-site-key"></div>
+                
+                <button type="submit" class="btn btn-primary-full">
+                    <i class="fas fa-user-plus"></i> Crear Cuenta
+                </button>
+                
+                <p class="form-footer">
+                    ¿Ya tienes cuenta? <a href="/LOGIN.html">Iniciar sesión</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal">
+        <div class="modal-content success-modal">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2>¡Registro Exitoso!</h2>
+            <p>Tu cuenta ha sido creada correctamente. En breve recibirás un email de confirmación.</p>
+            <button class="btn btn-primary" onclick="window.location.href='/LOGIN.html'">
+                Ir a Iniciar Sesión
+            </button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</body>
+</html>

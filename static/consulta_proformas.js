@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import { formatearImporte, formatearFechaSoloDia, getEstadoFormateado, getEstadoClass, parsearImporte } from './scripts_utils.js';
 
@@ -123,10 +123,10 @@ async function buscarProformas() {
             params.append('limit', '10');
         }
 
-        const url = `http://${IP_SERVER}:${PORT}/api/proformas/consulta?${params}`;
+        const url = `${API_URL}/api/proformas/consulta?${params}`;
         console.log('URL de búsqueda:', url);
 
-        const response = await fetch(url);
+        const response = await fetch(url, { credentials: "include" });
         if (!response.ok) {
             throw new Error('Error al buscar proformas');
         }
@@ -197,7 +197,7 @@ async function buscarProformas() {
                         const confirmado = await mostrarConfirmacion(`¿Estás seguro de que deseas convertir la proforma ${proforma.numero} a factura?`);
                         if (confirmado) {
                             showOverlay();
-                            const response = await fetch(`http://${IP_SERVER}:${PORT}/api/proformas/${proforma.id}/convertir`, {
+                            const response = await fetch(`${API_URL}/api/proformas/${proforma.id}/convertir`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json'

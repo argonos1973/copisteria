@@ -7,14 +7,14 @@
     <title>Panel de Control</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <!-- CSS base que usa variables CSS generadas por applyTheme -->
-    <link rel="stylesheet" href="/static/theme-base.css?v=1761938648">
+    <link rel="stylesheet" href="/static/theme-base.css?v=1762757322">
     <!-- CSS que consume las variables del tema y las aplica a la UI -->
-    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762362531">
-    <link rel="stylesheet" href="/static/styles.css?v=1761938648">
+    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762757322">
+    <link rel="stylesheet" href="/static/styles.css?v=1762757322">
     <link rel="stylesheet" href="/static/notificaciones.css">
     <link rel="stylesheet" href="/static/footer.css">
     <link rel="stylesheet" href="/static/page_header.css">
-    <link rel="stylesheet" href="/static/app_private.css?v=1762280740">
+    <link rel="stylesheet" href="/static/app_private.css?v=1762757322">
     <!-- CSS inline eliminado - movido a app_private.css -->
 </head>
 <body>
@@ -110,19 +110,19 @@
     </script>
     
     <!-- Cargador de menú dinámico -->
-    <script src="/static/menu_loader.js?v=1761938648"></script>
+    <script src="/static/menu_loader.js?v=1762757322"></script>
     <!-- Sistema de permisos -->
     <script src="/static/permisos.js"></script>
 
     
     <!-- Manejador de navegación del menú -->
-    <script src="/static/menu.js?v=v20251102_171031"></script>
+    <script src="/static/menu.js?v=1762757322v20251102_171031"></script>
     
     <!-- Branding y colores de empresa -->
-    <script src="/static/branding.js?v=1762345385184"></script>
+    <script src="/static/branding.js?v=1762757322"></script>
 
     <!-- Funciones principales de la aplicación -->
-    <script src="/static/app_private.js?v=1761938648"></script>
+    <script src="/static/app_private.js?v=1762757322"></script>
 
     <!-- Cargar versión de la aplicación -->
     <script>
@@ -382,46 +382,77 @@
         
         .plantilla-card-perfil {
             padding: 20px 15px;
-            border: 3px solid var(--color-border, #ddd);
+            border: 3px solid;
             border-radius: 10px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
-            background: var(--bg-card, #fff);
+            position: relative;
+            overflow: hidden;
         }
         
         .plantilla-card-perfil:hover {
             transform: translateY(-4px);
             box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-            border-color: var(--primary, var(--color-primario, #3498db));
         }
         
         .plantilla-card-perfil.active {
             border-color: var(--primary, var(--color-primario, #3498db));
-            background: var(--bg-hover, #f0f0f0);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            background: linear-gradient(135deg, var(--primary, #3498db) 0%, var(--primary-dark, #2980b9) 100%);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .plantilla-card-perfil.active .plantilla-icon,
+        .plantilla-card-perfil.active .plantilla-nombre {
+            color: white !important;
         }
         
         .plantilla-card-perfil .plantilla-icon {
             font-size: 32px;
             margin-bottom: 10px;
+            transition: color 0.3s;
         }
         
         .plantilla-card-perfil .plantilla-nombre {
             font-weight: 600;
             font-size: 14px;
             color: var(--color-texto, #333);
+            transition: color 0.3s;
         }
         
         .plantilla-card-perfil .plantilla-check {
             display: none;
-            color: var(--primary, var(--color-primario, #3498db));
+            color: white;
             font-size: 20px;
             margin-top: 8px;
         }
         
         .plantilla-card-perfil.active .plantilla-check {
             display: block;
+        }
+        
+        .plantilla-preview-colors {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .preview-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .plantilla-card-perfil.active .plantilla-preview-colors {
+            opacity: 0.9;
+        }
+        
+        .plantilla-card-perfil.active .preview-dot {
+            border-color: rgba(255,255,255,0.3);
         }
     </style>
 
@@ -558,15 +589,35 @@
                 const plantillas = plantillasData.plantillas;
                 
                 const grid = document.getElementById('plantillas-grid');
-                grid.innerHTML = plantillas.map(p => `
-                    <div class="plantilla-card-perfil ${p.id === plantillaActual ? 'active' : ''}" 
-                         data-plantilla="${p.id}"
-                         onclick="cambiarPlantillaUsuario('${p.id}', this)">
-                        <div class="plantilla-icon">${p.icono}</div>
-                        <div class="plantilla-nombre">${p.nombre}</div>
-                        <div class="plantilla-check"><i class="fas fa-check-circle"></i></div>
-                    </div>
-                `).join('');
+                grid.innerHTML = plantillas.map(p => {
+                    const isActive = p.id === plantillaActual;
+                    const colores = p.colores || {};
+                    
+                    // Si está activa, usar el gradiente azul, si no, usar los colores del tema
+                    const estilosCard = isActive ? 
+                        `background: linear-gradient(135deg, var(--primary, #3498db) 0%, var(--primary-dark, #2980b9) 100%); border-color: var(--primary, #3498db);` :
+                        `background: ${colores.background || '#fff'}; border-color: ${colores.border || '#ddd'};`;
+                    
+                    const estilosTexto = isActive ?
+                        `color: white !important;` :
+                        `color: ${colores.text || '#333'};`;
+                    
+                    return `
+                        <div class="plantilla-card-perfil ${isActive ? 'active' : ''}" 
+                             data-plantilla="${p.id}"
+                             style="${estilosCard}"
+                             onclick="cambiarPlantillaUsuario('${p.id}', this)">
+                            <div class="plantilla-preview-colors">
+                                <span class="preview-dot" style="background: ${colores.primary || '#3498db'}"></span>
+                                <span class="preview-dot" style="background: ${colores.background || '#fff'}"></span>
+                                <span class="preview-dot" style="background: ${colores.text || '#000'}"></span>
+                            </div>
+                            <div class="plantilla-icon" style="${estilosTexto}">${p.icono}</div>
+                            <div class="plantilla-nombre" style="${estilosTexto}">${p.nombre}</div>
+                            <div class="plantilla-check"><i class="fas fa-check-circle"></i></div>
+                        </div>
+                    `;
+                }).join('');
                 
                 console.log(`✅ ${plantillas.length} plantillas cargadas dinámicamente`);
             } catch (error) {
@@ -577,6 +628,19 @@
         
         async function cambiarPlantillaUsuario(plantilla, clickedElement) {
             try {
+                // Actualizar UI inmediatamente para mostrar feedback visual
+                document.querySelectorAll('.plantilla-card-perfil').forEach(card => {
+                    card.classList.remove('active');
+                });
+                
+                // Marcar la plantilla seleccionada como activa
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                } else {
+                    const card = document.querySelector(`.plantilla-card-perfil[data-plantilla="${plantilla}"]`);
+                    if (card) card.classList.add('active');
+                }
+                
                 const response = await fetch('/api/usuario/plantilla', {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -589,28 +653,30 @@
                     // Aplicar tema inmediatamente
                     if (typeof applyTheme === 'function') {
                         await applyTheme(result.colores);
-                    }
-                    
-                    // Actualizar UI de la modal
-                    document.querySelectorAll('.plantilla-card-perfil').forEach(card => {
-                        card.classList.remove('active');
-                    });
-                    
-                    // Marcar la plantilla seleccionada como activa
-                    const cardToActivate = clickedElement || document.querySelector(`.plantilla-card-perfil[data-plantilla="${plantilla}"]`);
-                    if (cardToActivate) {
-                        cardToActivate.classList.add('active');
+                        console.log(`✅ Plantilla "${plantilla}" aplicada al documento`);
+                    } else {
+                        console.error('❌ Función applyTheme no disponible');
                     }
                     
                     mostrarNotificacion('Plantilla cambiada correctamente', 'success');
                     
-                    // Recargar página para aplicar cambios en iframe
-                    setTimeout(() => location.reload(), 500);
+                    // Recargar la modal para aplicar el nuevo tema
+                    await cargarPlantillasModal();
+                    
+                    // Recargar página para aplicar cambios completos después de un breve delay
+                    setTimeout(() => {
+                        console.log('🔄 Recargando página para aplicar cambios completos...');
+                        location.reload();
+                    }, 1500);
                 } else {
+                    // Si hay error, restaurar el estado activo anterior
+                    await cargarPlantillasModal();
                     mostrarNotificacion('Error: ' + (result.error || 'No se pudo cambiar la plantilla'), 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
+                // Si hay error, restaurar el estado
+                await cargarPlantillasModal();
                 mostrarNotificacion('Error al cambiar plantilla', 'error');
             }
         }

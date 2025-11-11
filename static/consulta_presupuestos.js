@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import { formatearFechaSoloDia, getEstadoFormateado, getEstadoClass, parsearImporte } from './scripts_utils.js';
 
@@ -53,10 +53,10 @@ async function buscarPresupuestos() {
     // Añadir limit basado en el selector de página
     params.append('limit', pageSize);
 
-    const url = `http://${IP_SERVER}:${PORT}/api/presupuestos/consulta?${params.toString()}`;
+    const url = `${API_URL}/api/presupuestos/consulta?${params.toString()}`;
     // Trazas de depuración (se pueden dejar; ayudan a diagnosticar filtros en producción)
     try { console.debug('[CONSULTA_PRESUPUESTOS] Parámetros', { startDate, endDate, status, presupuestoNumber, contacto, identificador, url }); } catch (_) {}
-    const response = await fetch(url);
+    const response = await fetch(url, { credentials: "include" });
     if (!response.ok) throw new Error('Error al buscar presupuestos');
     const data = await response.json();
     if (!Array.isArray(data.items || data)) throw new Error('Formato de respuesta inválido');
@@ -105,7 +105,7 @@ async function buscarPresupuestos() {
         event.stopPropagation();
         try {
           showOverlay();
-          const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/${item.id}/imprimir`);
+          const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/imprimir`, { credentials: "include" });
           if (!resp.ok) throw new Error('Error al generar PDF');
           
           const blob = await resp.blob();
@@ -143,7 +143,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Enviar el presupuesto ${item.numero} por email a ${item.mail}?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/${item.id}/enviar_email`, { 
+              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/enviar_email`, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' } 
               });
@@ -173,7 +173,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Convertir el presupuesto ${item.numero} a factura?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/${item.id}/convertir_factura`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/convertir_factura`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
               if (!resp.ok) throw new Error('Error al convertir presupuesto a factura');
               const result = await resp.json();
               mostrarNotificacion(`Presupuesto ${item.numero} convertido a factura ${result.numero_factura}`, 'success');
@@ -201,7 +201,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Convertir el presupuesto ${item.numero} a ticket?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`http://${IP_SERVER}:${PORT}/api/presupuestos/${item.id}/convertir_ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/convertir_ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
               if (!resp.ok) throw new Error('Error al convertir presupuesto a ticket');
               const result = await resp.json();
               mostrarNotificacion(`Presupuesto ${item.numero} convertido a ticket ${result.numero_ticket}`, 'success');

@@ -53,8 +53,10 @@
                 console.log('[GRAFICO ANIO] Usando año actual:', anio);
             }
             
+            const apiProtocol = window.location.protocol;
             const apiHost = window.location.hostname;
-            const response = await fetch(`http://${apiHost}:5001/api/gastos/por-categoria-anio?anio=${anio}`);
+            const apiPort = apiProtocol === 'https:' ? '' : ':5001';
+            const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/gastos/por-categoria-anio?anio=${anio}`);
             
             if (!response.ok) {
                 console.error('[GRAFICO ANIO] Error en respuesta:', response.status);
@@ -275,7 +277,7 @@
         }
         
         .icono-actualizar:hover {
-            
+            opacity: 0.8;
         }
         
         .icono-actualizar.disabled {
@@ -339,11 +341,11 @@
         }
         
         .stats-percentage.positive {
-            
+            color: #27ae60;
         }
         
         .stats-percentage.negative {
-            
+            color: #e74c3c;
         }
         
         .stats-previous {
@@ -442,7 +444,7 @@
 
         .stats-card{position:relative;}
         .toggle-card{border:none;cursor:pointer;margin-left:0.5rem;font-size:0.9rem;padding:2px 6px;border-radius:3px;transition:all 0.2s ease;}        
-        .toggle-card:hover{}
+        .toggle-card:hover{opacity: 0.8;}
         .stats-card.collapsed .toggle-card{border:1px solid #e0e0e0;}
         .toggle-card i{pointer-events:none;}
         .stats-card.collapsed{padding:0.5rem 1rem;transition:none;max-height:2.5rem;overflow:hidden;}
@@ -468,20 +470,26 @@
         }
         
         .importe-negativo {
-            
+            color: #e74c3c;
         }
         
         .importe-positivo {
-            
+            color: #27ae60;
         }
     </style>
 
 <style>
     /* Modal para gráficos */
-    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background: var(--modal-overlay, rgba(0,0,0,0.5))} 
-    .modal-content{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px;border-radius:8px;width:90%;max-width:900px;cursor:move;}
+    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;overflow:auto;background: rgba(0,0,0,0.5);} 
+    #modal-graficos{background:rgba(0,0,0,0.5) !important;}
+    #modal-graficos .modal-content{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:20px;border:0 !important;border-width:0 !important;outline:none !important;border-radius:8px !important;width:90%;max-width:900px;cursor:move;background:var(--modal-bg, #ffffff) !important;box-shadow:0 4px 20px rgba(0,0,0,0.3) !important;}
+    /* Sobrescribir variables CSS del tema para este modal específico */
+    #modal-graficos {
+        --modal-border: transparent;
+        --modal-border-width: 0;
+    }
     .cerrar-modal{float:right;font-size:28px;font-weight:bold;cursor:pointer;}
-    .cerrar-modal:hover{}
+    .cerrar-modal:hover{opacity: 0.7;}
     /* Header layout */
     .stats-header{display:flex;flex-direction:column;gap:0.2rem;margin-bottom:1rem;}
     .header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;}
@@ -868,7 +876,7 @@
 
 <div id="modal-graficos" class="modal">
     <div class="modal-content">
-        <span class="cerrar-modal" id="cerrar-modal">&times;</span>
+        <span class="cerrar-modal" id="cerrar-modal" style="cursor: pointer; z-index: 9999;">&times;</span>
         <div class="chart-controls" class="chart-controls">
             <label for="tipo-datos" class="label-spacing">Mostrar:</label>
             <select id="tipo-datos" class="form-select">
@@ -1216,9 +1224,11 @@ window.cargarDatosGastos = async function() {
         const [anio, mes] = selectorFecha.value.split('-');
         console.log(`[INLINE] ✅ Año: ${anio}, Mes: ${mes}`);
         
-        // Cargar estadísticas generales (usar IP dinámica)
+        // Cargar estadísticas generales (usar protocolo y host dinámicos)
+        const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
-        const urlEstadisticas = `http://${apiHost}:5001/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`;
+        const apiPort = apiProtocol === 'https:' ? '' : ':5001'; // No usar puerto si es HTTPS
+        const urlEstadisticas = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`;
         console.log('[INLINE] 📡 Haciendo fetch a:', urlEstadisticas);
         
         const respuesta = await fetch(urlEstadisticas);
@@ -1297,8 +1307,10 @@ async function cargarTop10GastosInline(anio) {
         
         tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;">⏳ Cargando Top 10...</td></tr>';
         
+        const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
-        const url = `http://${apiHost}:5001/api/gastos/top10?anio=${anio}`;
+        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
+        const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/top10?anio=${anio}`;
         console.log('[INLINE] URL:', url);
         
         const respuesta = await fetch(url);
@@ -1427,8 +1439,10 @@ async function abrirModalDetallesGasto(concepto, anio) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
+        const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
-        const url = `http://${apiHost}:5001/api/gastos/detalles?concepto=${encodeURIComponent(concepto)}&anio=${anio}`;
+        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
+        const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/detalles?concepto=${encodeURIComponent(concepto)}&anio=${anio}`;
         console.log('[MODAL] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1526,8 +1540,10 @@ async function abrirModalDetallesGastoMes(categoria) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
+        const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
-        const url = `http://${apiHost}:5001/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&mes=${parseInt(mes)}`;
+        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
+        const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&mes=${parseInt(mes)}`;
         console.log('[MODAL MES] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1626,8 +1642,10 @@ async function abrirModalDetallesGastoAnio(categoria) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
+        const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
-        const url = `http://${apiHost}:5001/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
+        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
+        const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
         console.log('[MODAL ANIO] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1721,8 +1739,10 @@ async function cargarGraficoGastosMes() {
         const [anio, mes] = selectorFecha.value.split('-');
         console.log('[GRAFICO] Cargando gráfico para:', mes, '/', anio);
         
+        const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
-        const response = await fetch(`http://${apiHost}:5001/api/gastos/por-categoria-mes?anio=${anio}&mes=${parseInt(mes)}`);
+        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
+        const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/gastos/por-categoria-mes?anio=${anio}&mes=${parseInt(mes)}`);
         
         if (!response.ok) {
             console.error('[GRAFICO] Error en respuesta:', response.status);
@@ -1860,8 +1880,10 @@ async function cargarGraficoGastosMensual(categoria) {
         
         console.log('[GRAFICO MENSUAL] Cargando para:', categoria, anio);
         
+        const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
-        const response = await fetch(`http://${apiHost}:5001/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`);
+        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
+        const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`);
         
         if (!response.ok) {
             console.error('[GRAFICO MENSUAL] Error en respuesta:', response.status);
@@ -1994,8 +2016,10 @@ async function abrirModalInformeSituacion() {
     const [anio, mes] = selectorFecha.value.split('-');
     
     try {
+        const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
-        const response = await fetch(`http://${apiHost}:5001/api/informe-situacion?anio=${anio}&mes=${parseInt(mes)}`);
+        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
+        const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/informe-situacion?anio=${anio}&mes=${parseInt(mes)}`);
         
         if (!response.ok) {
             throw new Error(`Error HTTP: ${response.status}`);
@@ -2177,8 +2201,10 @@ async function ejecutarSimulacion() {
     };
     
     try {
-        // Usar la misma IP que el navegador para evitar problemas de CORS
-        const apiUrl = `http://${window.location.hostname}:5001/api/simulador-financiero`;
+        // Usar protocolo dinámico para evitar problemas de Mixed Content
+        const apiProtocol = window.location.protocol;
+        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
+        const apiUrl = `${apiProtocol}//${window.location.hostname}${apiPort}/api/simulador-financiero`;
         console.log('[SIMULADOR] Llamando a:', apiUrl);
         
         const response = await fetch(apiUrl, {
@@ -2259,7 +2285,9 @@ async function aplicarEstrategia() {
     console.log('[ESTRATEGIA] Aplicando estrategia:', estrategiaSeleccionada);
     
     // Obtener datos reales primero
-    const apiUrl = `http://${window.location.hostname}:5001/api/simulador-financiero`;
+    const apiProtocol = window.location.protocol;
+    const apiPort = apiProtocol === 'https:' ? '' : ':5001';
+    const apiUrl = `${apiProtocol}//${window.location.hostname}${apiPort}/api/simulador-financiero`;
     
     try {
         // 1. Obtener situación base

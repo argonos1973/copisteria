@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { 
   PRODUCTO_ID_LIBRE,
   truncarDecimales,
@@ -13,7 +13,8 @@ import { mostrarNotificacion } from './notificaciones.js';
 // Funciones comunes para manejo de productos
 export async function cargarProductos() {
   try {
-    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/productos`);
+    // Usar API_URL que ya tiene el protocolo correcto
+    const response = await fetch(`${API_URL}/api/productos`);
     if (!response.ok) {
       throw new Error(`Error al cargar productos: ${response.statusText}`);
     }

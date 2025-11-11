@@ -259,24 +259,35 @@ def autenticar_usuario(username, password, empresa_codigo):
             conn.close()
             return None
         
-        # Verificar acceso a empresa
-        cursor.execute('''
-            SELECT ue.rol, ue.es_admin_empresa, e.id, e.nombre, e.db_path, e.logo_header
-            FROM usuario_empresa ue
-            JOIN empresas e ON ue.empresa_id = e.id
-            WHERE ue.usuario_id = ? 
-            AND e.codigo = ?
-            AND e.activa = 1
-        ''', (user_id, empresa_codigo))
-        
-        empresa = cursor.fetchone()
-        
-        if not empresa:
-            logger.warning(f"Usuario {username} sin acceso a empresa {empresa_codigo}")
-            conn.close()
-            return {'error': 'No tienes acceso a esta empresa'}
-        
-        rol, es_admin_empresa, empresa_id, empresa_nombre, db_path, logo_header = empresa
+        # Si empresa_codigo es None o vacío, permitir login sin empresa
+        if not empresa_codigo:
+            logger.info(f"Usuario {username} ingresando sin empresa asignada")
+            # Usuario sin empresa - acceso limitado
+            rol = 'usuario'
+            es_admin_empresa = True  # Usuario sin empresa es admin para poder crear su empresa
+            empresa_id = None
+            empresa_nombre = 'Sin Empresa'
+            db_path = None
+            logo_header = 'aleph_completo.png'  # Logo completo de Aleph70
+        else:
+            # Verificar acceso a empresa
+            cursor.execute('''
+                SELECT ue.rol, ue.es_admin_empresa, e.id, e.nombre, e.db_path, e.logo_header
+                FROM usuario_empresa ue
+                JOIN empresas e ON ue.empresa_id = e.id
+                WHERE ue.usuario_id = ? 
+                AND e.codigo = ?
+                AND e.activa = 1
+            ''', (user_id, empresa_codigo))
+            
+            empresa = cursor.fetchone()
+            
+            if not empresa:
+                logger.warning(f"Usuario {username} sin acceso a empresa {empresa_codigo}")
+                conn.close()
+                return {'error': 'No tienes acceso a esta empresa'}
+            
+            rol, es_admin_empresa, empresa_id, empresa_nombre, db_path, logo_header = empresa
         
         # Obtener último acceso ANTES de actualizarlo
         cursor.execute('SELECT ultimo_acceso FROM usuarios WHERE id = ?', (user_id,))

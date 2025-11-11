@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js?v=20250911_1135';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { mostrarConfirmacion } from './notificaciones.js';
 
 export const PRODUCTO_ID_LIBRE = '94';
@@ -1278,9 +1278,12 @@ export function buildApiUrl(path) {
     if (!path) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
     const p = path.startsWith('/') ? path : `/${path}`;
-    // Para rutas de API, devolver SIEMPRE absoluta a la IP del servidor (evita puertos incorrectos)
+    // Para rutas de API, usar protocolo y puerto correctos
     if (p.startsWith('/api')) {
-      return `http://${IP_SERVER}:${PORT}${p}`;
+      // Detectar protocolo automáticamente - IMPORTANTE para Cloudflare
+      const PROTOCOL = window.location.protocol || 'http:';
+      const USE_PORT = (PROTOCOL === 'https:' || window.location.hostname.includes('cloudflare')) ? '' : `:${PORT}`;
+      return `${PROTOCOL}//${IP_SERVER}${USE_PORT}${p}`;
     }
     // Para otras rutas, devolver relativo al origen
     return p;

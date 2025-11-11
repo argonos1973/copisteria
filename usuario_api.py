@@ -131,10 +131,49 @@ def obtener_plantillas_disponibles():
                             nombre = data.get('name', plantilla_id.replace('_', ' ').title())
                             icono = data.get('meta', {}).get('icon', '🎨')
                             
+                            # Función para resolver referencias
+                            def resolver_referencia(valor, data):
+                                if isinstance(valor, str) and valor.startswith('{') and valor.endswith('}'):
+                                    # Quitar llaves y obtener la ruta
+                                    path = valor[1:-1].split('.')
+                                    
+                                    # Navegar por el objeto para obtener el valor
+                                    resultado = data
+                                    for parte in path:
+                                        if isinstance(resultado, dict) and parte in resultado:
+                                            resultado = resultado[parte]
+                                        else:
+                                            return valor  # Devolver como está si no se puede resolver
+                                    
+                                    # Resolver recursivamente si el resultado es otra referencia
+                                    if isinstance(resultado, str) and resultado.startswith('{'):
+                                        return resolver_referencia(resultado, data)
+                                    
+                                    return resultado
+                                return valor
+                            
+                            # Extraer colores para preview
+                            colores_preview = {}
+                            if 'semantic' in data:
+                                semantic = data['semantic']
+                                colores_preview['background'] = resolver_referencia(semantic.get('bg', '#ffffff'), data)
+                                colores_preview['text'] = resolver_referencia(semantic.get('text', '#000000'), data)
+                                colores_preview['primary'] = resolver_referencia(semantic.get('primary', '#3498db'), data)
+                                colores_preview['border'] = resolver_referencia(semantic.get('border', '#ddd'), data)
+                            else:
+                                # Valores por defecto para plantillas sin estructura semantic
+                                colores_preview = {
+                                    'background': '#ffffff',
+                                    'text': '#000000',
+                                    'primary': '#3498db',
+                                    'border': '#ddd'
+                                }
+                            
                             plantillas.append({
                                 'id': plantilla_id,
                                 'nombre': nombre,
-                                'icono': icono
+                                'icono': icono,
+                                'colores': colores_preview
                             })
                     except Exception as e:
                         logger.warning(f"Error leyendo plantilla {filename}: {e}")

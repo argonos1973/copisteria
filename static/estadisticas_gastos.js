@@ -75,7 +75,9 @@ async function cargarEstadisticasGastos() {
         console.log(`[GASTOS] Año: ${anio}, Mes: ${mes}`);
         
         const apiHost = window.location.hostname;
-        const response = await fetch(`http://${apiHost}:5001/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`);
+        const protocol = window.location.protocol;
+        const usePort = (protocol === 'https:' || apiHost.includes('cloudflare')) ? '' : ':5001';
+        const response = await fetch(`${protocol}//${apiHost}${usePort}/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -140,7 +142,9 @@ async function cargarTop10Gastos(anio) {
     try {
         console.log(`[TOP10 GASTOS] Cargando top 10 para año ${anio}`);
         const apiHost = window.location.hostname;
-        const response = await fetch(`http://${apiHost}:5001/api/gastos/top10?anio=${anio}`);
+        const protocol = window.location.protocol;
+        const usePort = (protocol === 'https:' || apiHost.includes('cloudflare')) ? '' : ':5001';
+        const response = await fetch(`${protocol}//${apiHost}${usePort}/api/gastos/top10?anio=${anio}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);

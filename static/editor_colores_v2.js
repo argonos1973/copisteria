@@ -1,4 +1,8 @@
-const API_URL = 'http://192.168.1.23:5001/api';
+// Detectar protocolo y host automáticamente
+const PROTOCOL = window.location.protocol;
+const HOST = window.location.hostname;
+const USE_PORT = (PROTOCOL === 'https:' || HOST.includes('cloudflare')) ? '' : ':5001';
+const API_URL = `${PROTOCOL}//${HOST}${USE_PORT}/api`;
 let empresaId = null;
 let plantillaActual = null;
 
@@ -490,13 +494,13 @@ function detectarCambiosPlantilla() {
     if (plantillaOriginal === 'custom') return false;
     
     const plantilla = PLANTILLAS[plantillaOriginal];
-    if (\!plantilla) return false;
+    if (!plantilla) return false;
     
     const campos = Object.keys(plantilla).filter(k => k.startsWith('color_'));
     
     return campos.some(campo => {
         const input = document.getElementById(campo);
-        return input && input.value.toUpperCase() \!== plantilla[campo].toUpperCase();
+        return input && input.value.toUpperCase() !== plantilla[campo].toUpperCase();
     });
 }
 
@@ -505,7 +509,7 @@ async function guardarColores() {
         const huboChange = detectarCambiosPlantilla();
         let nombrePersonalizado = null;
         
-        if (huboChange && plantillaOriginal \!== 'custom') {
+        if (huboChange && plantillaOriginal !== 'custom') {
             const crear = confirm(`Has modificado los colores de la plantilla "${PLANTILLAS[plantillaOriginal].nombre}".\n\n¿Deseas guardar como plantilla personalizada?`);
             
             if (crear) {
@@ -514,7 +518,7 @@ async function guardarColores() {
                     `${PLANTILLAS[plantillaOriginal].nombre} Personalizado`
                 );
                 
-                if (\!nombrePersonalizado) {
+                if (!nombrePersonalizado) {
                     return;
                 }
             }

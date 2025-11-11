@@ -25,10 +25,16 @@ const overrideIp = getOverrideIp();
 // Para producción, cambia DEFAULT_LOCAL_SERVER_IP a la IP de producción y rehace build/deploy.
 export const IP_SERVER = overrideIp || DEFAULT_LOCAL_SERVER_IP;
 export const PORT = 5001;
-export const API_URL = `http://${IP_SERVER}:${PORT}`;
-export const API_URL_PRIMARY = `http://${IP_SERVER}:${PORT}`;
-export const API_URL_FALLBACK = `http://${IP_SERVER}:${PORT}`;
-export const API_GASTOS = `http://${IP_SERVER}:${PORT}/api/gastos`;
+
+// Detectar protocolo automáticamente - IMPORTANTE para Cloudflare
+const PROTOCOL = window.location.protocol || 'http:';
+const USE_PORT = (PROTOCOL === 'https:' || window.location.hostname.includes('cloudflare')) ? '' : `:${PORT}`;
+
+// Usar protocolo y puerto correctos según el contexto
+export const API_URL = `${PROTOCOL}//${IP_SERVER}${USE_PORT}`;
+export const API_URL_PRIMARY = `${PROTOCOL}//${IP_SERVER}${USE_PORT}`;
+export const API_URL_FALLBACK = `${PROTOCOL}//${IP_SERVER}${USE_PORT}`;
+export const API_GASTOS = `${PROTOCOL}//${IP_SERVER}${USE_PORT}/api/gastos`;
 
 // Conveniencia: flag de entorno de producción (basado en hostname)
 // Se considera producción si NO es localhost ni 127.0.0.1

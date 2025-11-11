@@ -45,10 +45,33 @@ function inicializarEventosMenu() {
     });
 
     // Función para cerrar todos los submenús excepto el actual
+    function aplicarEstiloActivo(menuItem, activo) {
+        if (!menuItem) return;
+        const link = menuItem.querySelector('.menu-link');
+        if (activo) {
+            menuItem.style.setProperty('background', 'transparent', 'important');
+            menuItem.style.setProperty('background-color', 'transparent', 'important');
+            if (link) {
+                link.style.setProperty('background', 'transparent', 'important');
+                link.style.setProperty('background-color', 'transparent', 'important');
+                link.style.setProperty('box-shadow', 'none', 'important');
+            }
+        } else {
+            menuItem.style.removeProperty('background');
+            menuItem.style.removeProperty('background-color');
+            if (link) {
+                link.style.removeProperty('background');
+                link.style.removeProperty('background-color');
+                link.style.removeProperty('box-shadow');
+            }
+        }
+    }
+
     function closeOtherMenus(currentItem) {
         menuItems.forEach(item => {
             if (item !== currentItem && item.classList.contains('active')) {
                 item.classList.remove('active');
+                aplicarEstiloActivo(item, false);
                 // Eliminar del array de activos
                 const menuTitle = item.querySelector('.menu-link').textContent;
                 const index = activeMenus.indexOf(menuTitle);
@@ -131,6 +154,7 @@ function inicializarEventosMenu() {
                 // Cerrar otros menús y activar este
                 closeOtherMenus(item);
                 item.classList.add('active');
+                aplicarEstiloActivo(item, true);
                 if (!activeMenus.includes(link.textContent)) {
                     activeMenus.push(link.textContent);
                     sessionStorage.setItem('activeMenus', JSON.stringify(activeMenus));
@@ -148,6 +172,7 @@ function inicializarEventosMenu() {
             if (item.classList.contains('active')) {
                 console.log('[MENU] ❌ Desactivando menú:', link.textContent);
                 item.classList.remove('active');
+                aplicarEstiloActivo(item, false);
                 // Eliminar del array de activos
                 const index = activeMenus.indexOf(link.textContent);
                 if (index > -1) {
@@ -156,6 +181,7 @@ function inicializarEventosMenu() {
             } else {
                 console.log('[MENU] ✅ Activando menú:', link.textContent);
                 item.classList.add('active');
+                aplicarEstiloActivo(item, true);
                 console.log('[MENU] Clase active añadida. classList:', item.classList.value);
                 // Añadir al array de activos
                 activeMenus.push(link.textContent);
@@ -183,6 +209,7 @@ function inicializarEventosMenu() {
             if (!menuItem.classList.contains('active')) {
                 closeOtherMenus(menuItem);
                 menuItem.classList.add('active');
+                aplicarEstiloActivo(menuItem, true);
                 // Añadir al array de activos si no está ya
                 const menuTitle = menuItem.querySelector('.menu-link').textContent;
                 if (!activeMenus.includes(menuTitle)) {

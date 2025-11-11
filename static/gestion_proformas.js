@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT } from './constantes.js';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { 
   PRODUCTO_ID_LIBRE,
   formatearImporte,
@@ -38,7 +38,7 @@ import {
   seleccionarProducto as seleccionarProductoCommon,
   validarDetalle,
   volverSegunOrigen
-} from './common.js';
+} from './common.js?v=1762757322';
 
 // Variables globales
 let detalles = [];
@@ -585,7 +585,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function cargarProforma(id) {
   try {
-    const response = await fetch(`http://${IP_SERVER}:${PORT}/api/proformas/consulta/${id}`);
+    const response = await fetch(`${API_URL}/api/proformas/consulta/${id}`);
     if (!response.ok) {
       throw new Error(`Error al cargar la proforma: ${response.statusText}`);
     }
@@ -873,7 +873,7 @@ async function buscarProformaAbierta(idContacto) {
         } else {
             console.log("Creando nueva proforma");
             try {
-                const numResponse = await fetch('/api/proforma/numero');
+                const numResponse = await fetch('/api/proforma/numero', { credentials: 'include' });
                 if (!numResponse.ok) {
                     throw new Error('Error al obtener el número de proforma');
                 }
@@ -1021,7 +1021,7 @@ async function guardarProforma(formaPago = 'E', totalPago = 0, estado = 'A') {
         if (!idProforma) {
    
                 // Obtener un nuevo número de proforma
-                const numResponse = await fetch('/api/proforma/numero');
+                const numResponse = await fetch('/api/proforma/numero', { credentials: 'include' });
                 if (!numResponse.ok) {
                     throw new Error('Error al obtener nuevo número de proforma');
                 }
@@ -1211,7 +1211,7 @@ async function cargarDetalleParaEditar(fila) {
 
 async function inicializarNuevoTicket() {
     try {
-        const response = await fetch('/api/proforma/numero');
+        const response = await fetch('/api/proforma/numero', { credentials: 'include' });
         if (!response.ok) {
             throw new Error('Error al obtener el número de proforma');
         }

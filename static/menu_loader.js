@@ -6,7 +6,7 @@ async function verificarSesionYCargarMenu() {
         console.log('[MENU] Iniciando carga de menú según permisos...');
         
         // Primero obtener datos de sesión
-        const sessionResponse = await fetch('/api/auth/session');
+        const sessionResponse = await fetch('/api/auth/session', { credentials: 'include' }, { credentials: 'include' });
         if (!sessionResponse.ok) {
             console.error('[MENU] Sesión no válida');
             window.location.href = '/LOGIN.html';
@@ -20,7 +20,7 @@ async function verificarSesionYCargarMenu() {
         actualizarInfoUsuario(sessionData);
         
         // Luego cargar el menú
-        const menuResponse = await fetch('/api/auth/menu');
+        const menuResponse = await fetch('/api/auth/menu', { credentials: 'include' }, { credentials: 'include' });
         
         if (!menuResponse.ok) {
             throw new Error(`Error ${menuResponse.status}: ${menuResponse.statusText}`);

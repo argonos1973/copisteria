@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT, API_URL } from './constantes.js'
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322'
 import { mostrarNotificacion } from './notificaciones.js'
 import { formatearImporte, formatearImporteVariable, truncarDecimales, formatearFechaSoloDia, parsearImporte, mostrarCargando, ocultarCargando } from './scripts_utils.js'
 
@@ -236,7 +236,10 @@ async function buscarTickets() {
         if (currentController) currentController.abort();
         currentController = new AbortController();
         console.log('Buscando tickets con URL:', url.toString());
-        const response = await fetch(url, { signal: currentController.signal });
+        const response = await fetch(url, { 
+            signal: currentController.signal,
+            credentials: 'include'  // Incluir cookies en la petición
+        });
         if (!response.ok) throw new Error('Error al consultar los tickets');
         const data = await response.json();
         const tickets = Array.isArray(data) ? data : (data.items || []);

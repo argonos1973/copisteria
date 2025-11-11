@@ -6,18 +6,15 @@ from decimal import Decimal, ROUND_HALF_UP
 from format_utils import format_currency_es_two, format_total_es_two, format_number_es_max5, format_percentage
 
 from flask import (Flask, Response, jsonify, request, send_file,
-                   stream_with_context, session)
+                   stream_with_context, session, make_response, send_from_directory)
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
 from logger_config import get_logger
 
 # Sistema Multiempresa
 from multiempresa_config import SESSION_CONFIG, inicializar_bd_usuarios
 from auth_routes import auth_bp
-# Force reload empresas_routes
-import sys
-if 'empresas_routes' in sys.modules:
-    del sys.modules['empresas_routes']
 from empresas_api import empresas_bp
 from admin_routes import admin_bp
 from plantillas_routes import plantillas_bp
@@ -88,12 +85,88 @@ application = Flask(__name__,
                    template_folder='templates',
                    static_folder='static')
 app = application
+CORS(app, supports_credentials=True, origins=['https://*.trycloudflare.com', 'http://localhost:*', 'http://192.168.*:*'])
 
-# Configurar sesiones - CONFIGURACIÓN SIMPLE QUE FUNCIONA
+# Configurar para proxy reverso (Cloudflare, nginx, etc)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
+# Configurar sesiones - CONFIGURACIÓN PARA PROXY CLOUDFLARE
 app.config['SECRET_KEY'] = 'clave-super-secreta-cambiar-en-produccion-12345'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # Lax funciona mejor que None
+app.config['SESSION_COOKIE_PATH'] = '/'
+app.config['SESSION_COOKIE_SECURE'] = False  # False porque el backend recibe HTTP
+app.config['SESSION_COOKIE_NAME'] = 'aleph70_session'
+app.config['SESSION_COOKIE_DOMAIN'] = None
+
+# Configuración especial para que funcione con Cloudflare
+app.config['SESSION_COOKIE_SECURE'] = False
+app.config['PREFERRED_URL_SCHEME'] = 'https'
+
+# NO usar Flask-Session, usar sesiones nativas de Flask que funcionan mejor con proxy
+# Session(app) - DESACTIVADO
+
+# Middleware para manejar sesiones con proxy
+@app.before_request
+def before_request():
+    # Headers para permitir cookies cross-origin (preflight)
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Session-Data'
+        origin = request.headers.get('Origin')
+        if origin and 'trycloudflare.com' in origin:
+            response.headers['Access-Control-Allow-Origin'] = origin
+        return response
+    
+    # WORKAROUND: Si no hay sesión pero hay header X-Session-Data, restaurar sesión
+    if not session.get('user_id') and request.headers.get('X-Session-Data'):
+        try:
+            import json
+            session_data = json.loads(request.headers.get('X-Session-Data'))
+            # Restaurar datos básicos de sesión desde el header
+            if session_data.get('username'):
+                session['username'] = session_data['username']
+                session['empresa_codigo'] = session_data.get('empresa', 'copisteria')
+                session['empresa_db'] = '/var/www/html/db/caca/caca.db'  # BD por defecto
+                session['rol'] = session_data.get('rol', 'usuario')
+                session.modified = True
+        except:
+            pass
+
+@app.after_request
+def after_request(response):
+    # Detectar si viene de Cloudflare
+    origin = request.headers.get('Origin')
+    forwarded_proto = request.headers.get('X-Forwarded-Proto')
+    
+    if origin and 'trycloudflare.com' in origin:
+        # Headers CORS
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        
+        # Manejar cookies para proxy HTTPS->HTTP
+        if 'Set-Cookie' in response.headers:
+            cookies = response.headers.getlist('Set-Cookie')
+            response.headers.pop('Set-Cookie')
+            
+            for cookie in cookies:
+                # Para Cloudflare necesitamos Secure=true y SameSite=None
+                # aunque el backend reciba HTTP
+                if forwarded_proto == 'https':
+                    # Asegurar que tiene Secure
+                    if '; Secure' not in cookie:
+                        cookie += '; Secure'
+                    # Cambiar SameSite a None
+                    import re
+                    cookie = re.sub(r'; SameSite=[^;]+', '', cookie)
+                    cookie += '; SameSite=None'
+                
+                response.headers.add('Set-Cookie', cookie)
+    
+    return response
 
 # Inicializar BD de usuarios al arrancar
 inicializar_bd_usuarios()
@@ -108,6 +181,15 @@ app.register_blueprint(dashboard_bp)
 app.register_blueprint(gastos_bp, url_prefix='')
 app.register_blueprint(estadisticas_gastos_bp, url_prefix='')
 app.register_blueprint(conciliacion.conciliacion_bp, url_prefix='')
+
+# Registrar rutas públicas y de registro (landing page)
+try:
+    from public_routes import public_bp
+    from public.register_api import register_bp
+    app.register_blueprint(public_bp)  # Landing page y sitio público
+    app.register_blueprint(register_bp)  # API de registro de nuevos usuarios
+except ImportError:
+    pass  # Las rutas públicas son opcionales
 
 # Configurar CORS
 CORS(app, resources={
@@ -3169,13 +3251,32 @@ def enviar_email_presupuesto_endpoint(id):
 
 # ENDPOINT ELIMINADO - Ahora se usa el de auth_routes.py que solo devuelve plantilla JSON
 # @app.route('/api/auth/branding', methods=['GET'])
-# def get_branding():
-#     """Obtener logo y colores de la empresa del usuario logueado"""
-#     print("[BRANDING-DEBUG] ===== ENDPOINT EJECUT Ándose =====", flush=True)
-#     if 'user_id' not in session:
+
+# Endpoint de debug para sesiones (TEMPORAL - ELIMINAR EN PRODUCCIÓN)
+@app.route('/api/debug/session')
+def debug_session():
+    """Debug endpoint para verificar estado de sesiones"""
+    return jsonify({
+        'session_data': dict(session),
+        'session_new': session.new if hasattr(session, 'new') else None,
+        'session_modified': session.modified if hasattr(session, 'modified') else None,
+        'cookies_in_request': dict(request.cookies),
+        'headers': dict(request.headers),
+        'remote_addr': request.remote_addr,
+        'scheme': request.scheme,
+        'is_secure': request.is_secure,
+        'forwarded_proto': request.headers.get('X-Forwarded-Proto'),
+        'config': {
+            'SESSION_COOKIE_SECURE': app.config.get('SESSION_COOKIE_SECURE'),
+            'SESSION_COOKIE_SAMESITE': app.config.get('SESSION_COOKIE_SAMESITE'),
+            'SESSION_COOKIE_HTTPONLY': app.config.get('SESSION_COOKIE_HTTPONLY'),
+            'SESSION_COOKIE_NAME': app.config.get('SESSION_COOKIE_NAME')
+        }
+    })
 
 # Ruta raíz e index - debe estar ANTES de la ruta genérica
 @app.route('/')
+@app.route('/index')
 def ruta_raiz():
     """Redirige a index.html que manejará la lógica de sesión"""
     # NO limpiar sesión aquí, dejar que index.html verifique
@@ -3252,6 +3353,36 @@ def servir_dashboard():
     except Exception as e:
         logger.error(f"Error sirviendo DASHBOARD.html: {e}", exc_info=True)
         return Response(f'Error sirviendo DASHBOARD.html: {e}', status=500)
+
+@app.route('/ADMIN_USUARIOS.html')
+@login_required
+def admin_usuarios():
+    """Página de administración de usuarios"""
+    return send_from_directory('frontend', 'ADMIN_USUARIOS.html')
+
+@app.route('/perfil')
+@login_required
+def perfil():
+    """Página de perfil de usuario"""
+    return send_from_directory('frontend', 'perfil.html')
+
+@app.route('/cambiar_password')
+@login_required
+def cambiar_password_page():
+    """Página para cambiar contraseña"""
+    return send_from_directory('frontend', 'cambiar_password.html')
+
+@app.route('/solicitar_empresa')
+@login_required
+def solicitar_empresa():
+    """Página para solicitar acceso a empresa"""
+    return send_from_directory('frontend', 'solicitar_empresa.html')
+
+@app.route('/crear_empresa')
+@login_required
+def crear_empresa_page():
+    """Página para crear empresa"""
+    return send_from_directory('frontend', 'crear_empresa.html')
 
 @app.route('/ADMIN_PERMISOS.html')
 @login_required
