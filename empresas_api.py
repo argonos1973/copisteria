@@ -293,6 +293,7 @@ def crear_empresa():
     """
     Crea una nueva empresa con su BD independiente
     """
+    conn = None  # Inicializar conn al principio
     try:
         # Debug: log de datos recibidos
         logger.info(f"[CREAR EMPRESA] Form data recibido: {dict(request.form)}")
