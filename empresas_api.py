@@ -321,6 +321,7 @@ def crear_empresa():
         
         # Generar código de empresa
         codigo = generar_codigo_empresa(nombre)
+        print(f"[DEBUG] Código generado: {codigo}", flush=True)
         
         # Verificar que no exista otra empresa con ese código
         conn = sqlite3.connect(DB_USUARIOS_PATH)
@@ -328,7 +329,10 @@ def crear_empresa():
         cursor.execute('SELECT id FROM empresas WHERE codigo = ?', (codigo,))
         if cursor.fetchone():
             conn.close()
+            print(f"[DEBUG] Empresa {codigo} ya existe", flush=True)
             return jsonify({'error': f'Ya existe una empresa con código "{codigo}"'}), 400
+        
+        print(f"[DEBUG] Empresa {codigo} no existe, continuando...", flush=True)
         
         # Procesar logo si se subió
         logo_filename = None
@@ -344,23 +348,33 @@ def crear_empresa():
         
         # Crear directorio para la empresa
         empresa_dir = os.path.join(DB_DIR, codigo)
+        print(f"[DEBUG] Creando directorio: {empresa_dir}", flush=True)
         os.makedirs(empresa_dir, exist_ok=True)
         # Establecer permisos inmediatamente después de crear el directorio
         os.chmod(empresa_dir, 0o775)
         logger.info(f"Directorio creado para empresa: {empresa_dir}")
+        print(f"[DEBUG] Directorio creado OK", flush=True)
         
         # Crear BD de la empresa dentro del subdirectorio
         bd_origen = os.path.join(DB_DIR, 'plantilla.db')
         bd_destino = os.path.join(empresa_dir, f'{codigo}.db')
         
+        print(f"[DEBUG] BD origen: {bd_origen}, existe: {os.path.exists(bd_origen)}", flush=True)
+        print(f"[DEBUG] BD destino: {bd_destino}", flush=True)
+        
         if not os.path.exists(bd_origen):
             conn.close()
+            print(f"[DEBUG ERROR] Plantilla no encontrada", flush=True)
             return jsonify({'error': 'BD plantilla (plantilla.db) no encontrada'}), 500
         
         # Clonar estructura
+        print(f"[DEBUG] Iniciando clonación de BD...", flush=True)
         if not clonar_estructura_bd(bd_origen, bd_destino):
             conn.close()
+            print(f"[DEBUG ERROR] Error clonando BD", flush=True)
             return jsonify({'error': 'Error clonando estructura de BD'}), 500
+        
+        print(f"[DEBUG] BD clonada exitosamente", flush=True)
         
         
         # Establecer permisos correctos en directorio y BD
