@@ -131,8 +131,9 @@ def enviar_email_verificacion(email, nombre, token):
         msg['From'] = EMAIL_CONFIG['sender_email']
         msg['To'] = email
         
-        # URL de verificación
-        verify_url = f"http://localhost:5002/api/public/verify-email?token={token}"
+        # URL de verificación - usar la URL del request o variable de entorno
+        base_url = os.getenv('BASE_URL', 'http://localhost:5002')
+        verify_url = f"{base_url}/api/public/verify-email?token={token}"
         
         # HTML del email
         html = f"""
