@@ -375,7 +375,7 @@ def crear_empresa():
             logger.warning(f"No se pudieron establecer permisos automáticamente: {perm_error}")
             logger.warning(f"Por favor, ejecute manualmente: sudo chown -R www-data:www-data {empresa_dir} && sudo chmod 775 {empresa_dir} && sudo chmod 664 {bd_destino}")
         
-        # Insertar empresa en BD de usuarios
+        # Insertar empresa en BD de usuarios (SIN COMMIT todavía)
         cursor.execute('''
             INSERT INTO empresas (
                 codigo, nombre, razon_social, cif, direccion, codigo_postal, ciudad, provincia,
@@ -390,8 +390,7 @@ def crear_empresa():
             bd_destino
         ))
         empresa_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
+        # NO cerrar conexión todavía, la necesitamos para crear el usuario admin
         
         
         # Crear archivo emisor.json para la empresa
@@ -424,9 +423,7 @@ def crear_empresa():
         password_admin = codigo.lower()  # Contraseña inicial = código de empresa
         password_hash = hashlib.sha256(password_admin.encode('utf-8')).hexdigest()
         
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
+        # Usar la misma conexión que ya tenemos abierta
         try:
             # Crear usuario admin (es_superadmin = 0, ya no hay superadmins)
             cursor.execute('''
@@ -496,12 +493,25 @@ def crear_empresa():
         
     except Exception as e:
         logger.error(f"Error creando empresa: {e}", exc_info=True)
+        # Hacer rollback de la transacción si hay error
+        try:
+            if 'conn' in locals() and conn:
+                conn.rollback()
+                conn.close()
+                logger.info("Rollback de transacción realizado")
+        except:
+            pass
         # Limpiar archivos si hubo error
-        if logo_filename and os.path.exists(os.path.join(UPLOAD_FOLDER, logo_filename)):
+        if 'logo_filename' in locals() and logo_filename and os.path.exists(os.path.join(UPLOAD_FOLDER, logo_filename)):
             os.remove(os.path.join(UPLOAD_FOLDER, logo_filename))
-        if bd_destino and os.path.exists(bd_destino):
+        if 'bd_destino' in locals() and bd_destino and os.path.exists(bd_destino):
             os.remove(bd_destino)
-        return jsonify({'error': 'Error creando empresa'}), 500
+        if 'empresa_dir' in locals() and empresa_dir and os.path.exists(empresa_dir):
+            import shutil
+            shutil.rmtree(empresa_dir)
+        if 'emisor_path' in locals() and emisor_path and os.path.exists(emisor_path):
+            os.remove(emisor_path)
+        return jsonify({'error': f'Error creando empresa: {str(e)}'}), 500
 
 
 @empresas_bp.route('/api/empresas/<int:empresa_id>', methods=['PUT'])
