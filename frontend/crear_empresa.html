@@ -69,17 +69,31 @@
 
                 <h4 class="mt-4">Información de Contacto</h4>
                 <div class="form-row">
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column: 1 / -1;">
                         <label><i class="fas fa-map-marker-alt"></i> Dirección</label>
                         <input type="text" class="form-control" id="direccion" 
-                               placeholder="Calle, número, ciudad">
+                               placeholder="Calle, número">
                     </div>
-                    
+                </div>
+
+                <div class="form-row">
                     <div class="form-group">
                         <label><i class="fas fa-mail-bulk"></i> Código Postal</label>
                         <input type="text" class="form-control" id="codigoPostal" 
                                placeholder="28001" maxlength="5">
                     </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-city"></i> Ciudad</label>
+                        <input type="text" class="form-control" id="ciudad" 
+                               placeholder="Madrid">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-map"></i> Provincia</label>
+                    <input type="text" class="form-control" id="provincia" 
+                           placeholder="Madrid">
                 </div>
 
                 <div class="form-row">

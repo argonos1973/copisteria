@@ -13,10 +13,11 @@ document.getElementById('createCompanyForm').addEventListener('submit', async (e
     formData.append('nombre', document.getElementById('nombreEmpresa').value.trim());
     formData.append('razon_social', document.getElementById('nombreEmpresa').value.trim());
     formData.append('cif', document.getElementById('nif').value.trim());
+    formData.append('sector', document.getElementById('sector').value.trim());
     formData.append('direccion', document.getElementById('direccion').value.trim());
     formData.append('codigo_postal', document.getElementById('codigoPostal').value.trim());
-    formData.append('ciudad', ''); // Añadir campo ciudad si es necesario
-    formData.append('provincia', ''); // Añadir campo provincia si es necesario
+    formData.append('ciudad', document.getElementById('ciudad').value.trim());
+    formData.append('provincia', document.getElementById('provincia').value.trim());
     formData.append('telefono', document.getElementById('telefono').value.trim());
     formData.append('email', document.getElementById('email').value.trim());
     formData.append('web', document.getElementById('web').value.trim());

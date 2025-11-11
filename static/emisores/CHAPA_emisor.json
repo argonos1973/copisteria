@@ -1,0 +1,13 @@
+{
+    "nombre": "chapalandia",
+    "nif": "44007535W",
+    "direccion": "Verdi 306",
+    "cp": "08024",
+    "ciudad": "",
+    "provincia": "",
+    "telefono": "678876344",
+    "email": "aleph70copisteria@gmail.com",
+    "web": "",
+    "db_path": "/var/www/html/db/CHAPA/CHAPA.db",
+    "codigo": "CHAPA"
+}
