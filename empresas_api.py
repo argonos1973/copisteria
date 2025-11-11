@@ -335,6 +335,8 @@ def crear_empresa():
         # Crear directorio para la empresa
         empresa_dir = os.path.join(DB_DIR, codigo)
         os.makedirs(empresa_dir, exist_ok=True)
+        # Establecer permisos inmediatamente después de crear el directorio
+        os.chmod(empresa_dir, 0o775)
         logger.info(f"Directorio creado para empresa: {empresa_dir}")
         
         # Crear BD de la empresa dentro del subdirectorio
