@@ -208,18 +208,23 @@ async function handleRegistration(e) {
     
     // Get form data
     const formData = {
-        name: document.getElementById('regName').value,
-        surname: document.getElementById('regSurname').value,
-        company: document.getElementById('regCompany').value,
-        email: document.getElementById('regEmail').value,
-        phone: document.getElementById('regPhone').value,
+        nombre: document.getElementById('regName').value.trim(),
+        apellidos: document.getElementById('regSurname').value.trim(),
+        email: document.getElementById('regEmail').value.trim(),
+        telefono: document.getElementById('regPhone').value.trim(),
         password: document.getElementById('regPassword').value,
-        passwordConfirm: document.getElementById('regPasswordConfirm').value
+        password_confirm: document.getElementById('regPasswordConfirm').value
     };
     
     // Validate passwords match
-    if (formData.password !== formData.passwordConfirm) {
+    if (formData.password !== formData.password_confirm) {
         showError(document.getElementById('regPasswordConfirm'), 'Las contraseñas no coinciden');
+        return;
+    }
+    
+    // Validate password length
+    if (formData.password.length < 6) {
+        showError(document.getElementById('regPassword'), 'La contraseña debe tener al menos 6 caracteres');
         return;
     }
     
@@ -237,7 +242,7 @@ async function handleRegistration(e) {
     
     try {
         // Send registration request
-        const response = await fetch('/api/register', {
+        const response = await fetch('/api/public/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -248,7 +253,15 @@ async function handleRegistration(e) {
         const result = await response.json();
         
         if (response.ok) {
-            // Success
+            // Success - Update success modal message
+            const successModal = document.getElementById('successModal');
+            const successMessage = successModal.querySelector('p');
+            successMessage.innerHTML = `
+                Tu cuenta ha sido creada correctamente con el usuario <strong>${result.username}</strong>.<br>
+                ${result.email_sent ? 
+                    'Te hemos enviado un email de verificación. Por favor, revisa tu bandeja de entrada.' :
+                    'Por favor, contacta con el administrador para activar tu cuenta.'}
+            `;
             closeRegisterModal();
             openSuccessModal();
         } else {
