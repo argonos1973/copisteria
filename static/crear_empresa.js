@@ -116,7 +116,7 @@ document.getElementById('createCompanyForm').addEventListener('submit', async (e
                 // Cerrar sesión actual
                 await fetch('/api/auth/logout', { method: 'POST' });
                 // Redirigir al login
-                window.parent.location.href = '/frontend/LOGIN.html';
+                window.parent.location.href = '/LOGIN.html';
             }, 5000);
         } else {
             mostrarAlerta(result.error || 'Error al crear la empresa', 'danger');
