@@ -44,10 +44,13 @@ async function verificarSesionYCargarMenu() {
         renderizarMenu(menuData, sessionData);
         
         // Cargar página inicial en el iframe según tipo de usuario
+        const tieneEmpresa = sessionData && sessionData.empresa && sessionData.empresa !== 'Sin Empresa';
         const esAdmin = sessionData && sessionData.es_admin_empresa;
-        const paginaInicial = esAdmin ? '/estadisticas.html' : '/bienvenida.html';
+        const paginaInicial = (tieneEmpresa && esAdmin) ? '/estadisticas.html' : '/bienvenida.html';
         
         console.log('[MENU] sessionData completo:', sessionData);
+        console.log('[MENU] empresa:', sessionData?.empresa);
+        console.log('[MENU] tiene empresa:', tieneEmpresa);
         console.log('[MENU] es_admin_empresa:', sessionData?.es_admin_empresa);
         console.log('[MENU] Usuario es admin:', esAdmin);
         console.log('[MENU] Página a cargar:', paginaInicial);
@@ -194,10 +197,11 @@ function renderizarMenu(menuItems, sessionData) {
     menuList.innerHTML = '';
     
     // Determinar página de inicio según tipo de usuario
+    const tieneEmpresa = sessionData && sessionData.empresa && sessionData.empresa !== 'Sin Empresa';
     const esAdmin = sessionData && sessionData.es_admin_empresa;
-    const paginaInicio = esAdmin ? '/estadisticas.html' : '/bienvenida.html';
+    const paginaInicio = (tieneEmpresa && esAdmin) ? '/estadisticas.html' : '/bienvenida.html';
     
-    console.log(`[MENU] Usuario es admin: ${esAdmin}, página inicio: ${paginaInicio}`);
+    console.log(`[MENU] Usuario tiene empresa: ${tieneEmpresa}, es admin: ${esAdmin}, página inicio: ${paginaInicio}`);
     
     // Siempre añadir "Inicio" primero
     const inicioItem = crearMenuItem('Inicio', 'fas fa-home', paginaInicio, null);
