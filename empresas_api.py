@@ -464,79 +464,43 @@ def crear_empresa():
         
         logger.info(f"Emisor JSON creado: {emisor_path}")
         
-        # Crear usuario admin automático para la empresa
-        import hashlib
-        username_admin = f'admin_{codigo.lower()}'
-        password_admin = codigo.lower()  # Contraseña inicial = código de empresa
-        password_hash = hashlib.sha256(password_admin.encode('utf-8')).hexdigest()
+        # Asignar empresa al usuario actual (no crear nuevo usuario)
+        usuario_actual_id = session.get('user_id')
+        usuario_actual_username = session.get('username')
+        
+        if not usuario_actual_id:
+            raise Exception("No hay usuario logueado")
         
         # Usar la misma conexión que ya tenemos abierta
         try:
-            # Crear usuario admin (es_superadmin = 0, ya no hay superadmins)
-            cursor.execute('''
-                INSERT INTO usuarios (username, password_hash, nombre_completo, email, es_superadmin, activo)
-                VALUES (?, ?, ?, ?, 0, 1)
-            ''', (username_admin, password_hash, f'Administrador {nombre}', email or ''))
-            
-            usuario_admin_id = cursor.lastrowid
-            
-            # Asignar empresa al usuario admin
+            # Asignar la empresa al usuario actual como administrador
             cursor.execute('''
                 INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
                 VALUES (?, ?, 'admin', 1)
-            ''', (usuario_admin_id, empresa_id))
+            ''', (usuario_actual_id, empresa_id))
+            logger.info(f"Empresa {codigo} asignada al usuario {usuario_actual_username}")
             
-            # También asignar empresa al usuario actual si no tiene empresa
-            usuario_actual_id = session.get('user_id')
-            empresa_actual = session.get('empresa_id')
-            if usuario_actual_id and not empresa_actual:
-                # Asignar la nueva empresa al usuario actual como admin
-                cursor.execute('''
-                    INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
-                    VALUES (?, ?, 'admin', 1)
-                ''', (usuario_actual_id, empresa_id))
-                logger.info(f"Empresa {codigo} asignada al usuario actual {session.get('username')}")
-            
-            # Asignar TODOS los permisos al admin
+            # Asignar TODOS los permisos al usuario sobre esta empresa
             modulos = ['facturas', 'tickets', 'proformas', 'productos', 'contactos', 'presupuestos']
-            permisos_completos = ['ver', 'crear', 'editar', 'eliminar', 'anular', 'exportar']
             
             for modulo in modulos:
-                # Crear permisos completos para cada módulo
-                permisos_dict = {permiso: 1 for permiso in permisos_completos}
                 cursor.execute('''
                     INSERT INTO permisos_usuario_modulo 
                     (usuario_id, empresa_id, modulo_codigo, puede_ver, puede_crear, puede_editar, puede_eliminar, puede_anular, puede_exportar)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (usuario_admin_id, empresa_id, modulo, 1, 1, 1, 1, 1, 1))
+                ''', (usuario_actual_id, empresa_id, modulo, 1, 1, 1, 1, 1, 1))
             
             conn.commit()
-            logger.info(f"Usuario admin creado: {username_admin} para empresa {codigo}")
-            logger.info(f"Contraseña inicial: {password_admin}")
+            logger.info(f"Permisos completos asignados al usuario {usuario_actual_username} para empresa {codigo}")
             
-        except sqlite3.IntegrityError:
-            logger.warning(f"Usuario {username_admin} ya existe, saltando creación")
+        except sqlite3.IntegrityError as e:
+            logger.warning(f"Error al asignar empresa al usuario: {e}")
+            # Si el usuario ya tiene la empresa asignada, continuar
         finally:
             conn.close()
         
         logger.info(f"Empresa creada: {nombre} ({codigo}) - BD: {bd_destino}")
-        
-        # Enviar email de bienvenida con las credenciales
-        try:
-            exito_email, mensaje_email = enviar_email_bienvenida_empresa(
-                destinatario=email,
-                nombre_empresa=nombre,
-                codigo_empresa=codigo,
-                usuario_admin=username_admin,
-                password_admin=password_admin
-            )
-            if exito_email:
-                logger.info(f"Email de bienvenida enviado a {email}")
-            else:
-                logger.warning(f"No se pudo enviar email de bienvenida: {mensaje_email}")
-        except Exception as email_error:
-            logger.error(f"Error al enviar email de bienvenida: {email_error}")
-            # No fallar la creación de empresa si el email falla
+        logger.info(f"Empresa asignada al usuario: {usuario_actual_username}")
         
         return jsonify({
             'success': True,
@@ -544,9 +508,8 @@ def crear_empresa():
             'codigo': codigo,
             'nombre': nombre,
             'db_path': bd_destino,
-            'usuario_admin': username_admin,
-            'password_admin': password_admin,
-            'mensaje': f'Empresa "{nombre}" creada exitosamente. Usuario admin: {username_admin} / {password_admin}'
+            'usuario': usuario_actual_username,
+            'mensaje': f'Empresa "{nombre}" creada exitosamente y asignada a tu usuario con todos los permisos.'
         }), 201
         
     except Exception as e:
