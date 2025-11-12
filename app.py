@@ -3420,5 +3420,11 @@ def servir_admin_permisos():
         logger.error(f"Error sirviendo ADMIN_PERMISOS.html: {e}")
         return "Error cargando página", 500
 
+@app.route("/callback")
+def callback():
+    """Endpoint de callback para OAuth o integraciones externas"""
+    code = request.args.get("code")
+    return f"<h1>OK</h1><p>code: {code}</p>", 200
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5002, debug=False)
