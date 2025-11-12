@@ -651,6 +651,7 @@ def obtener_branding():
         logger.info(f"[BRANDING] Plantilla: {plantilla_base} ('{plantilla_nombre}')")
         
         return jsonify({
+            'empresa_id': empresa_id,  # ← Agregar empresa_id
             'logo_header': empresa['logo_header'],
             'logo_factura': empresa['logo_factura'],
             'plantilla': plantilla_base,  # ← Solo nombre de plantilla
