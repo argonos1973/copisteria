@@ -306,32 +306,32 @@ async function cargarUsuarios() {
     }
 }
 
-// Cargar empresas de un usuario para el select de permisos
-async function cargarEmpresasDeUsuario() {
+// Cargar permisos del usuario seleccionado (usa empresa actual del admin)
+async function cargarPermisosUsuarioSeleccionado() {
     const usuarioId = document.getElementById('select-usuario-permisos').value;
-    const selectEmpresa = document.getElementById('select-empresa-permisos');
-    
-    // Limpiar select de empresa
-    selectEmpresa.innerHTML = '<option value="">-- Seleccione --</option>';
     
     // Limpiar matriz de permisos
     document.getElementById('matriz-permisos').innerHTML = '';
     
     if (!usuarioId) return;
     
+    // Obtener empresa del usuario logueado (admin)
     try {
-        const response = await fetch(`/api/admin/usuarios/${usuarioId}/empresas`);
-        if (!response.ok) throw new Error('Error cargando empresas del usuario');
+        const brandingResponse = await fetch('/api/auth/branding', { credentials: 'include' });
+        const branding = await brandingResponse.json();
+        const empresaId = branding.empresa_id;
         
-        const empresasUsuario = await response.json();
+        if (!empresaId) {
+            mostrarAlerta('No tienes empresa asignada', 'error');
+            return;
+        }
         
-        empresasUsuario.forEach(eu => {
-            selectEmpresa.innerHTML += `<option value="${eu.id}">${eu.nombre}</option>`;
-        });
+        // Cargar permisos del usuario seleccionado para la empresa del admin
+        await cargarPermisosUsuario(usuarioId, empresaId);
         
     } catch (error) {
         console.error('Error:', error);
-        mostrarAlerta('Error cargando empresas del usuario', 'error');
+        mostrarAlerta('Error cargando permisos', 'error');
     }
 }
 
@@ -563,14 +563,11 @@ function mostrarModulos(lista) {
 }
 
 // PERMISOS
-async function cargarPermisosUsuario() {
-    const usuarioId = document.getElementById('select-usuario-permisos').value;
-    const empresaId = document.getElementById('select-empresa-permisos').value;
-    
+async function cargarPermisosUsuario(usuarioId, empresaId) {
     const container = document.getElementById('matriz-permisos');
     
     if (!usuarioId || !empresaId) {
-        container.innerHTML = '<p style="text-align: center; color: #7f8c8d; margin-top: 20px;">Seleccione un usuario y una empresa</p>';
+        container.innerHTML = '<p style="text-align: center; color: #7f8c8d; margin-top: 20px;">Seleccione un usuario</p>';
         return;
     }
     

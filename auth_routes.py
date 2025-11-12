@@ -508,11 +508,6 @@ def obtener_menu():
                         'nombre': 'Permisos',
                         'icono': 'fas fa-cog',
                         'ruta': '/ADMIN_PERMISOS.html'
-                    },
-                    {
-                        'nombre': 'Nueva Empresa',
-                        'icono': 'fas fa-plus-circle',
-                        'ruta': '/NUEVA_EMPRESA.html'
                     }
                 ]
             })

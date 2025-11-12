@@ -1,13 +1,12 @@
 {
-    "nombre": "samue",
     "nif": "44007535W",
+    "nombre": "samue",
     "direccion": "Carrer de la Legalitat, 70",
     "cp": "08024",
     "ciudad": "Barcelona",
     "provincia": "Barcelona",
-    "telefono": "678876344",
+    "pais": "ESP",
     "email": "aleph70copisteria@gmail.com",
-    "web": "",
     "db_path": "/var/www/html/db/SAMUE/SAMUE.db",
     "codigo": "SAMUE"
 }
