@@ -208,6 +208,23 @@
             font-weight: 500;
             color: #000000;
         }
+
+        .forgot-password {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .forgot-password a {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .forgot-password a:hover {
+            color: #000;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -239,6 +256,10 @@
                 <button type="submit" class="btn-login" id="btn-siguiente">
                     Aceptar
                 </button>
+                
+                <div class="forgot-password">
+                    <a href="#" onclick="mostrarRecuperarPassword(event)">¿Olvidaste tu contraseña?</a>
+                </div>
             </form>
             
             <!-- Paso 2: Selector de empresa (oculto inicialmente) -->
@@ -468,6 +489,11 @@
                 document.getElementById('login-form').dispatchEvent(new Event('submit'));
             }
         });
+
+        function mostrarRecuperarPassword(e) {
+            e.preventDefault();
+            mostrarAlerta('Contacta con el administrador del sistema para recuperar tu contraseña', 'error');
+        }
     </script>
     <script src="/static/auto_branding.js?v=1762757322"></script>
 </body>
