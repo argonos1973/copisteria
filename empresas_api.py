@@ -240,12 +240,28 @@ def _row_to_dict_full(row):
 @empresas_bp.route('/api/empresas', methods=['GET'])
 @require_admin
 def listar_empresas():
-    """Lista todas las empresas del sistema (requiere admin)"""
+    """Lista las empresas del usuario (solo sus empresas, excepto superadmin que ve todas)"""
     try:
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        cursor.execute(SELECT_EMPRESAS_FULL + " ORDER BY nombre")
+        user_id = session.get('user_id')
+        es_superadmin = session.get('es_superadmin', False)
+        
+        if es_superadmin:
+            # Superadmin ve todas las empresas
+            cursor.execute(SELECT_EMPRESAS_FULL + " ORDER BY nombre")
+        else:
+            # Admin de empresa solo ve sus empresas
+            query = f"""
+                {SELECT_EMPRESAS_FULL}
+                WHERE e.id IN (
+                    SELECT empresa_id FROM usuario_empresa 
+                    WHERE usuario_id = ?
+                )
+                ORDER BY e.nombre
+            """
+            cursor.execute(query, (user_id,))
         
         empresas = []
         for row in cursor.fetchall():
@@ -254,6 +270,7 @@ def listar_empresas():
                 empresas.append(empresa)
         
         conn.close()
+        logger.info(f"Usuario {session.get('username')} listó {len(empresas)} empresas")
         return jsonify(empresas), 200
         
     except Exception as e:
@@ -265,8 +282,22 @@ def listar_empresas():
 def obtener_empresa(empresa_id):
     """Obtiene datos de una empresa y su JSON de emisor"""
     try:
+        user_id = session.get('user_id')
+        es_superadmin = session.get('es_superadmin', False)
+        
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
+        
+        # Verificar que el usuario tenga acceso a esta empresa
+        if not es_superadmin:
+            cursor.execute('''
+                SELECT COUNT(*) FROM usuario_empresa 
+                WHERE usuario_id = ? AND empresa_id = ?
+            ''', (user_id, empresa_id))
+            if cursor.fetchone()[0] == 0:
+                conn.close()
+                logger.warning(f"Usuario {session.get('username')} intentó acceder a empresa {empresa_id} sin permiso")
+                return jsonify({'error': 'No tienes permiso para ver esta empresa'}), 403
         
         cursor.execute(SELECT_EMPRESAS_FULL + " WHERE id = ?", (empresa_id,))
         row = cursor.fetchone()
