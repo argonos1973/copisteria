@@ -3097,6 +3097,14 @@ async function cargarConfiguracionEmpresa() {
         
         // Obtener datos completos de la empresa
         const empresaResponse = await fetch(`/api/empresas/${empresaId}`);
+        
+        if (!empresaResponse.ok) {
+            if (empresaResponse.status === 403) {
+                throw new Error('No tienes permiso para ver esta empresa');
+            }
+            throw new Error('Error cargando datos de empresa');
+        }
+        
         const empresa = await empresaResponse.json();
         
         // Obtener plantillas disponibles

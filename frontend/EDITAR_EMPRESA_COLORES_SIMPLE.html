@@ -49,6 +49,17 @@ document.getElementById('logs').innerHTML += msg + '<br>';
 async function init() {
 try {
 log('[INIT] Cargando...');
+
+// Primero intentar obtener ID de URL
+const urlParams = new URLSearchParams(window.location.search);
+const urlId = urlParams.get('id');
+if (urlId) {
+empresaId = parseInt(urlId);
+log('[INIT] ID desde URL: ' + empresaId);
+}
+
+// Si no hay ID en URL, usar sesión
+if (!empresaId) {
 let data;
 try {
 const r = await fetch('/api/auth/branding');
@@ -68,7 +79,8 @@ if (s.empresa_id) empresaId = s.empresa_id;
 }
 
 if (!empresaId) empresaId = 1;
-log('[INIT] Empresa ID: ' + empresaId);
+}
+log('[INIT] Empresa ID final: ' + empresaId);
 
 render(data?.plantilla || 'minimal');
 const t = await (await fetch('/static/plantillas/' + (data?.plantilla || 'minimal') + '.json')).json();
