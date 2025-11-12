@@ -3093,7 +3093,11 @@ async function cargarConfiguracionEmpresa() {
         // Obtener datos de la empresa actual
         const brandingResponse = await fetch('/api/auth/branding', { credentials: 'include' });
         const branding = await brandingResponse.json();
-        const empresaId = branding.empresa_id || 1;
+        const empresaId = branding.empresa_id;
+        
+        if (!empresaId) {
+            throw new Error('No tienes empresa asignada. Contacta con el administrador.');
+        }
         
         // Obtener datos completos de la empresa
         const empresaResponse = await fetch(`/api/empresas/${empresaId}`);
