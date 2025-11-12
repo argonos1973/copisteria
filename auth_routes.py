@@ -11,7 +11,10 @@ Fecha: 2025-10-21
 
 import os
 import uuid
+import secrets
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
+from werkzeug.security import generate_password_hash
 from flask import Blueprint, request, jsonify, session, render_template_string, Response, make_response
 from logger_config import get_logger
 from auth_middleware import (
@@ -20,6 +23,7 @@ from auth_middleware import (
 )
 import sqlite3
 from multiempresa_config import DB_USUARIOS_PATH
+from email_utils import enviar_email_recuperacion_password
 
 # Configuración de avatares
 AVATAR_FOLDER = 'static/avatars'
@@ -778,3 +782,188 @@ def upload_avatar():
     except Exception as e:
         logger.error(f"Error subiendo avatar: {e}", exc_info=True)
         return jsonify({'error': 'Error al subir avatar'}), 500
+
+@auth_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """
+    Solicitar recuperación de contraseña - envía email con token
+    """
+    try:
+        data = request.get_json()
+        username_or_email = data.get('username', '').strip()
+        
+        if not username_or_email:
+            return jsonify({'error': 'Usuario o email requerido'}), 400
+        
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Buscar usuario por username o email
+        cursor.execute('''
+            SELECT id, username, nombre_completo, email 
+            FROM usuarios 
+            WHERE username = ? OR email = ?
+        ''', (username_or_email, username_or_email))
+        
+        usuario = cursor.fetchone()
+        
+        if not usuario:
+            # Por seguridad, no revelar si el usuario existe
+            logger.warning(f"Intento de recuperación para usuario inexistente: {username_or_email}")
+            return jsonify({'success': True, 'message': 'Si el usuario existe, recibirás un email'}), 200
+        
+        if not usuario['email']:
+            logger.warning(f"Usuario {usuario['username']} no tiene email configurado")
+            return jsonify({'error': 'Usuario sin email configurado. Contacta al administrador'}), 400
+        
+        # Generar token único
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.now() + timedelta(hours=1)
+        
+        # Guardar token en BD
+        cursor.execute('''
+            INSERT INTO password_reset_tokens (usuario_id, token, email, expires_at)
+            VALUES (?, ?, ?, ?)
+        ''', (usuario['id'], token, usuario['email'], expires_at))
+        
+        conn.commit()
+        conn.close()
+        
+        # Obtener URL base del request
+        base_url = request.host_url.rstrip('/')
+        
+        # Enviar email
+        success, message = enviar_email_recuperacion_password(
+            usuario['email'],
+            usuario['nombre_completo'] or usuario['username'],
+            token,
+            base_url
+        )
+        
+        if success:
+            logger.info(f"Email de recuperación enviado a {usuario['email']}")
+            return jsonify({
+                'success': True, 
+                'message': 'Email de recuperación enviado. Revisa tu bandeja de entrada.'
+            }), 200
+        else:
+            logger.error(f"Error enviando email de recuperación: {message}")
+            return jsonify({'error': 'Error enviando email. Intenta más tarde'}), 500
+        
+    except Exception as e:
+        logger.error(f"Error en forgot_password: {e}", exc_info=True)
+        return jsonify({'error': 'Error procesando solicitud'}), 500
+
+@auth_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """
+    Restablecer contraseña usando token
+    """
+    try:
+        data = request.get_json()
+        token = data.get('token', '').strip()
+        new_password = data.get('password', '').strip()
+        
+        if not token or not new_password:
+            return jsonify({'error': 'Token y contraseña requeridos'}), 400
+        
+        if len(new_password) < 6:
+            return jsonify({'error': 'La contraseña debe tener al menos 6 caracteres'}), 400
+        
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Buscar token válido
+        cursor.execute('''
+            SELECT t.id, t.usuario_id, t.used, t.expires_at, u.username
+            FROM password_reset_tokens t
+            JOIN usuarios u ON t.usuario_id = u.id
+            WHERE t.token = ?
+        ''', (token,))
+        
+        token_data = cursor.fetchone()
+        
+        if not token_data:
+            conn.close()
+            return jsonify({'error': 'Token inválido'}), 400
+        
+        # Verificar si ya fue usado
+        if token_data['used']:
+            conn.close()
+            return jsonify({'error': 'Este enlace ya fue utilizado'}), 400
+        
+        # Verificar si expiró
+        expires_at = datetime.fromisoformat(token_data['expires_at'])
+        if datetime.now() > expires_at:
+            conn.close()
+            return jsonify({'error': 'Este enlace ha expirado. Solicita uno nuevo'}), 400
+        
+        # Actualizar contraseña
+        hashed_password = generate_password_hash(new_password)
+        cursor.execute('UPDATE usuarios SET password = ? WHERE id = ?', 
+                      (hashed_password, token_data['usuario_id']))
+        
+        # Marcar token como usado
+        cursor.execute('UPDATE password_reset_tokens SET used = 1 WHERE id = ?', 
+                      (token_data['id'],))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Contraseña restablecida para usuario {token_data['username']}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error en reset_password: {e}", exc_info=True)
+        return jsonify({'error': 'Error procesando solicitud'}), 500
+
+@auth_bp.route('/validate-reset-token', methods=['GET'])
+def validate_reset_token():
+    """
+    Validar si un token de recuperación es válido
+    """
+    try:
+        token = request.args.get('token', '').strip()
+        
+        if not token:
+            return jsonify({'valid': False, 'error': 'Token requerido'}), 400
+        
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT used, expires_at, u.username, u.nombre_completo
+            FROM password_reset_tokens t
+            JOIN usuarios u ON t.usuario_id = u.id
+            WHERE t.token = ?
+        ''', (token,))
+        
+        token_data = cursor.fetchone()
+        conn.close()
+        
+        if not token_data:
+            return jsonify({'valid': False, 'error': 'Token inválido'}), 200
+        
+        if token_data['used']:
+            return jsonify({'valid': False, 'error': 'Este enlace ya fue utilizado'}), 200
+        
+        expires_at = datetime.fromisoformat(token_data['expires_at'])
+        if datetime.now() > expires_at:
+            return jsonify({'valid': False, 'error': 'Este enlace ha expirado'}), 200
+        
+        return jsonify({
+            'valid': True,
+            'username': token_data['username'],
+            'nombre': token_data['nombre_completo']
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error validando token: {e}", exc_info=True)
+        return jsonify({'valid': False, 'error': 'Error validando token'}), 500

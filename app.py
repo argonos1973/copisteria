@@ -3306,6 +3306,28 @@ def servir_login():
         logger.error(f"Error sirviendo LOGIN.html: {e}", exc_info=True)
         return Response(f'Error sirviendo LOGIN.html: {e}', status=500)
 
+@app.route('/forgot-password.html')
+def servir_forgot_password():
+    """Sirve la página de recuperación de contraseña"""
+    try:
+        with open(os.path.join(BASE_DIR, 'frontend', 'forgot-password.html'), 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo forgot-password.html: {e}", exc_info=True)
+        return Response(f'Error sirviendo forgot-password.html: {e}', status=500)
+
+@app.route('/reset-password')
+def servir_reset_password():
+    """Sirve la página de reseteo de contraseña"""
+    try:
+        with open(os.path.join(BASE_DIR, 'frontend', 'reset-password.html'), 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo reset-password.html: {e}", exc_info=True)
+        return Response(f'Error sirviendo reset-password.html: {e}', status=500)
+
 @app.route('/<path:filename>.html')
 @login_required
 def servir_html_protegido(filename):

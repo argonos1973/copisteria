@@ -284,3 +284,147 @@ El equipo de Aleph70
             except:
                 pass
         return False, f"Error al enviar el correo: {str(e)}"
+
+def enviar_email_recuperacion_password(destinatario, nombre_usuario, token, base_url):
+    """
+    Enviar email con enlace para recuperar contraseña
+    """
+    server = None
+    try:
+        # Configurar el servidor SMTP
+        smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
+        smtp_port = int(os.getenv('SMTP_PORT', '465'))
+        smtp_username = os.getenv('SMTP_USERNAME', 'info@aleph70.com')
+        smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
+        smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
+
+        # Crear el mensaje
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = 'Recuperación de Contraseña - Aleph70'
+        msg['From'] = smtp_from
+        msg['To'] = destinatario
+
+        # URL de recuperación
+        reset_url = f"{base_url}/reset-password?token={token}"
+
+        # Cuerpo del email en HTML
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                }}
+                .container {{
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                }}
+                .header {{
+                    background-color: #000;
+                    color: #fff;
+                    padding: 20px;
+                    text-align: center;
+                }}
+                .content {{
+                    background-color: #fff;
+                    padding: 30px;
+                    border-radius: 5px;
+                    margin-top: 20px;
+                }}
+                .button {{
+                    display: inline-block;
+                    padding: 12px 30px;
+                    background-color: #000;
+                    color: #fff !important;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    margin: 20px 0;
+                }}
+                .footer {{
+                    text-align: center;
+                    margin-top: 20px;
+                    font-size: 12px;
+                    color: #666;
+                }}
+                .warning {{
+                    background-color: #fff3cd;
+                    border-left: 4px solid #ffc107;
+                    padding: 10px;
+                    margin: 15px 0;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Recuperación de Contraseña</h1>
+                </div>
+                <div class="content">
+                    <p>Hola <strong>{nombre_usuario}</strong>,</p>
+                    
+                    <p>Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en Aleph70.</p>
+                    
+                    <p>Para crear una nueva contraseña, haz clic en el siguiente botón:</p>
+                    
+                    <div style="text-align: center;">
+                        <a href="{reset_url}" class="button">Restablecer Contraseña</a>
+                    </div>
+                    
+                    <p>O copia y pega este enlace en tu navegador:</p>
+                    <p style="word-break: break-all; background-color: #f5f5f5; padding: 10px; border-radius: 3px;">
+                        {reset_url}
+                    </p>
+                    
+                    <div class="warning">
+                        <strong>⚠️ Importante:</strong>
+                        <ul>
+                            <li>Este enlace es válido por <strong>1 hora</strong></li>
+                            <li>Solo puede usarse una vez</li>
+                            <li>Si no solicitaste este cambio, ignora este email</li>
+                        </ul>
+                    </div>
+                    
+                    <p>Si tienes problemas, contacta con el administrador del sistema.</p>
+                    
+                    <p>Saludos,<br>
+                    <strong>Equipo Aleph70</strong></p>
+                </div>
+                <div class="footer">
+                    <p>© 2025 Aleph70 - Sistema Multiempresa</p>
+                    <p>Este es un email automático, por favor no respondas a este mensaje.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        # Adjuntar HTML
+        msg.attach(MIMEText(html, 'html'))
+
+        # Conectar y enviar
+        context = ssl.create_default_context()
+        server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
+        server.login(smtp_username, smtp_password)
+        
+        from email import policy
+        msg_bytes = msg.as_bytes(policy=policy.SMTP)
+        server.sendmail(smtp_from, [destinatario], msg_bytes)
+        
+        server.quit()
+        logger.info(f"Email de recuperación enviado correctamente a {destinatario}")
+        return True, "Email enviado correctamente"
+        
+    except Exception as e:
+        logger.error(f"Error al enviar email de recuperación: {str(e)}", exc_info=True)
+        if server:
+            try:
+                server.quit()
+            except:
+                pass
+        return False, f"Error al enviar el correo: {str(e)}"
