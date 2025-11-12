@@ -502,6 +502,14 @@ def crear_empresa():
         logger.info(f"Empresa creada: {nombre} ({codigo}) - BD: {bd_destino}")
         logger.info(f"Empresa asignada al usuario: {usuario_actual_username}")
         
+        # Actualizar sesión con la nueva empresa
+        session['empresa_id'] = empresa_id
+        session['empresa_codigo'] = codigo
+        session['empresa_nombre'] = nombre
+        session['empresa_db'] = bd_destino
+        session['es_admin_empresa'] = True
+        logger.info(f"Sesión actualizada con nueva empresa: {nombre} (ID: {empresa_id})")
+        
         return jsonify({
             'success': True,
             'empresa_id': empresa_id,
@@ -545,13 +553,20 @@ def actualizar_empresa(empresa_id):
     try:
         # SEGURIDAD: Verificar permisos
         es_superadmin = session.get('es_superadmin', False)
-        empresa_id_usuario = session.get('empresa_id')
         user_id = session.get('user_id')
         
-        # Solo superadmin puede editar cualquier empresa
-        # Admin de empresa solo puede editar su propia empresa
+        # Verificar si el usuario tiene acceso a esta empresa
         if not es_superadmin:
-            if empresa_id != empresa_id_usuario:
+            conn_check = sqlite3.connect(DB_USUARIOS_PATH)
+            cursor_check = conn_check.cursor()
+            cursor_check.execute('''
+                SELECT es_admin_empresa FROM usuario_empresa 
+                WHERE usuario_id = ? AND empresa_id = ?
+            ''', (user_id, empresa_id))
+            result = cursor_check.fetchone()
+            conn_check.close()
+            
+            if not result or not result[0]:
                 logger.warning(f"Usuario {session.get('username')} intentó modificar empresa {empresa_id} sin permisos")
                 return jsonify({'error': 'No tienes permisos para modificar esta empresa'}), 403
         
