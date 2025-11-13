@@ -27,7 +27,7 @@ async function abrirModalPerfil() {
             const timestamp = new Date().getTime();
             avatarPreview.src = data.avatar + '?t=' + timestamp;
         } else {
-            avatarPreview.src = '/static/avatars/default.png';
+            avatarPreview.src = '/static/avatars/default.svg';
         }
         
         // Cargar plantillas disponibles

@@ -119,6 +119,20 @@ function actualizarInfoUsuario(sessionData) {
         console.warn('[MENU] Logo no disponible en sessionData:', sessionData);
     }
     
+    // Actualizar avatar del usuario
+    const menuAvatar = document.getElementById('menu-usuario-avatar');
+    if (menuAvatar && sessionData.avatar) {
+        const timestamp = new Date().getTime();
+        menuAvatar.src = sessionData.avatar + '?t=' + timestamp;
+        menuAvatar.onerror = function() {
+            console.error('[MENU] Error cargando avatar:', sessionData.avatar);
+            this.src = '/static/avatars/default.svg';
+        };
+        console.log('[MENU] Avatar actualizado:', sessionData.avatar);
+    } else if (menuAvatar) {
+        menuAvatar.src = '/static/avatars/default.svg';
+    }
+    
     // Actualizar info en menú (usar IDs correctos del HTML)
     const menuUsuario = document.getElementById('menu-usuario-nombre');
     const menuEmpresa = document.getElementById('menu-empresa-nombre');

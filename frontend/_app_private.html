@@ -37,14 +37,15 @@
             
             <!-- Información de sesión -->
             <div style="padding: 0.5rem 1rem; border-top: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem;">
-                <div id="user-profile-link" style="color: rgba(255,255,255,0.7); font-size: 12px; margin-bottom: 5px; cursor: pointer;" 
+                <div id="user-profile-link" style="color: rgba(255,255,255,0.7); font-size: 12px; margin-bottom: 5px; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 4px; border-radius: 4px;" 
                      onclick="abrirModalPerfil()" 
                      onmouseover="this.style.background='rgba(255,255,255,0.1)'"
                      onmouseout="this.style.background='transparent'"
                      title="Click para ver tu perfil">
-                    <i class="fas fa-user" style="margin-right: 5px;"></i>
-                    <span id="menu-usuario-nombre">Usuario</span>
-                    <i class="fas fa-cog" style="margin-left: 5px; font-size: 10px; opacity: 0.7;"></i>
+                    <img id="menu-usuario-avatar" src="/static/avatars/default.svg" alt="" 
+                         style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.3);">
+                    <span id="menu-usuario-nombre" style="flex: 1;">Usuario</span>
+                    <i class="fas fa-cog" style="font-size: 10px; opacity: 0.7;"></i>
                 </div>
                 <div style="color: rgba(255,255,255,0.7); font-size: 12px; margin-bottom: 5px;">
                     <i class="fas fa-building" style="margin-right: 5px;"></i>
@@ -161,7 +162,7 @@
                     <!-- Avatar -->
                     <div class="form-group" style="text-align: center; margin-bottom: 20px;">
                         <div style="position: relative; display: inline-block; width: 120px; height: 120px;">
-                            <img id="perfil-avatar-preview" src="/static/avatars/default.png" alt="" 
+                            <img id="perfil-avatar-preview" src="/static/avatars/default.svg" alt="" 
                                  style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--color-primario, #007bff); cursor: pointer; display: block;"
                                  onclick="document.getElementById('perfil-avatar-input').click()">
                             <label for="perfil-avatar-input" 
