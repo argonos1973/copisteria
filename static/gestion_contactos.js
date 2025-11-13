@@ -1,6 +1,3 @@
-    // Pequeño delay para asegurar que los valores se mantengan
-    await new Promise(resolve => setTimeout(resolve, 100));
-let cargandoContacto = false;
 // gestion_contactos.js
 // Vanilla JS replacement for the former Vue implementation in GESTION_CONTACTOS.html
 // Mantiene las mismas validaciones y envíos.
@@ -11,6 +8,11 @@ import { inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSi
 import { inicializarPestanas } from './tabs.js';
 
 const API_URL = `${API_URL_BASE}/api`;
+let cargandoContacto = false;
+
+// Esperar a que el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('[Contactos] DOM cargado, inicializando...');
 
 // Element references --------------------------------------------------------
 const form = document.getElementById('contactForm');
@@ -471,3 +473,5 @@ console.log('[Contactos] Todos los listeners configurados');
 
 // Luego cargar el contacto si hay ID en la URL
 loadContacto();
+
+}); // Fin DOMContentLoaded
