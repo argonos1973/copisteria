@@ -473,6 +473,11 @@
     </style>
 
     <!-- JavaScript de la modal -->
+    <script src="/static/perfil_modal.js?v=1762757322"></script>
+    <script src="/static/app_init.js?v=1762757322"></script>
+    
+    <!-- Scripts inline eliminados - movidos a archivos externos -->
+    <!--
     <script>
         let datosUsuarioActual = {};
         
@@ -766,37 +771,7 @@
                 cerrarModalPerfil();
             }
         }
-    </script>
+    -->
 </body>
 </html>
-<!-- Version: 20251026_refactored - CSS y JS movidos a archivos externos -->
-
-<script>
-// Inicializar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', async () => {
-    console.log('[INIT] Iniciando aplicación...');
-    
-    // Cargar menú según permisos
-    if (window.verificarSesionYCargarMenu) {
-        await verificarSesionYCargarMenu();
-    } else {
-        console.error('[INIT] verificarSesionYCargarMenu no está definida');
-    }
-    
-    // Cargar notificaciones
-    if (window.cargarNotificaciones) {
-        cargarNotificaciones();
-    }
-});
-
-// Función para cerrar sesión
-async function cerrarSesion() {
-    try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        window.location.href = '/LOGIN.html';
-    } catch (error) {
-        console.error('Error cerrando sesión:', error);
-        window.location.href = '/LOGIN.html';
-    }
-}
-</script>
+<!-- Version: 20251113_refactored - Todo el JS movido a archivos externos -->
