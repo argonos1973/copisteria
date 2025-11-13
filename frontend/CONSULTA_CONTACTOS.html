@@ -441,8 +441,14 @@
           await fetchContactos();
           // Aplicar permisos a los elementos después de que Vue renderice
           await nextTick();
+          console.log('[CONTACTOS] Aplicando permisos...');
+          console.log('[CONTACTOS] window.usuarioPermisos:', window.usuarioPermisos);
+          console.log('[CONTACTOS] window.parent.usuarioPermisos:', window.parent?.usuarioPermisos);
           if (typeof aplicarPermisosAElementos !== 'undefined') {
+            console.log('[CONTACTOS] Función aplicarPermisosAElementos existe, ejecutando...');
             aplicarPermisosAElementos();
+          } else {
+            console.error('[CONTACTOS] Función aplicarPermisosAElementos NO está definida');
           }
           // Poner el foco en el campo de razón social
           const razonSocialInput = document.getElementById('razonSocial');
