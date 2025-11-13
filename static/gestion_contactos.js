@@ -5,12 +5,12 @@ let cargandoContacto = false;
 // Vanilla JS replacement for the former Vue implementation in GESTION_CONTACTOS.html
 // Mantiene las mismas validaciones y envíos.
 
-import { IP_SERVER, PORT } from './constantes.js?v=1762757322';
+import { IP_SERVER, PORT, API_URL as API_URL_BASE } from './constantes.js?v=1762757322';
 import { mostrarNotificacion } from './notificaciones.js';
 import { inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar, hayCambiosSinGuardar, debounce } from './scripts_utils.js';
 import { inicializarPestanas } from './tabs.js';
 
-const API_URL = `${API_URL}/api`;
+const API_URL = `${API_URL_BASE}/api`;
 
 // Element references --------------------------------------------------------
 const form = document.getElementById('contactForm');
