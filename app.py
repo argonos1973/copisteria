@@ -182,6 +182,13 @@ app.register_blueprint(gastos_bp, url_prefix='')
 app.register_blueprint(estadisticas_gastos_bp, url_prefix='')
 app.register_blueprint(conciliacion.conciliacion_bp, url_prefix='')
 
+# Registrar integración con Plaid
+try:
+    from plaid_routes import plaid_bp
+    app.register_blueprint(plaid_bp)  # Integración bancaria con Plaid
+except ImportError:
+    pass  # Plaid es opcional
+
 # Registrar rutas públicas y de registro (landing page)
 try:
     from public_routes import public_bp
@@ -3406,6 +3413,12 @@ def crear_empresa_page():
     """Página para crear empresa"""
     return send_from_directory('frontend', 'crear_empresa.html')
 
+@app.route('/conectar_banco')
+@login_required
+def conectar_banco_page():
+    """Página para conectar banco con Plaid"""
+    return send_from_directory('frontend', 'CONECTAR_BANCO.html')
+
 @app.route('/ADMIN_PERMISOS.html')
 @login_required
 @require_admin
@@ -3422,9 +3435,61 @@ def servir_admin_permisos():
 
 @app.route("/callback")
 def callback():
-    """Endpoint de callback para OAuth o integraciones externas"""
+    """Endpoint de callback para OAuth o integraciones externas (Tink)"""
     code = request.args.get("code")
-    return f"<h1>OK</h1><p>code: {code}</p>", 200
+    
+    # Guardar el código en un archivo para fácil acceso
+    if code:
+        try:
+            with open('/tmp/tink_code.txt', 'w') as f:
+                f.write(code)
+            logger.info(f"Código Tink guardado: {code}")
+        except Exception as e:
+            logger.error(f"Error guardando código: {e}")
+    
+    return f"<h1>OK</h1><p>code: {code}</p><p>Código guardado en /tmp/tink_code.txt</p>", 200
+
+@app.route("/nordigen/callback")
+def nordigen_callback():
+    """Endpoint de callback para Nordigen (GoCardless)"""
+    ref = request.args.get("ref")
+    error = request.args.get("error")
+    
+    if error:
+        logger.error(f"Error en callback de Nordigen: {error}")
+        return f"""
+        <html>
+        <head><title>Error - Nordigen</title></head>
+        <body style="font-family: Arial; text-align: center; padding: 50px;">
+            <h1 style="color: #c33;">❌ Error</h1>
+            <p>Hubo un error en la autorización: {error}</p>
+            <p><a href="/">Volver al inicio</a></p>
+        </body>
+        </html>
+        """, 400
+    
+    if ref:
+        try:
+            with open('/tmp/nordigen_ref.txt', 'w') as f:
+                f.write(ref)
+            logger.info(f"Referencia de Nordigen guardada: {ref}")
+        except Exception as e:
+            logger.error(f"Error guardando referencia: {e}")
+    
+    return f"""
+    <html>
+    <head><title>Autorización Completada - Nordigen</title></head>
+    <body style="font-family: Arial; text-align: center; padding: 50px;">
+        <h1 style="color: #3c3;">✅ Autorización Completada</h1>
+        <p>Tu banco ha sido conectado exitosamente.</p>
+        <p>Referencia: <code>{ref}</code></p>
+        <hr style="margin: 30px auto; width: 300px;">
+        <p>Puedes cerrar esta ventana.</p>
+        <p><small>Para obtener tus transacciones, ejecuta:<br>
+        <code>python3 setup_nordigen.py transactions</code></small></p>
+    </body>
+    </html>
+    """, 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5002, debug=False)

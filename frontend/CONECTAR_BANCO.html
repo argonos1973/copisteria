@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conectar Banco</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    
+    <!-- Estilos -->
+    <link rel="stylesheet" href="../static/styles.css?v=1762757322" />
+    <link rel="stylesheet" href="../static/page_header.css" />
+    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762757322">
+    
+    <!-- Plaid Link -->
+    <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+    
+    <style>
+        .bank-connection-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        
+        .connection-card {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .connection-card h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .connect-button {
+            background: var(--color-button, #4CAF50);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .connect-button:hover {
+            background: var(--color-button-hover, #45a049);
+        }
+        
+        .connect-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .accounts-list {
+            margin-top: 20px;
+        }
+        
+        .account-item {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .account-info {
+            flex: 1;
+        }
+        
+        .account-name {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .account-details {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .account-balance {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--color-primario, #4CAF50);
+        }
+        
+        .disconnect-button {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .disconnect-button:hover {
+            background: #da190b;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box h3 {
+            margin-top: 0;
+            color: #1976D2;
+        }
+    </style>
+</head>
+<body>
+    <div class="bank-connection-container">
+        <div class="page-header">
+            <h1><i class="fas fa-university"></i> Conectar Banco</h1>
+        </div>
+        
+        <div id="messageContainer"></div>
+        
+        <div class="connection-card">
+            <h2>Conecta tu cuenta bancaria</h2>
+            <div class="info-box">
+                <h3><i class="fas fa-info-circle"></i> ¿Por qué conectar mi banco?</h3>
+                <p>
+                    Al conectar tu banco podrás:
+                </p>
+                <ul>
+                    <li>Importar automáticamente tus movimientos bancarios</li>
+                    <li>Conciliar pagos con facturas de forma automática</li>
+                    <li>Ver el saldo de tus cuentas en tiempo real</li>
+                    <li>Ahorrar tiempo en la gestión de tu tesorería</li>
+                </ul>
+                <p>
+                    <strong>Seguridad:</strong> Utilizamos Plaid, una plataforma segura y certificada 
+                    que conecta con más de 11,000 bancos. Tus credenciales bancarias nunca pasan por 
+                    nuestros servidores.
+                </p>
+            </div>
+            
+            <button id="connectButton" class="connect-button">
+                <i class="fas fa-plus-circle"></i>
+                Conectar nueva cuenta bancaria
+            </button>
+        </div>
+        
+        <div class="connection-card">
+            <h2>Cuentas conectadas</h2>
+            <div id="accountsList" class="accounts-list">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando cuentas...
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Configuración
+        const API_URL = window.location.origin;
+        
+        // Variables globales
+        let linkHandler = null;
+        
+        // Mostrar mensaje
+        function showMessage(message, type = 'info') {
+            const container = document.getElementById('messageContainer');
+            const className = type === 'error' ? 'error-message' : 'success-message';
+            container.innerHTML = `<div class="${className}">${message}</div>`;
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Cargar cuentas conectadas
+        async function loadAccounts() {
+            try {
+                const response = await fetch(`${API_URL}/api/plaid/accounts`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error cargando cuentas');
+                }
+                
+                const accounts = await response.json();
+                displayAccounts(accounts);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('accountsList').innerHTML = 
+                    '<p style="text-align:center; color:#666;">No hay cuentas conectadas</p>';
+            }
+        }
+        
+        // Mostrar cuentas
+        function displayAccounts(accounts) {
+            const container = document.getElementById('accountsList');
+            
+            if (accounts.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#666;">No hay cuentas conectadas</p>';
+                return;
+            }
+            
+            container.innerHTML = accounts.map(account => `
+                <div class="account-item">
+                    <div class="account-info">
+                        <div class="account-name">
+                            ${account.official_name || account.name}
+                            ${account.mask ? `(****${account.mask})` : ''}
+                        </div>
+                        <div class="account-details">
+                            ${account.type} - ${account.subtype}
+                        </div>
+                    </div>
+                    <div class="account-balance">
+                        ${formatCurrency(account.balance.current, account.balance.currency)}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Formatear moneda
+        function formatCurrency(amount, currency = 'EUR') {
+            return new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: currency
+            }).format(amount);
+        }
+        
+        // Inicializar Plaid Link
+        async function initPlaidLink() {
+            try {
+                // Obtener link token
+                const response = await fetch(`${API_URL}/api/plaid/create-link-token`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error creando link token');
+                }
+                
+                const data = await response.json();
+                
+                // Inicializar Plaid Link
+                linkHandler = Plaid.create({
+                    token: data.link_token,
+                    onSuccess: async (public_token, metadata) => {
+                        console.log('Conexión exitosa:', metadata);
+                        
+                        // Intercambiar token
+                        try {
+                            const exchangeResponse = await fetch(`${API_URL}/api/plaid/exchange-token`, {
+                                method: 'POST',
+                                credentials: 'include',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ public_token })
+                            });
+                            
+                            if (!exchangeResponse.ok) {
+                                throw new Error('Error guardando conexión');
+                            }
+                            
+                            const result = await exchangeResponse.json();
+                            showMessage(`✓ Banco conectado exitosamente. ${result.accounts.length} cuenta(s) agregada(s).`, 'success');
+                            
+                            // Recargar cuentas
+                            loadAccounts();
+                            
+                        } catch (error) {
+                            console.error('Error:', error);
+                            showMessage('Error guardando la conexión bancaria', 'error');
+                        }
+                    },
+                    onExit: (err, metadata) => {
+                        if (err) {
+                            console.error('Error en Plaid Link:', err);
+                            showMessage('Error conectando con el banco', 'error');
+                        }
+                    }
+                });
+                
+                // Abrir Plaid Link
+                linkHandler.open();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error iniciando la conexión bancaria', 'error');
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('connectButton').addEventListener('click', initPlaidLink);
+        
+        // Cargar cuentas al iniciar
+        loadAccounts();
+    </script>
+</body>
+</html>
