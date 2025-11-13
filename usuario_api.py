@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify, session
 import sqlite3
 import os
 import json
+import glob
 
 from logger_config import get_logger
 from auth_middleware import login_required
@@ -13,28 +14,73 @@ logger = get_logger(__name__)
 usuario_bp = Blueprint('usuario', __name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+AVATAR_FOLDER = os.path.join(BASE_DIR, 'static', 'avatars')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @usuario_bp.route('/api/usuario/perfil', methods=['PUT'])
 @login_required
 def actualizar_perfil():
-    """Actualiza datos del perfil del usuario (email, teléfono)"""
+    """Actualiza datos del perfil del usuario (email, teléfono, avatar)"""
     try:
         user_id = session.get('user_id')
-        data = request.get_json()
         
-        email = data.get('email')
-        telefono = data.get('telefono')
+        # Obtener datos del formulario (puede ser JSON o FormData)
+        if request.is_json:
+            email = request.json.get('email')
+            telefono = request.json.get('telefono')
+            avatar_file = None
+        else:
+            email = request.form.get('email')
+            telefono = request.form.get('telefono')
+            avatar_file = request.files.get('avatar')
         
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
+        # Procesar avatar si viene archivo
+        avatar_path_relativa = None
+        if avatar_file and avatar_file.filename:
+            if allowed_file(avatar_file.filename):
+                # Eliminar avatars anteriores de este usuario
+                old_avatars = glob.glob(os.path.join(AVATAR_FOLDER, f"user_{user_id}_avatar.*"))
+                for old_avatar in old_avatars:
+                    try:
+                        os.remove(old_avatar)
+                        logger.info(f"Avatar anterior eliminado: {old_avatar}")
+                    except Exception as e:
+                        logger.warning(f"No se pudo eliminar avatar anterior {old_avatar}: {e}")
+                
+                # Guardar nuevo avatar
+                ext = avatar_file.filename.rsplit('.', 1)[1].lower()
+                filename = f"user_{user_id}_avatar.{ext}"
+                filepath = os.path.join(AVATAR_FOLDER, filename)
+                
+                avatar_file.save(filepath)
+                logger.info(f"Avatar actualizado para usuario {user_id}: {filename}")
+                
+                # Ruta relativa para la BD
+                avatar_path_relativa = f"/static/avatars/{filename}"
+            else:
+                conn.close()
+                return jsonify({'error': 'Formato de archivo no permitido'}), 400
+        
         # Actualizar datos del usuario
-        cursor.execute('''
-            UPDATE usuarios 
-            SET email = ?, telefono = ?
-            WHERE id = ?
-        ''', (email, telefono, user_id))
+        if avatar_path_relativa:
+            cursor.execute('''
+                UPDATE usuarios 
+                SET email = ?, telefono = ?, avatar = ?
+                WHERE id = ?
+            ''', (email, telefono, avatar_path_relativa, user_id))
+        else:
+            cursor.execute('''
+                UPDATE usuarios 
+                SET email = ?, telefono = ?
+                WHERE id = ?
+            ''', (email, telefono, user_id))
         
         conn.commit()
         conn.close()
@@ -43,7 +89,8 @@ def actualizar_perfil():
         
         return jsonify({
             'success': True,
-            'mensaje': 'Perfil actualizado correctamente'
+            'mensaje': 'Perfil actualizado correctamente',
+            'avatar': avatar_path_relativa
         }), 200
         
     except Exception as e:

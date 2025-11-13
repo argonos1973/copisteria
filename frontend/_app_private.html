@@ -158,6 +158,22 @@
             <!-- Tab: Datos Personales -->
             <div id="tab-datos" class="tab-content active">
                 <form id="form-datos" onsubmit="return guardarDatos(event)">
+                    <!-- Avatar -->
+                    <div class="form-group" style="text-align: center; margin-bottom: 20px;">
+                        <div style="position: relative; display: inline-block;">
+                            <img id="perfil-avatar-preview" src="/static/avatars/default.png" alt="Avatar" 
+                                 style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-primario, #007bff); cursor: pointer;"
+                                 onclick="document.getElementById('perfil-avatar-input').click()">
+                            <label for="perfil-avatar-input" style="position: absolute; bottom: 0; right: 0; background: var(--color-primario, #007bff); color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid white;">
+                                <i class="fas fa-camera"></i>
+                            </label>
+                        </div>
+                        <input type="file" id="perfil-avatar-input" accept="image/*" style="display: none;" onchange="previsualizarAvatar(event)">
+                        <div style="margin-top: 8px; font-size: 11px; color: var(--color-texto-secundario, #666);">
+                            PNG, JPG (máx. 2MB)
+                        </div>
+                    </div>
+                    
                     <div class="form-group">
                         <label><i class="fas fa-user"></i> Nombre de usuario</label>
                         <input type="text" id="perfil-username" disabled>
@@ -473,6 +489,15 @@
                 document.getElementById('perfil-email').value = data.email || '';
                 document.getElementById('perfil-telefono').value = data.telefono || '';
                 
+                // Cargar avatar si existe
+                const avatarPreview = document.getElementById('perfil-avatar-preview');
+                if (data.avatar) {
+                    const timestamp = new Date().getTime();
+                    avatarPreview.src = data.avatar + '?t=' + timestamp;
+                } else {
+                    avatarPreview.src = '/static/avatars/default.png';
+                }
+                
                 // Cargar plantillas disponibles
                 await cargarPlantillasModal();
                 
@@ -481,6 +506,22 @@
             } catch (error) {
                 console.error('Error cargando perfil:', error);
                 alert('Error al cargar datos del perfil');
+            }
+        }
+        
+        async function cargarDatosPerfil() {
+            try {
+                const response = await fetch('/api/auth/session');
+                const data = await response.json();
+                
+                // Actualizar avatar
+                const avatarPreview = document.getElementById('perfil-avatar-preview');
+                if (data.avatar) {
+                    const timestamp = new Date().getTime();
+                    avatarPreview.src = data.avatar + '?t=' + timestamp;
+                }
+            } catch (error) {
+                console.error('Error recargando perfil:', error);
             }
         }
         
@@ -500,25 +541,62 @@
             document.getElementById(`tab-${tab}`).classList.add('active');
         }
         
+        function previsualizarAvatar(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('perfil-avatar-preview');
+            
+            if (file) {
+                // Validar tamaño (2MB máximo)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('❌ El archivo es demasiado grande. Máximo 2MB');
+                    event.target.value = '';
+                    return;
+                }
+                
+                // Validar tipo
+                if (!file.type.startsWith('image/')) {
+                    alert('❌ Solo se permiten imágenes');
+                    event.target.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
         async function guardarDatos(event) {
             event.preventDefault();
             
             try {
-                const datos = {
-                    email: document.getElementById('perfil-email').value,
-                    telefono: document.getElementById('perfil-telefono').value
-                };
+                // Usar FormData para enviar archivos
+                const formData = new FormData();
+                formData.append('email', document.getElementById('perfil-email').value);
+                formData.append('telefono', document.getElementById('perfil-telefono').value);
+                
+                // Agregar avatar si se seleccionó uno
+                const avatarInput = document.getElementById('perfil-avatar-input');
+                if (avatarInput && avatarInput.files && avatarInput.files[0]) {
+                    formData.append('avatar', avatarInput.files[0]);
+                }
                 
                 const response = await fetch('/api/usuario/perfil', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(datos)
+                    body: formData
+                    // No incluir Content-Type, el navegador lo establece automáticamente con boundary
                 });
                 
                 const result = await response.json();
                 
                 if (response.ok) {
                     alert('✅ Datos actualizados correctamente');
+                    // Recargar datos del perfil para mostrar avatar actualizado
+                    setTimeout(() => {
+                        cargarDatosPerfil();
+                    }, 500);
                 } else {
                     alert('❌ Error: ' + (result.error || 'No se pudieron actualizar los datos'));
                 }
