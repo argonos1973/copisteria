@@ -316,6 +316,7 @@ def obtener_menu():
             'gastos': [
                 {'nombre': 'Consultar Gastos', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_GASTOS.html'},
                 {'nombre': 'Conciliación', 'icono': 'fas fa-exchange-alt', 'ruta': '/CONCILIACION_GASTOS.html'},
+                {'nombre': 'Extracto Bancario', 'icono': 'fas fa-file-invoice-dollar', 'ruta': '/extracto_bancario'},
                 {'nombre': 'Conectar Banco', 'icono': 'fas fa-university', 'ruta': '/conectar_banco'}
             ]
         }

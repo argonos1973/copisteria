@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extracto Bancario - Aleph ERP</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .extracto-container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--primary, #000);
+        }
+
+        .filters-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn-filter {
+            background: var(--primary, #000);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.3s;
+        }
+
+        .btn-filter:hover {
+            opacity: 0.8;
+        }
+
+        .accounts-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .account-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .account-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .account-card.selected {
+            border-color: var(--primary, #000);
+            background: #f0f8ff;
+        }
+
+        .account-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .account-type {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .account-balance {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary, #000);
+        }
+
+        .transactions-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .table-header {
+            background: var(--primary, #000);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f8f9fa;
+        }
+
+        th {
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #ddd;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .amount-positive {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .amount-negative {
+            color: #dc3545;
+            font-weight: 600;
+        }
+
+        .transaction-date {
+            color: #666;
+        }
+
+        .transaction-merchant {
+            font-weight: 600;
+        }
+
+        .transaction-category {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #495057;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary, #000);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .sync-info {
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .sync-info i {
+            color: #0066cc;
+            margin-right: 8px;
+        }
+
+        .btn-sync {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+
+        .btn-sync:hover {
+            background: #0052a3;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary, #000);
+        }
+    </style>
+</head>
+<body>
+    <div class="extracto-container">
+        <div class="header-section">
+            <div>
+                <h1><i class="fas fa-file-invoice-dollar"></i> Extracto Bancario</h1>
+                <p>Consulta tus movimientos bancarios</p>
+            </div>
+        </div>
+
+        <div class="sync-info">
+            <i class="fas fa-info-circle"></i>
+            <strong>Última sincronización:</strong> <span id="last-sync">Cargando...</span>
+            <button class="btn-sync" onclick="syncTransactions()">
+                <i class="fas fa-sync-alt"></i> Sincronizar ahora
+            </button>
+        </div>
+
+        <!-- Resumen de cuentas -->
+        <div id="accounts-container" class="accounts-summary">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Cargando cuentas...</p>
+            </div>
+        </div>
+
+        <!-- Estadísticas -->
+        <div id="stats-container" class="stats-row" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-label">Total Ingresos</div>
+                <div class="stat-value" id="total-ingresos">0,00 €</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Gastos</div>
+                <div class="stat-value" id="total-gastos">0,00 €</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Balance</div>
+                <div class="stat-value" id="balance">0,00 €</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Transacciones</div>
+                <div class="stat-value" id="total-transacciones">0</div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters-section">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Cuenta</label>
+                    <select id="filter-account">
+                        <option value="">Todas las cuentas</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Desde</label>
+                    <input type="date" id="filter-start-date">
+                </div>
+                <div class="filter-group">
+                    <label>Hasta</label>
+                    <input type="date" id="filter-end-date">
+                </div>
+                <div class="filter-group" style="align-self: flex-end;">
+                    <button class="btn-filter" onclick="loadTransactions()">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de transacciones -->
+        <div class="transactions-table">
+            <div class="table-header">
+                <span><i class="fas fa-list"></i> Transacciones</span>
+                <span id="transaction-count">0 movimientos</span>
+            </div>
+            <div id="transactions-container">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Cargando transacciones...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let accounts = [];
+        let transactions = [];
+        let selectedAccountId = null;
+
+        // Cargar cuentas al iniciar
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAccounts();
+            setDefaultDates();
+        });
+
+        function setDefaultDates() {
+            const today = new Date();
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+
+            document.getElementById('filter-start-date').valueAsDate = thirtyDaysAgo;
+            document.getElementById('filter-end-date').valueAsDate = today;
+        }
+
+        async function loadAccounts() {
+            try {
+                const response = await fetch(`${API_URL}/api/plaid/accounts`, {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error cargando cuentas');
+                }
+
+                accounts = await response.json();
+                renderAccounts();
+                populateAccountFilter();
+                
+                // Cargar transacciones automáticamente
+                if (accounts.length > 0) {
+                    loadTransactions();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('accounts-container').innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ffc107; margin-bottom: 15px;"></i>
+                        <p>Error cargando las cuentas bancarias</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderAccounts() {
+            const container = document.getElementById('accounts-container');
+            
+            if (accounts.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-university" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
+                        <p>No hay cuentas bancarias conectadas</p>
+                        <a href="/conectar_banco" style="color: var(--primary, #000); text-decoration: underline;">Conectar banco</a>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = accounts.map(account => `
+                <div class="account-card ${selectedAccountId === account.account_id ? 'selected' : ''}" 
+                     onclick="selectAccount('${account.account_id}')">
+                    <div class="account-name">${account.name}</div>
+                    <div class="account-type">${account.type} ${account.mask ? '••••' + account.mask : ''}</div>
+                    <div class="account-balance">${formatCurrency(account.balance)}</div>
+                </div>
+            `).join('');
+        }
+
+        function populateAccountFilter() {
+            const select = document.getElementById('filter-account');
+            select.innerHTML = '<option value="">Todas las cuentas</option>' +
+                accounts.map(account => `
+                    <option value="${account.account_id}">${account.name}</option>
+                `).join('');
+        }
+
+        function selectAccount(accountId) {
+            selectedAccountId = selectedAccountId === accountId ? null : accountId;
+            renderAccounts();
+            document.getElementById('filter-account').value = selectedAccountId || '';
+            loadTransactions();
+        }
+
+        async function loadTransactions() {
+            const accountId = document.getElementById('filter-account').value;
+            const startDate = document.getElementById('filter-start-date').value;
+            const endDate = document.getElementById('filter-end-date').value;
+
+            const container = document.getElementById('transactions-container');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando transacciones...</p></div>';
+
+            try {
+                let url = `${API_URL}/api/plaid/transactions?`;
+                if (startDate) url += `start_date=${startDate}&`;
+                if (endDate) url += `end_date=${endDate}&`;
+                if (accountId) url += `account_id=${accountId}`;
+
+                const response = await fetch(url, {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error cargando transacciones');
+                }
+
+                transactions = await response.json();
+                renderTransactions();
+                calculateStats();
+            } catch (error) {
+                console.error('Error:', error);
+                container.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ffc107; margin-bottom: 15px;"></i>
+                        <p>Error cargando las transacciones</p>
+                    </div>
+                `;
+            }
+        }
+
+        function renderTransactions() {
+            const container = document.getElementById('transactions-container');
+            document.getElementById('transaction-count').textContent = `${transactions.length} movimientos`;
+
+            if (transactions.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <i class="fas fa-receipt" style="font-size: 48px; color: #ccc; margin-bottom: 15px;"></i>
+                        <p>No hay transacciones en el período seleccionado</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Descripción</th>
+                            <th>Categoría</th>
+                            <th>Cuenta</th>
+                            <th style="text-align: right;">Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${transactions.map(tx => `
+                            <tr>
+                                <td class="transaction-date">${formatDate(tx.date)}</td>
+                                <td class="transaction-merchant">${tx.name}</td>
+                                <td><span class="transaction-category">${tx.category || 'Sin categoría'}</span></td>
+                                <td>${getAccountName(tx.account_id)}</td>
+                                <td style="text-align: right;" class="${tx.amount < 0 ? 'amount-positive' : 'amount-negative'}">
+                                    ${tx.amount < 0 ? '+' : '-'}${formatCurrency(Math.abs(tx.amount))}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function calculateStats() {
+            const statsContainer = document.getElementById('stats-container');
+            statsContainer.style.display = 'grid';
+
+            let totalIngresos = 0;
+            let totalGastos = 0;
+
+            transactions.forEach(tx => {
+                if (tx.amount < 0) {
+                    totalIngresos += Math.abs(tx.amount);
+                } else {
+                    totalGastos += tx.amount;
+                }
+            });
+
+            const balance = totalIngresos - totalGastos;
+
+            document.getElementById('total-ingresos').textContent = formatCurrency(totalIngresos);
+            document.getElementById('total-gastos').textContent = formatCurrency(totalGastos);
+            document.getElementById('balance').textContent = formatCurrency(balance);
+            document.getElementById('balance').style.color = balance >= 0 ? '#28a745' : '#dc3545';
+            document.getElementById('total-transacciones').textContent = transactions.length;
+        }
+
+        async function syncTransactions() {
+            const btn = event.target.closest('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sincronizando...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_URL}/api/plaid/sync`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error sincronizando');
+                }
+
+                const result = await response.json();
+                alert(`✓ Sincronización completada. ${result.added || 0} nuevas transacciones.`);
+                
+                // Recargar datos
+                await loadAccounts();
+                await loadTransactions();
+                
+                document.getElementById('last-sync').textContent = new Date().toLocaleString('es-ES');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al sincronizar las transacciones');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function getAccountName(accountId) {
+            const account = accounts.find(a => a.account_id === accountId);
+            return account ? account.name : 'Desconocida';
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: 'EUR'
+            }).format(amount);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('es-ES', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+
+        // Actualizar última sincronización
+        document.getElementById('last-sync').textContent = 'Nunca';
+    </script>
+</body>
+</html>

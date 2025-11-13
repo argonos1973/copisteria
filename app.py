@@ -3419,6 +3419,12 @@ def conectar_banco_page():
     """Página para conectar banco con Plaid"""
     return send_from_directory('frontend', 'CONECTAR_BANCO.html')
 
+@app.route('/extracto_bancario')
+@login_required
+def extracto_bancario_page():
+    """Página para consultar extractos bancarios"""
+    return send_from_directory('frontend', 'EXTRACTO_BANCARIO.html')
+
 @app.route('/ADMIN_PERMISOS.html')
 @login_required
 @require_admin
