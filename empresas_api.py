@@ -627,6 +627,25 @@ def actualizar_empresa(empresa_id):
         nombre_empresa = row[1]
         db_path_empresa = row[2]
         
+        # Procesar logo si viene archivo
+        logo_path_relativa = None
+        if logo_file and logo_file.filename:
+            # Validar archivo
+            if allowed_file(logo_file.filename):
+                ext = logo_file.filename.rsplit('.', 1)[1].lower()
+                filename = f"{codigo_empresa}_logo.{ext}"
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                
+                # Guardar archivo
+                logo_file.save(filepath)
+                logger.info(f"Logo actualizado para empresa {codigo_empresa}: {filename}")
+                
+                # Ruta relativa para el JSON
+                logo_path_relativa = f"/static/logos/{filename}"
+            else:
+                conn.close()
+                return jsonify({'error': 'Formato de archivo no permitido'}), 400
+        
         # Construir datos de emisor para JSON
         emisor_data = {
             'nif': data.get('cif', ''),
@@ -640,6 +659,10 @@ def actualizar_empresa(empresa_id):
             'db_path': db_path_empresa,
             'codigo': codigo_empresa
         }
+        
+        # Agregar logo si existe
+        if logo_path_relativa:
+            emisor_data['logo'] = logo_path_relativa
         
         # Guardar JSON de emisor
         emisor_json_path = os.path.join(BASE_DIR, 'emisores', f'{codigo_empresa}_emisor.json')
@@ -669,24 +692,10 @@ def actualizar_empresa(empresa_id):
             else:
                 valores.append(0)
         
-        # Procesar logo si viene archivo
-        if logo_file and logo_file.filename:
-            # Validar archivo
-            if allowed_file(logo_file.filename):
-                ext = logo_file.filename.rsplit('.', 1)[1].lower()
-                filename = f"{codigo_empresa}_logo.{ext}"
-                filepath = os.path.join(UPLOAD_FOLDER, filename)
-                
-                # Guardar archivo
-                logo_file.save(filepath)
-                logger.info(f"Logo actualizado para empresa {codigo_empresa}: {filename}")
-                
-                # Agregar logo_header al update
-                campos_update.append("logo_header = ?")
-                valores.append(filename)
-            else:
-                conn.close()
-                return jsonify({'error': 'Formato de archivo no permitido'}), 400
+        # Agregar logo_header al update si se procesó
+        if logo_path_relativa:
+            campos_update.append("logo_header = ?")
+            valores.append(filename)
         
         # Ejecutar UPDATE solo si hay campos para actualizar
         if campos_update:

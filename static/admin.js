@@ -3364,33 +3364,28 @@ function previsualizarLogoEmpresa(event) {
 
 async function guardarDatosEmpresa(empresaId) {
     try {
-        const datos = {
-            nombre: document.getElementById('empresa-nombre').value,
-            razon_social: document.getElementById('empresa-razon-social').value,
-            cif: document.getElementById('empresa-cif').value,
-            direccion: document.getElementById('empresa-direccion').value,
-            codigo_postal: document.getElementById('empresa-codigo-postal').value,
-            ciudad: document.getElementById('empresa-ciudad').value,
-            provincia: document.getElementById('empresa-provincia').value,
-            telefono: document.getElementById('empresa-telefono').value,
-            email: document.getElementById('empresa-email').value
-        };
+        // Usar FormData para enviar archivos
+        const formData = new FormData();
+        formData.append('nombre', document.getElementById('empresa-nombre').value);
+        formData.append('razon_social', document.getElementById('empresa-razon-social').value);
+        formData.append('cif', document.getElementById('empresa-cif').value);
+        formData.append('direccion', document.getElementById('empresa-direccion').value);
+        formData.append('codigo_postal', document.getElementById('empresa-codigo-postal').value);
+        formData.append('ciudad', document.getElementById('empresa-ciudad').value);
+        formData.append('provincia', document.getElementById('empresa-provincia').value);
+        formData.append('telefono', document.getElementById('empresa-telefono').value);
+        formData.append('email', document.getElementById('empresa-email').value);
         
         // Agregar logo si se seleccionó uno
         const logoInput = document.getElementById('empresa-logo');
         if (logoInput && logoInput.files && logoInput.files[0]) {
-            const reader = new FileReader();
-            const logoBase64 = await new Promise((resolve) => {
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(logoInput.files[0]);
-            });
-            datos.logo = logoBase64;
+            formData.append('logo', logoInput.files[0]);
         }
         
         const response = await fetch(`/api/empresas/${empresaId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(datos)
+            body: formData
+            // No incluir Content-Type, el navegador lo establece automáticamente con boundary
         });
         
         const result = await response.json();
