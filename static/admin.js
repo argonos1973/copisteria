@@ -3227,16 +3227,29 @@ async function cargarConfiguracionEmpresa() {
             </div>
         `;
         
-        // Cargar logo existente si existe
-        if (empresa.emisor_data && empresa.emisor_data.logo) {
-            const logoPreviewContainer = document.getElementById('logo-preview-container');
-            const logoPreview = document.getElementById('logo-preview');
+        // Cargar logo existente si existe (usar setTimeout para asegurar que el DOM esté listo)
+        setTimeout(() => {
+            console.log('[LOGO] Verificando logo existente...', empresa.emisor_data);
             
-            if (logoPreviewContainer && logoPreview) {
-                logoPreview.src = empresa.emisor_data.logo;
-                logoPreviewContainer.style.display = 'block';
+            if (empresa.emisor_data && empresa.emisor_data.logo) {
+                console.log('[LOGO] Logo encontrado:', empresa.emisor_data.logo);
+                
+                const logoPreviewContainer = document.getElementById('logo-preview-container');
+                const logoPreview = document.getElementById('logo-preview');
+                
+                console.log('[LOGO] Elementos DOM:', { logoPreviewContainer, logoPreview });
+                
+                if (logoPreviewContainer && logoPreview) {
+                    logoPreview.src = empresa.emisor_data.logo;
+                    logoPreviewContainer.style.display = 'block';
+                    console.log('[LOGO] Vista previa mostrada');
+                } else {
+                    console.error('[LOGO] No se encontraron elementos DOM para la vista previa');
+                }
+            } else {
+                console.log('[LOGO] No hay logo en emisor_data');
             }
-        }
+        }, 100);
         
     } catch (error) {
         console.error('Error cargando configuración de empresa:', error);
