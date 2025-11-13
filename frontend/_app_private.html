@@ -195,18 +195,43 @@
             
             <!-- Tab: Contraseña -->
             <div id="tab-password" class="tab-content">
+                <!-- Información del usuario -->
+                <div style="background: var(--bg-elevated, #f8f9fa); padding: 12px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid var(--color-primario, #007bff);">
+                    <div style="font-size: 12px; color: var(--color-texto-secundario, #666); margin-bottom: 4px;">
+                        <i class="fas fa-user"></i> Usuario actual
+                    </div>
+                    <div style="font-size: 14px; font-weight: 600; color: var(--color-texto, #333);" id="password-info-username">
+                        -
+                    </div>
+                </div>
+                
                 <form id="form-password" onsubmit="return cambiarPassword(event)">
                     <div class="form-group">
                         <label><i class="fas fa-lock"></i> Contraseña Actual</label>
-                        <input type="password" id="password-actual" required>
+                        <div style="position: relative;">
+                            <input type="password" id="password-actual" required style="padding-right: 40px;">
+                            <i class="fas fa-eye" onclick="togglePasswordVisibility('password-actual', this)" 
+                               style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--color-texto-secundario, #666); font-size: 16px;"></i>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label><i class="fas fa-lock"></i> Nueva Contraseña</label>
-                        <input type="password" id="password-nueva" required minlength="6">
+                        <div style="position: relative;">
+                            <input type="password" id="password-nueva" required minlength="6" style="padding-right: 40px;">
+                            <i class="fas fa-eye" onclick="togglePasswordVisibility('password-nueva', this)" 
+                               style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--color-texto-secundario, #666); font-size: 16px;"></i>
+                        </div>
+                        <small style="font-size: 11px; color: var(--color-texto-secundario, #666); display: block; margin-top: 4px;">
+                            Mínimo 6 caracteres
+                        </small>
                     </div>
                     <div class="form-group">
                         <label><i class="fas fa-lock"></i> Confirmar Nueva Contraseña</label>
-                        <input type="password" id="password-confirmar" required>
+                        <div style="position: relative;">
+                            <input type="password" id="password-confirmar" required style="padding-right: 40px;">
+                            <i class="fas fa-eye" onclick="togglePasswordVisibility('password-confirmar', this)" 
+                               style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--color-texto-secundario, #666); font-size: 16px;"></i>
+                        </div>
                     </div>
                     <button type="submit" class="btn-guardar"><i class="fas fa-key"></i> Cambiar Contraseña</button>
                 </form>

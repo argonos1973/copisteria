@@ -15,6 +15,12 @@ async function abrirModalPerfil() {
         document.getElementById('perfil-email').value = data.email || '';
         document.getElementById('perfil-telefono').value = data.telefono || '';
         
+        // Llenar información en pestaña de contraseña
+        const passwordInfoUsername = document.getElementById('password-info-username');
+        if (passwordInfoUsername) {
+            passwordInfoUsername.textContent = data.username || '-';
+        }
+        
         // Cargar avatar si existe
         const avatarPreview = document.getElementById('perfil-avatar-preview');
         if (data.avatar) {
@@ -32,6 +38,19 @@ async function abrirModalPerfil() {
     } catch (error) {
         console.error('Error cargando perfil:', error);
         alert('Error al cargar datos del perfil');
+    }
+}
+
+function togglePasswordVisibility(inputId, iconElement) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        iconElement.classList.remove('fa-eye');
+        iconElement.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        iconElement.classList.remove('fa-eye-slash');
+        iconElement.classList.add('fa-eye');
     }
 }
 

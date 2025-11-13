@@ -146,20 +146,26 @@ def obtener_sesion():
     try:
         user_id = session.get('user_id')
         
-        # Obtener avatar de la base de datos
+        # Obtener avatar, email y teléfono de la base de datos
         avatar = None
+        email = None
+        telefono = None
         if user_id:
             conn = sqlite3.connect(DB_USUARIOS_PATH)
             cursor = conn.cursor()
-            cursor.execute('SELECT avatar FROM usuarios WHERE id = ?', (user_id,))
+            cursor.execute('SELECT avatar, email, telefono FROM usuarios WHERE id = ?', (user_id,))
             result = cursor.fetchone()
-            if result and result[0]:
-                avatar = result[0]
+            if result:
+                avatar = result[0] if result[0] else None
+                email = result[1] if result[1] else None
+                telefono = result[2] if result[2] else None
             conn.close()
         
         return jsonify({
             'usuario': session.get('nombre_completo'),
             'username': session.get('username'),
+            'email': email,
+            'telefono': telefono,
             'empresa': session.get('empresa_nombre'),
             'empresa_codigo': session.get('empresa_codigo'),
             'logo': f"/static/logos/{session.get('empresa_logo', 'default_header.png')}",
