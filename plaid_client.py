@@ -29,8 +29,8 @@ class PlaidClient:
             secret: Secret de Plaid
             environment: 'sandbox', 'development' o 'production'
         """
-        self.client_id = client_id or os.getenv('PLAID_CLIENT_ID', '6914f27ba7c3ba81a912b10')
-        self.secret = secret or os.getenv('PLAID_SECRET', '445a15bdc94ec17c89bc8f49582274')
+        self.client_id = client_id or os.getenv('PLAID_CLIENT_ID', '6914f270a7e39a001d912b10')
+        self.secret = secret or os.getenv('PLAID_SECRET', '445a15b6c94bc17c05be8fd59822f4')
         
         # Configurar ambiente
         if environment == 'sandbox':
@@ -68,16 +68,22 @@ class PlaidClient:
             dict con link_token y expiration
         """
         try:
-            request = LinkTokenCreateRequest(
-                user=LinkTokenCreateRequestUser(
+            # Preparar parámetros del request
+            request_params = {
+                'user': LinkTokenCreateRequestUser(
                     client_user_id=str(user_id)
                 ),
-                client_name="Aleph ERP",
-                products=[Products("transactions"), Products("auth")],
-                country_codes=[CountryCode('ES'), CountryCode('GB'), CountryCode('US')],
-                language='es',
-                redirect_uri=redirect_uri
-            )
+                'client_name': "Aleph ERP",
+                'products': [Products("transactions"), Products("auth")],
+                'country_codes': [CountryCode('ES'), CountryCode('GB'), CountryCode('US')],
+                'language': 'es'
+            }
+            
+            # Solo agregar redirect_uri si se proporciona
+            if redirect_uri:
+                request_params['redirect_uri'] = redirect_uri
+            
+            request = LinkTokenCreateRequest(**request_params)
             
             response = self.client.link_token_create(request)
             
