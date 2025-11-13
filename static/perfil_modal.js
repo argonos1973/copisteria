@@ -21,6 +21,12 @@ async function abrirModalPerfil() {
             passwordInfoUsername.textContent = data.username || '-';
         }
         
+        // Mostrar contraseña actual con puntos (placeholder visual)
+        const passwordActualInput = document.getElementById('password-actual');
+        if (passwordActualInput) {
+            passwordActualInput.placeholder = '••••••••';
+        }
+        
         // Cargar avatar si existe
         const avatarPreview = document.getElementById('perfil-avatar-preview');
         if (data.avatar) {
