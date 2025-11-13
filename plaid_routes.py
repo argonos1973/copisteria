@@ -152,6 +152,11 @@ def exchange_token():
         
         # Insertar cuentas
         for account in accounts:
+            # Convertir tipos de Plaid a strings para SQLite
+            account_type = str(account['type']) if account.get('type') else None
+            account_subtype = str(account['subtype']) if account.get('subtype') else None
+            currency = str(account['balance']['currency']) if account.get('balance', {}).get('currency') else 'EUR'
+            
             cursor.execute('''
                 INSERT OR REPLACE INTO plaid_accounts
                 (item_id, account_id, name, official_name, type, subtype, mask, currency)
@@ -161,10 +166,10 @@ def exchange_token():
                 account['account_id'],
                 account['name'],
                 account.get('official_name'),
-                account['type'],
-                account['subtype'],
+                account_type,
+                account_subtype,
                 account.get('mask'),
-                account['balance']['currency']
+                currency
             ))
         
         logger.info("[PLAID] Haciendo commit a la base de datos")
