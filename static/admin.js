@@ -3171,10 +3171,20 @@ async function cargarConfiguracionEmpresa() {
                                     <input type="text" id="empresa-provincia" value="${empresa.provincia || ''}" 
                                            style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
                                 </div>
-                                <div style="grid-column: 1 / -1;">
+                                <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Email:</label>
                                     <input type="email" id="empresa-email" value="${empresa.email || ''}" 
-                                           style="max-width: 620px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                </div>
+                                <div>
+                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Logo:</label>
+                                    <input type="file" id="empresa-logo" accept="image/*" onchange="previsualizarLogoEmpresa(event)"
+                                           style="max-width: 300px; width: 100%; padding: 4px; font-size: 11px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                    <small style="font-size: 10px; color: #7f8c8d; display: block; margin-top: 2px;">PNG, JPG, SVG (máx. 2MB)</small>
+                                </div>
+                                <div id="logo-preview-container" style="grid-column: 1 / -1; display: none; margin-top: 8px;">
+                                    <img id="logo-preview" src="" alt="Vista previa del logo" 
+                                         style="max-width: 150px; max-height: 75px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; padding: 3px; background: #f9f9f9;">
                                 </div>
                             </div>
                             <div style="display: flex; justify-content: flex-start; margin-top: 12px; gap: 8px;">
@@ -3327,6 +3337,31 @@ async function aplicarPlantilla(plantilla, empresaId) {
     }
 }
 
+function previsualizarLogoEmpresa(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('logo-preview-container');
+    const img = document.getElementById('logo-preview');
+    
+    if (file) {
+        // Validar tamaño (2MB máximo)
+        if (file.size > 2 * 1024 * 1024) {
+            mostrarAlerta('❌ El archivo es demasiado grande. Máximo 2MB', 'error');
+            event.target.value = '';
+            preview.style.display = 'none';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            img.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
 async function guardarDatosEmpresa(empresaId) {
     try {
         const datos = {
@@ -3340,6 +3375,17 @@ async function guardarDatosEmpresa(empresaId) {
             telefono: document.getElementById('empresa-telefono').value,
             email: document.getElementById('empresa-email').value
         };
+        
+        // Agregar logo si se seleccionó uno
+        const logoInput = document.getElementById('empresa-logo');
+        if (logoInput && logoInput.files && logoInput.files[0]) {
+            const reader = new FileReader();
+            const logoBase64 = await new Promise((resolve) => {
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(logoInput.files[0]);
+            });
+            datos.logo = logoBase64;
+        }
         
         const response = await fetch(`/api/empresas/${empresaId}`, {
             method: 'PUT',
