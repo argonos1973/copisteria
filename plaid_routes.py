@@ -264,13 +264,35 @@ def get_transactions():
     Obtener transacciones bancarias
     """
     try:
+        logger.info("[PLAID] Iniciando get_transactions")
         user_id = session.get('user_id')
         empresa_id = session.get('empresa_id')
         
+        if not user_id or not empresa_id:
+            logger.error("[PLAID] Usuario o empresa no válidos")
+            return jsonify({'error': 'Usuario o empresa no válidos'}), 401
+        
         # Parámetros
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
+        start_date_str = request.args.get('start_date')
+        end_date_str = request.args.get('end_date')
         account_id = request.args.get('account_id')
+        
+        logger.info(f"[PLAID] Parámetros: start_date={start_date_str}, end_date={end_date_str}, account_id={account_id}")
+        
+        # Validar fechas
+        if not start_date_str or not end_date_str:
+            logger.error("[PLAID] Fechas requeridas")
+            return jsonify({'error': 'start_date y end_date son requeridos'}), 400
+        
+        # Convertir strings a objetos date
+        from datetime import date as date_type
+        try:
+            start_date = date_type.fromisoformat(start_date_str)
+            end_date = date_type.fromisoformat(end_date_str)
+            logger.info(f"[PLAID] Fechas convertidas: {start_date} - {end_date}")
+        except ValueError as e:
+            logger.error(f"[PLAID] Error convirtiendo fechas: {e}")
+            return jsonify({'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}), 400
         
         conn = sqlite3.connect(get_db_path())
         conn.row_factory = sqlite3.Row
@@ -278,6 +300,7 @@ def get_transactions():
         
         # Obtener access token del item
         if account_id:
+            logger.info(f"[PLAID] Buscando access_token para account_id={account_id}")
             cursor.execute('''
                 SELECT i.access_token, a.item_id
                 FROM plaid_accounts a
@@ -285,6 +308,7 @@ def get_transactions():
                 WHERE a.account_id = ? AND i.user_id = ? AND i.empresa_id = ? AND i.active = 1
             ''', (account_id, user_id, empresa_id))
         else:
+            logger.info("[PLAID] Buscando access_token para todas las cuentas")
             cursor.execute('''
                 SELECT access_token, item_id
                 FROM plaid_items
@@ -296,10 +320,14 @@ def get_transactions():
         conn.close()
         
         if not item:
-            return jsonify({'error': 'No hay cuentas bancarias conectadas'}), 404
+            logger.warning("[PLAID] No hay cuentas bancarias conectadas")
+            return jsonify([]), 200  # Retornar array vacío en lugar de error
+        
+        logger.info(f"[PLAID] Access token encontrado para item_id={item['item_id']}")
         
         # Obtener transacciones de Plaid
         account_ids = [account_id] if account_id else None
+        logger.info(f"[PLAID] Obteniendo transacciones de Plaid...")
         transactions = plaid_client.get_transactions(
             access_token=item['access_token'],
             start_date=start_date,
@@ -307,10 +335,13 @@ def get_transactions():
             account_ids=account_ids
         )
         
+        logger.info(f"[PLAID] ✅ {len(transactions)} transacciones obtenidas")
         return jsonify(transactions), 200
         
     except Exception as e:
-        logger.error(f"[PLAID] Error obteniendo transacciones: {e}", exc_info=True)
+        logger.error(f"[PLAID] ❌ Error obteniendo transacciones: {e}", exc_info=True)
+        import traceback
+        logger.error(f"[PLAID] Traceback:\n{traceback.format_exc()}")
         return jsonify({'error': str(e)}), 500
 
 @plaid_bp.route('/sync', methods=['POST'])
