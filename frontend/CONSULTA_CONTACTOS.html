@@ -215,7 +215,7 @@
     import { IP_SERVER, PORT, API_URL as API_URL_BASE } from '../static/constantes.js?v=1762757322';
     import { mostrarNotificacion, mostrarConfirmacion } from '../static/notificaciones.js';
 
-    const { createApp, ref, reactive, onMounted, watch } = Vue;
+    const { createApp, ref, reactive, onMounted, watch, nextTick } = Vue;
 
     createApp({
       setup() {
@@ -439,22 +439,21 @@
           restaurarFiltros();
           // Cargar contactos
           await fetchContactos();
-          // Aplicar permisos a los elementos
-          Vue.nextTick(() => {
-            if (typeof aplicarPermisosAElementos !== 'undefined') {
-              aplicarPermisosAElementos();
-            }
-            // Poner el foco en el campo de razón social
-            const razonSocialInput = document.getElementById('razonSocial');
-            if (razonSocialInput) {
-              razonSocialInput.focus();
-            }
-          });
+          // Aplicar permisos a los elementos después de que Vue renderice
+          await nextTick();
+          if (typeof aplicarPermisosAElementos !== 'undefined') {
+            aplicarPermisosAElementos();
+          }
+          // Poner el foco en el campo de razón social
+          const razonSocialInput = document.getElementById('razonSocial');
+          if (razonSocialInput) {
+            razonSocialInput.focus();
+          }
         });
 
         // Re-aplicar permisos cuando cambian los contactos
         watch(contactos, async () => {
-          await Vue.nextTick();
+          await nextTick();
           if (typeof aplicarPermisosAElementos !== 'undefined') {
             aplicarPermisosAElementos();
           }
