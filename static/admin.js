@@ -3417,6 +3417,11 @@ async function guardarDatosEmpresa(empresaId) {
         
         if (response.ok) {
             mostrarAlerta(`✅ Datos de emisor guardados en ${result.emisor_json}`, 'success');
+            
+            // Recargar la configuración de empresa para mostrar el logo actualizado
+            setTimeout(() => {
+                cargarConfiguracionEmpresa();
+            }, 500);
         } else {
             throw new Error(result.error || 'Error guardando datos');
         }
