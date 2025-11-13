@@ -328,11 +328,6 @@
                     <label>Hasta</label>
                     <input type="date" id="filter-end-date">
                 </div>
-                <div class="filter-group" style="align-self: flex-end;">
-                    <button class="btn-filter" onclick="loadTransactions()">
-                        <i class="fas fa-search"></i> Buscar
-                    </button>
-                </div>
             </div>
         </div>
 
@@ -356,12 +351,43 @@
         let accounts = [];
         let transactions = [];
         let selectedAccountId = null;
+        let debounceTimer = null;
 
         // Cargar cuentas al iniciar
         document.addEventListener('DOMContentLoaded', () => {
             loadAccounts();
             setDefaultDates();
+            setupFilterListeners();
         });
+
+        // Configurar listeners con debounce
+        function setupFilterListeners() {
+            const accountFilter = document.getElementById('filter-account');
+            const startDateFilter = document.getElementById('filter-start-date');
+            const endDateFilter = document.getElementById('filter-end-date');
+
+            // Select cambia inmediatamente
+            accountFilter.addEventListener('change', () => {
+                loadTransactionsDebounced(0);
+            });
+
+            // Fechas con debounce de 500ms
+            startDateFilter.addEventListener('change', () => {
+                loadTransactionsDebounced(500);
+            });
+
+            endDateFilter.addEventListener('change', () => {
+                loadTransactionsDebounced(500);
+            });
+        }
+
+        // Función con debounce
+        function loadTransactionsDebounced(delay = 500) {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                loadTransactions();
+            }, delay);
+        }
 
         function setDefaultDates() {
             const today = new Date();
@@ -444,7 +470,7 @@
             selectedAccountId = selectedAccountId === accountId ? null : accountId;
             renderAccounts();
             document.getElementById('filter-account').value = selectedAccountId || '';
-            loadTransactions();
+            loadTransactionsDebounced(0); // Inmediato al hacer click
         }
 
         async function loadTransactions() {
