@@ -34,7 +34,10 @@ def create_link_token():
             return jsonify({'error': 'Usuario no autenticado'}), 401
         
         # Obtener redirect_uri del request (opcional)
-        data = request.json or {}
+        try:
+            data = request.get_json(silent=True) or {}
+        except:
+            data = {}
         redirect_uri = data.get('redirect_uri')
         
         # Crear link token

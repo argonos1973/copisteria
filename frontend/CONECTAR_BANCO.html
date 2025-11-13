@@ -272,10 +272,13 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error('Error creando link token');
+                    const errorData = await response.json();
+                    console.error('Error response:', errorData);
+                    throw new Error(errorData.error || 'Error creando link token');
                 }
                 
                 const data = await response.json();
+                console.log('Link token recibido:', data);
                 
                 // Inicializar Plaid Link
                 linkHandler = Plaid.create({
