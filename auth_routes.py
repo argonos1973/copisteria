@@ -455,35 +455,10 @@ def obtener_menu():
                                permisos.get('anular', 0) == 1 or 
                                permisos.get('exportar', 0) == 1)
                 
-                if 'submenu' in item and len(item['submenu']) > 0:
-                    # Tiene submenús - verificar si alguno es de acción (no solo consulta)
-                    # Buscar recursivamente en todos los niveles de submenús
-                    def tiene_accion_en_submenu(submenu_lista):
-                        for sub in submenu_lista:
-                            nombre_sub = sub.get('nombre', '').lower()
-                            # Submenús de acción: Nuevo, Editar, etc (no Consultar)
-                            if 'nuevo' in nombre_sub or 'editar' in nombre_sub or 'crear' in nombre_sub:
-                                return True
-                            # Buscar recursivamente en sub-submenús
-                            if 'submenu' in sub and len(sub['submenu']) > 0:
-                                if tiene_accion_en_submenu(sub['submenu']):
-                                    return True
-                        return False
-                    
-                    submenu_tiene_accion = tiene_accion_en_submenu(item['submenu'])
-                    
-                    if submenu_tiene_accion or tiene_accion:
-                        incluir_modulo = True
-                        logger.info(f"[MENU] Item con submenús incluido (tiene acciones): {item['nombre']}")
-                    else:
-                        logger.info(f"[MENU] Item con submenús omitido (solo consulta, sin acciones): {item['nombre']}")
-                else:
-                    # Sin submenús - incluir solo si tiene acciones
-                    if tiene_accion:
-                        incluir_modulo = True
-                        logger.info(f"[MENU] Item sin submenús incluido (tiene acciones): {item['nombre']}")
-                    else:
-                        logger.info(f"[MENU] Item sin submenús omitido (solo Ver, sin acciones): {item['nombre']}")
+                # CAMBIO: Incluir módulos aunque solo tengan permiso de Ver
+                # Los usuarios de solo consulta también deben ver el menú
+                incluir_modulo = True
+                logger.info(f"[MENU] Item incluido (tiene permiso de Ver): {item['nombre']}")
             
             if incluir_modulo:
                 menu.append(item)
@@ -967,3 +942,61 @@ def validate_reset_token():
     except Exception as e:
         logger.error(f"Error validando token: {e}", exc_info=True)
         return jsonify({'valid': False, 'error': 'Error validando token'}), 500
+
+@auth_bp.route('/permisos', methods=['GET'])
+@login_required
+def obtener_permisos():
+    """
+    Retorna los permisos detallados del usuario logueado para control de UI
+    """
+    try:
+        user_id = session.get('user_id')
+        empresa_id = session.get('empresa_id')
+        es_superadmin = session.get('es_superadmin')
+        es_admin_empresa = session.get('es_admin_empresa', False)
+        
+        # Si es superadmin o admin de empresa, tiene todos los permisos
+        if es_superadmin or es_admin_empresa:
+            return jsonify({
+                '_todos': True,
+                '_es_admin': True
+            }), 200
+        
+        if not empresa_id:
+            return jsonify({}), 200
+        
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT 
+                modulo_codigo,
+                puede_ver,
+                puede_crear,
+                puede_editar,
+                puede_eliminar,
+                puede_anular,
+                puede_exportar
+            FROM permisos_usuario_modulo
+            WHERE usuario_id = ? AND empresa_id = ?
+        ''', (user_id, empresa_id))
+        
+        permisos = {}
+        for row in cursor.fetchall():
+            permisos[row[0]] = {
+                'puede_ver': row[1],
+                'puede_crear': row[2],
+                'puede_editar': row[3],
+                'puede_eliminar': row[4],
+                'puede_anular': row[5],
+                'puede_exportar': row[6]
+            }
+        
+        conn.close()
+        
+        logger.info(f"[PERMISOS] Usuario {user_id} tiene permisos en {len(permisos)} módulos")
+        return jsonify(permisos), 200
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo permisos: {e}", exc_info=True)
+        return jsonify({'error': 'Error obteniendo permisos'}), 500
