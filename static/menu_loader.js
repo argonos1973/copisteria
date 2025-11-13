@@ -106,7 +106,9 @@ function actualizarInfoUsuario(sessionData) {
     // Actualizar logo de la empresa
     const logoEmpresa = document.getElementById('logo-empresa');
     if (logoEmpresa && sessionData.logo) {
-        logoEmpresa.src = sessionData.logo;
+        // Agregar timestamp para evitar caché
+        const timestamp = new Date().getTime();
+        logoEmpresa.src = sessionData.logo + '?t=' + timestamp;
         logoEmpresa.style.display = 'block';
         logoEmpresa.onerror = function() {
             console.error('[MENU] Error cargando logo:', sessionData.logo);

@@ -3240,9 +3240,11 @@ async function cargarConfiguracionEmpresa() {
                 console.log('[LOGO] Elementos DOM:', { logoPreviewContainer, logoPreview });
                 
                 if (logoPreviewContainer && logoPreview) {
-                    logoPreview.src = empresa.emisor_data.logo;
+                    // Agregar timestamp para evitar caché del navegador
+                    const timestamp = new Date().getTime();
+                    logoPreview.src = empresa.emisor_data.logo + '?t=' + timestamp;
                     logoPreviewContainer.style.display = 'block';
-                    console.log('[LOGO] Vista previa mostrada');
+                    console.log('[LOGO] Vista previa mostrada con timestamp:', timestamp);
                 } else {
                     console.error('[LOGO] No se encontraron elementos DOM para la vista previa');
                 }

@@ -241,7 +241,9 @@ async function cargarColoresEmpresa() {
             const logoUrl = branding.logo_header.startsWith('/') 
                 ? branding.logo_header 
                 : `/static/logos/${branding.logo_header}`;
-            logoEmpresa.src = logoUrl;
+            // Agregar timestamp para evitar caché
+            const timestamp = new Date().getTime();
+            logoEmpresa.src = logoUrl + '?t=' + timestamp;
             logoEmpresa.style.display = 'block';
             logoEmpresa.onerror = function() {
                 console.error('[BRANDING] ❌ Error cargando logo:', logoUrl);
