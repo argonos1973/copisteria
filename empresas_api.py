@@ -641,11 +641,21 @@ def actualizar_empresa(empresa_id):
         if logo_file and logo_file.filename:
             # Validar archivo
             if allowed_file(logo_file.filename):
+                # Eliminar logos anteriores de esta empresa
+                import glob
+                old_logos = glob.glob(os.path.join(UPLOAD_FOLDER, f"{codigo_empresa}_logo.*"))
+                for old_logo in old_logos:
+                    try:
+                        os.remove(old_logo)
+                        logger.info(f"Logo anterior eliminado: {old_logo}")
+                    except Exception as e:
+                        logger.warning(f"No se pudo eliminar logo anterior {old_logo}: {e}")
+                
+                # Guardar nuevo logo
                 ext = logo_file.filename.rsplit('.', 1)[1].lower()
                 filename = f"{codigo_empresa}_logo.{ext}"
                 filepath = os.path.join(UPLOAD_FOLDER, filename)
                 
-                # Guardar archivo
                 logo_file.save(filepath)
                 logger.info(f"Logo actualizado para empresa {codigo_empresa}: {filename}")
                 
