@@ -1,8 +1,8 @@
 // conciliacion_gastos.js
-import { IP_SERVER, PORT } from './constantes.js?v=1762757322';
+import { IP_SERVER, PORT, API_URL as API_URL_BASE } from './constantes.js?v=1762757322';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 
-const API_URL = `${API_URL}/api`;
+const API_URL = `${API_URL_BASE}/api`;
 
 let gastoSeleccionado = null;
 let coincidenciaSeleccionada = null;
