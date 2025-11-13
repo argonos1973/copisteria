@@ -3226,6 +3226,18 @@ async function cargarConfiguracionEmpresa() {
                 </div>
             </div>
         `;
+        
+        // Cargar logo existente si existe
+        if (empresa.emisor_data && empresa.emisor_data.logo) {
+            const logoPreviewContainer = document.getElementById('logo-preview-container');
+            const logoPreview = document.getElementById('logo-preview');
+            
+            if (logoPreviewContainer && logoPreview) {
+                logoPreview.src = empresa.emisor_data.logo;
+                logoPreviewContainer.style.display = 'block';
+            }
+        }
+        
     } catch (error) {
         console.error('Error cargando configuración de empresa:', error);
         mostrarAlerta('Error cargando configuración de empresa', 'error');

@@ -329,6 +329,9 @@ def obtener_empresa(empresa_id):
                 empresa['email'] = emisor_data.get('email', empresa.get('email', ''))
                 empresa['pais'] = emisor_data.get('pais', 'ESP')
                 
+                # Incluir emisor_data completo para acceso al logo y otros campos
+                empresa['emisor_data'] = emisor_data
+                
                 logger.info(f"Datos de emisor cargados desde {emisor_json_path}")
             except Exception as e:
                 logger.error(f"Error cargando JSON de emisor: {e}")
