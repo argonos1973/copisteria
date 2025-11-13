@@ -3421,6 +3421,16 @@ async function guardarDatosEmpresa(empresaId) {
             // Recargar la configuración de empresa para mostrar el logo actualizado
             setTimeout(() => {
                 cargarConfiguracionEmpresa();
+                
+                // Recargar el branding global (menú lateral y logo)
+                if (window.parent && typeof window.parent.cargarColoresEmpresa === 'function') {
+                    window.parent.cargarColoresEmpresa();
+                }
+                
+                // Recargar el menú si existe la función
+                if (window.parent && typeof window.parent.cargarMenu === 'function') {
+                    window.parent.cargarMenu();
+                }
             }, 500);
         } else {
             throw new Error(result.error || 'Error guardando datos');
