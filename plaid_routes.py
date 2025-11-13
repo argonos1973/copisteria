@@ -2,12 +2,13 @@
 Rutas de Flask para integración con Plaid
 """
 
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, g
 from auth_middleware import login_required
 from plaid_client import PlaidClient
 import sqlite3
 import logging
 from datetime import datetime
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -17,8 +18,19 @@ plaid_bp = Blueprint('plaid', __name__, url_prefix='/api/plaid')
 # Inicializar cliente de Plaid
 plaid_client = PlaidClient(environment='sandbox')
 
-# Base de datos
-DB_PATH = '/var/www/html/db/usuarios_sistema.db'
+def get_db_path():
+    """Obtener la ruta de la base de datos según el contexto"""
+    # Intentar obtener de g (contexto de Flask)
+    if hasattr(g, 'db_path') and g.db_path:
+        return g.db_path
+    
+    # Intentar obtener empresa_codigo de la sesión
+    empresa_codigo = session.get('empresa_codigo')
+    if empresa_codigo:
+        return f'/var/www/html/db/{empresa_codigo}/{empresa_codigo}.db'
+    
+    # Fallback a usuarios_sistema.db
+    return '/var/www/html/db/usuarios_sistema.db'
 
 @plaid_bp.route('/create-link-token', methods=['POST'])
 @login_required
@@ -68,7 +80,10 @@ def exchange_token():
         if not user_id or not empresa_id:
             return jsonify({'error': 'Usuario o empresa no válidos'}), 401
         
-        data = request.json
+        try:
+            data = request.get_json(silent=True) or {}
+        except:
+            data = {}
         public_token = data.get('public_token')
         
         if not public_token:
@@ -83,7 +98,9 @@ def exchange_token():
         accounts = plaid_client.get_accounts(access_token)
         
         # Guardar en base de datos
-        conn = sqlite3.connect(DB_PATH)
+        db_path = get_db_path()
+        logger.info(f"[PLAID] Usando base de datos: {db_path}")
+        conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
         # Crear tabla si no existe
@@ -165,7 +182,7 @@ def get_accounts():
         user_id = session.get('user_id')
         empresa_id = session.get('empresa_id')
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(get_db_path())
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -236,7 +253,7 @@ def get_transactions():
         end_date = request.args.get('end_date')
         account_id = request.args.get('account_id')
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(get_db_path())
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -287,7 +304,7 @@ def sync_transactions():
         user_id = session.get('user_id')
         empresa_id = session.get('empresa_id')
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(get_db_path())
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
@@ -354,7 +371,7 @@ def disconnect_bank(item_id):
         user_id = session.get('user_id')
         empresa_id = session.get('empresa_id')
         
-        conn = sqlite3.connect(DB_PATH)
+        conn = sqlite3.connect(get_db_path())
         cursor = conn.cursor()
         
         # Verificar que el item pertenece al usuario
