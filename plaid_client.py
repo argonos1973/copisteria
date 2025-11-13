@@ -192,15 +192,21 @@ class PlaidClient:
             if isinstance(end_date, datetime):
                 end_date = end_date.date()
             
+            # Preparar opciones
+            options = {
+                'count': 500,
+                'offset': 0
+            }
+            
+            # Solo agregar account_ids si se proporciona
+            if account_ids:
+                options['account_ids'] = account_ids
+            
             request = TransactionsGetRequest(
                 access_token=access_token,
                 start_date=start_date,
                 end_date=end_date,
-                options={
-                    'account_ids': account_ids if account_ids else None,
-                    'count': 500,
-                    'offset': 0
-                }
+                options=options
             )
             
             response = self.client.transactions_get(request)
