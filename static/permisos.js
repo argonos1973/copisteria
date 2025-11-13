@@ -115,8 +115,23 @@ function aplicarPermisosAElementos() {
         
         if (!tieneAcceso) {
             if (modo === 'ocultar') {
+                // Ocultar el elemento
                 elemento.style.setProperty('display', 'none', 'important');
                 elemento.setAttribute('data-permiso-oculto', 'true');
+                
+                // Si el padre es un form-group vacío, ocultarlo también
+                const padre = elemento.parentElement;
+                if (padre && padre.classList.contains('form-group')) {
+                    // Verificar si el padre solo tiene este elemento
+                    const hijosVisibles = Array.from(padre.children).filter(hijo => {
+                        return hijo.style.display !== 'none' && hijo !== elemento;
+                    });
+                    if (hijosVisibles.length === 0) {
+                        padre.style.setProperty('display', 'none', 'important');
+                        console.log(`[PERMISOS] Padre también ocultado: ${padre.tagName}`);
+                    }
+                }
+                
                 console.log(`[PERMISOS] Ocultado: ${elemento.tagName} - ${modulo}.${accion}`);
             } else if (modo === 'deshabilitar') {
                 elemento.disabled = true;
