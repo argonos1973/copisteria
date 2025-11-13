@@ -298,7 +298,9 @@
                             });
                             
                             if (!exchangeResponse.ok) {
-                                throw new Error('Error guardando conexión');
+                                const errorData = await exchangeResponse.json();
+                                console.error('Error del servidor:', errorData);
+                                throw new Error(errorData.error || 'Error guardando conexión');
                             }
                             
                             const result = await exchangeResponse.json();
@@ -308,8 +310,8 @@
                             loadAccounts();
                             
                         } catch (error) {
-                            console.error('Error:', error);
-                            showMessage('Error guardando la conexión bancaria', 'error');
+                            console.error('Error completo:', error);
+                            showMessage(`Error guardando la conexión bancaria: ${error.message}`, 'error');
                         }
                     },
                     onExit: (err, metadata) => {

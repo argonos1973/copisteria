@@ -74,28 +74,38 @@ def exchange_token():
     Intercambiar public_token por access_token y guardar en BD
     """
     try:
+        logger.info("[PLAID] Iniciando exchange_token")
         user_id = session.get('user_id')
         empresa_id = session.get('empresa_id')
+        logger.info(f"[PLAID] user_id={user_id}, empresa_id={empresa_id}")
         
         if not user_id or not empresa_id:
+            logger.error("[PLAID] Usuario o empresa no válidos")
             return jsonify({'error': 'Usuario o empresa no válidos'}), 401
         
         try:
             data = request.get_json(silent=True) or {}
-        except:
+        except Exception as e:
+            logger.error(f"[PLAID] Error parseando JSON: {e}")
             data = {}
         public_token = data.get('public_token')
+        logger.info(f"[PLAID] public_token recibido: {public_token[:20]}..." if public_token else "[PLAID] No public_token")
         
         if not public_token:
+            logger.error("[PLAID] public_token requerido pero no recibido")
             return jsonify({'error': 'public_token requerido'}), 400
         
         # Intercambiar token
+        logger.info("[PLAID] Intercambiando public_token por access_token")
         result = plaid_client.exchange_public_token(public_token)
         access_token = result['access_token']
         item_id = result['item_id']
+        logger.info(f"[PLAID] Token intercambiado exitosamente. item_id={item_id}")
         
         # Obtener cuentas
+        logger.info("[PLAID] Obteniendo cuentas")
         accounts = plaid_client.get_accounts(access_token)
+        logger.info(f"[PLAID] {len(accounts)} cuentas obtenidas")
         
         # Guardar en base de datos
         db_path = get_db_path()
@@ -157,10 +167,12 @@ def exchange_token():
                 account['balance']['currency']
             ))
         
+        logger.info("[PLAID] Haciendo commit a la base de datos")
         conn.commit()
         conn.close()
+        logger.info("[PLAID] Conexión a BD cerrada")
         
-        logger.info(f"[PLAID] Conexión bancaria guardada: {len(accounts)} cuentas")
+        logger.info(f"[PLAID] ✅ Conexión bancaria guardada exitosamente: {len(accounts)} cuentas")
         
         return jsonify({
             'success': True,
@@ -169,8 +181,10 @@ def exchange_token():
         }), 200
         
     except Exception as e:
-        logger.error(f"[PLAID] Error intercambiando token: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"[PLAID] ❌ Error intercambiando token: {e}", exc_info=True)
+        import traceback
+        logger.error(f"[PLAID] Traceback completo:\n{traceback.format_exc()}")
+        return jsonify({'error': f'Error intercambiando token: {str(e)}'}), 500
 
 @plaid_bp.route('/accounts', methods=['GET'])
 @login_required
