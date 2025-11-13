@@ -314,10 +314,15 @@ def obtener_empresa(empresa_id):
         codigo_empresa = empresa.get('codigo', '')
         emisor_json_path = os.path.join(BASE_DIR, 'emisores', f'{codigo_empresa}_emisor.json')
         
+        logger.info(f"[LOGO DEBUG] Buscando emisor en: {emisor_json_path}")
+        logger.info(f"[LOGO DEBUG] Código empresa: {codigo_empresa}")
+        
         if os.path.exists(emisor_json_path):
             try:
                 with open(emisor_json_path, 'r', encoding='utf-8') as f:
                     emisor_data = json.load(f)
+                
+                logger.info(f"[LOGO DEBUG] Emisor data cargado: {emisor_data}")
                 
                 # Sobrescribir con datos del JSON (tienen prioridad)
                 empresa['cif'] = emisor_data.get('nif', empresa.get('cif', ''))
@@ -332,6 +337,7 @@ def obtener_empresa(empresa_id):
                 # Incluir emisor_data completo para acceso al logo y otros campos
                 empresa['emisor_data'] = emisor_data
                 
+                logger.info(f"[LOGO DEBUG] emisor_data incluido en respuesta: {empresa.get('emisor_data')}")
                 logger.info(f"Datos de emisor cargados desde {emisor_json_path}")
             except Exception as e:
                 logger.error(f"Error cargando JSON de emisor: {e}")
