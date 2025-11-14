@@ -33,17 +33,26 @@ def actualizar_perfil():
             email = request.json.get('email')
             telefono = request.json.get('telefono')
             avatar_file = None
+            avatar_predefinido = None
         else:
             email = request.form.get('email')
             telefono = request.form.get('telefono')
             avatar_file = request.files.get('avatar')
+            avatar_predefinido = request.form.get('avatar_predefinido')
         
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        # Procesar avatar si viene archivo
+        # Procesar avatar
         avatar_path_relativa = None
-        if avatar_file and avatar_file.filename:
+        
+        # Opción 1: Avatar predefinido
+        if avatar_predefinido:
+            avatar_path_relativa = f"/static/avatares/{avatar_predefinido}"
+            logger.info(f"Avatar predefinido seleccionado para usuario {user_id}: {avatar_predefinido}")
+        
+        # Opción 2: Avatar personalizado (archivo subido)
+        elif avatar_file and avatar_file.filename:
             if allowed_file(avatar_file.filename):
                 # Eliminar avatars anteriores de este usuario
                 old_avatars = glob.glob(os.path.join(AVATAR_FOLDER, f"user_{user_id}_avatar.*"))
@@ -60,7 +69,7 @@ def actualizar_perfil():
                 filepath = os.path.join(AVATAR_FOLDER, filename)
                 
                 avatar_file.save(filepath)
-                logger.info(f"Avatar actualizado para usuario {user_id}: {filename}")
+                logger.info(f"Avatar personalizado actualizado para usuario {user_id}: {filename}")
                 
                 # Ruta relativa para la BD
                 avatar_path_relativa = f"/static/avatars/{filename}"

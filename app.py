@@ -19,6 +19,7 @@ from empresas_api import empresas_bp
 from admin_routes import admin_bp
 from plantillas_routes import plantillas_bp
 from usuario_api import usuario_bp
+from avatares_api import avatares_bp
 from auth_middleware import login_required, require_admin, require_permission
 
 logger = get_logger('aleph70.app')
@@ -177,6 +178,7 @@ app.register_blueprint(empresas_bp)  # Gestión de empresas
 app.register_blueprint(admin_bp)  # Sistema de administración
 app.register_blueprint(plantillas_bp)  # Plantillas personalizadas
 app.register_blueprint(usuario_bp)  # Gestión de perfil de usuario
+app.register_blueprint(avatares_bp)  # Gestión de avatares predefinidos
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(gastos_bp, url_prefix='')
 app.register_blueprint(estadisticas_gastos_bp, url_prefix='')

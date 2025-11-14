@@ -128,7 +128,12 @@ async function guardarDatos(event) {
         formData.append('email', document.getElementById('perfil-email').value);
         formData.append('telefono', document.getElementById('perfil-telefono').value);
         
-        // Agregar avatar si se seleccionó uno
+        // Agregar avatar predefinido si se seleccionó uno
+        if (avatarSeleccionado) {
+            formData.append('avatar_predefinido', avatarSeleccionado);
+        }
+        
+        // Agregar avatar personalizado si se subió uno
         const avatarInput = document.getElementById('perfil-avatar-input');
         if (avatarInput && avatarInput.files && avatarInput.files[0]) {
             formData.append('avatar', avatarInput.files[0]);
@@ -310,10 +315,83 @@ async function cambiarPlantillaUsuario(plantilla, clickedElement) {
     }
 }
 
+// Selector de avatares
+let avatarSeleccionado = null;
+
+async function abrirSelectorAvatares() {
+    const modal = document.getElementById('modal-selector-avatares');
+    modal.style.display = 'block';
+    await cargarAvataresPredefinidos();
+    mostrarAvataresPredefinidos();
+}
+
+function cerrarSelectorAvatares() {
+    document.getElementById('modal-selector-avatares').style.display = 'none';
+}
+
+async function cargarAvataresPredefinidos() {
+    try {
+        const response = await fetch('/api/avatares/listar');
+        const avatares = await response.json();
+        
+        const container = document.getElementById('avatares-predefinidos');
+        container.innerHTML = '';
+        
+        if (avatares.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: var(--color-texto-secundario, #666); padding: 20px;">No hay avatares predefinidos disponibles</p>';
+            return;
+        }
+        
+        avatares.forEach(avatar => {
+            const div = document.createElement('div');
+            div.style.cssText = 'cursor: pointer; text-align: center; transition: transform 0.2s;';
+            div.onmouseover = function() { this.style.transform = 'scale(1.05)'; };
+            div.onmouseout = function() { this.style.transform = 'scale(1)'; };
+            div.onclick = function() { seleccionarAvatarPredefinido(avatar); };
+            
+            div.innerHTML = `
+                <img src="/static/avatares/${avatar}" alt="${avatar}" 
+                     style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-border, #ddd);">
+                <p style="margin: 5px 0 0 0; font-size: 11px; color: var(--color-texto-secundario, #666); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${avatar}</p>
+            `;
+            
+            container.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Error cargando avatares:', error);
+        document.getElementById('avatares-predefinidos').innerHTML = '<p style="text-align: center; color: #e74c3c; padding: 20px;">Error cargando avatares</p>';
+    }
+}
+
+function seleccionarAvatarPredefinido(avatar) {
+    avatarSeleccionado = avatar;
+    const preview = document.getElementById('perfil-avatar-preview');
+    preview.src = `/static/avatares/${avatar}?t=${new Date().getTime()}`;
+    cerrarSelectorAvatares();
+}
+
+function mostrarAvataresPredefinidos() {
+    document.getElementById('avatares-predefinidos').style.display = 'grid';
+    document.getElementById('subir-personalizado').style.display = 'none';
+    document.getElementById('btn-predefinidos').style.background = 'var(--color-primario, #007bff)';
+    document.getElementById('btn-personalizado').style.background = 'var(--color-secundario, #6c757d)';
+}
+
+function mostrarSubirPersonalizado() {
+    document.getElementById('avatares-predefinidos').style.display = 'none';
+    document.getElementById('subir-personalizado').style.display = 'block';
+    document.getElementById('btn-predefinidos').style.background = 'var(--color-secundario, #6c757d)';
+    document.getElementById('btn-personalizado').style.background = 'var(--color-primario, #007bff)';
+}
+
 // Cerrar modal al hacer click fuera
 window.onclick = function(event) {
     const modal = document.getElementById('modal-perfil');
+    const modalSelector = document.getElementById('modal-selector-avatares');
     if (event.target === modal) {
         cerrarModalPerfil();
+    }
+    if (event.target === modalSelector) {
+        cerrarSelectorAvatares();
     }
 }
