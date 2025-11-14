@@ -4,12 +4,72 @@ Procesa imágenes de tarjetas de visita, documentos, etc.
 """
 
 import pytesseract
-from PIL import Image
+from PIL import Image, ImageEnhance, ImageOps, ImageFilter
 import re
 import io
+import numpy as np
 from logger_config import get_logger
 
 logger = get_logger(__name__)
+
+
+def preprocesar_imagen(imagen):
+    """
+    Preprocesa la imagen para mejorar la precisión del OCR
+    
+    Args:
+        imagen: Objeto PIL Image
+        
+    Returns:
+        PIL Image: Imagen preprocesada
+    """
+    try:
+        # Convertir a RGB si es necesario
+        if imagen.mode != 'RGB':
+            imagen = imagen.convert('RGB')
+        
+        # Aumentar tamaño si es muy pequeña (mejora OCR)
+        ancho, alto = imagen.size
+        if ancho < 1000 or alto < 1000:
+            factor = max(1000 / ancho, 1000 / alto)
+            nuevo_ancho = int(ancho * factor)
+            nuevo_alto = int(alto * factor)
+            imagen = imagen.resize((nuevo_ancho, nuevo_alto), Image.Resampling.LANCZOS)
+            logger.info(f"Imagen redimensionada a {nuevo_ancho}x{nuevo_alto}")
+        
+        # Convertir a escala de grises
+        imagen_gris = imagen.convert('L')
+        
+        # Detectar si es fondo oscuro (tarjeta oscura con texto claro)
+        # Calcular brillo promedio
+        np_imagen = np.array(imagen_gris)
+        brillo_promedio = np.mean(np_imagen)
+        
+        logger.info(f"Brillo promedio de la imagen: {brillo_promedio}")
+        
+        # Si el brillo promedio es bajo (<128), es fondo oscuro → invertir
+        if brillo_promedio < 128:
+            logger.info("Detectado fondo oscuro - invirtiendo colores")
+            imagen_gris = ImageOps.invert(imagen_gris)
+        
+        # Aumentar contraste
+        enhancer = ImageEnhance.Contrast(imagen_gris)
+        imagen_contraste = enhancer.enhance(2.0)
+        
+        # Aumentar nitidez
+        imagen_nitida = imagen_contraste.filter(ImageFilter.SHARPEN)
+        
+        # Binarización (convertir a blanco y negro puro)
+        # Usar umbral adaptativo
+        threshold = 128
+        imagen_binaria = imagen_nitida.point(lambda x: 255 if x > threshold else 0)
+        
+        return imagen_binaria
+        
+    except Exception as e:
+        logger.error(f"Error en preprocesamiento: {e}", exc_info=True)
+        # Si falla el preprocesamiento, devolver imagen original en escala de grises
+        return imagen.convert('L')
 
 
 def extraer_texto_imagen(imagen_bytes):
@@ -26,12 +86,18 @@ def extraer_texto_imagen(imagen_bytes):
         # Abrir imagen desde bytes
         imagen = Image.open(io.BytesIO(imagen_bytes))
         
-        # Convertir a RGB si es necesario
-        if imagen.mode != 'RGB':
-            imagen = imagen.convert('RGB')
+        # Preprocesar imagen para mejorar OCR
+        imagen_procesada = preprocesar_imagen(imagen)
+        
+        # Configuración de Tesseract para mejor precisión
+        config_tesseract = '--psm 6 --oem 3'  # PSM 6: bloque uniforme de texto, OEM 3: mejor motor
         
         # Extraer texto con OCR (español y catalán)
-        texto = pytesseract.image_to_string(imagen, lang='spa+cat')
+        texto = pytesseract.image_to_string(
+            imagen_procesada, 
+            lang='spa+cat',
+            config=config_tesseract
+        )
         
         logger.info(f"Texto extraído por OCR: {texto[:200]}...")
         return texto
@@ -65,11 +131,16 @@ def parsear_datos_contacto(texto):
     try:
         lineas = [l.strip() for l in texto.split('\n') if l.strip()]
         
-        # Patrones de búsqueda
+        # Patrones de búsqueda mejorados
         patron_nif = r'\b[A-Z]\d{8}|[A-Z]\d{7}[A-Z]|\d{8}[A-Z]\b'
         patron_email = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        patron_telefono = r'\b(?:\+34\s?)?[6789]\d{2}\s?\d{2}\s?\d{2}\s?\d{2}\b'
+        # Patrón de teléfono más flexible (con espacios, puntos, guiones)
+        patron_telefono = r'\b(?:\+34\s?)?[6789]\d{2}[\s.-]?\d{2,3}[\s.-]?\d{2,3}[\s.-]?\d{2,3}\b'
         patron_cp = r'\b\d{5}\b'
+        # Patrón para móvil con formato "M.: 690 924 069" o "T. 93 342 99 20"
+        patron_movil = r'(?:M\.|T\.|Tel\.|Móvil|Movil|Telf)[\s:\.]+(\+?[\d\s]+)'
+        # Patrón para web
+        patron_web = r'www\.[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
         
         # Buscar NIF/CIF
         for linea in lineas:
@@ -85,17 +156,34 @@ def parsear_datos_contacto(texto):
                 datos['email'] = match_email.group(0).lower()
                 break
         
-        # Buscar teléfono
+        # Buscar teléfono (primero con prefijos M., T., etc.)
         for linea in lineas:
-            match_telefono = re.search(patron_telefono, linea.replace('-', '').replace('.', ''))
-            if match_telefono:
-                telefono = match_telefono.group(0)
-                # Limpiar formato
-                telefono = re.sub(r'\s+', '', telefono)
+            match_movil = re.search(patron_movil, linea, re.IGNORECASE)
+            if match_movil:
+                telefono = match_movil.group(1)
+                # Limpiar formato (quitar espacios, puntos, guiones)
+                telefono = re.sub(r'[\s.-]', '', telefono)
                 if telefono.startswith('+34'):
                     telefono = telefono[3:]
-                datos['telefono'] = telefono
-                break
+                # Validar que tenga 9 dígitos
+                if len(telefono) == 9 and telefono.isdigit():
+                    datos['telefono'] = telefono
+                    break
+        
+        # Si no encontró con prefijo, buscar patrón general
+        if not datos['telefono']:
+            for linea in lineas:
+                match_telefono = re.search(patron_telefono, linea)
+                if match_telefono:
+                    telefono = match_telefono.group(0)
+                    # Limpiar formato
+                    telefono = re.sub(r'[\s.-]', '', telefono)
+                    if telefono.startswith('+34'):
+                        telefono = telefono[3:]
+                    # Validar que tenga 9 dígitos
+                    if len(telefono) == 9 and telefono.isdigit():
+                        datos['telefono'] = telefono
+                        break
         
         # Buscar código postal
         for linea in lineas:
@@ -120,21 +208,37 @@ def parsear_datos_contacto(texto):
                     datos['direccion'] = linea_limpia.strip()
                     break
         
-        # Razón social: primera línea no vacía que no sea email, teléfono o dirección
-        for linea in lineas:
-            if (linea and 
-                not re.search(patron_email, linea) and 
+        # Razón social: buscar líneas largas al inicio (típicamente nombre de empresa)
+        # Ignorar líneas muy cortas, emails, teléfonos, webs, direcciones
+        for linea in lineas[:5]:  # Buscar en las primeras 5 líneas
+            if (len(linea) > 3 and 
+                not re.search(patron_email, linea, re.IGNORECASE) and 
                 not re.search(patron_telefono, linea) and
-                not re.search(patron_nif, linea.upper()) and
-                linea != datos['direccion']):
-                datos['razon_social'] = linea
+                not re.search(patron_movil, linea, re.IGNORECASE) and
+                not re.search(patron_web, linea, re.IGNORECASE) and
+                not re.search(patron_nif, linea.upper().replace(' ', '')) and
+                not re.search(patron_cp, linea) and
+                linea != datos['direccion'] and
+                not linea.lower().startswith(('tel', 'telf', 'móvil', 'movil', 'email', 'm.', 't.'))):
+                datos['razon_social'] = linea.strip()
                 break
         
-        # Nombre de contacto: buscar líneas con "Sr.", "Sra.", nombres comunes
-        titulos = ['sr.', 'sra.', 'sr', 'sra', 'd.', 'dña.', 'don', 'doña']
-        for linea in lineas:
+        # Nombre de contacto: buscar líneas con nombres propios o títulos
+        # Típicamente después de la razón social
+        titulos = ['sr.', 'sra.', 'sr', 'sra', 'd.', 'dña.', 'don', 'doña', 'director', 'gerente', 'presidente']
+        for i, linea in enumerate(lineas):
             linea_lower = linea.lower()
+            # Buscar títulos
             if any(titulo in linea_lower for titulo in titulos):
+                datos['nombre_contacto'] = linea.strip()
+                break
+            # O buscar líneas que parezcan nombres (2-4 palabras, cada una capitalizada)
+            palabras = linea.split()
+            if (2 <= len(palabras) <= 4 and 
+                all(p[0].isupper() for p in palabras if len(p) > 1) and
+                not re.search(patron_email, linea) and
+                not re.search(patron_telefono, linea) and
+                linea != datos['razon_social']):
                 datos['nombre_contacto'] = linea.strip()
                 break
         
