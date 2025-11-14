@@ -166,6 +166,11 @@ async function guardarDatos(event) {
             if (avatarInput) {
                 avatarInput.value = '';
             }
+            
+            // Cerrar modal después de guardar
+            setTimeout(() => {
+                cerrarModalPerfil();
+            }, 800);
         } else {
             mostrarNotificacion('Error: ' + (result.error || 'No se pudieron actualizar los datos'), 'error');
         }
