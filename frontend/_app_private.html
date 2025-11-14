@@ -532,8 +532,8 @@
         
         .modal-avatares-header {
             padding: 20px 25px;
-            background: var(--primary, #3b82f6);
-            color: var(--button-text, #ffffff);
+            background: var(--modal-header-bg, var(--primary, #2c3e50)) !important;
+            color: var(--modal-header-text, #ffffff) !important;
             border-radius: 12px 12px 0 0;
             display: flex;
             justify-content: space-between;
@@ -544,10 +544,11 @@
             margin: 0;
             font-size: 20px;
             font-weight: 600;
+            color: var(--modal-header-text, #ffffff) !important;
         }
         
         .modal-avatares-close {
-            color: var(--button-text, #ffffff);
+            color: var(--modal-header-text, #ffffff) !important;
             font-size: 32px;
             font-weight: bold;
             cursor: pointer;
