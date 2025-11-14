@@ -521,13 +521,28 @@ if (btnEscanearDatos) {
   btnEscanearDatos.addEventListener('click', async function() {
     // Mostrar indicador de carga
     btnEscanearDatos.disabled = true;
-    btnEscanearDatos.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando email...';
+    
+    console.log('[OCR] Iniciando proceso de escaneo...');
+    
+    // Paso 1: Conectando
+    btnEscanearDatos.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando al buzón...';
+    mostrarNotificacion('📧 Conectando al buzón de correo...', 'info');
     
     try {
-      // Enviar petición al servidor (busca email con asunto "C" automáticamente)
+      // Pequeña pausa para que se vea el mensaje
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Paso 2: Buscando emails
+      btnEscanearDatos.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando emails no leídos...';
+      mostrarNotificacion('🔍 Buscando emails no leídos con asunto "C"...', 'info');
+      
+      // Enviar petición al servidor
       const response = await fetch(`${API_URL}/contactos/ocr`, {
         method: 'POST'
       });
+      
+      // Paso 3: Procesando
+      btnEscanearDatos.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando imagen...';
       
       const resultado = await response.json();
       
@@ -558,12 +573,17 @@ if (btnEscanearDatos) {
         // Marcar cambios sin guardar
         marcarCambiosSinGuardar();
         
-        let mensaje = '✅ Datos extraídos del email. Revisa la información.';
+        // Mensaje de éxito con información de emails procesados
+        let mensaje = '✅ Datos extraídos correctamente. Revisa la información.';
         if (datos._metodo_ocr) {
           mensaje += ` (${datos._metodo_ocr})`;
         }
+        if (resultado.total_emails_no_leidos > 1) {
+          mensaje += ` • ${resultado.total_emails_no_leidos} emails no leídos encontrados`;
+        }
         
         mostrarNotificacion(mensaje, 'success');
+        console.log('[OCR] ✓ Proceso completado exitosamente');
         
         // Mostrar texto completo extraído en consola para debugging
         if (datos.texto_completo) {
@@ -578,14 +598,17 @@ if (btnEscanearDatos) {
       
       let mensajeError = 'Error al procesar: ' + error.message;
       
-      if (error.message.includes('No se encontró')) {
-        mensajeError = '📧 No hay emails con asunto "C" o "c". Envía uno primero con la foto adjunta.';
+      if (error.message.includes('No hay emails') || error.message.includes('No se encontró')) {
+        mensajeError = '📧 No hay emails NO LEÍDOS con asunto "C" o "c". Envía uno nuevo o marca alguno como no leído.';
       } else if (error.message.includes('no contiene ninguna imagen')) {
         mensajeError = '📷 El email no tiene imagen adjunta. Reenvía con la foto.';
       } else if (error.message.includes('Email no configurado')) {
         mensajeError = '⚙️ Email no configurado. Contacta al administrador.';
+      } else if (error.message.includes('conectando')) {
+        mensajeError = '🔌 Error de conexión al buzón. Verifica la configuración.';
       }
       
+      console.error('[OCR] ❌ Error:', error);
       mostrarNotificacion(mensajeError, 'error');
     } finally {
       // Restaurar botón

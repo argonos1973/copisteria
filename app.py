@@ -979,26 +979,30 @@ def procesar_ocr_contacto():
             return jsonify({'error': 'Email no configurado. Configure SMTP_USERNAME y SMTP_PASSWORD en .env'}), 500
         
         # Conectar al buzón
-        logger.info(f"Conectando a buzón {EMAIL_USER}...")
+        logger.info(f"📧 Conectando a buzón {EMAIL_USER}...")
         mail = imaplib.IMAP4_SSL(EMAIL_IMAP_HOST, EMAIL_IMAP_PORT)
         mail.login(EMAIL_USER, EMAIL_PASSWORD)
         mail.select('INBOX')
+        logger.info(f"✓ Conexión establecida con {EMAIL_IMAP_HOST}")
         
-        # Buscar emails con asunto "C" o "c" (mayúscula o minúscula)
-        logger.info("Buscando emails con asunto 'C' o 'c'...")
-        # Buscar con OR para mayúscula o minúscula
-        status, messages = mail.search(None, '(OR SUBJECT "C" SUBJECT "c")')
+        # Buscar emails NO LEÍDOS con asunto "C" o "c"
+        logger.info("🔍 Buscando emails NO LEÍDOS con asunto 'C' o 'c'...")
+        # Buscar con UNSEEN (no leídos) y asunto C o c
+        status, messages = mail.search(None, 'UNSEEN', '(OR SUBJECT "C" SUBJECT "c")')
         
         if status != 'OK' or not messages[0]:
             mail.close()
             mail.logout()
-            return jsonify({'error': 'No se encontró ningún email con asunto "C" o "c"'}), 404
+            logger.warning("⚠️ No se encontraron emails no leídos con asunto 'C' o 'c'")
+            return jsonify({'error': 'No hay emails no leídos con asunto "C" o "c"'}), 404
         
         # Obtener el último email (más reciente)
         email_ids = messages[0].split()
+        total_emails = len(email_ids)
         ultimo_email_id = email_ids[-1]
         
-        logger.info(f"Procesando email ID: {ultimo_email_id.decode()}")
+        logger.info(f"✓ Encontrados {total_emails} email(s) no leído(s)")
+        logger.info(f"📨 Procesando email más reciente (ID: {ultimo_email_id.decode()})")
         
         # Obtener el email
         status, msg_data = mail.fetch(ultimo_email_id, '(RFC822)')
@@ -1009,6 +1013,7 @@ def procesar_ocr_contacto():
         imagen_bytes = None
         nombre_archivo = None
         
+        logger.info("📎 Buscando imágenes adjuntas...")
         for part in msg.walk():
             if part.get_content_maintype() == 'multipart':
                 continue
@@ -1019,21 +1024,26 @@ def procesar_ocr_contacto():
             if content_type and content_type.startswith('image/'):
                 nombre_archivo = part.get_filename()
                 imagen_bytes = part.get_payload(decode=True)
-                logger.info(f"Imagen encontrada: {nombre_archivo} ({content_type})")
+                tamanio_kb = len(imagen_bytes) / 1024
+                logger.info(f"✓ Imagen encontrada: {nombre_archivo} ({content_type}, {tamanio_kb:.1f} KB)")
                 break
         
         # Cerrar conexión
         mail.close()
         mail.logout()
+        logger.info("✓ Conexión cerrada")
         
         if not imagen_bytes:
+            logger.error("❌ El email no contiene ninguna imagen adjunta")
             return jsonify({'error': 'El email no contiene ninguna imagen adjunta'}), 400
         
         # Procesar con OCR
-        logger.info("Procesando imagen con OCR...")
+        logger.info("🤖 Procesando imagen con OCR (GPT-4 Vision)...")
         datos = contacto_ocr.procesar_imagen_contacto(imagen_bytes)
+        logger.info(f"✓ OCR completado - Método: {datos.get('_metodo_ocr', 'N/A')}")
         
-        # Marcar email como leído (opcional)
+        # Marcar email como leído
+        logger.info("✉️ Marcando email como leído...")
         try:
             mail = imaplib.IMAP4_SSL(EMAIL_IMAP_HOST, EMAIL_IMAP_PORT)
             mail.login(EMAIL_USER, EMAIL_PASSWORD)
@@ -1041,13 +1051,16 @@ def procesar_ocr_contacto():
             mail.store(ultimo_email_id, '+FLAGS', '\\Seen')
             mail.close()
             mail.logout()
-        except:
-            pass  # No es crítico si falla
+            logger.info("✓ Email marcado como leído")
+        except Exception as e:
+            logger.warning(f"⚠️ No se pudo marcar como leído: {e}")
         
+        logger.info("🎉 Proceso completado exitosamente")
         return jsonify({
             'success': True,
             'datos': datos,
-            'email_procesado': True
+            'email_procesado': True,
+            'total_emails_no_leidos': total_emails
         }), 200
         
     except imaplib.IMAP4.error as e:
