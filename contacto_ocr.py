@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 def preprocesar_imagen(imagen):
     """
     Preprocesa la imagen para mejorar la precisión del OCR
+    Aplica múltiples técnicas de mejora de imagen
     
     Args:
         imagen: Objeto PIL Image
@@ -28,10 +29,10 @@ def preprocesar_imagen(imagen):
         if imagen.mode != 'RGB':
             imagen = imagen.convert('RGB')
         
-        # Aumentar tamaño si es muy pequeña (mejora OCR)
+        # Aumentar tamaño significativamente (OCR funciona mejor con imágenes grandes)
         ancho, alto = imagen.size
-        if ancho < 1000 or alto < 1000:
-            factor = max(1000 / ancho, 1000 / alto)
+        if ancho < 2000 or alto < 2000:
+            factor = max(2000 / ancho, 2000 / alto)
             nuevo_ancho = int(ancho * factor)
             nuevo_alto = int(alto * factor)
             imagen = imagen.resize((nuevo_ancho, nuevo_alto), Image.Resampling.LANCZOS)
@@ -51,20 +52,70 @@ def preprocesar_imagen(imagen):
         if brillo_promedio < 128:
             logger.info("Detectado fondo oscuro - invirtiendo colores")
             imagen_gris = ImageOps.invert(imagen_gris)
+            np_imagen = np.array(imagen_gris)
         
-        # Aumentar contraste
-        enhancer = ImageEnhance.Contrast(imagen_gris)
-        imagen_contraste = enhancer.enhance(2.0)
+        # Reducir ruido con filtro de mediana (elimina puntos aislados)
+        from PIL import ImageFilter
+        imagen_sin_ruido = imagen_gris.filter(ImageFilter.MedianFilter(size=3))
         
-        # Aumentar nitidez
+        # Aumentar contraste agresivamente
+        enhancer = ImageEnhance.Contrast(imagen_sin_ruido)
+        imagen_contraste = enhancer.enhance(3.0)  # Aumentado de 2.0 a 3.0
+        
+        # Aumentar brillo si es necesario
+        np_contraste = np.array(imagen_contraste)
+        if np.mean(np_contraste) < 140:
+            enhancer_brillo = ImageEnhance.Brightness(imagen_contraste)
+            imagen_contraste = enhancer_brillo.enhance(1.3)
+        
+        # Aplicar nitidez múltiple
         imagen_nitida = imagen_contraste.filter(ImageFilter.SHARPEN)
+        imagen_nitida = imagen_nitida.filter(ImageFilter.SHARPEN)  # Doble nitidez
         
-        # Binarización (convertir a blanco y negro puro)
-        # Usar umbral adaptativo
-        threshold = 128
-        imagen_binaria = imagen_nitida.point(lambda x: 255 if x > threshold else 0)
+        # Binarización adaptativa usando método de Otsu (mejor que umbral fijo)
+        np_nitida = np.array(imagen_nitida)
         
-        return imagen_binaria
+        # Calcular umbral óptimo (método de Otsu simplificado)
+        hist, bins = np.histogram(np_nitida.flatten(), 256, [0, 256])
+        total = np_nitida.size
+        
+        sum_total = np.sum(np.arange(256) * hist)
+        sum_background = 0
+        weight_background = 0
+        max_variance = 0
+        threshold_otsu = 128
+        
+        for t in range(256):
+            weight_background += hist[t]
+            if weight_background == 0:
+                continue
+            
+            weight_foreground = total - weight_background
+            if weight_foreground == 0:
+                break
+            
+            sum_background += t * hist[t]
+            
+            mean_background = sum_background / weight_background
+            mean_foreground = (sum_total - sum_background) / weight_foreground
+            
+            variance = weight_background * weight_foreground * (mean_background - mean_foreground) ** 2
+            
+            if variance > max_variance:
+                max_variance = variance
+                threshold_otsu = t
+        
+        logger.info(f"Umbral Otsu calculado: {threshold_otsu}")
+        
+        # Aplicar binarización con umbral calculado
+        imagen_binaria = imagen_nitida.point(lambda x: 255 if x > threshold_otsu else 0)
+        
+        # Dilatar ligeramente para conectar letras fragmentadas
+        # (útil si el texto está pixelado o tiene gaps)
+        from PIL import ImageFilter
+        imagen_final = imagen_binaria.filter(ImageFilter.MaxFilter(size=3))
+        
+        return imagen_final
         
     except Exception as e:
         logger.error(f"Error en preprocesamiento: {e}", exc_info=True)
@@ -75,6 +126,7 @@ def preprocesar_imagen(imagen):
 def extraer_texto_imagen(imagen_bytes):
     """
     Extrae texto de una imagen usando Tesseract OCR
+    Intenta múltiples configuraciones para mejor resultado
     
     Args:
         imagen_bytes: Bytes de la imagen
@@ -89,18 +141,47 @@ def extraer_texto_imagen(imagen_bytes):
         # Preprocesar imagen para mejorar OCR
         imagen_procesada = preprocesar_imagen(imagen)
         
-        # Configuración de Tesseract para mejor precisión
-        config_tesseract = '--psm 6 --oem 3'  # PSM 6: bloque uniforme de texto, OEM 3: mejor motor
+        # Intentar con diferentes configuraciones de PSM (Page Segmentation Mode)
+        # PSM 3: Segmentación automática completa (mejor para tarjetas complejas)
+        # PSM 6: Bloque uniforme de texto (mejor para documentos simples)
+        # PSM 11: Texto disperso (mejor para tarjetas con diseño complejo)
         
-        # Extraer texto con OCR (español y catalán)
-        texto = pytesseract.image_to_string(
-            imagen_procesada, 
-            lang='spa+cat',
-            config=config_tesseract
-        )
+        configs = [
+            '--psm 3 --oem 3',   # Segmentación automática completa
+            '--psm 6 --oem 3',   # Bloque uniforme
+            '--psm 11 --oem 3',  # Texto disperso
+        ]
         
-        logger.info(f"Texto extraído por OCR: {texto[:200]}...")
-        return texto
+        mejor_texto = ""
+        max_longitud = 0
+        
+        for config in configs:
+            try:
+                texto = pytesseract.image_to_string(
+                    imagen_procesada, 
+                    lang='spa+cat',
+                    config=config
+                )
+                
+                # Quedarse con el texto más largo (generalmente mejor resultado)
+                if len(texto.strip()) > max_longitud:
+                    max_longitud = len(texto.strip())
+                    mejor_texto = texto
+                    logger.info(f"Mejor resultado con config: {config}, longitud: {max_longitud}")
+                    
+            except Exception as e:
+                logger.warning(f"Error con config {config}: {e}")
+                continue
+        
+        if not mejor_texto:
+            # Si todos fallaron, intentar con configuración básica
+            mejor_texto = pytesseract.image_to_string(
+                imagen_procesada, 
+                lang='spa+cat'
+            )
+        
+        logger.info(f"Texto extraído por OCR (primeros 200 chars): {mejor_texto[:200]}...")
+        return mejor_texto
         
     except Exception as e:
         logger.error(f"Error en OCR: {e}", exc_info=True)
