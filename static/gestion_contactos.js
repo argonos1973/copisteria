@@ -472,40 +472,26 @@ if (facturacionCheckbox) {
 console.log('[Contactos] Todos los listeners configurados');
 
 // Listener para botón de escanear datos con OCR
+// Ahora busca automáticamente en el buzón un email con asunto "C"
 const btnEscanearDatos = document.getElementById('btnEscanearDatos');
-const inputImagenOCR = document.getElementById('inputImagenOCR');
 
-if (btnEscanearDatos && inputImagenOCR) {
-  btnEscanearDatos.addEventListener('click', function() {
-    inputImagenOCR.click();
-  });
-  
-  inputImagenOCR.addEventListener('change', async function(e) {
-    const archivo = e.target.files[0];
-    if (!archivo) return;
-    
-    // Validar que sea una imagen
-    if (!archivo.type.startsWith('image/')) {
-      mostrarNotificacion('Por favor selecciona un archivo de imagen', 'error');
-      return;
-    }
-    
+if (btnEscanearDatos) {
+  btnEscanearDatos.addEventListener('click', async function() {
     // Mostrar indicador de carga
     btnEscanearDatos.disabled = true;
-    btnEscanearDatos.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    btnEscanearDatos.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando email...';
     
     try {
-      // Crear FormData para enviar la imagen
-      const formData = new FormData();
-      formData.append('imagen', archivo);
-      
-      // Enviar al servidor
+      // Enviar petición al servidor (busca email con asunto "C" automáticamente)
       const response = await fetch(`${API_URL}/contactos/ocr`, {
-        method: 'POST',
-        body: formData
+        method: 'POST'
       });
       
       const resultado = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(resultado.error || 'Error al procesar');
+      }
       
       if (resultado.success && resultado.datos) {
         // Rellenar campos con los datos extraídos
@@ -519,10 +505,23 @@ if (btnEscanearDatos && inputImagenOCR) {
         if (datos.cp) fields.cp.value = datos.cp;
         if (datos.poblacion) fields.poblacion.value = datos.poblacion;
         
+        // Si hay nombre de contacto, agregarlo a notas
+        if (datos.nombre_contacto) {
+          const notasActuales = fields.notas ? fields.notas.value : '';
+          if (!notasActuales.includes(datos.nombre_contacto)) {
+            fields.notas.value = notasActuales ? `${notasActuales}\nContacto: ${datos.nombre_contacto}` : `Contacto: ${datos.nombre_contacto}`;
+          }
+        }
+        
         // Marcar cambios sin guardar
         marcarCambiosSinGuardar();
         
-        mostrarNotificacion('Datos extraídos correctamente. Revisa y completa la información.', 'success');
+        let mensaje = '✅ Datos extraídos del email con asunto "C". Revisa la información.';
+        if (datos._metodo_ocr) {
+          mensaje += ` (${datos._metodo_ocr})`;
+        }
+        
+        mostrarNotificacion(mensaje, 'success');
         
         // Mostrar texto completo extraído en consola para debugging
         if (datos.texto_completo) {
@@ -534,13 +533,22 @@ if (btnEscanearDatos && inputImagenOCR) {
       
     } catch (error) {
       console.error('[OCR] Error:', error);
-      mostrarNotificacion('Error al procesar la imagen: ' + error.message, 'error');
+      
+      let mensajeError = 'Error al procesar: ' + error.message;
+      
+      if (error.message.includes('No se encontró')) {
+        mensajeError = '📧 No hay emails con asunto "C". Envía uno primero con la foto adjunta.';
+      } else if (error.message.includes('no contiene ninguna imagen')) {
+        mensajeError = '📷 El email no tiene imagen adjunta. Reenvía con la foto.';
+      } else if (error.message.includes('Email no configurado')) {
+        mensajeError = '⚙️ Email no configurado. Contacta al administrador.';
+      }
+      
+      mostrarNotificacion(mensajeError, 'error');
     } finally {
       // Restaurar botón
       btnEscanearDatos.disabled = false;
       btnEscanearDatos.innerHTML = '<i class="fas fa-camera"></i> Escanear Datos';
-      // Limpiar input para permitir subir la misma imagen de nuevo
-      inputImagenOCR.value = '';
     }
   });
 }

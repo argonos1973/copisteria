@@ -956,35 +956,101 @@ def eliminar(idContacto):
 
 @app.route('/api/contactos/ocr', methods=['POST'])
 def procesar_ocr_contacto():
-    """Procesa una imagen y extrae datos del contacto mediante OCR"""
+    """
+    Procesa un contacto mediante OCR
+    Busca en el buzón de correo el último email con asunto 'C'
+    y procesa la imagen adjunta
+    """
     try:
-        if 'imagen' not in request.files:
-            return jsonify({'error': 'No se recibió ninguna imagen'}), 400
+        import contacto_ocr
+        import imaplib
+        import email
+        from email.header import decode_header
+        import os
         
-        archivo = request.files['imagen']
+        # Obtener configuración de email desde variables de entorno
+        EMAIL_USER = os.getenv('EMAIL_USER')
+        EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+        EMAIL_IMAP_HOST = os.getenv('EMAIL_IMAP_HOST', 'imap.gmail.com')
+        EMAIL_IMAP_PORT = int(os.getenv('EMAIL_IMAP_PORT', '993'))
         
-        if archivo.filename == '':
-            return jsonify({'error': 'Archivo vacío'}), 400
+        if not EMAIL_USER or not EMAIL_PASSWORD:
+            return jsonify({'error': 'Email no configurado. Configure EMAIL_USER y EMAIL_PASSWORD en .env'}), 500
         
-        # Validar tipo de archivo
-        extensiones_permitidas = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
-        extension = archivo.filename.rsplit('.', 1)[1].lower() if '.' in archivo.filename else ''
+        # Conectar al buzón
+        logger.info(f"Conectando a buzón {EMAIL_USER}...")
+        mail = imaplib.IMAP4_SSL(EMAIL_IMAP_HOST, EMAIL_IMAP_PORT)
+        mail.login(EMAIL_USER, EMAIL_PASSWORD)
+        mail.select('INBOX')
         
-        if extension not in extensiones_permitidas:
-            return jsonify({'error': 'Formato de imagen no permitido'}), 400
+        # Buscar emails con asunto "C" (case insensitive)
+        logger.info("Buscando emails con asunto 'C'...")
+        status, messages = mail.search(None, 'SUBJECT', '"C"')
         
-        # Leer bytes de la imagen
-        imagen_bytes = archivo.read()
+        if status != 'OK' or not messages[0]:
+            mail.close()
+            mail.logout()
+            return jsonify({'error': 'No se encontró ningún email con asunto "C"'}), 404
+        
+        # Obtener el último email (más reciente)
+        email_ids = messages[0].split()
+        ultimo_email_id = email_ids[-1]
+        
+        logger.info(f"Procesando email ID: {ultimo_email_id.decode()}")
+        
+        # Obtener el email
+        status, msg_data = mail.fetch(ultimo_email_id, '(RFC822)')
+        raw_email = msg_data[0][1]
+        msg = email.message_from_bytes(raw_email)
+        
+        # Extraer imágenes adjuntas
+        imagen_bytes = None
+        nombre_archivo = None
+        
+        for part in msg.walk():
+            if part.get_content_maintype() == 'multipart':
+                continue
+            if part.get('Content-Disposition') is None:
+                continue
+            
+            content_type = part.get_content_type()
+            if content_type and content_type.startswith('image/'):
+                nombre_archivo = part.get_filename()
+                imagen_bytes = part.get_payload(decode=True)
+                logger.info(f"Imagen encontrada: {nombre_archivo} ({content_type})")
+                break
+        
+        # Cerrar conexión
+        mail.close()
+        mail.logout()
+        
+        if not imagen_bytes:
+            return jsonify({'error': 'El email no contiene ninguna imagen adjunta'}), 400
         
         # Procesar con OCR
-        import contacto_ocr
+        logger.info("Procesando imagen con OCR...")
         datos = contacto_ocr.procesar_imagen_contacto(imagen_bytes)
+        
+        # Marcar email como leído (opcional)
+        try:
+            mail = imaplib.IMAP4_SSL(EMAIL_IMAP_HOST, EMAIL_IMAP_PORT)
+            mail.login(EMAIL_USER, EMAIL_PASSWORD)
+            mail.select('INBOX')
+            mail.store(ultimo_email_id, '+FLAGS', '\\Seen')
+            mail.close()
+            mail.logout()
+        except:
+            pass  # No es crítico si falla
         
         return jsonify({
             'success': True,
-            'datos': datos
+            'datos': datos,
+            'email_procesado': True
         }), 200
         
+    except imaplib.IMAP4.error as e:
+        logger.error(f"Error de conexión IMAP: {e}", exc_info=True)
+        return jsonify({'error': f'Error conectando al buzón: {str(e)}'}), 500
     except Exception as e:
         logger.error(f"Error en OCR de contacto: {e}", exc_info=True)
         return jsonify({'error': f'Error procesando imagen: {str(e)}'}), 500
