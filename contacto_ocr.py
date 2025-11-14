@@ -1,7 +1,7 @@
 """
 Módulo para extracción de datos de contactos mediante OCR
 Procesa imágenes de tarjetas de visita, documentos, etc.
-Soporta Tesseract OCR y EasyOCR (deep learning)
+Soporta Tesseract OCR, EasyOCR (deep learning) y GPT-4 Vision API
 """
 
 import pytesseract
@@ -9,9 +9,28 @@ from PIL import Image, ImageEnhance, ImageOps, ImageFilter
 import re
 import io
 import numpy as np
+import base64
+import os
+import json
 from logger_config import get_logger
 
 logger = get_logger(__name__)
+
+# Intentar importar OpenAI GPT-4 Vision (opcional, mejor precisión)
+try:
+    from openai import OpenAI
+    OPENAI_DISPONIBLE = True
+    # Obtener API key desde variable de entorno
+    OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+    if OPENAI_API_KEY:
+        logger.info("OpenAI GPT-4 Vision disponible - se usará como primera opción")
+    else:
+        OPENAI_DISPONIBLE = False
+        logger.info("OpenAI API Key no configurada - GPT-4 Vision deshabilitado")
+except ImportError:
+    OPENAI_DISPONIBLE = False
+    OPENAI_API_KEY = None
+    logger.info("OpenAI no disponible - no se usará GPT-4 Vision")
 
 # Intentar importar EasyOCR (opcional, mejor para diseños complejos)
 try:
@@ -208,6 +227,118 @@ def extraer_texto_imagen(imagen_bytes, debug=False):
         
     except Exception as e:
         logger.error(f"Error en OCR: {e}", exc_info=True)
+        raise
+
+
+def extraer_datos_gpt4_vision(imagen_bytes):
+    """
+    Extrae datos de contacto usando GPT-4 Vision API
+    Funciona excelentemente con diseños complejos, tarjetas, etc.
+    
+    Args:
+        imagen_bytes: Bytes de la imagen
+        
+    Returns:
+        dict: Datos estructurados extraídos directamente
+    """
+    if not OPENAI_DISPONIBLE or not OPENAI_API_KEY:
+        raise ValueError("OpenAI API Key no configurada")
+    
+    try:
+        # Convertir imagen a base64
+        base64_image = base64.b64encode(imagen_bytes).decode('utf-8')
+        
+        # Inicializar cliente OpenAI
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        
+        # Prompt para extraer datos estructurados
+        prompt = """Analiza esta imagen de tarjeta de visita o documento y extrae los siguientes datos de contacto.
+Devuelve SOLO un objeto JSON válido con estos campos (deja vacíos los que no encuentres):
+
+{
+  "razon_social": "nombre de la empresa u organización",
+  "nif": "NIF, CIF o número de identificación fiscal",
+  "direccion": "dirección completa de la calle",
+  "cp": "código postal (solo números)",
+  "poblacion": "ciudad o población",
+  "telefono": "teléfono principal (solo números, sin espacios)",
+  "email": "correo electrónico",
+  "nombre_contacto": "nombre de la persona de contacto",
+  "web": "sitio web si existe"
+}
+
+IMPORTANTE:
+- Para teléfonos, quita espacios, puntos y guiones. Si empieza con +34, quítalo también.
+- Para códigos postales, solo 5 dígitos.
+- Si hay varios teléfonos, usa el principal o el primero.
+- Si hay varios emails, usa el principal o el primero.
+- Devuelve SOLO el JSON, sin texto adicional."""
+
+        logger.info("Enviando imagen a GPT-4 Vision...")
+        
+        # Llamar a GPT-4 Vision API
+        response = client.chat.completions.create(
+            model="gpt-4o",  # Modelo más reciente y eficiente
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": prompt
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}",
+                                "detail": "high"  # Alta resolución para mejor OCR
+                            }
+                        }
+                    ]
+                }
+            ],
+            max_tokens=500,
+            temperature=0.1  # Baja temperatura para respuestas más determinísticas
+        )
+        
+        # Extraer respuesta
+        respuesta_texto = response.choices[0].message.content.strip()
+        logger.info(f"Respuesta de GPT-4 Vision: {respuesta_texto[:200]}...")
+        
+        # Parsear JSON
+        # Limpiar posibles markdown code blocks
+        if respuesta_texto.startswith('```'):
+            respuesta_texto = respuesta_texto.split('```')[1]
+            if respuesta_texto.startswith('json'):
+                respuesta_texto = respuesta_texto[4:]
+        
+        datos = json.loads(respuesta_texto)
+        
+        # Validar y limpiar datos
+        datos_limpios = {
+            'razon_social': datos.get('razon_social', '').strip(),
+            'nif': datos.get('nif', '').strip(),
+            'direccion': datos.get('direccion', '').strip(),
+            'cp': datos.get('cp', '').strip(),
+            'poblacion': datos.get('poblacion', '').strip(),
+            'telefono': datos.get('telefono', '').strip(),
+            'email': datos.get('email', '').strip(),
+            'nombre_contacto': datos.get('nombre_contacto', '').strip(),
+        }
+        
+        # Agregar web si existe
+        if datos.get('web'):
+            datos_limpios['web'] = datos.get('web', '').strip()
+        
+        logger.info(f"GPT-4 Vision extrajo: {datos_limpios}")
+        return datos_limpios
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parseando JSON de GPT-4: {e}")
+        logger.error(f"Respuesta recibida: {respuesta_texto}")
+        raise
+    except Exception as e:
+        logger.error(f"Error en GPT-4 Vision: {e}", exc_info=True)
         raise
 
 
@@ -442,8 +573,10 @@ def parsear_datos_contacto(texto):
 def procesar_imagen_contacto(imagen_bytes):
     """
     Procesa una imagen completa: OCR + parseo de datos
-    Usa EasyOCR si está disponible (mejor para diseños complejos)
-    o Tesseract como fallback
+    Prioridad de métodos:
+    1. GPT-4 Vision API (mejor precisión, ~$0.01 por imagen)
+    2. EasyOCR (deep learning, gratuito pero menos preciso)
+    3. Tesseract OCR (fallback, gratuito)
     
     Args:
         imagen_bytes: Bytes de la imagen
@@ -452,7 +585,27 @@ def procesar_imagen_contacto(imagen_bytes):
         dict: Datos del contacto extraídos
     """
     try:
-        # Extraer texto con el mejor método disponible
+        # 1. Intentar primero con GPT-4 Vision si está disponible
+        if OPENAI_DISPONIBLE and OPENAI_API_KEY:
+            try:
+                logger.info("Intentando extracción con GPT-4 Vision API...")
+                datos = extraer_datos_gpt4_vision(imagen_bytes)
+                
+                # Verificar que se extrajeron datos útiles
+                datos_utiles = any(v and len(str(v).strip()) > 0 for k, v in datos.items())
+                
+                if datos_utiles:
+                    logger.info("✓ GPT-4 Vision extrajo datos exitosamente")
+                    # Agregar marcador de método usado
+                    datos['_metodo_ocr'] = 'GPT-4 Vision'
+                    return datos
+                else:
+                    logger.warning("GPT-4 Vision no extrajo datos útiles, intentando con OCR tradicional...")
+            except Exception as e:
+                logger.warning(f"GPT-4 Vision falló: {e}, intentando con OCR tradicional...")
+        
+        # 2. Fallback a OCR tradicional (EasyOCR -> Tesseract)
+        logger.info("Usando OCR tradicional (EasyOCR/Tesseract)...")
         texto = extraer_texto_con_mejor_metodo(imagen_bytes)
         
         # Parsear datos
@@ -460,6 +613,7 @@ def procesar_imagen_contacto(imagen_bytes):
         
         # Agregar texto completo para referencia
         datos['texto_completo'] = texto
+        datos['_metodo_ocr'] = 'EasyOCR/Tesseract'
         
         return datos
         
