@@ -1,6 +1,7 @@
 """
 Módulo para extracción de datos de contactos mediante OCR
 Procesa imágenes de tarjetas de visita, documentos, etc.
+Soporta Tesseract OCR y EasyOCR (deep learning)
 """
 
 import pytesseract
@@ -11,6 +12,18 @@ import numpy as np
 from logger_config import get_logger
 
 logger = get_logger(__name__)
+
+# Intentar importar EasyOCR (opcional, mejor para diseños complejos)
+try:
+    import easyocr
+    EASYOCR_DISPONIBLE = True
+    logger.info("EasyOCR disponible - se usará para tarjetas complejas")
+except ImportError:
+    EASYOCR_DISPONIBLE = False
+    logger.info("EasyOCR no disponible - solo se usará Tesseract")
+
+# Cache del reader de EasyOCR (tarda en inicializar)
+_easyocr_reader = None
 
 
 def preprocesar_imagen(imagen):
@@ -123,13 +136,14 @@ def preprocesar_imagen(imagen):
         return imagen.convert('L')
 
 
-def extraer_texto_imagen(imagen_bytes):
+def extraer_texto_imagen(imagen_bytes, debug=False):
     """
     Extrae texto de una imagen usando Tesseract OCR
     Intenta múltiples configuraciones para mejor resultado
     
     Args:
         imagen_bytes: Bytes de la imagen
+        debug: Si es True, guarda la imagen procesada para debugging
         
     Returns:
         str: Texto extraído de la imagen
@@ -140,6 +154,15 @@ def extraer_texto_imagen(imagen_bytes):
         
         # Preprocesar imagen para mejorar OCR
         imagen_procesada = preprocesar_imagen(imagen)
+        
+        # Guardar imagen procesada para debugging si se solicita
+        if debug:
+            try:
+                debug_path = '/tmp/ocr_debug_processed.png'
+                imagen_procesada.save(debug_path)
+                logger.info(f"Imagen procesada guardada en: {debug_path}")
+            except Exception as e:
+                logger.warning(f"No se pudo guardar imagen debug: {e}")
         
         # Intentar con diferentes configuraciones de PSM (Page Segmentation Mode)
         # PSM 3: Segmentación automática completa (mejor para tarjetas complejas)
@@ -185,6 +208,91 @@ def extraer_texto_imagen(imagen_bytes):
         
     except Exception as e:
         logger.error(f"Error en OCR: {e}", exc_info=True)
+        raise
+
+
+def extraer_texto_easyocr(imagen_bytes):
+    """
+    Extrae texto usando EasyOCR (deep learning)
+    Funciona mejor con diseños complejos y tarjetas
+    
+    Args:
+        imagen_bytes: Bytes de la imagen
+        
+    Returns:
+        str: Texto extraído de la imagen
+    """
+    global _easyocr_reader
+    
+    if not EASYOCR_DISPONIBLE:
+        raise ImportError("EasyOCR no está instalado")
+    
+    try:
+        # Inicializar reader si no existe (se cachea)
+        if _easyocr_reader is None:
+            logger.info("Inicializando EasyOCR reader (esto puede tardar unos segundos)...")
+            _easyocr_reader = easyocr.Reader(['es', 'en'], gpu=False)  # Español e inglés
+            logger.info("EasyOCR reader inicializado")
+        
+        # Convertir bytes a array numpy
+        imagen = Image.open(io.BytesIO(imagen_bytes))
+        imagen_array = np.array(imagen)
+        
+        # Extraer texto
+        logger.info("Extrayendo texto con EasyOCR...")
+        resultados = _easyocr_reader.readtext(imagen_array)
+        
+        # Convertir resultados a texto
+        # Formato: [(bbox, texto, confianza), ...]
+        lineas = []
+        for (bbox, texto, confianza) in resultados:
+            if confianza > 0.1:  # Filtrar detecciones de baja confianza
+                lineas.append(texto)
+                logger.debug(f"EasyOCR: '{texto}' (confianza: {confianza:.2f})")
+        
+        texto_completo = '\n'.join(lineas)
+        logger.info(f"EasyOCR extrajo {len(lineas)} líneas de texto")
+        
+        return texto_completo
+        
+    except Exception as e:
+        logger.error(f"Error en EasyOCR: {e}", exc_info=True)
+        raise
+
+
+def extraer_texto_con_mejor_metodo(imagen_bytes, debug=False):
+    """
+    Intenta extraer texto usando el mejor método disponible
+    Prueba primero EasyOCR (mejor para diseños complejos) y luego Tesseract
+    
+    Args:
+        imagen_bytes: Bytes de la imagen
+        debug: Si es True, guarda la imagen procesada
+        
+    Returns:
+        str: Texto extraído de la imagen
+    """
+    try:
+        # Intentar primero con EasyOCR si está disponible
+        if EASYOCR_DISPONIBLE:
+            try:
+                logger.info("Intentando extracción con EasyOCR...")
+                texto_easyocr = extraer_texto_easyocr(imagen_bytes)
+                
+                if texto_easyocr and len(texto_easyocr.strip()) > 10:
+                    logger.info(f"EasyOCR exitoso - {len(texto_easyocr)} caracteres extraídos")
+                    return texto_easyocr
+                else:
+                    logger.warning("EasyOCR no extrajo suficiente texto, intentando con Tesseract...")
+            except Exception as e:
+                logger.warning(f"EasyOCR falló: {e}, intentando con Tesseract...")
+        
+        # Fallback a Tesseract
+        logger.info("Usando Tesseract OCR...")
+        return extraer_texto_imagen(imagen_bytes, debug=debug)
+        
+    except Exception as e:
+        logger.error(f"Error en extracción de texto: {e}", exc_info=True)
         raise
 
 
@@ -334,6 +442,8 @@ def parsear_datos_contacto(texto):
 def procesar_imagen_contacto(imagen_bytes):
     """
     Procesa una imagen completa: OCR + parseo de datos
+    Usa EasyOCR si está disponible (mejor para diseños complejos)
+    o Tesseract como fallback
     
     Args:
         imagen_bytes: Bytes de la imagen
@@ -342,8 +452,8 @@ def procesar_imagen_contacto(imagen_bytes):
         dict: Datos del contacto extraídos
     """
     try:
-        # Extraer texto
-        texto = extraer_texto_imagen(imagen_bytes)
+        # Extraer texto con el mejor método disponible
+        texto = extraer_texto_con_mejor_metodo(imagen_bytes)
         
         # Parsear datos
         datos = parsear_datos_contacto(texto)
