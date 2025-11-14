@@ -324,6 +324,11 @@ def obtener_menu():
                 {'nombre': 'Conciliación', 'icono': 'fas fa-exchange-alt', 'ruta': '/CONCILIACION_GASTOS.html'},
                 {'nombre': 'Extracto Bancario', 'icono': 'fas fa-file-invoice-dollar', 'ruta': '/extracto_bancario'},
                 {'nombre': 'Conectar Banco', 'icono': 'fas fa-university', 'ruta': '/conectar_banco'}
+            ],
+            'facturas_recibidas': [
+                {'nombre': 'Consultar Facturas', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_FACTURAS_RECIBIDAS.html'},
+                {'nombre': 'Subir Factura', 'icono': 'fas fa-upload', 'ruta': '/GESTION_FACTURAS_RECIBIDAS.html'},
+                {'nombre': 'Gestión Proveedores', 'icono': 'fas fa-users', 'ruta': '/GESTION_PROVEEDORES.html'}
             ]
         }
         
