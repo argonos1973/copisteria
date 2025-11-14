@@ -502,6 +502,147 @@
         .plantilla-card-perfil.active .preview-dot {
             border-color: rgba(255,255,255,0.3);
         }
+        
+        /* Modal Selector de Avatares */
+        .modal-avatares {
+            display: none;
+            position: fixed;
+            z-index: 10001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.3s;
+        }
+        
+        .modal-avatares-content {
+            background-color: var(--bg-card, #fff);
+            color: var(--color-texto, #333);
+            margin: 5% auto;
+            padding: 0;
+            border: 1px solid var(--color-border, #ddd);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 700px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            animation: slideDown 0.3s;
+        }
+        
+        .modal-avatares-header {
+            padding: 20px 25px;
+            background: var(--primary, var(--color-primario, #007bff));
+            color: white;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-avatares-header h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .modal-avatares-close {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            transition: transform 0.2s, opacity 0.2s;
+            opacity: 0.9;
+        }
+        
+        .modal-avatares-close:hover {
+            transform: rotate(90deg);
+            opacity: 1;
+        }
+        
+        .modal-avatares-body {
+            padding: 25px;
+            background-color: var(--bg-card, #fff);
+        }
+        
+        .modal-avatares-tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--color-border, #ddd);
+            padding-bottom: 15px;
+        }
+        
+        .avatar-tab-btn {
+            flex: 1;
+            padding: 10px 20px;
+            background: var(--color-secundario, #6c757d);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .avatar-tab-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .avatar-tab-btn.active {
+            background: var(--primary, var(--color-primario, #007bff));
+        }
+        
+        .avatares-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: transparent;
+        }
+        
+        .subir-avatar-container {
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .subir-avatar-area {
+            border: 2px dashed var(--color-border, #ddd);
+            border-radius: 8px;
+            padding: 40px;
+            cursor: pointer;
+            background-color: transparent;
+            transition: all 0.2s;
+        }
+        
+        .subir-avatar-area:hover {
+            background-color: var(--bg-hover, rgba(0,0,0,0.02));
+            border-color: var(--primary, var(--color-primario, #007bff));
+        }
+        
+        .subir-avatar-area i {
+            font-size: 48px;
+            color: var(--primary, var(--color-primario, #007bff));
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .subir-avatar-text {
+            margin: 0;
+            font-size: 14px;
+            color: var(--color-texto, #666);
+        }
+        
+        .subir-avatar-hint {
+            margin: 5px 0 0 0;
+            font-size: 11px;
+            color: var(--color-texto-secundario, #999);
+        }
     </style>
 
     <!-- JavaScript de la modal -->
@@ -806,34 +947,34 @@
     -->
     
     <!-- Modal Selector de Avatares -->
-    <div id="modal-selector-avatares" style="display: none; position: fixed; z-index: 10001; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px);">
-        <div style="background-color: var(--bg-card, #fff); margin: 5% auto; padding: 0; border-radius: 12px; width: 90%; max-width: 700px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); border: 1px solid var(--color-border, #ddd);">
-            <div style="padding: 20px 25px; background: var(--primary, var(--color-primario, #007bff)); color: white; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 20px;"><i class="fas fa-images"></i> Seleccionar Avatar</h3>
-                <span onclick="cerrarSelectorAvatares()" style="cursor: pointer; font-size: 28px; font-weight: bold; opacity: 0.9; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.9'">&times;</span>
+    <div id="modal-selector-avatares" class="modal-avatares" style="display: none;">
+        <div class="modal-avatares-content">
+            <div class="modal-avatares-header">
+                <h3><i class="fas fa-images"></i> Seleccionar Avatar</h3>
+                <span class="modal-avatares-close" onclick="cerrarSelectorAvatares()">&times;</span>
             </div>
-            <div style="padding: 25px; background-color: var(--bg-card, #fff); color: var(--color-texto, #333);">
+            <div class="modal-avatares-body">
                 <!-- Opciones de selección -->
-                <div style="display: flex; gap: 15px; margin-bottom: 20px; border-bottom: 2px solid var(--color-border, #ddd); padding-bottom: 15px;">
-                    <button onclick="mostrarAvataresPredefinidos()" id="btn-predefinidos" style="flex: 1; padding: 10px 20px; background: var(--primary, var(--color-primario, #007bff)); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                <div class="modal-avatares-tabs">
+                    <button onclick="mostrarAvataresPredefinidos()" id="btn-predefinidos" class="avatar-tab-btn active">
                         <i class="fas fa-th"></i> Avatares Predefinidos
                     </button>
-                    <button onclick="mostrarSubirPersonalizado()" id="btn-personalizado" style="flex: 1; padding: 10px 20px; background: var(--color-secundario, #6c757d); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                    <button onclick="mostrarSubirPersonalizado()" id="btn-personalizado" class="avatar-tab-btn">
                         <i class="fas fa-upload"></i> Subir Personalizado
                     </button>
                 </div>
                 
                 <!-- Grid de avatares predefinidos -->
-                <div id="avatares-predefinidos" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; max-height: 400px; overflow-y: auto; padding: 10px; background-color: transparent;">
+                <div id="avatares-predefinidos" class="avatares-grid">
                     <!-- Se llenará dinámicamente -->
                 </div>
                 
                 <!-- Subir personalizado -->
-                <div id="subir-personalizado" style="display: none; text-align: center; padding: 30px;">
-                    <div style="border: 2px dashed var(--color-border, #ddd); border-radius: 8px; padding: 40px; cursor: pointer; background-color: transparent; transition: background-color 0.2s;" onclick="document.getElementById('perfil-avatar-input').click()" onmouseover="this.style.backgroundColor='var(--bg-hover, rgba(0,0,0,0.02))'" onmouseout="this.style.backgroundColor='transparent'">
-                        <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: var(--primary, var(--color-primario, #007bff)); margin-bottom: 15px;"></i>
-                        <p style="margin: 0; font-size: 14px; color: var(--color-texto, #666);">Click para subir tu propia imagen</p>
-                        <p style="margin: 5px 0 0 0; font-size: 11px; color: var(--color-texto-secundario, #999);">PNG, JPG (máx. 2MB)</p>
+                <div id="subir-personalizado" class="subir-avatar-container" style="display: none;">
+                    <div class="subir-avatar-area" onclick="document.getElementById('perfil-avatar-input').click()">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <p class="subir-avatar-text">Click para subir tu propia imagen</p>
+                        <p class="subir-avatar-hint">PNG, JPG (máx. 2MB)</p>
                     </div>
                 </div>
             </div>

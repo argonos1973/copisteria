@@ -391,15 +391,15 @@ function seleccionarAvatarPredefinido(avatar) {
 function mostrarAvataresPredefinidos() {
     document.getElementById('avatares-predefinidos').style.display = 'grid';
     document.getElementById('subir-personalizado').style.display = 'none';
-    document.getElementById('btn-predefinidos').style.background = 'var(--color-primario, #007bff)';
-    document.getElementById('btn-personalizado').style.background = 'var(--color-secundario, #6c757d)';
+    document.getElementById('btn-predefinidos').classList.add('active');
+    document.getElementById('btn-personalizado').classList.remove('active');
 }
 
 function mostrarSubirPersonalizado() {
     document.getElementById('avatares-predefinidos').style.display = 'none';
     document.getElementById('subir-personalizado').style.display = 'block';
-    document.getElementById('btn-predefinidos').style.background = 'var(--color-secundario, #6c757d)';
-    document.getElementById('btn-personalizado').style.background = 'var(--color-primario, #007bff)';
+    document.getElementById('btn-predefinidos').classList.remove('active');
+    document.getElementById('btn-personalizado').classList.add('active');
 }
 
 // Cerrar modal al hacer click fuera
