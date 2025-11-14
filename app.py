@@ -969,13 +969,14 @@ def procesar_ocr_contacto():
         import os
         
         # Obtener configuración de email desde variables de entorno
-        EMAIL_USER = os.getenv('EMAIL_USER')
-        EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
-        EMAIL_IMAP_HOST = os.getenv('EMAIL_IMAP_HOST', 'imap.gmail.com')
+        # Usar la misma configuración que para enviar emails (SMTP_USERNAME/PASSWORD)
+        EMAIL_USER = os.getenv('SMTP_USERNAME', os.getenv('EMAIL_USER'))
+        EMAIL_PASSWORD = os.getenv('SMTP_PASSWORD', os.getenv('EMAIL_PASSWORD'))
+        EMAIL_IMAP_HOST = os.getenv('EMAIL_IMAP_HOST', 'imap.ionos.es')  # IONOS por defecto
         EMAIL_IMAP_PORT = int(os.getenv('EMAIL_IMAP_PORT', '993'))
         
         if not EMAIL_USER or not EMAIL_PASSWORD:
-            return jsonify({'error': 'Email no configurado. Configure EMAIL_USER y EMAIL_PASSWORD en .env'}), 500
+            return jsonify({'error': 'Email no configurado. Configure SMTP_USERNAME y SMTP_PASSWORD en .env'}), 500
         
         # Conectar al buzón
         logger.info(f"Conectando a buzón {EMAIL_USER}...")

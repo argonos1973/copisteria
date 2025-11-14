@@ -33,12 +33,13 @@ import contacto_ocr
 logger = get_logger(__name__)
 
 # Configuración desde variables de entorno
-EMAIL_HOST = os.getenv('EMAIL_IMAP_HOST', 'imap.gmail.com')
+# Usar las mismas credenciales SMTP que ya están configuradas
+EMAIL_HOST = os.getenv('EMAIL_IMAP_HOST', 'imap.ionos.es')  # IONOS por defecto
 EMAIL_PORT = int(os.getenv('EMAIL_IMAP_PORT', '993'))
-EMAIL_USER = os.getenv('EMAIL_USER')
-EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
-EMAIL_SMTP_HOST = os.getenv('EMAIL_SMTP_HOST', 'smtp.gmail.com')
-EMAIL_SMTP_PORT = int(os.getenv('EMAIL_SMTP_PORT', '587'))
+EMAIL_USER = os.getenv('SMTP_USERNAME', os.getenv('EMAIL_USER'))
+EMAIL_PASSWORD = os.getenv('SMTP_PASSWORD', os.getenv('EMAIL_PASSWORD'))
+EMAIL_SMTP_HOST = os.getenv('SMTP_SERVER', os.getenv('EMAIL_SMTP_HOST', 'smtp.ionos.es'))
+EMAIL_SMTP_PORT = int(os.getenv('SMTP_PORT', os.getenv('EMAIL_SMTP_PORT', '465')))
 
 # Asunto a buscar
 ASUNTO_BUSCAR = os.getenv('EMAIL_ASUNTO_CONTACTO', 'NUEVO CONTACTO')
@@ -219,9 +220,17 @@ def enviar_confirmacion(destinatario, datos, contacto_id):
         part = MIMEText(html, 'html')
         msg.attach(part)
         
-        # Enviar
-        server = smtplib.SMTP(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT)
-        server.starttls()
+        # Enviar (usar SSL si puerto 465, STARTTLS si 587)
+        import ssl
+        if EMAIL_SMTP_PORT == 465:
+            # Conexión SSL directa (IONOS, Gmail SSL)
+            context = ssl.create_default_context()
+            server = smtplib.SMTP_SSL(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT, context=context)
+        else:
+            # Conexión STARTTLS (Gmail, Outlook)
+            server = smtplib.SMTP(EMAIL_SMTP_HOST, EMAIL_SMTP_PORT)
+            server.starttls()
+        
         server.login(EMAIL_USER, EMAIL_PASSWORD)
         server.send_message(msg)
         server.quit()
