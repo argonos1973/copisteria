@@ -363,9 +363,13 @@ function mostrarUsuarios(lista) {
         const estado = usuario.activo ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-danger">Inactivo</span>';
         const rol = usuario.es_superadmin ? '<span class="badge badge-info">Superadmin</span>' : '<span class="badge">Usuario</span>';
         
+        // Avatar con fallback a default
+        const avatarUrl = usuario.avatar || '/static/avatars/default.svg';
+        const avatarHtml = `<img src="${avatarUrl}" alt="${usuario.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 8px; border: 2px solid #ddd;">`;
+        
         html += `
             <tr>
-                <td><strong>${usuario.username}</strong></td>
+                <td>${avatarHtml}<strong>${usuario.username}</strong></td>
                 <td>${usuario.nombre_completo}</td>
                 <td>${usuario.email || '-'}</td>
                 <td>${usuario.empresas || 'Sin asignar'}</td>

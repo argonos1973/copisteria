@@ -43,7 +43,7 @@ def listar_usuarios():
         cursor.execute('''
             SELECT 
                 u.id, u.username, u.nombre_completo, u.email, u.telefono,
-                u.activo, u.fecha_alta, u.ultimo_acceso,
+                u.activo, u.fecha_alta, u.ultimo_acceso, u.avatar,
                 ue.rol, ue.es_admin_empresa,
                 GROUP_CONCAT(DISTINCT e.nombre) as empresas,
                 GROUP_CONCAT(DISTINCT e.codigo) as empresas_codigos
