@@ -61,3 +61,4 @@ static/tmp_qr/
 # HTML duplicados en raíz
 /index.html
 .env
+logs/
