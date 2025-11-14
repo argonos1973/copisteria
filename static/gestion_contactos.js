@@ -139,12 +139,28 @@ async function seleccionarDireccion(sug) {
   fields.direccion.value = sug.carrer;
   fields.cp.value = sug.cp;
   sugerenciasContainer.innerHTML = '';
+  // Cargar población y provincia del CP seleccionado
+  await handleCP();
 }
 
 // ------------------------ CP lookup & suggestions ------------------------
 const cpDebounce = debounce((p)=>buscarCPSuggestions(p),300);
+
+// Buscar sugerencias mientras escribe
 fields.cp.addEventListener('input', (e)=>{
   cpDebounce(e.target.value);
+});
+
+// Cargar población y provincia cuando termina de escribir (5 dígitos)
+fields.cp.addEventListener('input', (e)=>{
+  const cp = e.target.value.trim();
+  if (cp.length === 5 && /^[0-9]{5}$/.test(cp)) {
+    handleCP();
+  }
+});
+
+// También al salir del campo (blur)
+fields.cp.addEventListener('blur', ()=>{
   handleCP();
 });
 
@@ -169,25 +185,51 @@ async function buscarCPSuggestions(prefix){
 
 async function handleCP() {
   if (cargandoContacto) return;
-  const cp = fields.cp.value;
-  // Permitir cualquier CP sin validación
+  const cp = fields.cp.value.trim();
+  
+  console.log('[CP] Buscando datos para CP:', cp);
+  
+  // Validar que sea un CP de 5 dígitos
   if (cp.length !== 5 || !/^[0-9]{5}$/.test(cp)) {
-    // CP no es catalán (5 dígitos), no buscar en BD
+    console.log('[CP] CP no válido (debe ser 5 dígitos)');
     return;
   }
+  
   try {
     const res = await fetch(`${API_URL}/contactos/get_cp?cp=${cp}`);
-    if (!res.ok) throw new Error('Error al obtener CP');
+    if (!res.ok) {
+      console.error('[CP] Error HTTP:', res.status);
+      throw new Error('Error al obtener CP');
+    }
+    
     const data = await res.json();
-    if (data && data.length) {
-      fields.poblacio.value = data[0].poblacio;
-      fields.provincia.value = data[0].provincia;
+    console.log('[CP] Datos recibidos:', data);
+    
+    if (data && data.length && data[0]) {
+      // Asignar población y provincia
+      const poblacio = data[0].poblacio || '';
+      const provincia = data[0].provincia || '';
+      
+      console.log('[CP] Asignando población:', poblacio, 'provincia:', provincia);
+      
+      fields.poblacio.value = poblacio;
+      fields.poblacion.value = poblacio; // Sincronizar campo oculto
+      fields.provincia.value = provincia;
+      
+      // Marcar que han cambiado
+      if (!cargandoContacto) {
+        marcarCambiosSinGuardar();
+      }
+      
+      console.log('[CP] ✓ Datos asignados correctamente');
     } else {
+      console.log('[CP] No se encontraron datos para este CP');
       fields.poblacio.value = '';
+      fields.poblacion.value = '';
       fields.provincia.value = '';
     }
   } catch (err) {
-    console.error(err);
+    console.error('[CP] Error:', err);
   }
 }
 
@@ -502,8 +544,16 @@ if (btnEscanearDatos) {
         if (datos.email) fields.mail.value = datos.email;
         if (datos.telefono) fields.telf1.value = datos.telefono;
         if (datos.direccion) fields.direccion.value = datos.direccion;
-        if (datos.cp) fields.cp.value = datos.cp;
-        if (datos.poblacion) fields.poblacion.value = datos.poblacion;
+        if (datos.cp) {
+          fields.cp.value = datos.cp;
+          // Buscar población y provincia en BD a partir del CP
+          await handleCP();
+        }
+        // Si no se encontró en BD, usar lo que extrajo el OCR
+        if (datos.poblacion && !fields.poblacio.value) {
+          fields.poblacio.value = datos.poblacion;
+          fields.poblacion.value = datos.poblacion;
+        }
         
         // Marcar cambios sin guardar
         marcarCambiosSinGuardar();
