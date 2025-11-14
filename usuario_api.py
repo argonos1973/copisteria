@@ -4,6 +4,8 @@ import sqlite3
 import os
 import json
 import glob
+import shutil
+from datetime import datetime
 
 from logger_config import get_logger
 from auth_middleware import login_required
@@ -15,6 +17,7 @@ usuario_bp = Blueprint('usuario', __name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 AVATAR_FOLDER = os.path.join(BASE_DIR, 'static', 'avatars')
+AVATARES_FOLDER = os.path.join(BASE_DIR, 'static', 'avatares')  # Avatares predefinidos
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 def allowed_file(filename):
@@ -63,13 +66,34 @@ def actualizar_perfil():
                     except Exception as e:
                         logger.warning(f"No se pudo eliminar avatar anterior {old_avatar}: {e}")
                 
-                # Guardar nuevo avatar
+                # Guardar nuevo avatar personalizado
                 ext = avatar_file.filename.rsplit('.', 1)[1].lower()
                 filename = f"user_{user_id}_avatar.{ext}"
                 filepath = os.path.join(AVATAR_FOLDER, filename)
                 
                 avatar_file.save(filepath)
                 logger.info(f"Avatar personalizado actualizado para usuario {user_id}: {filename}")
+                
+                # Copiar también a avatares predefinidos para que esté disponible para todos
+                try:
+                    # Crear directorio si no existe
+                    os.makedirs(AVATARES_FOLDER, exist_ok=True)
+                    
+                    # Generar nombre único para el avatar predefinido
+                    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    username = session.get('username', 'user')
+                    avatar_predefinido_filename = f"avatar_{username}_{timestamp}.{ext}"
+                    avatar_predefinido_path = os.path.join(AVATARES_FOLDER, avatar_predefinido_filename)
+                    
+                    # Copiar archivo
+                    shutil.copy2(filepath, avatar_predefinido_path)
+                    
+                    # Ajustar permisos
+                    os.chmod(avatar_predefinido_path, 0o644)
+                    
+                    logger.info(f"Avatar copiado a predefinidos: {avatar_predefinido_filename}")
+                except Exception as e:
+                    logger.warning(f"No se pudo copiar avatar a predefinidos: {e}")
                 
                 # Ruta relativa para la BD
                 avatar_path_relativa = f"/static/avatars/{filename}"
