@@ -99,14 +99,14 @@ function previsualizarAvatar(event) {
     if (file) {
         // Validar tamaño (2MB máximo)
         if (file.size > 2 * 1024 * 1024) {
-            alert('❌ El archivo es demasiado grande. Máximo 2MB');
+            mostrarNotificacion('El archivo es demasiado grande. Máximo 2MB', 'error');
             event.target.value = '';
             return;
         }
         
         // Validar tipo
         if (!file.type.startsWith('image/')) {
-            alert('❌ Solo se permiten imágenes');
+            mostrarNotificacion('Solo se permiten imágenes', 'error');
             event.target.value = '';
             return;
         }
@@ -114,8 +114,10 @@ function previsualizarAvatar(event) {
         const reader = new FileReader();
         reader.onload = function(e) {
             preview.src = e.target.result;
+            avatarSeleccionado = null; // Limpiar selección predefinida
         };
         reader.readAsDataURL(file);
+        cerrarSelectorAvatares();
     }
 }
 
@@ -148,17 +150,28 @@ async function guardarDatos(event) {
         const result = await response.json();
         
         if (response.ok) {
-            alert('✅ Datos actualizados correctamente');
-            // Recargar datos del perfil para mostrar avatar actualizado
-            setTimeout(() => {
-                cargarDatosPerfil();
-            }, 500);
+            mostrarNotificacion('Datos actualizados correctamente', 'success');
+            
+            // Refrescar avatar en el menú lateral
+            if (result.avatar) {
+                const menuAvatar = document.getElementById('menu-usuario-avatar');
+                if (menuAvatar) {
+                    menuAvatar.src = result.avatar + '?t=' + new Date().getTime();
+                }
+            }
+            
+            // Limpiar selección de avatar
+            avatarSeleccionado = null;
+            const avatarInput = document.getElementById('perfil-avatar-input');
+            if (avatarInput) {
+                avatarInput.value = '';
+            }
         } else {
-            alert('❌ Error: ' + (result.error || 'No se pudieron actualizar los datos'));
+            mostrarNotificacion('Error: ' + (result.error || 'No se pudieron actualizar los datos'), 'error');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('❌ Error al guardar datos');
+        mostrarNotificacion('Error al guardar datos', 'error');
     }
 }
 
@@ -170,12 +183,12 @@ async function cambiarPassword(event) {
     const passwordConfirmar = document.getElementById('password-confirmar').value;
     
     if (passwordNueva !== passwordConfirmar) {
-        alert('❌ Las contraseñas no coinciden');
+        mostrarNotificacion('Las contraseñas no coinciden', 'error');
         return;
     }
     
     if (passwordNueva.length < 6) {
-        alert('❌ La contraseña debe tener al menos 6 caracteres');
+        mostrarNotificacion('La contraseña debe tener al menos 6 caracteres', 'error');
         return;
     }
     
