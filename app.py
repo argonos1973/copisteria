@@ -48,6 +48,7 @@ import productos_franjas_utils
 import proforma
 import presupuesto
 import tickets
+import facturas_proveedores
 import verifactu
 import conciliacion
 
@@ -1069,6 +1070,115 @@ def procesar_ocr_contacto():
     except Exception as e:
         logger.error(f"Error en OCR de contacto: {e}", exc_info=True)
         return jsonify({'error': f'Error procesando imagen: {str(e)}'}), 500
+
+# ============================================================================
+# ENDPOINTS: FACTURAS DE PROVEEDORES
+# ============================================================================
+
+@login_required
+@app.route('/api/facturas-proveedores/consultar', methods=['POST'])
+def consultar_facturas_proveedores_endpoint():
+    """
+    Consulta facturas recibidas con filtros
+    """
+    empresa_id = session.get('empresa_id')
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        filtros = request.json or {}
+        resultado = facturas_proveedores.consultar_facturas_recibidas(empresa_id, filtros)
+        
+        return jsonify({
+            'success': True,
+            **resultado
+        })
+        
+    except Exception as e:
+        logger.error(f"Error consultando facturas proveedores: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@login_required
+@app.route('/api/proveedores/listar', methods=['GET'])
+def listar_proveedores_endpoint():
+    """
+    Lista todos los proveedores de la empresa
+    """
+    empresa_id = session.get('empresa_id')
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        activos_solo = request.args.get('activos', 'true').lower() == 'true'
+        proveedores = facturas_proveedores.obtener_proveedores(empresa_id, activos_solo)
+        
+        return jsonify({
+            'success': True,
+            'proveedores': proveedores
+        })
+        
+    except Exception as e:
+        logger.error(f"Error listando proveedores: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@login_required
+@app.route('/api/proveedores/<int:proveedor_id>', methods=['GET'])
+def obtener_proveedor_endpoint(proveedor_id):
+    """
+    Obtiene un proveedor por su ID
+    """
+    empresa_id = session.get('empresa_id')
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        proveedor = facturas_proveedores.obtener_proveedor_por_id(proveedor_id, empresa_id)
+        
+        if not proveedor:
+            return jsonify({'error': 'Proveedor no encontrado'}), 404
+        
+        return jsonify({
+            'success': True,
+            'proveedor': proveedor
+        })
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo proveedor: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@login_required
+@app.route('/api/proveedores/crear', methods=['POST'])
+def crear_proveedor_endpoint():
+    """
+    Crea un nuevo proveedor
+    """
+    empresa_id = session.get('empresa_id')
+    usuario = session.get('username')
+    
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        datos = request.json
+        
+        if not datos.get('nombre') or not datos.get('nif'):
+            return jsonify({'error': 'Nombre y NIF son obligatorios'}), 400
+        
+        proveedor_id = facturas_proveedores.crear_proveedor(empresa_id, datos, usuario)
+        
+        return jsonify({
+            'success': True,
+            'proveedor_id': proveedor_id,
+            'mensaje': 'Proveedor creado exitosamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error creando proveedor: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
 
 @login_required
 @app.route('/api/tickets/obtener_numerador/<string:tipoNum>', methods=['GET'])
