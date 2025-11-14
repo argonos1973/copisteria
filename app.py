@@ -984,14 +984,15 @@ def procesar_ocr_contacto():
         mail.login(EMAIL_USER, EMAIL_PASSWORD)
         mail.select('INBOX')
         
-        # Buscar emails con asunto "C" (case insensitive)
-        logger.info("Buscando emails con asunto 'C'...")
-        status, messages = mail.search(None, 'SUBJECT', '"C"')
+        # Buscar emails con asunto "C" o "c" (mayúscula o minúscula)
+        logger.info("Buscando emails con asunto 'C' o 'c'...")
+        # Buscar con OR para mayúscula o minúscula
+        status, messages = mail.search(None, '(OR SUBJECT "C" SUBJECT "c")')
         
         if status != 'OK' or not messages[0]:
             mail.close()
             mail.logout()
-            return jsonify({'error': 'No se encontró ningún email con asunto "C"'}), 404
+            return jsonify({'error': 'No se encontró ningún email con asunto "C" o "c"'}), 404
         
         # Obtener el último email (más reciente)
         email_ids = messages[0].split()

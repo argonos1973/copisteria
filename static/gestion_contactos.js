@@ -516,7 +516,7 @@ if (btnEscanearDatos) {
         // Marcar cambios sin guardar
         marcarCambiosSinGuardar();
         
-        let mensaje = '✅ Datos extraídos del email con asunto "C". Revisa la información.';
+        let mensaje = '✅ Datos extraídos del email. Revisa la información.';
         if (datos._metodo_ocr) {
           mensaje += ` (${datos._metodo_ocr})`;
         }
@@ -537,7 +537,7 @@ if (btnEscanearDatos) {
       let mensajeError = 'Error al procesar: ' + error.message;
       
       if (error.message.includes('No se encontró')) {
-        mensajeError = '📧 No hay emails con asunto "C". Envía uno primero con la foto adjunta.';
+        mensajeError = '📧 No hay emails con asunto "C" o "c". Envía uno primero con la foto adjunta.';
       } else if (error.message.includes('no contiene ninguna imagen')) {
         mensajeError = '📷 El email no tiene imagen adjunta. Reenvía con la foto.';
       } else if (error.message.includes('Email no configurado')) {
