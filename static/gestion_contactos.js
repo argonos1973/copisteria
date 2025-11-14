@@ -505,14 +505,6 @@ if (btnEscanearDatos) {
         if (datos.cp) fields.cp.value = datos.cp;
         if (datos.poblacion) fields.poblacion.value = datos.poblacion;
         
-        // Si hay nombre de contacto, agregarlo a notas
-        if (datos.nombre_contacto) {
-          const notasActuales = fields.notas ? fields.notas.value : '';
-          if (!notasActuales.includes(datos.nombre_contacto)) {
-            fields.notas.value = notasActuales ? `${notasActuales}\nContacto: ${datos.nombre_contacto}` : `Contacto: ${datos.nombre_contacto}`;
-          }
-        }
-        
         // Marcar cambios sin guardar
         marcarCambiosSinGuardar();
         
