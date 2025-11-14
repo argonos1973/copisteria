@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script src="/static/session_manager.js?v=1762757322"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facturas Recibidas</title>
+    <script src="/static/branding.js?v=1762757322"></script>
+    <script src="/static/auto_branding.js?v=1762757322"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="../static/page_header.css">
+    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762757322">
+    <link rel="stylesheet" href="../static/styles.css?v=1762757322">
+    <link rel="stylesheet" href="../static/notificaciones.css">
+    <link rel="stylesheet" href="../static/footer.css">
+    <style>
+      /* Vista Facturas Recibidas: layout a pantalla completa */
+      .facturas-recibidas-page { padding-bottom: 0 !important; }
+      .container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 96px);
+        min-height: 100vh;
+        box-sizing: border-box;
+      }
+      .facturas-recibidas-page .pagination { margin-bottom: 8px !important; }
+      .facturas-recibidas-page .container { padding-bottom: 0 !important; }
+      .table-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+      .table-responsive {
+        flex: 1;
+        max-height: none !important;
+        height: 100% !important;
+        overflow-y: auto;
+      }
+      .form-inline { margin: 4px 0; }
+      .pagination { margin-top: 6px; }
+      
+      /* Alertas en la parte superior */
+      .alertas-container {
+        margin: 8px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .alerta {
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .alerta.roja {
+        background: #fee;
+        border-left: 4px solid #d32f2f;
+        color: #c62828;
+      }
+      .alerta.amarilla {
+        background: #fffbf0;
+        border-left: 4px solid #f57c00;
+        color: #e65100;
+      }
+      .alerta.naranja {
+        background: #fff3e0;
+        border-left: 4px solid #ff9800;
+        color: #e65100;
+      }
+      .alerta a {
+        color: inherit;
+        text-decoration: underline;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      
+      /* Resumen de importes */
+      .resumen-importes {
+        display: flex;
+        gap: 12px;
+        margin: 8px 0;
+        flex-wrap: wrap;
+      }
+      .resumen-card {
+        flex: 1;
+        min-width: 150px;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color, #e0e0e0);
+        background: var(--card-bg, #fff);
+      }
+      .resumen-card .label {
+        font-size: 11px;
+        color: var(--text-secondary, #666);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+      .resumen-card .valor {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-primary, #333);
+      }
+      
+      /* Iconos de estado en tabla */
+      .estado-icon {
+        display: inline-block;
+        width: 20px;
+        text-align: center;
+        font-size: 16px;
+      }
+      
+      /* Botones de acción compactos */
+      .btn-action {
+        padding: 4px 8px;
+        font-size: 12px;
+        margin: 0 2px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-action:hover {
+        opacity: 0.8;
+        transform: scale(1.05);
+      }
+      .btn-action.btn-primary {
+        background: var(--primary-color, #007bff);
+        color: white;
+      }
+      .btn-action.btn-success {
+        background: #28a745;
+        color: white;
+      }
+      .btn-action.btn-info {
+        background: #17a2b8;
+        color: white;
+      }
+      .btn-action.btn-warning {
+        background: #ffc107;
+        color: #333;
+      }
+      .btn-action.btn-danger {
+        background: #dc3545;
+        color: white;
+      }
+    </style>
+</head>
+<body class="facturas-recibidas-page">
+    <div class="container">
+        <!-- Header -->
+        <div class="page-header">
+            <h1>📥 Facturas Recibidas</h1>
+        </div>
+
+        <!-- Alertas (ocultas por defecto, se muestran con JS) -->
+        <div class="alertas-container" id="alertasContainer" style="display: none;">
+            <!-- Se llenan dinámicamente con JS -->
+        </div>
+
+        <!-- Resumen de importes -->
+        <div class="resumen-importes">
+            <div class="resumen-card">
+                <div class="label">Total</div>
+                <div class="valor" id="resumenTotal">0,00€</div>
+            </div>
+            <div class="resumen-card">
+                <div class="label">Pendientes</div>
+                <div class="valor" id="resumenPendiente">0,00€</div>
+            </div>
+            <div class="resumen-card">
+                <div class="label">Pagadas</div>
+                <div class="valor" id="resumenPagado">0,00€</div>
+            </div>
+            <div class="resumen-card">
+                <div class="label">Vencidas</div>
+                <div class="valor" id="resumenVencido">0,00€</div>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="form-inline">
+            <div class="form-group">
+                <label for="proveedorFilter">Proveedor:</label>
+                <select id="proveedorFilter">
+                    <option value="todos">Todos</option>
+                    <!-- Se llenan dinámicamente -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="estadoFilter">Estado:</label>
+                <select id="estadoFilter">
+                    <option value="todos">Todos</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="pagada">Pagada</option>
+                    <option value="vencida">Vencida</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="trimestreFilter">Trimestre:</label>
+                <select id="trimestreFilter">
+                    <option value="actual">Trimestre Actual</option>
+                    <option value="Q1">Q1 - Ene-Mar</option>
+                    <option value="Q2">Q2 - Abr-Jun</option>
+                    <option value="Q3">Q3 - Jul-Sep</option>
+                    <option value="Q4">Q4 - Oct-Dic</option>
+                    <option value="todos">Todos</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="startDate">Desde:</label>
+                <input type="date" id="startDate" class="date-input">
+            </div>
+            <div class="form-group">
+                <label for="endDate">Hasta:</label>
+                <input type="date" id="endDate" class="date-input">
+            </div>
+            <div class="form-group">
+                <label for="busquedaFilter">Buscar:</label>
+                <input type="text" id="busquedaFilter" placeholder="Nº factura, concepto...">
+            </div>
+        </div>
+
+        <!-- Botones de acción -->
+        <div class="form-inline" style="justify-content: space-between;">
+            <div>
+                <button id="btnBuscar" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+                <button id="btnLimpiar" class="btn btn-secondary">
+                    <i class="fas fa-eraser"></i> Limpiar
+                </button>
+            </div>
+            <div>
+                <button id="btnExportar" class="btn btn-success">
+                    <i class="fas fa-file-excel"></i> Exportar Excel
+                </button>
+                <button id="btnSubir" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Subir Factura
+                </button>
+            </div>
+        </div>
+
+        <!-- Paginación superior -->
+        <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button id="prevPage" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟨</button>
+            <span id="pageInfo">Página 1 de 1</span>
+            <button id="nextPage" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟩</button>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+            <label>Por página:
+              <select id="perPage" style="padding:2px 4px;font-size:12px;">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </label>
+            <span id="totalRegistros" style="font-size:12px;color:#666;">0 registros</span>
+          </div>
+        </div>
+
+        <!-- Tabla de facturas -->
+        <div class="table-container">
+            <div class="table-responsive">
+                <table id="facturasTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="selectAll">
+                            </th>
+                            <th style="width: 50px;">Estado</th>
+                            <th>Proveedor</th>
+                            <th>NIF</th>
+                            <th>Nº Factura</th>
+                            <th>Fecha</th>
+                            <th>Vencimiento</th>
+                            <th style="text-align: right;">Base</th>
+                            <th style="text-align: right;">IVA</th>
+                            <th style="text-align: right;">Total</th>
+                            <th style="width: 220px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="facturasBody">
+                        <tr>
+                            <td colspan="11" style="text-align: center; padding: 40px;">
+                                <i class="fas fa-spinner fa-spin"></i> Cargando facturas...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Paginación inferior -->
+        <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <button id="prevPage2" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟨</button>
+            <span id="pageInfo2">Página 1 de 1</span>
+            <button id="nextPage2" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟩</button>
+          </div>
+        </div>
+    </div>
+
+    <!-- Notificaciones (reutilizando tu sistema) -->
+    <div id="notificaciones"></div>
+
+    <!-- Scripts -->
+    <script type="module" src="/static/facturas_recibidas.js?v=1762757322"></script>
+</body>
+</html>
