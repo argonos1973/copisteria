@@ -954,6 +954,41 @@ def eliminar(idContacto):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/contactos/ocr', methods=['POST'])
+def procesar_ocr_contacto():
+    """Procesa una imagen y extrae datos del contacto mediante OCR"""
+    try:
+        if 'imagen' not in request.files:
+            return jsonify({'error': 'No se recibió ninguna imagen'}), 400
+        
+        archivo = request.files['imagen']
+        
+        if archivo.filename == '':
+            return jsonify({'error': 'Archivo vacío'}), 400
+        
+        # Validar tipo de archivo
+        extensiones_permitidas = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'tiff'}
+        extension = archivo.filename.rsplit('.', 1)[1].lower() if '.' in archivo.filename else ''
+        
+        if extension not in extensiones_permitidas:
+            return jsonify({'error': 'Formato de imagen no permitido'}), 400
+        
+        # Leer bytes de la imagen
+        imagen_bytes = archivo.read()
+        
+        # Procesar con OCR
+        import contacto_ocr
+        datos = contacto_ocr.procesar_imagen_contacto(imagen_bytes)
+        
+        return jsonify({
+            'success': True,
+            'datos': datos
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error en OCR de contacto: {e}", exc_info=True)
+        return jsonify({'error': f'Error procesando imagen: {str(e)}'}), 500
+
 @login_required
 @app.route('/api/tickets/obtener_numerador/<string:tipoNum>', methods=['GET'])
 def obtener_numero_ticket_route(tipoNum):

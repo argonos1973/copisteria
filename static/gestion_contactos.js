@@ -471,6 +471,80 @@ if (facturacionCheckbox) {
 
 console.log('[Contactos] Todos los listeners configurados');
 
+// Listener para botón de escanear datos con OCR
+const btnEscanearDatos = document.getElementById('btnEscanearDatos');
+const inputImagenOCR = document.getElementById('inputImagenOCR');
+
+if (btnEscanearDatos && inputImagenOCR) {
+  btnEscanearDatos.addEventListener('click', function() {
+    inputImagenOCR.click();
+  });
+  
+  inputImagenOCR.addEventListener('change', async function(e) {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+    
+    // Validar que sea una imagen
+    if (!archivo.type.startsWith('image/')) {
+      mostrarNotificacion('Por favor selecciona un archivo de imagen', 'error');
+      return;
+    }
+    
+    // Mostrar indicador de carga
+    btnEscanearDatos.disabled = true;
+    btnEscanearDatos.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    
+    try {
+      // Crear FormData para enviar la imagen
+      const formData = new FormData();
+      formData.append('imagen', archivo);
+      
+      // Enviar al servidor
+      const response = await fetch(`${API_URL}/contactos/ocr`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const resultado = await response.json();
+      
+      if (resultado.success && resultado.datos) {
+        // Rellenar campos con los datos extraídos
+        const datos = resultado.datos;
+        
+        if (datos.razon_social) fields.razonsocial.value = datos.razon_social;
+        if (datos.nif) fields.identificador.value = datos.nif;
+        if (datos.email) fields.mail.value = datos.email;
+        if (datos.telefono) fields.telf1.value = datos.telefono;
+        if (datos.direccion) fields.direccion.value = datos.direccion;
+        if (datos.cp) fields.cp.value = datos.cp;
+        if (datos.poblacion) fields.poblacion.value = datos.poblacion;
+        
+        // Marcar cambios sin guardar
+        marcarCambiosSinGuardar();
+        
+        mostrarNotificacion('Datos extraídos correctamente. Revisa y completa la información.', 'success');
+        
+        // Mostrar texto completo extraído en consola para debugging
+        if (datos.texto_completo) {
+          console.log('[OCR] Texto completo extraído:', datos.texto_completo);
+        }
+      } else {
+        mostrarNotificacion('No se pudieron extraer datos de la imagen', 'warning');
+      }
+      
+    } catch (error) {
+      console.error('[OCR] Error:', error);
+      mostrarNotificacion('Error al procesar la imagen: ' + error.message, 'error');
+    } finally {
+      // Restaurar botón
+      btnEscanearDatos.disabled = false;
+      btnEscanearDatos.innerHTML = '<i class="fas fa-camera"></i> Escanear Datos';
+      // Limpiar input para permitir subir la misma imagen de nuevo
+      inputImagenOCR.value = '';
+    }
+  });
+}
+
 // Luego cargar el contacto si hay ID en la URL
 loadContacto();
 

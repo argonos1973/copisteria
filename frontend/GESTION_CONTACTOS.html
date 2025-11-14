@@ -522,6 +522,9 @@
 
       <!-- Botones de acción -->
       <div class="btn-container">
+        <button type="button" id="btnEscanearDatos" class="btn-secondary" style="background: var(--button-bg); margin-right: 10px;">
+          <i class="fas fa-camera"></i> Escanear Datos
+        </button>
         <button type="button" id="btnGuardar" class="btn-primary">
           <i class="fa fa-save"></i> Guardar
         </button>
@@ -529,6 +532,9 @@
           <i class="fa fa-times"></i> Cancelar
         </button>
       </div>
+      
+      <!-- Input oculto para subir imagen -->
+      <input type="file" id="inputImagenOCR" accept="image/*" style="display: none;">
     </form>
   </div>
 
