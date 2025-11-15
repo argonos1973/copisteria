@@ -142,9 +142,14 @@ function mostrarVistaPrevia() {
                     <div class="file-size">${formatearTamaño(archivo.size)}</div>
                 </div>
             </div>
-            <button class="btn-remove" onclick="eliminarArchivo(${index})">
-                <i class="fas fa-trash"></i> Eliminar
-            </button>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm btn-primary" onclick="escanearFactura(${index})" style="padding: 6px 12px; font-size: 12px;">
+                    <i class="fas fa-magic"></i> Escanear
+                </button>
+                <button class="btn-remove" onclick="eliminarArchivo(${index})">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </div>
         `;
         
         fileList.appendChild(item);
@@ -317,4 +322,181 @@ function limpiarFormulario() {
     document.getElementById('iva').value = '';
     document.getElementById('total').value = '';
     document.getElementById('concepto').value = '';
+}
+
+// ============================================================================
+// ESCANEO AUTOMÁTICO DE FACTURA (OCR)
+// ============================================================================
+
+window.escanearFactura = async function(index) {
+    const archivo = archivosSeleccionados[index];
+    
+    if (!archivo) {
+        mostrarNotificacion('Archivo no encontrado', 'error');
+        return;
+    }
+    
+    // Mostrar indicador de procesamiento
+    document.getElementById('processing').classList.add('active');
+    mostrarNotificacion('Escaneando factura con IA...', 'info');
+    
+    try {
+        // Crear FormData
+        const formData = new FormData();
+        formData.append('archivo', archivo);
+        
+        // Enviar al servidor
+        const response = await fetch('/api/facturas-proveedores/ocr', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.datos) {
+            mostrarNotificacion('✅ Factura escaneada correctamente', 'success');
+            
+            // Rellenar formulario con los datos extraídos
+            rellenarFormularioConDatos(data.datos);
+            
+            // Mostrar formulario si no está visible
+            mostrarFormulario();
+            
+        } else {
+            throw new Error(data.error || 'Error al escanear factura');
+        }
+        
+    } catch (error) {
+        console.error('[Escanear Factura] Error:', error);
+        mostrarNotificacion('Error al escanear: ' + error.message, 'error');
+    } finally {
+        document.getElementById('processing').classList.remove('active');
+    }
+};
+
+function rellenarFormularioConDatos(datos) {
+    console.log('[Escanear] Datos recibidos:', datos);
+    
+    // Datos del proveedor
+    if (datos.proveedor) {
+        const prov = datos.proveedor;
+        
+        // Buscar proveedor por NIF o nombre
+        if (prov.nif || prov.nombre) {
+            buscarOCrearProveedor(prov);
+        }
+    }
+    
+    // Datos de la factura
+    if (datos.factura) {
+        const fact = datos.factura;
+        
+        if (fact.numero) {
+            document.getElementById('numeroFactura').value = fact.numero;
+        }
+        
+        if (fact.fecha_emision) {
+            document.getElementById('fechaEmision').value = fact.fecha_emision;
+        }
+        
+        if (fact.fecha_vencimiento) {
+            document.getElementById('fechaVencimiento').value = fact.fecha_vencimiento;
+        }
+        
+        if (fact.base_imponible) {
+            document.getElementById('baseImponible').value = parseFloat(fact.base_imponible) || '';
+        }
+        
+        if (fact.iva) {
+            document.getElementById('iva').value = parseFloat(fact.iva) || '';
+        }
+        
+        if (fact.total) {
+            document.getElementById('total').value = parseFloat(fact.total) || '';
+        }
+        
+        if (fact.concepto) {
+            document.getElementById('concepto').value = fact.concepto;
+        }
+        
+        // Calcular total si no viene
+        if (!fact.total && fact.base_imponible && fact.iva) {
+            calcularTotal();
+        }
+    }
+    
+    mostrarNotificacion('📝 Formulario rellenado automáticamente', 'success');
+}
+
+async function buscarOCrearProveedor(datosProveedor) {
+    try {
+        // Buscar proveedor existente por NIF
+        if (datosProveedor.nif) {
+            const proveedorExistente = proveedores.find(p => 
+                p.nif && p.nif.toLowerCase() === datosProveedor.nif.toLowerCase()
+            );
+            
+            if (proveedorExistente) {
+                document.getElementById('proveedor').value = proveedorExistente.id;
+                mostrarNotificacion(`✓ Proveedor encontrado: ${proveedorExistente.nombre}`, 'success');
+                return;
+            }
+        }
+        
+        // Si no existe, preguntar si crear
+        if (datosProveedor.nombre) {
+            const crear = confirm(
+                `Proveedor "${datosProveedor.nombre}" no encontrado.\n\n` +
+                `¿Deseas crearlo automáticamente?`
+            );
+            
+            if (crear) {
+                await crearProveedorAutomatico(datosProveedor);
+            }
+        }
+        
+    } catch (error) {
+        console.error('[Buscar Proveedor] Error:', error);
+    }
+}
+
+async function crearProveedorAutomatico(datosProveedor) {
+    try {
+        const nuevoProveedor = {
+            nombre: datosProveedor.nombre || '',
+            nif: datosProveedor.nif || '',
+            email: datosProveedor.email || '',
+            telefono: datosProveedor.telefono || '',
+            direccion: datosProveedor.direccion || '',
+            activo: true
+        };
+        
+        const response = await fetch('/api/proveedores/crear', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(nuevoProveedor)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarNotificacion(`✅ Proveedor "${datosProveedor.nombre}" creado`, 'success');
+            
+            // Recargar lista de proveedores
+            await cargarProveedores();
+            
+            // Seleccionar el nuevo proveedor
+            if (data.proveedor && data.proveedor.id) {
+                document.getElementById('proveedor').value = data.proveedor.id;
+            }
+        } else {
+            throw new Error(data.error || 'Error al crear proveedor');
+        }
+        
+    } catch (error) {
+        console.error('[Crear Proveedor] Error:', error);
+        mostrarNotificacion('Error al crear proveedor: ' + error.message, 'error');
+    }
 }

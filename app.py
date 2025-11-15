@@ -1085,6 +1085,76 @@ def test_reload():
         'timestamp': '2025-11-15 11:47:00'
     })
 
+@app.route('/api/facturas-proveedores/ocr', methods=['POST'])
+@login_required
+def procesar_ocr_factura():
+    """
+    Procesa una factura mediante OCR usando GPT-4 Vision
+    Recibe una imagen y extrae los datos automáticamente
+    """
+    try:
+        import factura_ocr
+        from werkzeug.datastructures import FileStorage
+        
+        # Verificar que se envió un archivo
+        if 'archivo' not in request.files:
+            return jsonify({'error': 'No se envió ningún archivo'}), 400
+        
+        archivo = request.files['archivo']
+        
+        if archivo.filename == '':
+            return jsonify({'error': 'Archivo vacío'}), 400
+        
+        # Validar extensión
+        extension = archivo.filename.rsplit('.', 1)[1].lower() if '.' in archivo.filename else ''
+        if extension not in ['pdf', 'jpg', 'jpeg', 'png']:
+            return jsonify({'error': 'Formato no válido. Use PDF, JPG o PNG'}), 400
+        
+        # Leer bytes del archivo
+        imagen_bytes = archivo.read()
+        
+        # Si es PDF, convertir primera página a imagen
+        if extension == 'pdf':
+            try:
+                from pdf2image import convert_from_bytes
+                from PIL import Image
+                import io
+                
+                logger.info("📄 Convirtiendo PDF a imagen...")
+                imagenes = convert_from_bytes(imagen_bytes, first_page=1, last_page=1, dpi=200)
+                
+                if not imagenes:
+                    return jsonify({'error': 'No se pudo convertir el PDF'}), 400
+                
+                # Convertir PIL Image a bytes
+                img_buffer = io.BytesIO()
+                imagenes[0].save(img_buffer, format='JPEG', quality=95)
+                imagen_bytes = img_buffer.getvalue()
+                logger.info("✓ PDF convertido a imagen")
+                
+            except ImportError:
+                return jsonify({'error': 'pdf2image no está instalado. Instale: pip install pdf2image'}), 500
+            except Exception as e:
+                logger.error(f"Error convirtiendo PDF: {e}")
+                return jsonify({'error': f'Error convirtiendo PDF: {str(e)}'}), 500
+        
+        # Procesar con OCR
+        logger.info("🤖 Procesando factura con OCR (GPT-4 Vision)...")
+        datos = factura_ocr.procesar_imagen_factura(imagen_bytes)
+        logger.info(f"✓ OCR completado - Método: {datos.get('_metodo_ocr', 'N/A')}")
+        
+        return jsonify({
+            'success': True,
+            'datos': datos
+        }), 200
+        
+    except ValueError as e:
+        logger.error(f"Error de validación: {e}")
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error en OCR de factura: {e}", exc_info=True)
+        return jsonify({'error': f'Error procesando factura: {str(e)}'}), 500
+
 @app.route('/api/facturas-proveedores/consultar', methods=['POST'])
 @login_required
 def consultar_facturas_proveedores_endpoint():
