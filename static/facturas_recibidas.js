@@ -11,6 +11,8 @@ let porPagina = 25;
 let totalPaginas = 1;
 let proveedores = [];
 let filtrosActuales = {};
+let timeoutBusqueda = null;
+let facturasCache = [];
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -18,6 +20,9 @@ let filtrosActuales = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[Facturas Recibidas] Inicializando...');
+    
+    // Establecer fechas del trimestre actual
+    establecerTrimestreActual();
     
     // Cargar proveedores para el filtro
     cargarProveedores();
@@ -31,14 +36,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function configurarEventListeners() {
     // Botones de acción
-    document.getElementById('btnBuscar').addEventListener('click', () => {
-        paginaActual = 1;
-        cargarFacturas();
-    });
-    
-    document.getElementById('btnLimpiar').addEventListener('click', limpiarFiltros);
     document.getElementById('btnExportar').addEventListener('click', exportarExcel);
     document.getElementById('btnSubir').addEventListener('click', subirFactura);
+    
+    // Búsqueda interactiva en todos los filtros
+    const filtros = ['proveedorFilter', 'estadoFilter', 'trimestreFilter', 'startDate', 'endDate', 'busquedaFilter'];
+    filtros.forEach(filtroId => {
+        const elemento = document.getElementById(filtroId);
+        if (elemento) {
+            elemento.addEventListener('change', busquedaInteractiva);
+            if (filtroId === 'busquedaFilter') {
+                elemento.addEventListener('input', busquedaInteractiva);
+            }
+        }
+    });
     
     // Paginación
     document.getElementById('prevPage').addEventListener('click', () => cambiarPagina(-1));
@@ -55,7 +66,10 @@ function configurarEventListeners() {
     // Filtro de trimestre automático
     document.getElementById('trimestreFilter').addEventListener('change', (e) => {
         if (e.target.value === 'actual') {
-            // Limpiar fechas manuales
+            establecerTrimestreActual();
+        } else if (e.target.value !== 'todos') {
+            establecerTrimestreEspecifico(e.target.value);
+        } else {
             document.getElementById('startDate').value = '';
             document.getElementById('endDate').value = '';
         }
@@ -66,6 +80,92 @@ function configurarEventListeners() {
         const checkboxes = document.querySelectorAll('.select-factura');
         checkboxes.forEach(cb => cb.checked = e.target.checked);
     });
+}
+
+// ============================================================================
+// FUNCIONES DE TRIMESTRE Y FECHAS
+// ============================================================================
+
+function establecerTrimestreActual() {
+    const hoy = new Date();
+    const mes = hoy.getMonth(); // 0-11
+    const año = hoy.getFullYear();
+    
+    let mesInicio, mesFin;
+    
+    // Determinar trimestre actual
+    if (mes < 3) { // Q1: Ene-Mar
+        mesInicio = 0;
+        mesFin = 2;
+    } else if (mes < 6) { // Q2: Abr-Jun
+        mesInicio = 3;
+        mesFin = 5;
+    } else if (mes < 9) { // Q3: Jul-Sep
+        mesInicio = 6;
+        mesFin = 8;
+    } else { // Q4: Oct-Dic
+        mesInicio = 9;
+        mesFin = 11;
+    }
+    
+    const fechaInicio = new Date(año, mesInicio, 1);
+    const fechaFin = new Date(año, mesFin + 1, 0); // Último día del mes
+    
+    document.getElementById('startDate').value = formatearFechaInput(fechaInicio);
+    document.getElementById('endDate').value = formatearFechaInput(fechaFin);
+    
+    console.log(`[Facturas] Trimestre actual establecido: ${formatearFechaInput(fechaInicio)} - ${formatearFechaInput(fechaFin)}`);
+}
+
+function establecerTrimestreEspecifico(trimestre) {
+    const hoy = new Date();
+    const año = hoy.getFullYear();
+    let mesInicio, mesFin;
+    
+    switch(trimestre) {
+        case 'Q1':
+            mesInicio = 0; mesFin = 2;
+            break;
+        case 'Q2':
+            mesInicio = 3; mesFin = 5;
+            break;
+        case 'Q3':
+            mesInicio = 6; mesFin = 8;
+            break;
+        case 'Q4':
+            mesInicio = 9; mesFin = 11;
+            break;
+    }
+    
+    const fechaInicio = new Date(año, mesInicio, 1);
+    const fechaFin = new Date(año, mesFin + 1, 0);
+    
+    document.getElementById('startDate').value = formatearFechaInput(fechaInicio);
+    document.getElementById('endDate').value = formatearFechaInput(fechaFin);
+}
+
+function formatearFechaInput(fecha) {
+    const año = fecha.getFullYear();
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    return `${año}-${mes}-${dia}`;
+}
+
+// ============================================================================
+// BÚSQUEDA INTERACTIVA
+// ============================================================================
+
+function busquedaInteractiva() {
+    // Cancelar búsqueda anterior si existe
+    if (timeoutBusqueda) {
+        clearTimeout(timeoutBusqueda);
+    }
+    
+    // Esperar 300ms antes de buscar (debounce)
+    timeoutBusqueda = setTimeout(() => {
+        paginaActual = 1;
+        cargarFacturas();
+    }, 300);
 }
 
 // ============================================================================
@@ -318,18 +418,6 @@ function cambiarPagina(delta) {
         paginaActual = nuevaPagina;
         cargarFacturas();
     }
-}
-
-function limpiarFiltros() {
-    document.getElementById('proveedorFilter').value = 'todos';
-    document.getElementById('estadoFilter').value = 'todos';
-    document.getElementById('trimestreFilter').value = 'actual';
-    document.getElementById('startDate').value = '';
-    document.getElementById('endDate').value = '';
-    document.getElementById('busquedaFilter').value = '';
-    
-    paginaActual = 1;
-    cargarFacturas();
 }
 
 function filtrarVencidas() {
