@@ -322,7 +322,7 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
         return proveedoresCache.get(nifLower).id;
     }
     
-    // Crear nuevo proveedor
+    // Intentar crear nuevo proveedor
     const nuevoProveedor = {
         nombre: datosProveedor.nombre || 'Sin nombre',
         nif: datosProveedor.nif,
@@ -342,15 +342,30 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
     
     const data = await response.json();
     
-    if (!data.success) {
-        throw new Error(data.error || 'Error creando proveedor');
+    if (data.success) {
+        // Proveedor creado exitosamente
+        const proveedor = data.proveedor;
+        proveedoresCache.set(nifLower, proveedor);
+        return proveedor.id;
     }
     
-    // Agregar a cache
-    const proveedor = data.proveedor;
-    proveedoresCache.set(nifLower, proveedor);
+    // Si falla, puede ser porque ya existe
+    // Buscar en la lista de proveedores
+    const responseList = await fetch('/api/proveedores/listar');
+    const dataList = await responseList.json();
     
-    return proveedor.id;
+    if (dataList.success) {
+        const proveedorExistente = dataList.proveedores.find(p => 
+            p.nif && p.nif.toLowerCase() === nifLower
+        );
+        
+        if (proveedorExistente) {
+            proveedoresCache.set(nifLower, proveedorExistente);
+            return proveedorExistente.id;
+        }
+    }
+    
+    throw new Error(data.error || 'Error creando/buscando proveedor');
 }
 
 async function guardarFactura(archivo, datosOCR, proveedorId) {

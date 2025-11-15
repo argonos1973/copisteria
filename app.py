@@ -1298,12 +1298,26 @@ def subir_factura_proveedor():
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Verificar si la factura ya existe
+        cursor.execute('''
+            SELECT id FROM facturas_proveedores 
+            WHERE empresa_id = ? AND proveedor_id = ? AND numero_factura = ?
+        ''', (empresa_id, proveedor_id, numero_factura))
+        
+        factura_existente = cursor.fetchone()
+        
+        if factura_existente:
+            conn.close()
+            return jsonify({
+                'error': f'La factura {numero_factura} ya existe para este proveedor'
+            }), 400
+        
         cursor.execute('''
             INSERT INTO facturas_proveedores (
                 empresa_id, proveedor_id, numero_factura, fecha_emision,
-                fecha_vencimiento, base_imponible, iva, total, concepto,
-                estado, fecha_creacion, creado_por
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', datetime('now'), ?)
+                fecha_vencimiento, base_imponible, iva_importe, total, concepto,
+                estado, usuario_alta
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', ?)
         ''', (empresa_id, proveedor_id, numero_factura, fecha_emision,
               fecha_vencimiento or None, base_imponible, iva, total, concepto, usuario))
         
@@ -1334,8 +1348,8 @@ def subir_factura_proveedor():
         # Registrar en historial
         cursor.execute('''
             INSERT INTO historial_facturas_proveedores (
-                factura_id, usuario, accion, detalles, fecha
-            ) VALUES (?, ?, 'creacion', ?, datetime('now'))
+                factura_id, usuario, accion, datos_nuevos
+            ) VALUES (?, ?, 'creacion', ?)
         ''', (factura_id, usuario, f'Factura creada. Archivos: {len(archivos_guardados)}'))
         
         conn.commit()
