@@ -1249,14 +1249,109 @@ def crear_proveedor_endpoint():
         
         proveedor_id = facturas_proveedores.crear_proveedor(empresa_id, datos, usuario)
         
+        # Obtener el proveedor creado
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM proveedores WHERE id = ?', (proveedor_id,))
+        proveedor = dict(cursor.fetchone())
+        conn.close()
+        
         return jsonify({
             'success': True,
             'proveedor_id': proveedor_id,
+            'proveedor': proveedor,
             'mensaje': 'Proveedor creado exitosamente'
         })
         
     except Exception as e:
         logger.error(f"Error creando proveedor: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/facturas-proveedores/subir', methods=['POST'])
+@login_required
+def subir_factura_proveedor():
+    """
+    Sube una factura de proveedor con archivos adjuntos
+    """
+    empresa_id = session.get('empresa_id')
+    usuario = session.get('username')
+    
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        # Obtener datos del formulario
+        proveedor_id = request.form.get('proveedor_id')
+        numero_factura = request.form.get('numero_factura')
+        fecha_emision = request.form.get('fecha_emision')
+        fecha_vencimiento = request.form.get('fecha_vencimiento', '')
+        base_imponible = float(request.form.get('base_imponible', 0))
+        iva = float(request.form.get('iva', 0))
+        total = float(request.form.get('total', 0))
+        concepto = request.form.get('concepto', '')
+        
+        if not proveedor_id or not numero_factura or not fecha_emision:
+            return jsonify({'error': 'Faltan datos obligatorios'}), 400
+        
+        # Crear factura en BD
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO facturas_proveedores (
+                empresa_id, proveedor_id, numero_factura, fecha_emision,
+                fecha_vencimiento, base_imponible, iva, total, concepto,
+                estado, fecha_creacion, creado_por
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', datetime('now'), ?)
+        ''', (empresa_id, proveedor_id, numero_factura, fecha_emision,
+              fecha_vencimiento or None, base_imponible, iva, total, concepto, usuario))
+        
+        factura_id = cursor.lastrowid
+        
+        # Guardar archivos si existen
+        archivos_guardados = []
+        if 'archivos' in request.files:
+            archivos = request.files.getlist('archivos')
+            
+            # Crear directorio si no existe
+            facturas_dir = Path('/var/www/html/facturas_proveedores')
+            facturas_dir.mkdir(exist_ok=True)
+            
+            for archivo in archivos:
+                if archivo.filename:
+                    # Generar nombre único
+                    extension = archivo.filename.rsplit('.', 1)[1].lower()
+                    nombre_archivo = f"factura_{factura_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.{extension}"
+                    ruta_archivo = facturas_dir / nombre_archivo
+                    
+                    # Guardar archivo
+                    archivo.save(str(ruta_archivo))
+                    archivos_guardados.append(nombre_archivo)
+                    
+                    logger.info(f"Archivo guardado: {nombre_archivo}")
+        
+        # Registrar en historial
+        cursor.execute('''
+            INSERT INTO historial_facturas_proveedores (
+                factura_id, usuario, accion, detalles, fecha
+            ) VALUES (?, ?, 'creacion', ?, datetime('now'))
+        ''', (factura_id, usuario, f'Factura creada. Archivos: {len(archivos_guardados)}'))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Factura {numero_factura} creada con ID {factura_id}")
+        
+        return jsonify({
+            'success': True,
+            'factura_id': factura_id,
+            'archivos_guardados': archivos_guardados,
+            'mensaje': 'Factura guardada exitosamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error subiendo factura: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <script src="/static/session_manager.js?v=1762757322"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subir Facturas Masivo</title>
+    <script src="/static/branding.js?v=1762757322"></script>
+    <script src="/static/auto_branding.js?v=1762757322"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="../static/page_header.css">
+    <link rel="stylesheet" href="/static/theme-consumer.css?v=1762757322">
+    <link rel="stylesheet" href="../static/styles.css?v=1762757322">
+    <link rel="stylesheet" href="../static/notificaciones.css">
+    <link rel="stylesheet" href="../static/footer.css">
+    <style>
+        .upload-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        
+        .upload-zone {
+            border: 2px dashed var(--border-color, #ccc);
+            border-radius: 8px;
+            padding: 60px 40px;
+            text-align: center;
+            background: var(--card-bg, #f9f9f9);
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+        
+        .upload-zone:hover {
+            border-color: var(--primary-color, #007bff);
+            background: var(--hover-bg, #f0f0f0);
+        }
+        
+        .upload-zone.dragover {
+            border-color: var(--primary-color, #007bff);
+            background: var(--primary-light, #e3f2fd);
+            transform: scale(1.02);
+        }
+        
+        .upload-icon {
+            font-size: 64px;
+            color: var(--text-secondary, #666);
+            margin-bottom: 20px;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--border-color, #e0e0e0);
+            background: var(--card-bg, #fff);
+        }
+        
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary, #666);
+            text-transform: uppercase;
+        }
+        
+        .stat-card.total { border-left: 4px solid #007bff; }
+        .stat-card.procesando { border-left: 4px solid #ffc107; }
+        .stat-card.completadas { border-left: 4px solid #28a745; }
+        .stat-card.errores { border-left: 4px solid #dc3545; }
+        
+        .files-list {
+            margin-top: 20px;
+        }
+        
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 8px;
+            background: var(--card-bg, #fff);
+            transition: all 0.3s;
+        }
+        
+        .file-item.processing {
+            border-color: #ffc107;
+            background: #fff9e6;
+        }
+        
+        .file-item.success {
+            border-color: #28a745;
+            background: #e8f5e9;
+        }
+        
+        .file-item.error {
+            border-color: #dc3545;
+            background: #ffebee;
+        }
+        
+        .file-icon {
+            font-size: 32px;
+            margin-right: 15px;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .file-icon.pdf { color: #dc3545; }
+        .file-icon.image { color: #2196F3; }
+        
+        .file-info {
+            flex: 1;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-primary, #333);
+        }
+        
+        .file-status {
+            font-size: 13px;
+            color: var(--text-secondary, #666);
+        }
+        
+        .file-details {
+            font-size: 12px;
+            color: var(--text-secondary, #999);
+            margin-top: 5px;
+        }
+        
+        .file-progress {
+            width: 100%;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+        
+        .file-progress-bar {
+            height: 100%;
+            background: #007bff;
+            transition: width 0.3s;
+        }
+        
+        .file-progress-bar.success {
+            background: #28a745;
+        }
+        
+        .file-progress-bar.error {
+            background: #dc3545;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-top: 3px solid var(--primary-color, #007bff);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .log-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            display: none;
+        }
+        
+        .log-container.active {
+            display: block;
+        }
+        
+        .log-entry {
+            padding: 4px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .log-time {
+            color: #666;
+            margin-right: 10px;
+        }
+        
+        .log-info { color: #007bff; }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-warning { color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-file-upload"></i> Subir Facturas Masivo</h1>
+            <p style="margin-top: 10px; color: #666;">Arrastra múltiples facturas para procesarlas automáticamente con IA</p>
+        </div>
+
+        <div class="upload-container">
+            <!-- Zona de carga -->
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                </div>
+                <h2>Arrastra tus facturas aquí o haz clic para seleccionar</h2>
+                <p>Puedes seleccionar múltiples archivos PDF, JPG o PNG</p>
+                <p style="margin-top: 10px; font-size: 14px; color: #999;">
+                    <i class="fas fa-magic"></i> El sistema extraerá automáticamente los datos con IA<br>
+                    <i class="fas fa-users"></i> Creará proveedores si no existen<br>
+                    <i class="fas fa-save"></i> Guardará las facturas automáticamente
+                </p>
+                <input type="file" id="fileInput" class="file-input" accept=".pdf,.jpg,.jpeg,.png" multiple>
+            </div>
+
+            <!-- Estadísticas -->
+            <div class="stats-container" id="statsContainer" style="display: none;">
+                <div class="stat-card total">
+                    <div class="stat-number" id="statTotal">0</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-card procesando">
+                    <div class="stat-number" id="statProcesando">0</div>
+                    <div class="stat-label">Procesando</div>
+                </div>
+                <div class="stat-card completadas">
+                    <div class="stat-number" id="statCompletadas">0</div>
+                    <div class="stat-label">Completadas</div>
+                </div>
+                <div class="stat-card errores">
+                    <div class="stat-number" id="statErrores">0</div>
+                    <div class="stat-label">Errores</div>
+                </div>
+            </div>
+
+            <!-- Lista de archivos -->
+            <div id="filesList" class="files-list"></div>
+
+            <!-- Botones de acción -->
+            <div class="action-buttons" id="actionButtons" style="display: none;">
+                <button id="btnProcesar" class="btn btn-primary btn-lg">
+                    <i class="fas fa-play"></i> Procesar Todas
+                </button>
+                <button id="btnCancelar" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button id="btnToggleLog" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-terminal"></i> Ver Log
+                </button>
+            </div>
+
+            <!-- Log de procesamiento -->
+            <div id="logContainer" class="log-container"></div>
+        </div>
+    </div>
+
+    <div id="notificaciones"></div>
+
+    <script type="module" src="/static/subir_facturas_masivo.js?v=1762757322"></script>
+</body>
+</html>

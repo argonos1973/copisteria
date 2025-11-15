@@ -328,6 +328,7 @@ def obtener_menu():
             'facturas_recibidas': [
                 {'nombre': 'Consultar Facturas', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_FACTURAS_RECIBIDAS.html'},
                 {'nombre': 'Subir Factura', 'icono': 'fas fa-upload', 'ruta': '/GESTION_FACTURAS_RECIBIDAS.html'},
+                {'nombre': 'Subir Masivo', 'icono': 'fas fa-file-upload', 'ruta': '/SUBIR_FACTURAS_MASIVO.html'},
                 {'nombre': 'Gestión Proveedores', 'icono': 'fas fa-users', 'ruta': '/GESTION_PROVEEDORES.html'}
             ]  # Submenu de facturas de proveedores
         }
