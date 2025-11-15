@@ -7,7 +7,13 @@
 
 -- Insertar módulo de facturas recibidas
 INSERT OR IGNORE INTO modulos (codigo, nombre, ruta, icono, orden, activo) 
-VALUES ('facturas_recibidas', 'Facturas Recibidas', '/CONSULTA_FACTURAS_RECIBIDAS.html', '📥', 10, 1);
+VALUES ('facturas_recibidas', 'Facturas Recibidas', '/CONSULTA_FACTURAS_RECIBIDAS.html', 'fas fa-file-invoice-dollar', 6, 1);
+
+-- Actualizar si ya existe
+UPDATE modulos 
+SET icono = 'fas fa-file-invoice-dollar', 
+    orden = 6
+WHERE codigo = 'facturas_recibidas';
 
 -- Verificar inserción
 SELECT 'Módulo insertado:' as resultado;
