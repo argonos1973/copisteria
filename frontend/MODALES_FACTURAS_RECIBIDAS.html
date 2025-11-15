@@ -1,0 +1,305 @@
+<!-- ============================================================================ -->
+<!-- MODALES PARA GESTIÓN DE FACTURAS RECIBIDAS -->
+<!-- ============================================================================ -->
+
+<!-- Modal: Detalle de Factura -->
+<div id="modalDetalle" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>📄 Detalle de Factura</h2>
+            <button class="modal-close" onclick="cerrarModal('modalDetalle')">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Información del Proveedor -->
+            <div class="info-section">
+                <h3>Proveedor</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Nombre:</label>
+                        <span id="detalle-proveedor-nombre"></span>
+                    </div>
+                    <div class="info-item">
+                        <label>NIF:</label>
+                        <span id="detalle-proveedor-nif"></span>
+                    </div>
+                    <div class="info-item">
+                        <label>Dirección:</label>
+                        <span id="detalle-proveedor-direccion"></span>
+                    </div>
+                    <div class="info-item">
+                        <label>Teléfono:</label>
+                        <span id="detalle-proveedor-telefono"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Información de la Factura -->
+            <div class="info-section">
+                <h3>Datos de la Factura</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Número:</label>
+                        <span id="detalle-numero"></span>
+                    </div>
+                    <div class="info-item">
+                        <label>Fecha Emisión:</label>
+                        <span id="detalle-fecha-emision"></span>
+                    </div>
+                    <div class="info-item">
+                        <label>Fecha Vencimiento:</label>
+                        <span id="detalle-fecha-vencimiento"></span>
+                    </div>
+                    <div class="info-item">
+                        <label>Estado:</label>
+                        <span id="detalle-estado" class="badge"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Importes -->
+            <div class="info-section">
+                <h3>Importes</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>Base Imponible:</label>
+                        <span id="detalle-base"></span>
+                    </div>
+                    <div class="info-item">
+                        <label>IVA:</label>
+                        <span id="detalle-iva"></span>
+                    </div>
+                    <div class="info-item">
+                        <label>Total:</label>
+                        <strong id="detalle-total"></strong>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Concepto y Notas -->
+            <div class="info-section">
+                <h3>Descripción</h3>
+                <div class="info-item">
+                    <label>Concepto:</label>
+                    <p id="detalle-concepto"></p>
+                </div>
+                <div class="info-item">
+                    <label>Notas:</label>
+                    <p id="detalle-notas"></p>
+                </div>
+            </div>
+            
+            <!-- Líneas de Factura -->
+            <div class="info-section" id="seccion-lineas" style="display: none;">
+                <h3>Líneas de Detalle</h3>
+                <table class="table-simple">
+                    <thead>
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unit.</th>
+                            <th>IVA %</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detalle-lineas-body">
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Historial -->
+            <div class="info-section" id="seccion-historial" style="display: none;">
+                <h3>Historial de Cambios</h3>
+                <div id="detalle-historial" class="historial-list">
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="cerrarModal('modalDetalle')">Cerrar</button>
+            <button class="btn btn-primary" onclick="descargarPDFDesdeModal()">
+                <i class="fas fa-download"></i> Descargar PDF
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Marcar como Pagada -->
+<div id="modalPagar" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>💰 Marcar Factura como Pagada</h2>
+            <button class="modal-close" onclick="cerrarModal('modalPagar')">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+            <form id="formPagar">
+                <input type="hidden" id="pagar-factura-id">
+                
+                <div class="form-group">
+                    <label for="pagar-fecha">Fecha de Pago: *</label>
+                    <input type="date" id="pagar-fecha" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="pagar-metodo">Método de Pago:</label>
+                    <select id="pagar-metodo" class="form-control">
+                        <option value="transferencia">Transferencia Bancaria</option>
+                        <option value="efectivo">Efectivo</option>
+                        <option value="tarjeta">Tarjeta</option>
+                        <option value="cheque">Cheque</option>
+                        <option value="pagare">Pagaré</option>
+                        <option value="otro">Otro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="pagar-referencia">Referencia/Nº Operación:</label>
+                    <input type="text" id="pagar-referencia" class="form-control" 
+                           placeholder="Ej: TRF20250115001">
+                </div>
+                
+                <div class="info-box">
+                    <p><strong>Factura:</strong> <span id="pagar-info-numero"></span></p>
+                    <p><strong>Proveedor:</strong> <span id="pagar-info-proveedor"></span></p>
+                    <p><strong>Importe:</strong> <span id="pagar-info-total"></span></p>
+                </div>
+            </form>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="cerrarModal('modalPagar')">Cancelar</button>
+            <button class="btn btn-success" onclick="confirmarPago()">
+                <i class="fas fa-check"></i> Confirmar Pago
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Factura -->
+<div id="modalEditar" class="modal">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h2>✏️ Editar Factura</h2>
+            <button class="modal-close" onclick="cerrarModal('modalEditar')">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+            <form id="formEditar">
+                <input type="hidden" id="editar-factura-id">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editar-numero">Número de Factura: *</label>
+                        <input type="text" id="editar-numero" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editar-fecha-emision">Fecha Emisión: *</label>
+                        <input type="date" id="editar-fecha-emision" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editar-fecha-vencimiento">Fecha Vencimiento:</label>
+                        <input type="date" id="editar-fecha-vencimiento" class="form-control">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editar-base">Base Imponible: *</label>
+                        <input type="number" id="editar-base" class="form-control" 
+                               step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editar-iva-porcentaje">IVA %:</label>
+                        <select id="editar-iva-porcentaje" class="form-control">
+                            <option value="0">0%</option>
+                            <option value="4">4%</option>
+                            <option value="10">10%</option>
+                            <option value="21" selected>21%</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editar-iva-importe">IVA Importe:</label>
+                        <input type="number" id="editar-iva-importe" class="form-control" 
+                               step="0.01" min="0" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editar-total">Total:</label>
+                        <input type="number" id="editar-total" class="form-control" 
+                               step="0.01" min="0" readonly>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editar-concepto">Concepto:</label>
+                    <input type="text" id="editar-concepto" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="editar-notas">Notas:</label>
+                    <textarea id="editar-notas" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="editar-revisado">
+                        Marcar como revisada
+                    </label>
+                </div>
+            </form>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="cerrarModal('modalEditar')">Cancelar</button>
+            <button class="btn btn-primary" onclick="guardarEdicion()">
+                <i class="fas fa-save"></i> Guardar Cambios
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Subir Factura Manual -->
+<div id="modalSubir" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📤 Subir Factura Manualmente</h2>
+            <button class="modal-close" onclick="cerrarModal('modalSubir')">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+            <form id="formSubir" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="subir-archivo">Archivo PDF: *</label>
+                    <input type="file" id="subir-archivo" class="form-control" 
+                           accept=".pdf" required>
+                    <small>Selecciona el PDF de la factura</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="subir-proveedor">Proveedor:</label>
+                    <select id="subir-proveedor" class="form-control">
+                        <option value="">Detectar automáticamente</option>
+                        <!-- Se llena dinámicamente -->
+                    </select>
+                    <small>Deja en blanco para detección automática con OCR</small>
+                </div>
+                
+                <div class="info-box">
+                    <p><i class="fas fa-info-circle"></i> El sistema procesará el PDF automáticamente usando OCR para extraer los datos de la factura.</p>
+                </div>
+            </form>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="cerrarModal('modalSubir')">Cancelar</button>
+            <button class="btn btn-primary" onclick="procesarSubida()">
+                <i class="fas fa-upload"></i> Subir y Procesar
+            </button>
+        </div>
+    </div>
+</div>

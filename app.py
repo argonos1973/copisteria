@@ -1181,6 +1181,305 @@ def crear_proveedor_endpoint():
 
 
 @login_required
+@app.route('/api/facturas-proveedores/<int:factura_id>', methods=['GET'])
+def obtener_factura_detalle_endpoint(factura_id):
+    """
+    Obtiene el detalle completo de una factura
+    """
+    empresa_id = session.get('empresa_id')
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # Obtener factura con datos del proveedor
+        cursor.execute('''
+            SELECT 
+                f.*,
+                p.nombre as proveedor_nombre,
+                p.nif as proveedor_nif,
+                p.direccion as proveedor_direccion,
+                p.cp as proveedor_cp,
+                p.poblacion as proveedor_poblacion,
+                p.provincia as proveedor_provincia,
+                p.email as proveedor_email,
+                p.telefono as proveedor_telefono
+            FROM facturas_proveedores f
+            JOIN proveedores p ON f.proveedor_id = p.id
+            WHERE f.id = ? AND f.empresa_id = ?
+        ''', (factura_id, empresa_id))
+        
+        factura = cursor.fetchone()
+        
+        if not factura:
+            return jsonify({'error': 'Factura no encontrada'}), 404
+        
+        factura_dict = dict(factura)
+        
+        # Obtener líneas de la factura
+        cursor.execute('''
+            SELECT * FROM lineas_factura_proveedor
+            WHERE factura_id = ?
+            ORDER BY id
+        ''', (factura_id,))
+        
+        lineas = [dict(row) for row in cursor.fetchall()]
+        factura_dict['lineas'] = lineas
+        
+        # Obtener historial
+        cursor.execute('''
+            SELECT * FROM historial_facturas_proveedores
+            WHERE factura_id = ?
+            ORDER BY fecha DESC
+            LIMIT 10
+        ''', (factura_id,))
+        
+        historial = [dict(row) for row in cursor.fetchall()]
+        factura_dict['historial'] = historial
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'factura': factura_dict
+        })
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo detalle de factura: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@login_required
+@app.route('/api/facturas-proveedores/<int:factura_id>/pagar', methods=['PUT'])
+def marcar_factura_pagada_endpoint(factura_id):
+    """
+    Marca una factura como pagada
+    """
+    empresa_id = session.get('empresa_id')
+    usuario = session.get('username')
+    
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        datos = request.json
+        fecha_pago = datos.get('fecha_pago')
+        metodo_pago = datos.get('metodo_pago', 'transferencia')
+        referencia_pago = datos.get('referencia_pago', '')
+        
+        if not fecha_pago:
+            return jsonify({'error': 'Fecha de pago es obligatoria'}), 400
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar que la factura existe y pertenece a la empresa
+        cursor.execute('''
+            SELECT id, estado FROM facturas_proveedores
+            WHERE id = ? AND empresa_id = ?
+        ''', (factura_id, empresa_id))
+        
+        factura = cursor.fetchone()
+        if not factura:
+            conn.close()
+            return jsonify({'error': 'Factura no encontrada'}), 404
+        
+        # Actualizar factura
+        cursor.execute('''
+            UPDATE facturas_proveedores
+            SET estado = 'pagada',
+                fecha_pago = ?,
+                metodo_pago = ?,
+                referencia_pago = ?
+            WHERE id = ?
+        ''', (fecha_pago, metodo_pago, referencia_pago, factura_id))
+        
+        conn.commit()
+        conn.close()
+        
+        # Registrar en historial
+        facturas_proveedores.registrar_historial(
+            factura_id,
+            'pagada',
+            usuario,
+            datos_nuevos={
+                'fecha_pago': fecha_pago,
+                'metodo_pago': metodo_pago,
+                'referencia_pago': referencia_pago
+            }
+        )
+        
+        return jsonify({
+            'success': True,
+            'mensaje': 'Factura marcada como pagada'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error marcando factura como pagada: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@login_required
+@app.route('/api/facturas-proveedores/<int:factura_id>', methods=['PUT'])
+def editar_factura_endpoint(factura_id):
+    """
+    Edita los datos de una factura
+    """
+    empresa_id = session.get('empresa_id')
+    usuario = session.get('username')
+    
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        datos = request.json
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener datos anteriores para historial
+        cursor.execute('SELECT * FROM facturas_proveedores WHERE id = ? AND empresa_id = ?', 
+                      (factura_id, empresa_id))
+        factura_anterior = cursor.fetchone()
+        
+        if not factura_anterior:
+            conn.close()
+            return jsonify({'error': 'Factura no encontrada'}), 404
+        
+        # Actualizar campos permitidos
+        campos_actualizables = [
+            'numero_factura', 'fecha_emision', 'fecha_vencimiento',
+            'base_imponible', 'iva_porcentaje', 'iva_importe', 'total',
+            'concepto', 'notas', 'revisado'
+        ]
+        
+        updates = []
+        valores = []
+        
+        for campo in campos_actualizables:
+            if campo in datos:
+                updates.append(f"{campo} = ?")
+                valores.append(datos[campo])
+        
+        if updates:
+            valores.append(factura_id)
+            sql = f"UPDATE facturas_proveedores SET {', '.join(updates)} WHERE id = ?"
+            cursor.execute(sql, valores)
+            conn.commit()
+        
+        conn.close()
+        
+        # Registrar en historial
+        facturas_proveedores.registrar_historial(
+            factura_id,
+            'editada',
+            usuario,
+            datos_anteriores=dict(factura_anterior) if factura_anterior else None,
+            datos_nuevos=datos
+        )
+        
+        return jsonify({
+            'success': True,
+            'mensaje': 'Factura actualizada correctamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error editando factura: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@login_required
+@app.route('/api/facturas-proveedores/<int:factura_id>', methods=['DELETE'])
+def eliminar_factura_endpoint(factura_id):
+    """
+    Elimina una factura (soft delete)
+    """
+    empresa_id = session.get('empresa_id')
+    usuario = session.get('username')
+    
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar que existe
+        cursor.execute('''
+            SELECT id FROM facturas_proveedores
+            WHERE id = ? AND empresa_id = ?
+        ''', (factura_id, empresa_id))
+        
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'error': 'Factura no encontrada'}), 404
+        
+        # Eliminar (o marcar como eliminada si prefieres soft delete)
+        cursor.execute('DELETE FROM facturas_proveedores WHERE id = ?', (factura_id,))
+        conn.commit()
+        conn.close()
+        
+        # Registrar en historial
+        facturas_proveedores.registrar_historial(
+            factura_id,
+            'eliminada',
+            usuario
+        )
+        
+        return jsonify({
+            'success': True,
+            'mensaje': 'Factura eliminada correctamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error eliminando factura: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@login_required
+@app.route('/api/facturas-proveedores/<int:factura_id>/pdf', methods=['GET'])
+def descargar_pdf_factura_endpoint(factura_id):
+    """
+    Descarga el PDF de una factura
+    """
+    empresa_id = session.get('empresa_id')
+    
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT ruta_archivo FROM facturas_proveedores
+            WHERE id = ? AND empresa_id = ?
+        ''', (factura_id, empresa_id))
+        
+        resultado = cursor.fetchone()
+        conn.close()
+        
+        if not resultado or not resultado[0]:
+            return jsonify({'error': 'PDF no encontrado'}), 404
+        
+        ruta_archivo = resultado[0]
+        ruta_completa = os.path.join('/var/www/html', ruta_archivo)
+        
+        if not os.path.exists(ruta_completa):
+            return jsonify({'error': 'Archivo no existe en el servidor'}), 404
+        
+        from flask import send_file
+        return send_file(ruta_completa, mimetype='application/pdf', as_attachment=True)
+        
+    except Exception as e:
+        logger.error(f"Error descargando PDF: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@login_required
 @app.route('/api/tickets/obtener_numerador/<string:tipoNum>', methods=['GET'])
 def obtener_numero_ticket_route(tipoNum):
     return tickets.obtener_numero_ticket(tipoNum)

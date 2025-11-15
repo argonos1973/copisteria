@@ -380,36 +380,319 @@ function subirFactura() {
 // FUNCIONES GLOBALES (llamadas desde HTML)
 // ============================================================================
 
-window.verDetalle = function(facturaId) {
-    console.log('[Facturas] Ver detalle:', facturaId);
-    mostrarNotificacion('Función de detalle en desarrollo', 'info');
-    // TODO: Implementar modal de detalle
+window.verDetalle = async function(facturaId) {
+    try {
+        const response = await fetch(`/api/facturas-proveedores/${facturaId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarModalDetalle(data.factura);
+        } else {
+            mostrarNotificacion('Error al cargar factura: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('[Facturas] Error cargando detalle:', error);
+        mostrarNotificacion('Error al cargar factura', 'error');
+    }
 };
 
 window.descargarPDF = function(facturaId) {
-    console.log('[Facturas] Descargar PDF:', facturaId);
     window.open(`/api/facturas-proveedores/${facturaId}/pdf`, '_blank');
 };
 
-window.marcarPagada = function(facturaId) {
-    console.log('[Facturas] Marcar pagada:', facturaId);
-    mostrarNotificacion('Función de pago en desarrollo', 'info');
-    // TODO: Implementar modal de pago
-};
-
-window.editarFactura = function(facturaId) {
-    console.log('[Facturas] Editar:', facturaId);
-    mostrarNotificacion('Función de edición en desarrollo', 'info');
-    // TODO: Implementar modal de edición
-};
-
-window.eliminarFactura = function(facturaId) {
-    if (confirm('¿Estás seguro de que deseas eliminar esta factura?')) {
-        console.log('[Facturas] Eliminar:', facturaId);
-        mostrarNotificacion('Función de eliminación en desarrollo', 'info');
-        // TODO: Implementar eliminación
+window.marcarPagada = async function(facturaId) {
+    try {
+        const response = await fetch(`/api/facturas-proveedores/${facturaId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarModalPagar(data.factura);
+        } else {
+            mostrarNotificacion('Error al cargar factura', 'error');
+        }
+    } catch (error) {
+        console.error('[Facturas] Error:', error);
+        mostrarNotificacion('Error al cargar factura', 'error');
     }
 };
+
+window.editarFactura = async function(facturaId) {
+    try {
+        const response = await fetch(`/api/facturas-proveedores/${facturaId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarModalEditar(data.factura);
+        } else {
+            mostrarNotificacion('Error al cargar factura', 'error');
+        }
+    } catch (error) {
+        console.error('[Facturas] Error:', error);
+        mostrarNotificacion('Error al cargar factura', 'error');
+    }
+};
+
+window.eliminarFactura = async function(facturaId) {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta factura?\n\nEsta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/facturas-proveedores/${facturaId}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarNotificacion('✅ Factura eliminada correctamente', 'success');
+            cargarFacturas(); // Recargar tabla
+        } else {
+            mostrarNotificacion('Error: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('[Facturas] Error eliminando:', error);
+        mostrarNotificacion('Error al eliminar factura', 'error');
+    }
+};
+
+// ============================================================================
+// FUNCIONES DE MODALES
+// ============================================================================
+
+function mostrarModalDetalle(factura) {
+    // Llenar datos del proveedor
+    document.getElementById('detalle-proveedor-nombre').textContent = factura.proveedor_nombre || '-';
+    document.getElementById('detalle-proveedor-nif').textContent = factura.proveedor_nif || '-';
+    document.getElementById('detalle-proveedor-direccion').textContent = factura.proveedor_direccion || '-';
+    document.getElementById('detalle-proveedor-telefono').textContent = factura.proveedor_telefono || '-';
+    
+    // Llenar datos de la factura
+    document.getElementById('detalle-numero').textContent = factura.numero_factura;
+    document.getElementById('detalle-fecha-emision').textContent = formatearFecha(factura.fecha_emision);
+    document.getElementById('detalle-fecha-vencimiento').textContent = formatearFecha(factura.fecha_vencimiento);
+    
+    const estadoBadge = document.getElementById('detalle-estado');
+    estadoBadge.textContent = factura.estado;
+    estadoBadge.className = `badge ${factura.estado}`;
+    
+    // Importes
+    document.getElementById('detalle-base').textContent = formatearImporte(factura.base_imponible);
+    document.getElementById('detalle-iva').textContent = formatearImporte(factura.iva_importe) + ` (${factura.iva_porcentaje}%)`;
+    document.getElementById('detalle-total').textContent = formatearImporte(factura.total);
+    
+    // Concepto y notas
+    document.getElementById('detalle-concepto').textContent = factura.concepto || '-';
+    document.getElementById('detalle-notas').textContent = factura.notas || '-';
+    
+    // Líneas (si existen)
+    if (factura.lineas && factura.lineas.length > 0) {
+        const tbody = document.getElementById('detalle-lineas-body');
+        tbody.innerHTML = '';
+        
+        factura.lineas.forEach(linea => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${linea.concepto}</td>
+                <td>${linea.cantidad}</td>
+                <td>${formatearImporte(linea.precio_unitario)}</td>
+                <td>${linea.iva_porcentaje}%</td>
+                <td>${formatearImporte(linea.total_linea)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        document.getElementById('seccion-lineas').style.display = 'block';
+    } else {
+        document.getElementById('seccion-lineas').style.display = 'none';
+    }
+    
+    // Historial
+    if (factura.historial && factura.historial.length > 0) {
+        const historialDiv = document.getElementById('detalle-historial');
+        historialDiv.innerHTML = '';
+        
+        factura.historial.forEach(h => {
+            const item = document.createElement('div');
+            item.className = 'historial-item';
+            item.innerHTML = `
+                <div class="fecha">${formatearFechaHora(h.fecha)}</div>
+                <div class="accion">${h.accion}</div>
+                <div class="usuario">Por: ${h.usuario}</div>
+            `;
+            historialDiv.appendChild(item);
+        });
+        
+        document.getElementById('seccion-historial').style.display = 'block';
+    } else {
+        document.getElementById('seccion-historial').style.display = 'none';
+    }
+    
+    // Guardar ID para descargar PDF
+    window.facturaDetalleId = factura.id;
+    
+    // Mostrar modal
+    abrirModal('modalDetalle');
+}
+
+function mostrarModalPagar(factura) {
+    document.getElementById('pagar-factura-id').value = factura.id;
+    document.getElementById('pagar-fecha').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pagar-metodo').value = 'transferencia';
+    document.getElementById('pagar-referencia').value = '';
+    
+    document.getElementById('pagar-info-numero').textContent = factura.numero_factura;
+    document.getElementById('pagar-info-proveedor').textContent = factura.proveedor_nombre;
+    document.getElementById('pagar-info-total').textContent = formatearImporte(factura.total);
+    
+    abrirModal('modalPagar');
+}
+
+function mostrarModalEditar(factura) {
+    document.getElementById('editar-factura-id').value = factura.id;
+    document.getElementById('editar-numero').value = factura.numero_factura;
+    document.getElementById('editar-fecha-emision').value = factura.fecha_emision;
+    document.getElementById('editar-fecha-vencimiento').value = factura.fecha_vencimiento || '';
+    document.getElementById('editar-base').value = factura.base_imponible;
+    document.getElementById('editar-iva-porcentaje').value = factura.iva_porcentaje;
+    document.getElementById('editar-iva-importe').value = factura.iva_importe;
+    document.getElementById('editar-total').value = factura.total;
+    document.getElementById('editar-concepto').value = factura.concepto || '';
+    document.getElementById('editar-notas').value = factura.notas || '';
+    document.getElementById('editar-revisado').checked = factura.revisado === 1;
+    
+    // Event listeners para cálculo automático
+    const baseInput = document.getElementById('editar-base');
+    const ivaSelect = document.getElementById('editar-iva-porcentaje');
+    
+    const calcular = () => {
+        const base = parseFloat(baseInput.value) || 0;
+        const ivaPorcentaje = parseFloat(ivaSelect.value) || 0;
+        const ivaImporte = base * (ivaPorcentaje / 100);
+        const total = base + ivaImporte;
+        
+        document.getElementById('editar-iva-importe').value = ivaImporte.toFixed(2);
+        document.getElementById('editar-total').value = total.toFixed(2);
+    };
+    
+    baseInput.addEventListener('input', calcular);
+    ivaSelect.addEventListener('change', calcular);
+    
+    abrirModal('modalEditar');
+}
+
+window.abrirModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('show');
+        modal.style.display = 'flex';
+    }
+};
+
+window.cerrarModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 300);
+    }
+};
+
+window.descargarPDFDesdeModal = function() {
+    if (window.facturaDetalleId) {
+        window.open(`/api/facturas-proveedores/${window.facturaDetalleId}/pdf`, '_blank');
+    }
+};
+
+window.confirmarPago = async function() {
+    const facturaId = document.getElementById('pagar-factura-id').value;
+    const fechaPago = document.getElementById('pagar-fecha').value;
+    const metodoPago = document.getElementById('pagar-metodo').value;
+    const referenciaPago = document.getElementById('pagar-referencia').value;
+    
+    if (!fechaPago) {
+        mostrarNotificacion('La fecha de pago es obligatoria', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/facturas-proveedores/${facturaId}/pagar`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                fecha_pago: fechaPago,
+                metodo_pago: metodoPago,
+                referencia_pago: referenciaPago
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarNotificacion('✅ Factura marcada como pagada', 'success');
+            cerrarModal('modalPagar');
+            cargarFacturas(); // Recargar tabla
+        } else {
+            mostrarNotificacion('Error: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('[Facturas] Error:', error);
+        mostrarNotificacion('Error al marcar como pagada', 'error');
+    }
+};
+
+window.guardarEdicion = async function() {
+    const facturaId = document.getElementById('editar-factura-id').value;
+    
+    const datos = {
+        numero_factura: document.getElementById('editar-numero').value,
+        fecha_emision: document.getElementById('editar-fecha-emision').value,
+        fecha_vencimiento: document.getElementById('editar-fecha-vencimiento').value,
+        base_imponible: parseFloat(document.getElementById('editar-base').value),
+        iva_porcentaje: parseFloat(document.getElementById('editar-iva-porcentaje').value),
+        iva_importe: parseFloat(document.getElementById('editar-iva-importe').value),
+        total: parseFloat(document.getElementById('editar-total').value),
+        concepto: document.getElementById('editar-concepto').value,
+        notas: document.getElementById('editar-notas').value,
+        revisado: document.getElementById('editar-revisado').checked ? 1 : 0
+    };
+    
+    try {
+        const response = await fetch(`/api/facturas-proveedores/${facturaId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(datos)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarNotificacion('✅ Factura actualizada correctamente', 'success');
+            cerrarModal('modalEditar');
+            cargarFacturas(); // Recargar tabla
+        } else {
+            mostrarNotificacion('Error: ' + data.error, 'error');
+        }
+    } catch (error) {
+        console.error('[Facturas] Error:', error);
+        mostrarNotificacion('Error al guardar cambios', 'error');
+    }
+};
+
+// Cerrar modal al hacer click fuera
+window.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+        e.target.classList.remove('show');
+        setTimeout(() => {
+            e.target.style.display = 'none';
+        }, 300);
+    }
+});
 
 // ============================================================================
 // UTILIDADES
@@ -419,6 +702,21 @@ function formatearFecha(fecha) {
     if (!fecha) return '-';
     const [year, month, day] = fecha.split('-');
     return `${day}/${month}/${year}`;
+}
+
+function formatearFechaHora(fechaHora) {
+    if (!fechaHora) return '-';
+    try {
+        const fecha = new Date(fechaHora);
+        const dia = fecha.getDate().toString().padStart(2, '0');
+        const mes = (fecha.getMonth() + 1).toString().padStart(2, '0');
+        const año = fecha.getFullYear();
+        const hora = fecha.getHours().toString().padStart(2, '0');
+        const minutos = fecha.getMinutes().toString().padStart(2, '0');
+        return `${dia}/${mes}/${año} ${hora}:${minutos}`;
+    } catch (e) {
+        return fechaHora;
+    }
 }
 
 function formatearImporte(importe) {
