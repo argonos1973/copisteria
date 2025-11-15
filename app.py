@@ -1075,8 +1075,8 @@ def procesar_ocr_contacto():
 # ENDPOINTS: FACTURAS DE PROVEEDORES
 # ============================================================================
 
-@login_required
 @app.route('/api/facturas-proveedores/consultar', methods=['POST'])
+@login_required
 def consultar_facturas_proveedores_endpoint():
     """
     Consulta facturas recibidas con filtros
@@ -1099,8 +1099,8 @@ def consultar_facturas_proveedores_endpoint():
         return jsonify({'error': str(e)}), 500
 
 
-@login_required
 @app.route('/api/proveedores/listar', methods=['GET'])
+@login_required
 def listar_proveedores_endpoint():
     """
     Lista todos los proveedores de la empresa
@@ -1123,8 +1123,8 @@ def listar_proveedores_endpoint():
         return jsonify({'error': str(e)}), 500
 
 
-@login_required
 @app.route('/api/proveedores/<int:proveedor_id>', methods=['GET'])
+@login_required
 def obtener_proveedor_endpoint(proveedor_id):
     """
     Obtiene un proveedor por su ID
@@ -1149,8 +1149,8 @@ def obtener_proveedor_endpoint(proveedor_id):
         return jsonify({'error': str(e)}), 500
 
 
-@login_required
 @app.route('/api/proveedores/crear', methods=['POST'])
+@login_required
 def crear_proveedor_endpoint():
     """
     Crea un nuevo proveedor
@@ -1180,8 +1180,8 @@ def crear_proveedor_endpoint():
         return jsonify({'error': str(e)}), 500
 
 
-@login_required
 @app.route('/api/facturas-proveedores/<int:factura_id>', methods=['GET'])
+@login_required
 def obtener_factura_detalle_endpoint(factura_id):
     """
     Obtiene el detalle completo de una factura
@@ -1252,8 +1252,8 @@ def obtener_factura_detalle_endpoint(factura_id):
         return jsonify({'error': str(e)}), 500
 
 
-@login_required
 @app.route('/api/facturas-proveedores/<int:factura_id>/pagar', methods=['PUT'])
+@login_required
 def marcar_factura_pagada_endpoint(factura_id):
     """
     Marca una factura como pagada
@@ -1322,8 +1322,8 @@ def marcar_factura_pagada_endpoint(factura_id):
         return jsonify({'error': str(e)}), 500
 
 
-@login_required
 @app.route('/api/facturas-proveedores/<int:factura_id>', methods=['PUT'])
+@login_required
 def editar_factura_endpoint(factura_id):
     """
     Edita los datos de una factura
@@ -1391,8 +1391,8 @@ def editar_factura_endpoint(factura_id):
         return jsonify({'error': str(e)}), 500
 
 
-@login_required
 @app.route('/api/facturas-proveedores/<int:factura_id>', methods=['DELETE'])
+@login_required
 def eliminar_factura_endpoint(factura_id):
     """
     Elimina una factura (soft delete)
@@ -1439,8 +1439,8 @@ def eliminar_factura_endpoint(factura_id):
         return jsonify({'error': str(e)}), 500
 
 
-@login_required
 @app.route('/api/facturas-proveedores/<int:factura_id>/pdf', methods=['GET'])
+@login_required
 def descargar_pdf_factura_endpoint(factura_id):
     """
     Descarga el PDF de una factura
