@@ -39,14 +39,17 @@ function configurarEventListeners() {
     document.getElementById('btnExportar').addEventListener('click', exportarExcel);
     document.getElementById('btnSubir').addEventListener('click', subirFactura);
     
-    // Búsqueda interactiva en todos los filtros
+    // Búsqueda interactiva en todos los filtros con debounce
     const filtros = ['proveedorFilter', 'estadoFilter', 'trimestreFilter', 'startDate', 'endDate', 'busquedaFilter'];
     filtros.forEach(filtroId => {
         const elemento = document.getElementById(filtroId);
         if (elemento) {
-            elemento.addEventListener('change', busquedaInteractiva);
+            // Para selects y fechas: change event
+            elemento.addEventListener('change', (e) => busquedaInteractiva(e));
+            
+            // Para campo de texto: input event (mientras escribe)
             if (filtroId === 'busquedaFilter') {
-                elemento.addEventListener('input', busquedaInteractiva);
+                elemento.addEventListener('input', (e) => busquedaInteractiva(e));
             }
         }
     });
@@ -152,20 +155,53 @@ function formatearFechaInput(fecha) {
 }
 
 // ============================================================================
-// BÚSQUEDA INTERACTIVA
+// BÚSQUEDA INTERACTIVA CON DEBOUNCE
 // ============================================================================
 
-function busquedaInteractiva() {
+function busquedaInteractiva(event) {
     // Cancelar búsqueda anterior si existe
     if (timeoutBusqueda) {
         clearTimeout(timeoutBusqueda);
     }
     
-    // Esperar 300ms antes de buscar (debounce)
+    // Mostrar indicador de búsqueda
+    const searchingIndicator = document.getElementById('searchingIndicator');
+    const busquedaInput = document.getElementById('busquedaFilter');
+    
+    if (event && event.target === busquedaInput) {
+        // Mostrar spinner solo para campo de texto
+        if (searchingIndicator) {
+            searchingIndicator.style.display = 'inline';
+        }
+        busquedaInput.style.borderColor = '#ffc107';
+    }
+    
+    // Determinar delay según el tipo de filtro
+    let delay = 300; // Por defecto 300ms para campos de texto
+    
+    // Para selects y fechas, búsqueda más rápida (50ms)
+    if (event && event.target && (
+        event.target.tagName === 'SELECT' || 
+        event.target.type === 'date'
+    )) {
+        delay = 50;
+    }
+    
+    // Esperar antes de buscar (debounce)
     timeoutBusqueda = setTimeout(() => {
         paginaActual = 1;
         cargarFacturas();
-    }, 300);
+        
+        // Quitar indicador de búsqueda
+        if (searchingIndicator) {
+            searchingIndicator.style.display = 'none';
+        }
+        if (busquedaInput) {
+            busquedaInput.style.borderColor = '';
+        }
+    }, delay);
+    
+    console.log(`[Facturas] Búsqueda programada en ${delay}ms (tipo: ${event?.target?.tagName || 'unknown'})`);
 }
 
 // ============================================================================

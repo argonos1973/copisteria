@@ -220,7 +220,12 @@
             </div>
             <div class="form-group">
                 <label for="busquedaFilter">Buscar:</label>
-                <input type="text" id="busquedaFilter" placeholder="Nº factura, concepto...">
+                <div style="position: relative; display: inline-block;">
+                    <input type="text" id="busquedaFilter" placeholder="Nº factura, concepto...">
+                    <span id="searchingIndicator" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #ffc107;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </div>
             </div>
         </div>
 
