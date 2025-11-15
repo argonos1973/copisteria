@@ -200,17 +200,6 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="trimestreFilter">Trimestre:</label>
-                <select id="trimestreFilter">
-                    <option value="actual">Trimestre Actual</option>
-                    <option value="Q1">Q1 - Ene-Mar</option>
-                    <option value="Q2">Q2 - Abr-Jun</option>
-                    <option value="Q3">Q3 - Jul-Sep</option>
-                    <option value="Q4">Q4 - Oct-Dic</option>
-                    <option value="todos">Todos</option>
-                </select>
-            </div>
-            <div class="form-group">
                 <label for="startDate">Desde:</label>
                 <input type="date" id="startDate" class="date-input">
             </div>
@@ -248,13 +237,12 @@
           </div>
           <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
             <label>Por página:
-              <select id="perPage" style="padding:2px 4px;font-size:12px;">
+              <select id="perPage" style="padding:2px 6px;font-size:12px;">
                 <option value="25">25</option>
                 <option value="50">50</option>
                 <option value="100">100</option>
               </select>
             </label>
-            <span id="totalRegistros" style="font-size:12px;color:#666;">0 registros</span>
           </div>
         </div>
 
@@ -290,14 +278,6 @@
             </div>
         </div>
 
-        <!-- Paginación inferior -->
-        <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <button id="prevPage2" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟨</button>
-            <span id="pageInfo2">Página 1 de 1</span>
-            <button id="nextPage2" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟩</button>
-          </div>
-        </div>
     </div>
 
     <!-- Notificaciones (reutilizando tu sistema) -->

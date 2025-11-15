@@ -40,7 +40,7 @@ function configurarEventListeners() {
     document.getElementById('btnSubir').addEventListener('click', subirFactura);
     
     // Búsqueda interactiva en todos los filtros con debounce
-    const filtros = ['proveedorFilter', 'estadoFilter', 'trimestreFilter', 'startDate', 'endDate', 'busquedaFilter'];
+    const filtros = ['proveedorFilter', 'estadoFilter', 'startDate', 'endDate', 'busquedaFilter'];
     filtros.forEach(filtroId => {
         const elemento = document.getElementById(filtroId);
         if (elemento) {
@@ -57,8 +57,6 @@ function configurarEventListeners() {
     // Paginación
     document.getElementById('prevPage').addEventListener('click', () => cambiarPagina(-1));
     document.getElementById('nextPage').addEventListener('click', () => cambiarPagina(1));
-    document.getElementById('prevPage2').addEventListener('click', () => cambiarPagina(-1));
-    document.getElementById('nextPage2').addEventListener('click', () => cambiarPagina(1));
     
     document.getElementById('perPage').addEventListener('change', (e) => {
         porPagina = parseInt(e.target.value);
@@ -66,17 +64,6 @@ function configurarEventListeners() {
         cargarFacturas();
     });
     
-    // Filtro de trimestre automático
-    document.getElementById('trimestreFilter').addEventListener('change', (e) => {
-        if (e.target.value === 'actual') {
-            establecerTrimestreActual();
-        } else if (e.target.value !== 'todos') {
-            establecerTrimestreEspecifico(e.target.value);
-        } else {
-            document.getElementById('startDate').value = '';
-            document.getElementById('endDate').value = '';
-        }
-    });
     
     // Select all checkboxes
     document.getElementById('selectAll').addEventListener('change', (e) => {
@@ -411,16 +398,10 @@ function actualizarPaginacion(data) {
     
     const pageInfo = `Página ${paginaActual} de ${totalPaginas}`;
     document.getElementById('pageInfo').textContent = pageInfo;
-    document.getElementById('pageInfo2').textContent = pageInfo;
-    
-    document.getElementById('totalRegistros').textContent = `${data.total} registros`;
     
     // Habilitar/deshabilitar botones
-    const prevButtons = [document.getElementById('prevPage'), document.getElementById('prevPage2')];
-    const nextButtons = [document.getElementById('nextPage'), document.getElementById('nextPage2')];
-    
-    prevButtons.forEach(btn => btn.disabled = paginaActual === 1);
-    nextButtons.forEach(btn => btn.disabled = paginaActual === totalPaginas);
+    document.getElementById('prevPage').disabled = paginaActual === 1;
+    document.getElementById('nextPage').disabled = paginaActual === totalPaginas;
 }
 
 function verificarAlertas(data) {
