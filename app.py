@@ -1075,6 +1075,16 @@ def procesar_ocr_contacto():
 # ENDPOINTS: FACTURAS DE PROVEEDORES
 # ============================================================================
 
+# Endpoint de prueba para verificar que el código se está cargando
+@app.route('/api/test-reload', methods=['GET'])
+def test_reload():
+    """Endpoint de prueba para verificar recarga de código"""
+    return jsonify({
+        'status': 'ok',
+        'message': 'Código recargado correctamente',
+        'timestamp': '2025-11-15 11:47:00'
+    })
+
 @app.route('/api/facturas-proveedores/consultar', methods=['POST'])
 @login_required
 def consultar_facturas_proveedores_endpoint():
