@@ -253,12 +253,6 @@ async function cargarFacturas() {
             filtros.estado = estado;
         }
         
-        // Filtro de trimestre
-        const trimestre = document.getElementById('trimestreFilter').value;
-        if (trimestre !== 'todos') {
-            filtros.trimestre = trimestre;
-        }
-        
         // Filtro de fechas
         const fechaDesde = document.getElementById('startDate').value;
         const fechaHasta = document.getElementById('endDate').value;
