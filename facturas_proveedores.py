@@ -10,18 +10,11 @@ from pathlib import Path
 import hashlib
 import json
 from logger_config import get_logger
+from db_utils import get_db_connection
 
 logger = get_logger(__name__)
 
-DB_PATH = '/var/www/html/copisteria.db'
 FACTURAS_DIR = '/var/www/html/facturas_proveedores'
-
-
-def get_db_connection():
-    """Obtiene conexión a la base de datos"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 
 # ============================================================================
