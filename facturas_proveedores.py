@@ -217,11 +217,16 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
     cursor = conn.cursor()
     
     try:
+        # Transformar datos a mayúsculas
+        nombre = datos.get('nombre', '').upper().strip()
         nif = datos.get('nif', '').upper().strip()
+        direccion = datos.get('direccion', '').upper().strip() if datos.get('direccion') else ''
+        poblacion = datos.get('poblacion', '').upper().strip() if datos.get('poblacion') else ''
+        provincia = datos.get('provincia', '').upper().strip() if datos.get('provincia') else ''
         
         # Si el NIF está vacío, permitirlo (para proveedores sin NIF o cuando coincide con empresa)
         if not nif:
-            logger.info(f"Creando proveedor sin NIF: {datos.get('nombre')}")
+            logger.info(f"Creando proveedor sin NIF: {nombre}")
         
         cursor.execute("""
             INSERT INTO proveedores (
@@ -232,12 +237,12 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             empresa_id,
-            datos.get('nombre'),
+            nombre,
             nif,
-            datos.get('direccion'),
+            direccion,
             datos.get('cp'),
-            datos.get('poblacion'),
-            datos.get('provincia'),
+            poblacion,
+            provincia,
             datos.get('email'),
             datos.get('email_facturacion'),
             datos.get('telefono'),
