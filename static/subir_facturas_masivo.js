@@ -221,8 +221,8 @@ async function procesarTodas() {
     for (const item of archivosSeleccionados) {
         if (item.estado === 'pendiente') {
             await procesarArchivo(item);
-            // Pequeña pausa entre archivos
-            await sleep(500);
+            // Pausa entre archivos para evitar "database is locked"
+            await sleep(1000);
         }
     }
     
