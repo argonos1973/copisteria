@@ -195,6 +195,12 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
     cursor = conn.cursor()
     
     try:
+        nif = datos.get('nif', '').upper().strip()
+        
+        # Si el NIF está vacío, permitirlo (para proveedores sin NIF o cuando coincide con empresa)
+        if not nif:
+            logger.info(f"Creando proveedor sin NIF: {datos.get('nombre')}")
+        
         cursor.execute("""
             INSERT INTO proveedores (
                 empresa_id, nombre, nif, direccion, cp, poblacion, provincia,
@@ -205,7 +211,7 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
         """, (
             empresa_id,
             datos.get('nombre'),
-            datos.get('nif', '').upper().strip(),
+            nif,
             datos.get('direccion'),
             datos.get('cp'),
             datos.get('poblacion'),
@@ -225,14 +231,20 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
         proveedor_id = cursor.lastrowid
         conn.commit()
         
-        logger.info(f"✓ Proveedor creado: {datos.get('nombre')} (ID: {proveedor_id}) por {usuario}")
+        nif_info = f"NIF: {nif}" if nif else "sin NIF"
+        logger.info(f"✓ Proveedor creado: {datos.get('nombre')} ({nif_info}, ID: {proveedor_id}) por {usuario}")
         
         return proveedor_id
         
     except sqlite3.IntegrityError as e:
         conn.rollback()
-        logger.error(f"Error creando proveedor: {e}")
-        raise Exception(f"Ya existe un proveedor con ese NIF en esta empresa")
+        error_msg = str(e).lower()
+        if 'unique' in error_msg and 'nif' in error_msg:
+            logger.error(f"Error: Ya existe un proveedor con NIF {nif} en esta empresa")
+            raise Exception(f"Ya existe un proveedor con ese NIF en esta empresa")
+        else:
+            logger.error(f"Error de integridad creando proveedor: {e}")
+            raise Exception(f"Error de integridad en la base de datos: {str(e)}")
     finally:
         conn.close()
 

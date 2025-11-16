@@ -271,12 +271,19 @@ async function procesarArchivo(item) {
         item.mensaje = 'Guardando factura...';
         renderizarArchivos();
         
-        await guardarFactura(item.archivo, datosOCR, proveedorId);
+        const resultado = await guardarFactura(item.archivo, datosOCR, proveedorId);
         item.progreso = 100;
-        item.estado = 'completada';
-        item.mensaje = '✓ Completada';
         
-        addLog(`  ✅ Factura guardada: ${datosOCR.factura?.numero}`, 'success');
+        // Verificar si es duplicada
+        if (resultado.duplicada) {
+            item.estado = 'duplicada';
+            item.mensaje = '⚠️ Duplicada';
+            addLog(`  ⚠️ Factura duplicada: ${datosOCR.factura?.numero} (ya existe)`, 'warning');
+        } else {
+            item.estado = 'completada';
+            item.mensaje = '✓ Completada';
+            addLog(`  ✅ Factura guardada: ${datosOCR.factura?.numero}`, 'success');
+        }
         
     } catch (error) {
         item.estado = 'error';
@@ -311,8 +318,52 @@ async function escanearFactura(archivo) {
 }
 
 async function buscarOCrearProveedorSilencioso(datosProveedor) {
-    if (!datosProveedor || !datosProveedor.nif) {
-        throw new Error('Proveedor sin NIF');
+    if (!datosProveedor) {
+        throw new Error('Datos de proveedor no disponibles');
+    }
+    
+    // Si no tiene NIF, crear con nombre solamente
+    if (!datosProveedor.nif) {
+        addLog(`  ⚠️ Proveedor sin NIF: ${datosProveedor.nombre}`, 'warning');
+        // Buscar por nombre exacto
+        const responseList = await fetch('/api/proveedores/listar?activos=false');
+        const dataList = await responseList.json();
+        
+        if (dataList.success) {
+            const proveedorExistente = dataList.proveedores.find(p => 
+                p.nombre && p.nombre.toLowerCase() === datosProveedor.nombre.toLowerCase()
+            );
+            
+            if (proveedorExistente) {
+                addLog(`  ✓ Proveedor encontrado por nombre: ${proveedorExistente.nombre} (ID: ${proveedorExistente.id})`, 'success');
+                return proveedorExistente.id;
+            }
+        }
+        
+        // Crear sin NIF
+        const nuevoProveedor = {
+            nombre: datosProveedor.nombre || 'Proveedor sin nombre',
+            nif: '',  // NIF vacío
+            email: datosProveedor.email || '',
+            telefono: datosProveedor.telefono || '',
+            direccion: datosProveedor.direccion || '',
+            activo: true,
+            requiere_revision: true
+        };
+        
+        const response = await fetch('/api/proveedores/crear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nuevoProveedor)
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+            addLog(`  ✓ Proveedor creado sin NIF: ${data.proveedor.nombre} (ID: ${data.proveedor.id})`, 'success');
+            return data.proveedor.id;
+        }
+        
+        throw new Error(data.error || 'Error creando proveedor sin NIF');
     }
     
     const nifLower = datosProveedor.nif.toLowerCase();
@@ -329,7 +380,9 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
         email: datosProveedor.email || '',
         telefono: datosProveedor.telefono || '',
         direccion: datosProveedor.direccion || '',
-        activo: true
+        activo: true,
+        creado_automaticamente: true,
+        requiere_revision: true
     };
     
     const response = await fetch('/api/proveedores/crear', {
@@ -346,12 +399,13 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
         // Proveedor creado exitosamente
         const proveedor = data.proveedor;
         proveedoresCache.set(nifLower, proveedor);
+        addLog(`  ✓ Proveedor creado: ${proveedor.nombre} (ID: ${proveedor.id})`, 'success');
         return proveedor.id;
     }
     
-    // Si falla, puede ser porque ya existe
-    // Buscar en la lista de proveedores
-    const responseList = await fetch('/api/proveedores/listar');
+    // Si falla, puede ser porque ya existe (duplicado)
+    // Buscar en la lista de proveedores (incluir inactivos)
+    const responseList = await fetch('/api/proveedores/listar?activos=false');
     const dataList = await responseList.json();
     
     if (dataList.success) {
@@ -361,6 +415,7 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
         
         if (proveedorExistente) {
             proveedoresCache.set(nifLower, proveedorExistente);
+            addLog(`  ✓ Proveedor existente: ${proveedorExistente.nombre} (ID: ${proveedorExistente.id})`, 'info');
             return proveedorExistente.id;
         }
     }
@@ -388,6 +443,15 @@ async function guardarFactura(archivo, datosOCR, proveedorId) {
     const data = await response.json();
     
     if (!data.success) {
+        // Si es factura duplicada, retornar info en lugar de error
+        if (data.duplicada) {
+            return {
+                success: false,
+                duplicada: true,
+                mensaje: data.mensaje,
+                info: data.info
+            };
+        }
         throw new Error(data.error || 'Error guardando factura');
     }
     

@@ -1245,8 +1245,38 @@ def crear_proveedor_endpoint():
     try:
         datos = request.json
         
-        if not datos.get('nombre') or not datos.get('nif'):
-            return jsonify({'error': 'Nombre y NIF son obligatorios'}), 400
+        if not datos.get('nombre'):
+            return jsonify({'error': 'El nombre es obligatorio'}), 400
+        
+        # Obtener NIF de la empresa para validar
+        conn_usuarios = sqlite3.connect('db/usuarios_sistema.db')
+        conn_usuarios.row_factory = sqlite3.Row
+        cursor_usuarios = conn_usuarios.cursor()
+        cursor_usuarios.execute('SELECT cif FROM empresas WHERE id = ?', (empresa_id,))
+        empresa = cursor_usuarios.fetchone()
+        conn_usuarios.close()
+        
+        empresa_nif = empresa['cif'].upper().strip() if empresa and empresa['cif'] else ''
+        proveedor_nif = datos.get('nif', '').upper().strip()
+        
+        # Si el NIF del proveedor es el mismo que el de la empresa, dejarlo vacío
+        if proveedor_nif and empresa_nif and proveedor_nif == empresa_nif:
+            logger.info(f"NIF del proveedor coincide con NIF de la empresa ({empresa_nif}), dejando vacío")
+            datos['nif'] = ''
+            proveedor_nif = ''
+        
+        # Verificar si ya existe un proveedor con ese NIF (solo si tiene NIF)
+        if proveedor_nif:
+            proveedor_existente = facturas_proveedores.obtener_proveedor_por_nif(proveedor_nif, empresa_id)
+            if proveedor_existente:
+                logger.info(f"Proveedor ya existe con NIF {proveedor_nif}: {proveedor_existente['nombre']}")
+                return jsonify({
+                    'success': True,
+                    'proveedor_id': proveedor_existente['id'],
+                    'proveedor': proveedor_existente,
+                    'mensaje': 'Proveedor ya existente',
+                    'ya_existia': True
+                })
         
         proveedor_id = facturas_proveedores.crear_proveedor(empresa_id, datos, usuario)
         
@@ -1301,7 +1331,7 @@ def subir_factura_proveedor():
         
         # Verificar si la factura ya existe
         cursor.execute('''
-            SELECT id FROM facturas_proveedores 
+            SELECT id, numero_factura, total FROM facturas_proveedores 
             WHERE empresa_id = ? AND proveedor_id = ? AND numero_factura = ?
         ''', (empresa_id, proveedor_id, numero_factura))
         
@@ -1309,9 +1339,14 @@ def subir_factura_proveedor():
         
         if factura_existente:
             conn.close()
+            logger.info(f"Factura duplicada detectada: {numero_factura} (ID: {factura_existente['id']})")
             return jsonify({
-                'error': f'La factura {numero_factura} ya existe para este proveedor'
-            }), 400
+                'success': False,
+                'duplicada': True,
+                'factura_id': factura_existente['id'],
+                'mensaje': f'La factura {numero_factura} ya existe para este proveedor',
+                'info': 'Factura duplicada, no se ha insertado'
+            }), 200  # 200 en lugar de 400 para que no sea tratado como error crítico
         
         cursor.execute('''
             INSERT INTO facturas_proveedores (
