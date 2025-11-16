@@ -179,6 +179,28 @@ def obtener_proveedor_por_nif(nif, empresa_id):
     return dict(proveedor) if proveedor else None
 
 
+def obtener_proveedor_por_nombre(nombre, empresa_id):
+    """
+    Obtiene un proveedor por su nombre (búsqueda exacta, case-insensitive)
+    """
+    if not nombre:
+        return None
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # Buscar por nombre exacto (case-insensitive)
+    cursor.execute("""
+        SELECT * FROM proveedores
+        WHERE LOWER(TRIM(nombre)) = LOWER(TRIM(?)) AND empresa_id = ?
+    """, (nombre, empresa_id))
+    
+    proveedor = cursor.fetchone()
+    conn.close()
+    
+    return dict(proveedor) if proveedor else None
+
+
 def crear_proveedor(empresa_id, datos, usuario='sistema'):
     """
     Crea un nuevo proveedor

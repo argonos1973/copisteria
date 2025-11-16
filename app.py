@@ -1265,18 +1265,30 @@ def crear_proveedor_endpoint():
             datos['nif'] = ''
             proveedor_nif = ''
         
-        # Verificar si ya existe un proveedor con ese NIF (solo si tiene NIF)
+        # Verificar si ya existe un proveedor
+        proveedor_existente = None
+        
+        # 1. Buscar por NIF si existe
         if proveedor_nif:
             proveedor_existente = facturas_proveedores.obtener_proveedor_por_nif(proveedor_nif, empresa_id)
             if proveedor_existente:
                 logger.info(f"Proveedor ya existe con NIF {proveedor_nif}: {proveedor_existente['nombre']}")
-                return jsonify({
-                    'success': True,
-                    'proveedor_id': proveedor_existente['id'],
-                    'proveedor': proveedor_existente,
-                    'mensaje': 'Proveedor ya existente',
-                    'ya_existia': True
-                })
+        
+        # 2. Si no se encontró por NIF (o no tiene NIF), buscar por nombre
+        if not proveedor_existente:
+            proveedor_existente = facturas_proveedores.obtener_proveedor_por_nombre(datos.get('nombre'), empresa_id)
+            if proveedor_existente:
+                logger.info(f"Proveedor ya existe con nombre '{datos.get('nombre')}': ID {proveedor_existente['id']}")
+        
+        # Si existe, retornarlo
+        if proveedor_existente:
+            return jsonify({
+                'success': True,
+                'proveedor_id': proveedor_existente['id'],
+                'proveedor': proveedor_existente,
+                'mensaje': 'Proveedor ya existente',
+                'ya_existia': True
+            })
         
         proveedor_id = facturas_proveedores.crear_proveedor(empresa_id, datos, usuario)
         
