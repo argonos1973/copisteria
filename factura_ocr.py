@@ -47,16 +47,22 @@ def extraer_datos_factura_gpt4(imagen_bytes):
         client = OpenAI(api_key=OPENAI_API_KEY)
         
         # Prompt para extraer datos estructurados de factura
-        prompt = """Analiza esta imagen de factura y extrae los siguientes datos.
-Devuelve SOLO un objeto JSON válido con estos campos (deja vacíos los que no encuentres):
+        prompt = """Analiza esta imagen de FACTURA RECIBIDA y extrae los siguientes datos.
+
+⚠️ MUY IMPORTANTE: 
+- El PROVEEDOR es quien EMITE la factura (aparece arriba, en el encabezado)
+- El CLIENTE es quien RECIBE la factura (aparece abajo, como "Facturar a:" o "Cliente:")
+- SOLO extrae los datos del PROVEEDOR/EMISOR, NO del cliente/destinatario
+
+Devuelve SOLO un objeto JSON válido con estos campos:
 
 {
   "proveedor": {
-    "nombre": "nombre o razón social del proveedor/emisor",
-    "nif": "NIF o CIF del proveedor",
-    "direccion": "dirección del proveedor",
-    "telefono": "teléfono del proveedor",
-    "email": "email del proveedor"
+    "nombre": "nombre o razón social del EMISOR de la factura (quien vende)",
+    "nif": "NIF o CIF del EMISOR (NO del cliente)",
+    "direccion": "dirección del EMISOR",
+    "telefono": "teléfono del EMISOR",
+    "email": "email del EMISOR"
   },
   "factura": {
     "numero": "número de factura (ej: FAC-2024-001, F-123, etc)",
@@ -65,17 +71,26 @@ Devuelve SOLO un objeto JSON válido con estos campos (deja vacíos los que no e
     "base_imponible": "base imponible en número decimal (ej: 100.50)",
     "iva": "importe del IVA en número decimal (ej: 21.00)",
     "total": "importe total en número decimal (ej: 121.50)",
-    "concepto": "descripción o concepto de la factura"
+    "concepto": "descripción breve de los productos/servicios"
   }
 }
 
-IMPORTANTE:
-- Para números decimales, usa punto como separador (ej: 123.45)
-- Para fechas, usa formato YYYY-MM-DD (ej: 2024-11-15)
-- Si no encuentras un campo, déjalo vacío ""
-- Para el número de factura, incluye el formato completo como aparece
-- Para importes, solo el número sin símbolos de moneda
-- Devuelve SOLO el JSON, sin texto adicional ni markdown."""
+REGLAS CRÍTICAS:
+1. El proveedor.nif debe ser del EMISOR de la factura, NO del destinatario
+2. Busca el NIF que está junto al nombre de la empresa en el ENCABEZADO
+3. Si ves "Facturar a:" o "Cliente:", esos datos NO son del proveedor
+4. Para números decimales, usa punto como separador (ej: 123.45)
+5. Para fechas, usa formato YYYY-MM-DD (ej: 2024-11-15)
+6. Si no encuentras un campo, déjalo vacío ""
+7. Para importes, solo el número sin símbolos de moneda
+8. Devuelve SOLO el JSON, sin texto adicional ni markdown
+
+EJEMPLO:
+Si la factura dice:
+  Encabezado: "ECOMPUTER S.L. - NIF: B12345678"
+  Abajo: "Cliente: GETNET - NIF: B99999999"
+  
+Entonces proveedor.nif debe ser "B12345678" (del emisor ECOMPUTER), NO "B99999999"."""
 
         logger.info("📤 Enviando factura a GPT-4 Vision...")
         
