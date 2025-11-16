@@ -77,20 +77,31 @@ Devuelve SOLO un objeto JSON válido con estos campos:
 
 REGLAS CRÍTICAS:
 1. El proveedor.nif debe ser del EMISOR de la factura, NO del destinatario
-2. Busca el NIF que está junto al nombre de la empresa en el ENCABEZADO
-3. Si ves "Facturar a:" o "Cliente:", esos datos NO son del proveedor
-4. Para números decimales, usa punto como separador (ej: 123.45)
-5. Para fechas, usa formato YYYY-MM-DD (ej: 2024-11-15)
-6. Si no encuentras un campo, déjalo vacío ""
-7. Para importes, solo el número sin símbolos de moneda
-8. Devuelve SOLO el JSON, sin texto adicional ni markdown
+2. Busca el NIF PRINCIPAL que está junto al nombre de la empresa en el ENCABEZADO
+3. Si hay múltiples NIFs en el encabezado, usa el PRIMERO o el más prominente
+4. Si ves "Facturar a:" o "Cliente:", esos datos NO son del proveedor
+5. IGNORA NIFs que aparezcan en pie de página, notas legales o información adicional
+6. Para números decimales, usa punto como separador (ej: 123.45)
+7. Para fechas, usa formato YYYY-MM-DD (ej: 2024-11-15)
+8. Si no encuentras un campo, déjalo vacío ""
+9. Para importes, solo el número sin símbolos de moneda
+10. Devuelve SOLO el JSON, sin texto adicional ni markdown
 
-EJEMPLO:
-Si la factura dice:
+EJEMPLOS:
+
+Ejemplo 1 - NIF único:
   Encabezado: "ECOMPUTER S.L. - NIF: B12345678"
-  Abajo: "Cliente: GETNET - NIF: B99999999"
-  
-Entonces proveedor.nif debe ser "B12345678" (del emisor ECOMPUTER), NO "B99999999"."""
+  Cliente: "GETNET - NIF: B99999999"
+  → proveedor.nif = "B12345678" ✅
+
+Ejemplo 2 - Múltiples NIFs del mismo grupo (Vodafone):
+  Encabezado: "Vodafone España S.A.U. - NIF: A80907397"
+  Pie: "Vodafone Servicios S.L.U. - NIF: B83788964"
+  → proveedor.nif = "A80907397" ✅ (el primero/principal)
+
+Ejemplo 3 - NIF en diferentes formatos:
+  "Canon España S.A.U. - CIF: A-28122125"
+  → proveedor.nif = "A-28122125" ✅ (incluir guiones si existen)"""
 
         logger.info("📤 Enviando factura a GPT-4 Vision...")
         
