@@ -1330,23 +1330,44 @@ def subir_factura_proveedor():
         cursor = conn.cursor()
         
         # Verificar si la factura ya existe
+        # Si tiene número de factura, buscar por número
+        if numero_factura and numero_factura.strip():
+            cursor.execute('''
+                SELECT id, numero_factura, total, fecha_emision FROM facturas_proveedores 
+                WHERE empresa_id = ? AND proveedor_id = ? AND numero_factura = ?
+            ''', (empresa_id, proveedor_id, numero_factura.strip()))
+            
+            factura_existente = cursor.fetchone()
+            
+            if factura_existente:
+                conn.close()
+                logger.info(f"Factura duplicada detectada (por número): {numero_factura} (ID: {factura_existente['id']})")
+                return jsonify({
+                    'success': False,
+                    'duplicada': True,
+                    'factura_id': factura_existente['id'],
+                    'mensaje': f'La factura {numero_factura} ya existe para este proveedor',
+                    'info': 'Factura duplicada, no se ha insertado'
+                }), 200
+        
+        # Si no tiene número o no se encontró por número, buscar por proveedor + fecha + total
         cursor.execute('''
-            SELECT id, numero_factura, total FROM facturas_proveedores 
-            WHERE empresa_id = ? AND proveedor_id = ? AND numero_factura = ?
-        ''', (empresa_id, proveedor_id, numero_factura))
+            SELECT id, numero_factura, total, fecha_emision FROM facturas_proveedores 
+            WHERE empresa_id = ? AND proveedor_id = ? AND fecha_emision = ? AND total = ?
+        ''', (empresa_id, proveedor_id, fecha_emision, total))
         
         factura_existente = cursor.fetchone()
         
         if factura_existente:
             conn.close()
-            logger.info(f"Factura duplicada detectada: {numero_factura} (ID: {factura_existente['id']})")
+            logger.info(f"Factura duplicada detectada (por fecha+total): Proveedor {proveedor_id}, Fecha {fecha_emision}, Total {total} (ID: {factura_existente['id']})")
             return jsonify({
                 'success': False,
                 'duplicada': True,
                 'factura_id': factura_existente['id'],
-                'mensaje': f'La factura {numero_factura} ya existe para este proveedor',
+                'mensaje': f'Ya existe una factura del mismo proveedor con la misma fecha ({fecha_emision}) y total ({total}€)',
                 'info': 'Factura duplicada, no se ha insertado'
-            }), 200  # 200 en lugar de 400 para que no sea tratado como error crítico
+            }), 200
         
         cursor.execute('''
             INSERT INTO facturas_proveedores (
