@@ -7,7 +7,7 @@ import { mostrarNotificacion } from './notificaciones.js';
 
 // Variables globales
 let paginaActual = 1;
-let porPagina = 25;
+let porPagina = parseInt(sessionStorage.getItem('facturas_por_pagina')) || 25;
 let totalPaginas = 1;
 let proveedores = [];
 let filtrosActuales = {};
@@ -20,6 +20,12 @@ let facturasCache = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[Facturas Recibidas] Inicializando...');
+    
+    // Restaurar valor del selector de registros por página
+    const perPageSelect = document.getElementById('perPage');
+    if (perPageSelect) {
+        perPageSelect.value = porPagina;
+    }
     
     // Establecer fechas del trimestre actual
     establecerTrimestreActual();
@@ -60,6 +66,7 @@ function configurarEventListeners() {
     
     document.getElementById('perPage').addEventListener('change', (e) => {
         porPagina = parseInt(e.target.value);
+        sessionStorage.setItem('facturas_por_pagina', porPagina);
         paginaActual = 1;
         cargarFacturas();
     });
