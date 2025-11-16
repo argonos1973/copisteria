@@ -396,10 +396,16 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
     const data = await response.json();
     
     if (data.success) {
-        // Proveedor creado exitosamente
+        // Proveedor creado o ya existente
         const proveedor = data.proveedor;
         proveedoresCache.set(nifLower, proveedor);
-        addLog(`  ✓ Proveedor creado: ${proveedor.nombre} (ID: ${proveedor.id})`, 'success');
+        
+        if (data.ya_existia) {
+            addLog(`  ✓ Proveedor existente: ${proveedor.nombre} (ID: ${proveedor.id})`, 'info');
+        } else {
+            addLog(`  ✓ Proveedor creado: ${proveedor.nombre} (ID: ${proveedor.id})`, 'success');
+        }
+        
         return proveedor.id;
     }
     
