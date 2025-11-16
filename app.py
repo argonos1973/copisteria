@@ -1364,9 +1364,31 @@ def subir_factura_proveedor():
         if 'archivos' in request.files:
             archivos = request.files.getlist('archivos')
             
-            # Crear directorio si no existe
-            facturas_dir = Path('/var/www/html/facturas_proveedores')
-            facturas_dir.mkdir(exist_ok=True)
+            # Obtener código de empresa
+            conn_usuarios = sqlite3.connect('db/usuarios_sistema.db')
+            conn_usuarios.row_factory = sqlite3.Row
+            cursor_usuarios = conn_usuarios.cursor()
+            cursor_usuarios.execute('SELECT codigo FROM empresas WHERE id = ?', (empresa_id,))
+            empresa = cursor_usuarios.fetchone()
+            conn_usuarios.close()
+            empresa_codigo = empresa['codigo'] if empresa else 'default'
+            
+            # Determinar trimestre
+            fecha_obj = datetime.strptime(fecha_emision, '%Y-%m-%d')
+            año = fecha_obj.year
+            mes = fecha_obj.month
+            if mes <= 3:
+                trimestre = 'Q1'
+            elif mes <= 6:
+                trimestre = 'Q2'
+            elif mes <= 9:
+                trimestre = 'Q3'
+            else:
+                trimestre = 'Q4'
+            
+            # Crear estructura: facturas_proveedores/EMPRESA/facturas_recibidas/YYYY/QX/originales/
+            facturas_dir = Path('/var/www/html/facturas_proveedores') / empresa_codigo / 'facturas_recibidas' / str(año) / trimestre / 'originales'
+            facturas_dir.mkdir(parents=True, exist_ok=True)
             
             for archivo in archivos:
                 if archivo.filename:
@@ -1377,9 +1399,11 @@ def subir_factura_proveedor():
                     
                     # Guardar archivo
                     archivo.save(str(ruta_archivo))
-                    archivos_guardados.append(nombre_archivo)
+                    # Guardar ruta relativa
+                    ruta_relativa = f"{empresa_codigo}/facturas_recibidas/{año}/{trimestre}/originales/{nombre_archivo}"
+                    archivos_guardados.append(ruta_relativa)
                     
-                    logger.info(f"Archivo guardado: {nombre_archivo}")
+                    logger.info(f"Archivo guardado: {ruta_relativa}")
         
         # Registrar en historial
         cursor.execute('''
