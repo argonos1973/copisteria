@@ -246,6 +246,7 @@ async function procesarArchivo(item) {
         item.mensaje = 'Escaneando con IA...';
         actualizarStats();
         renderizarArchivos();
+        mostrarIndicadorProcesamiento(item.archivo.name, 'Escaneando con IA...');
         
         addLog(`📄 Procesando: ${item.archivo.name}`, 'info');
         
@@ -254,12 +255,14 @@ async function procesarArchivo(item) {
         item.progreso = 40;
         item.datos = datosOCR;
         renderizarArchivos();
+        actualizarIndicadorProcesamiento('Extrayendo datos del proveedor...');
         
         addLog(`  ✓ OCR completado: ${datosOCR.proveedor?.nombre || 'Sin nombre'}`, 'success');
         
         // 2. Buscar o crear proveedor
         item.mensaje = 'Buscando proveedor...';
         renderizarArchivos();
+        actualizarIndicadorProcesamiento('Buscando/creando proveedor...');
         
         const proveedorId = await buscarOCrearProveedorSilencioso(datosOCR.proveedor);
         item.progreso = 60;
@@ -270,6 +273,7 @@ async function procesarArchivo(item) {
         // 3. Guardar factura
         item.mensaje = 'Guardando factura...';
         renderizarArchivos();
+        actualizarIndicadorProcesamiento('Guardando factura en base de datos...');
         
         const resultado = await guardarFactura(item.archivo, datosOCR, proveedorId);
         item.progreso = 100;
@@ -297,6 +301,7 @@ async function procesarArchivo(item) {
     
     actualizarStats();
     renderizarArchivos();
+    ocultarIndicadorProcesamiento();
 }
 
 async function escanearFactura(archivo) {
@@ -483,6 +488,30 @@ async function guardarFactura(archivo, datosOCR, proveedorId) {
 }
 
 // ============================================================================
+// INDICADOR DE PROCESAMIENTO
+// ============================================================================
+
+function mostrarIndicadorProcesamiento(filename, status) {
+    const indicator = document.getElementById('processingIndicator');
+    const filenameEl = document.getElementById('processingFilename');
+    const statusEl = document.getElementById('processingStatusText');
+    
+    filenameEl.textContent = filename;
+    statusEl.textContent = status;
+    indicator.style.display = 'flex';
+}
+
+function actualizarIndicadorProcesamiento(status) {
+    const statusEl = document.getElementById('processingStatusText');
+    statusEl.textContent = status;
+}
+
+function ocultarIndicadorProcesamiento() {
+    const indicator = document.getElementById('processingIndicator');
+    indicator.style.display = 'none';
+}
+
+// ============================================================================
 // UTILIDADES
 // ============================================================================
 
@@ -504,6 +533,7 @@ function cancelar() {
     document.getElementById('logContainer').innerHTML = '';
     document.getElementById('logContainer').classList.remove('active');
     document.getElementById('fileInput').value = '';
+    ocultarIndicadorProcesamiento();
     
     cargarProveedores();
     addLog('🔄 Sistema reiniciado', 'info');
