@@ -85,33 +85,16 @@ function configurarEventListeners() {
 
 function establecerTrimestreActual() {
     const hoy = new Date();
-    const mes = hoy.getMonth(); // 0-11
     const año = hoy.getFullYear();
     
-    let mesInicio, mesFin;
-    
-    // Determinar trimestre actual
-    if (mes < 3) { // Q1: Ene-Mar
-        mesInicio = 0;
-        mesFin = 2;
-    } else if (mes < 6) { // Q2: Abr-Jun
-        mesInicio = 3;
-        mesFin = 5;
-    } else if (mes < 9) { // Q3: Jul-Sep
-        mesInicio = 6;
-        mesFin = 8;
-    } else { // Q4: Oct-Dic
-        mesInicio = 9;
-        mesFin = 11;
-    }
-    
-    const fechaInicio = new Date(año, mesInicio, 1);
-    const fechaFin = new Date(año, mesFin + 1, 0); // Último día del mes
+    // Desde el 1 de enero hasta hoy
+    const fechaInicio = new Date(año, 0, 1); // 1 de enero del año actual
+    const fechaFin = hoy; // Fecha actual
     
     document.getElementById('startDate').value = formatearFechaInput(fechaInicio);
     document.getElementById('endDate').value = formatearFechaInput(fechaFin);
     
-    console.log(`[Facturas] Trimestre actual establecido: ${formatearFechaInput(fechaInicio)} - ${formatearFechaInput(fechaFin)}`);
+    console.log(`[Facturas] Rango establecido: ${formatearFechaInput(fechaInicio)} - ${formatearFechaInput(fechaFin)}`);
 }
 
 function establecerTrimestreEspecifico(trimestre) {
