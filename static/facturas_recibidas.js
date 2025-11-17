@@ -7,7 +7,7 @@ import { mostrarNotificacion } from './notificaciones.js';
 
 // Variables globales
 let paginaActual = 1;
-let porPagina = parseInt(sessionStorage.getItem('facturas_por_pagina')) || 25;
+let porPagina = parseInt(sessionStorage.getItem('facturas_por_pagina')) || 20;
 let totalPaginas = 1;
 let proveedores = [];
 let filtrosActuales = {};

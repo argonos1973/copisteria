@@ -425,7 +425,7 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
     
     # Paginación
     pagina = filtros.get('pagina', 1)
-    por_pagina = filtros.get('por_pagina', 25)
+    por_pagina = filtros.get('por_pagina', 20)
     offset = (pagina - 1) * por_pagina
     
     query += " LIMIT ? OFFSET ?"
