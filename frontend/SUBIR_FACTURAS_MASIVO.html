@@ -86,6 +86,28 @@
         
         .files-list {
             margin-top: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        /* Estilo del scrollbar */
+        .files-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .files-list::-webkit-scrollbar-track {
+            background: var(--card-bg, #f1f1f1);
+            border-radius: 4px;
+        }
+        
+        .files-list::-webkit-scrollbar-thumb {
+            background: var(--border-color, #888);
+            border-radius: 4px;
+        }
+        
+        .files-list::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary, #555);
         }
         
         .file-item {
