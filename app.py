@@ -1748,10 +1748,15 @@ def descargar_pdf_factura_endpoint(factura_id):
             return jsonify({'error': 'PDF no encontrado'}), 404
         
         ruta_archivo = resultado[0]
-        ruta_completa = os.path.join('/var/www/html', ruta_archivo)
+        
+        # Construir ruta completa: facturas_proveedores/ + ruta_relativa
+        ruta_completa = os.path.join('/var/www/html/facturas_proveedores', ruta_archivo)
+        
+        logger.info(f"Intentando descargar PDF: {ruta_completa}")
         
         if not os.path.exists(ruta_completa):
-            return jsonify({'error': 'Archivo no existe en el servidor'}), 404
+            logger.error(f"Archivo no existe: {ruta_completa}")
+            return jsonify({'error': 'Archivo no existe en el servidor', 'ruta': ruta_archivo}), 404
         
         from flask import send_file
         return send_file(ruta_completa, mimetype='application/pdf', as_attachment=True)
