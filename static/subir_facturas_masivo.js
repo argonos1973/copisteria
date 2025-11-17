@@ -326,9 +326,13 @@ async function procesarArchivo(item) {
         item.progreso = 40;
         item.datos = datosOCR;
         renderizarArchivos();
-        actualizarIndicadorProcesamiento('Extrayendo datos del proveedor...');
         
-        addLog(`  ✓ OCR completado: ${datosOCR.proveedor?.nombre || 'Sin nombre'}`, 'success');
+        // Actualizar indicador con proveedor y total
+        const proveedor = datosOCR.proveedor?.nombre || 'Sin nombre';
+        const total = datosOCR.factura?.total || '0.00';
+        actualizarIndicadorConDatos(proveedor, total, 'Extrayendo datos del proveedor...');
+        
+        addLog(`  ✓ OCR completado: ${proveedor}`, 'success');
         
         // 2. Buscar o crear proveedor
         item.mensaje = 'Buscando proveedor...';
@@ -575,6 +579,16 @@ function mostrarIndicadorProcesamiento(filename, status) {
 function actualizarIndicadorProcesamiento(status) {
     const statusEl = document.getElementById('processingStatusText');
     statusEl.textContent = status;
+}
+
+function actualizarIndicadorConDatos(proveedor, total, status) {
+    const providerEl = document.getElementById('processingProvider');
+    const totalEl = document.getElementById('processingTotal');
+    const statusEl = document.getElementById('processingStatusText');
+    
+    if (providerEl) providerEl.textContent = `🏢 ${proveedor}`;
+    if (totalEl) totalEl.textContent = `💰 ${parseFloat(total).toFixed(2)}€`;
+    if (statusEl) statusEl.textContent = status;
 }
 
 function ocultarIndicadorProcesamiento() {
