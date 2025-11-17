@@ -1381,14 +1381,17 @@ def subir_factura_proveedor():
                 'info': 'Factura duplicada, no se ha insertado'
             }), 200
         
+        # Marcar como pagada automáticamente (facturas escaneadas ya están pagadas)
+        fecha_pago = fecha_emision if fecha_emision else datetime.now().strftime('%Y-%m-%d')
+        
         cursor.execute('''
             INSERT INTO facturas_proveedores (
                 empresa_id, proveedor_id, numero_factura, fecha_emision,
                 fecha_vencimiento, base_imponible, iva_importe, total, concepto,
-                estado, usuario_alta
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', ?)
+                estado, fecha_pago, metodo_pago, usuario_alta
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pagada', ?, 'transferencia', ?)
         ''', (empresa_id, proveedor_id, numero_factura, fecha_emision,
-              fecha_vencimiento or None, base_imponible, iva, total, concepto, usuario))
+              fecha_vencimiento or None, base_imponible, iva, total, concepto, fecha_pago, usuario))
         
         factura_id = cursor.lastrowid
         
@@ -1437,6 +1440,15 @@ def subir_factura_proveedor():
                     archivos_guardados.append(ruta_relativa)
                     
                     logger.info(f"Archivo guardado: {ruta_relativa}")
+            
+            # Actualizar ruta_archivo en la BD con el primer archivo guardado
+            if archivos_guardados:
+                cursor.execute('''
+                    UPDATE facturas_proveedores 
+                    SET ruta_archivo = ?
+                    WHERE id = ?
+                ''', (archivos_guardados[0], factura_id))
+                logger.info(f"Ruta archivo actualizada en BD: {archivos_guardados[0]}")
         
         # Registrar en historial
         cursor.execute('''
