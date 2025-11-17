@@ -496,6 +496,8 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
     # Calcular resúmenes
     cursor.execute("""
         SELECT 
+            COALESCE(SUM(base_imponible), 0) as total_base,
+            COALESCE(SUM(iva_importe), 0) as total_iva,
             COALESCE(SUM(total), 0) as total_general,
             COALESCE(SUM(CASE WHEN estado = 'pendiente' THEN total ELSE 0 END), 0) as total_pendiente,
             COALESCE(SUM(CASE WHEN estado = 'pagada' THEN total ELSE 0 END), 0) as total_pagado,

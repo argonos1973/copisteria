@@ -377,15 +377,13 @@ function actualizarResumen(data) {
     document.getElementById('resumenVencido').textContent = formatearImporte(data.total_vencido || 0);
     
     // Actualizar footer fijo
+    const footerBase = document.getElementById('footerBase');
+    const footerIVA = document.getElementById('footerIVA');
     const footerTotal = document.getElementById('footerTotal');
-    const footerPendiente = document.getElementById('footerPendiente');
-    const footerPagado = document.getElementById('footerPagado');
-    const footerVencido = document.getElementById('footerVencido');
     
+    if (footerBase) footerBase.textContent = formatearImporte(data.total_base || 0);
+    if (footerIVA) footerIVA.textContent = formatearImporte(data.total_iva || 0);
     if (footerTotal) footerTotal.textContent = formatearImporte(data.total_general || 0);
-    if (footerPendiente) footerPendiente.textContent = formatearImporte(data.total_pendiente || 0);
-    if (footerPagado) footerPagado.textContent = formatearImporte(data.total_pagado || 0);
-    if (footerVencido) footerVencido.textContent = formatearImporte(data.total_vencido || 0);
 }
 
 function actualizarPaginacion(data) {
