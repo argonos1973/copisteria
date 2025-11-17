@@ -132,7 +132,78 @@ function agregarArchivos(files) {
         renderizarArchivos();
         mostrarControles();
         addLog(`📁 ${archivosArray.length} archivo(s) agregado(s)`, 'info');
+        
+        // Mostrar notificación de confirmación para iniciar proceso
+        mostrarNotificacionConfirmacion();
     }
+}
+
+async function mostrarNotificacionConfirmacion() {
+    const totalArchivos = archivosSeleccionados.length;
+    const mensaje = `Se han cargado ${totalArchivos} factura${totalArchivos > 1 ? 's' : ''}. ¿Deseas iniciar el procesamiento automático?`;
+    
+    // Crear diálogo de confirmación personalizado
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+    
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 500px;
+        text-align: center;
+    `;
+    
+    dialog.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <i class="fas fa-file-invoice" style="font-size: 48px; color: #667eea;"></i>
+        </div>
+        <h3 style="margin-bottom: 15px; color: #333;">Procesar Facturas</h3>
+        <p style="margin-bottom: 25px; color: #666; font-size: 16px;">${mensaje}</p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btnConfirmarProcesar" class="btn btn-primary" style="padding: 10px 30px;">
+                <i class="fas fa-play"></i> Procesar Ahora
+            </button>
+            <button id="btnCancelarProcesar" class="btn btn-secondary" style="padding: 10px 30px;">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>
+    `;
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    // Event listeners
+    document.getElementById('btnConfirmarProcesar').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        procesarTodas();
+    });
+    
+    document.getElementById('btnCancelarProcesar').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        mostrarNotificacion('Procesamiento cancelado. Puedes procesarlas cuando quieras.', 'info');
+    });
+    
+    // Cerrar al hacer click fuera del diálogo
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+            mostrarNotificacion('Procesamiento cancelado. Puedes procesarlas cuando quieras.', 'info');
+        }
+    });
 }
 
 function renderizarArchivos() {
