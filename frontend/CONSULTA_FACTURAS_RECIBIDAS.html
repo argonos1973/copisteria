@@ -281,6 +281,24 @@
 
     </div>
 
+    <!-- Footer fijo con totales -->
+    <div class="fixed-footer fixed-footer-factura">
+        <table class="grid">
+            <tr>
+                <td class="label-totales" style="width: 100px;"><span class="content-cell hidden"><strong>Totales:</strong></span></td>
+                <td style="width: 250px;"><span class="content-cell hidden" id="footerTotal">0,00€</span></td>
+                <td style="width: 120px;"><span class="content-cell hidden" id="footerPendiente">0,00€</span></td>
+                <td style="width: 120px;"><span class="content-cell hidden" id="footerPagado">0,00€</span></td>
+                <td style="width: 120px;"><span class="content-cell hidden" id="footerVencido">0,00€</span></td>
+                <td>
+                    <div class="toggle-totals" role="button" tabindex="0" aria-pressed="false" aria-label="Mostrar/Ocultar totales">
+                        <i class="fas fa-eye-slash"></i>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
     <!-- Notificaciones (reutilizando tu sistema) -->
     <div id="notificaciones"></div>
 
@@ -298,5 +316,60 @@
             .catch(error => console.error('Error cargando modales:', error));
     </script>
     <script type="module" src="/static/facturas_recibidas.js?v=1762757322"></script>
+    
+    <!-- Script para toggle de totales en footer -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleTotals = document.querySelector('.toggle-totals');
+            const totalDataCells = document.querySelectorAll('.fixed-footer-factura .content-cell');
+            const icon = toggleTotals.querySelector('i');
+
+            function updateIcon(show) {
+                if (show) {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                    toggleTotals.setAttribute('aria-pressed', 'true');
+                } else {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                    toggleTotals.setAttribute('aria-pressed', 'false');
+                }
+            }
+
+            function showTotals() {
+                totalDataCells.forEach(cell => cell.classList.remove('hidden'));
+                updateIcon(true);
+            }
+
+            function hideTotals() {
+                totalDataCells.forEach(cell => cell.classList.add('hidden'));
+                updateIcon(false);
+            }
+
+            const totalsVisible = sessionStorage.getItem('totalsVisible');
+            if (totalsVisible === 'true') {
+                showTotals();
+            } else {
+                hideTotals();
+            }
+
+            toggleTotals.addEventListener('click', function() {
+                let currentlyVisible = sessionStorage.getItem('totalsVisible') === 'true';
+                if (currentlyVisible) {
+                    hideTotals();
+                } else {
+                    showTotals();
+                }
+                sessionStorage.setItem('totalsVisible', !currentlyVisible);
+            });
+
+            toggleTotals.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggleTotals.click();
+                }
+            });
+        });
+    </script>
 </body>
 </html>
