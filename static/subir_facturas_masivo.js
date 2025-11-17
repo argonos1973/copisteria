@@ -308,6 +308,12 @@ async function escanearFactura(archivo) {
         body: formData
     });
     
+    // Verificar si la respuesta es HTML (sesión expirada)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+        throw new Error('Sesión expirada. Por favor, recarga la página y vuelve a iniciar sesión.');
+    }
+    
     const data = await response.json();
     
     if (!data.success) {
@@ -393,6 +399,12 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
         body: JSON.stringify(nuevoProveedor)
     });
     
+    // Verificar si la respuesta es HTML (sesión expirada)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+        throw new Error('Sesión expirada. Por favor, recarga la página y vuelve a iniciar sesión.');
+    }
+    
     const data = await response.json();
     
     if (data.success) {
@@ -445,6 +457,12 @@ async function guardarFactura(archivo, datosOCR, proveedorId) {
         method: 'POST',
         body: formData
     });
+    
+    // Verificar si la respuesta es HTML (sesión expirada)
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('text/html')) {
+        throw new Error('Sesión expirada. Por favor, recarga la página y vuelve a iniciar sesión.');
+    }
     
     const data = await response.json();
     
