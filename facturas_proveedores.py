@@ -559,16 +559,20 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
             iva_pct = datos_factura.get('iva_porcentaje', 21)
             iva_importe = round(base * iva_pct / 100, 2)
         
+        # Marcar como pagada automáticamente con fecha de emisión como fecha de pago
+        fecha_pago = fecha_emision if fecha_emision else datetime.now().strftime('%Y-%m-%d')
+        
         cursor.execute("""
             INSERT INTO facturas_proveedores (
                 empresa_id, proveedor_id, numero_factura,
                 fecha_emision, fecha_vencimiento,
                 base_imponible, iva_porcentaje, iva_importe, total,
-                estado, ruta_archivo, pdf_hash, email_origen,
+                estado, fecha_pago, metodo_pago,
+                ruta_archivo, pdf_hash, email_origen,
                 trimestre, año,
                 metodo_extraccion, confianza_extraccion, revisado,
                 usuario_alta, concepto, notas
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             empresa_id,
             proveedor_id,
@@ -579,7 +583,9 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
             datos_factura.get('iva_porcentaje', 21),
             iva_importe,
             datos_factura.get('total'),
-            'pendiente',
+            'pagada',  # Marcar como pagada automáticamente
+            fecha_pago,  # Fecha de pago = fecha de emisión
+            'transferencia',  # Método de pago por defecto
             ruta_pdf,
             pdf_hash,
             email_origen,
