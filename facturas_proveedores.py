@@ -267,8 +267,15 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
         conn.rollback()
         error_msg = str(e).lower()
         if 'unique' in error_msg and 'nif' in error_msg:
-            logger.error(f"Error: Ya existe un proveedor con NIF {nif} en esta empresa")
-            raise Exception(f"Ya existe un proveedor con ese NIF en esta empresa")
+            # Buscar el proveedor existente y devolverlo
+            logger.warning(f"Proveedor con NIF {nif} ya existe, buscando...")
+            proveedor_existente = obtener_proveedor_por_nif(nif, empresa_id)
+            if proveedor_existente:
+                logger.info(f"✓ Proveedor existente encontrado: {proveedor_existente['nombre']} (ID: {proveedor_existente['id']})")
+                return proveedor_existente['id']
+            else:
+                logger.error(f"Error: Proveedor con NIF {nif} existe pero no se pudo recuperar")
+                raise Exception(f"Error de consistencia: proveedor existe pero no se pudo recuperar")
         else:
             logger.error(f"Error de integridad creando proveedor: {e}")
             raise Exception(f"Error de integridad en la base de datos: {str(e)}")
