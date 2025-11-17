@@ -418,6 +418,57 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
         busqueda = f"%{filtros['busqueda']}%"
         params.extend([busqueda, busqueda, busqueda])
     
+    # Contar total CON LOS MISMOS FILTROS (antes de ordenar y paginar)
+    query_count = """
+        SELECT COUNT(*) as total
+        FROM facturas_proveedores f
+        INNER JOIN proveedores p ON f.proveedor_id = p.id
+        WHERE f.empresa_id = ?
+    """
+    
+    params_count = [empresa_id]
+    
+    # Aplicar los mismos filtros al conteo
+    if filtros.get('proveedor_id'):
+        query_count += " AND f.proveedor_id = ?"
+        params_count.append(filtros['proveedor_id'])
+    
+    if filtros.get('estado') and filtros['estado'] != 'todos':
+        if filtros['estado'] == 'vencida':
+            query_count += " AND f.fecha_vencimiento < date('now') AND f.estado != 'pagada'"
+        else:
+            query_count += " AND f.estado = ?"
+            params_count.append(filtros['estado'])
+    
+    if filtros.get('fecha_desde'):
+        query_count += " AND f.fecha_emision >= ?"
+        params_count.append(filtros['fecha_desde'])
+    
+    if filtros.get('fecha_hasta'):
+        query_count += " AND f.fecha_emision <= ?"
+        params_count.append(filtros['fecha_hasta'])
+    
+    if filtros.get('trimestre') and filtros['trimestre'] != 'todos':
+        if filtros['trimestre'] == 'actual':
+            trimestre, año, _, _ = obtener_trimestre_actual()
+            query_count += " AND f.trimestre = ? AND f.año = ?"
+            params_count.extend([trimestre, año])
+        else:
+            query_count += " AND f.trimestre = ?"
+            params_count.append(filtros['trimestre'])
+    
+    if filtros.get('busqueda'):
+        query_count += """ AND (
+            f.numero_factura LIKE ? OR
+            p.nombre LIKE ? OR
+            f.concepto LIKE ?
+        )"""
+        busqueda = f"%{filtros['busqueda']}%"
+        params_count.extend([busqueda, busqueda, busqueda])
+    
+    cursor.execute(query_count, params_count)
+    total = cursor.fetchone()['total']
+    
     # Ordenamiento
     orden_campo = filtros.get('orden_campo', 'fecha_emision')
     orden_dir = filtros.get('orden_direccion', 'DESC')
@@ -431,19 +482,9 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
     query += " LIMIT ? OFFSET ?"
     params.extend([por_pagina, offset])
     
-    # Ejecutar
+    # Ejecutar consulta de facturas
     cursor.execute(query, params)
     facturas = [dict(row) for row in cursor.fetchall()]
-    
-    # Contar total
-    cursor.execute("""
-        SELECT COUNT(*) as total
-        FROM facturas_proveedores f
-        INNER JOIN proveedores p ON f.proveedor_id = p.id
-        WHERE f.empresa_id = ?
-    """, [empresa_id])
-    
-    total = cursor.fetchone()['total']
     
     # Calcular resúmenes
     cursor.execute("""
