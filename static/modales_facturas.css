@@ -190,18 +190,18 @@
 }
 
 .badge.pendiente {
-    background: #fff3cd;
-    color: #856404;
+    background: var(--badge-warning-bg, #fff3cd);
+    color: var(--badge-warning-text, #856404);
 }
 
 .badge.pagada {
-    background: #d4edda;
-    color: #155724;
+    background: var(--badge-success-bg, #d4edda);
+    color: var(--badge-success-text, #155724);
 }
 
 .badge.vencida {
-    background: #f8d7da;
-    color: #721c24;
+    background: var(--badge-danger-bg, #f8d7da);
+    color: var(--badge-danger-text, #721c24);
 }
 
 /* Tabla Simple */
@@ -332,7 +332,7 @@
 /* Info Box */
 .info-box {
     padding: 16px;
-    background: #e7f3ff;
+    background: var(--info-box-bg, #e7f3ff);
     border-left: 4px solid var(--primary-color, #007bff);
     border-radius: 4px;
     margin: 16px 0;
@@ -382,21 +382,21 @@
 }
 
 .btn-secondary {
-    background: #6c757d;
-    color: white;
+    background: var(--secondary-color, #6c757d);
+    color: var(--button-text, white);
 }
 
 .btn-secondary:hover {
-    background: #5a6268;
+    background: var(--secondary-dark, #5a6268);
 }
 
 .btn-success {
-    background: #28a745;
-    color: white;
+    background: var(--success-color, #28a745);
+    color: var(--button-text, white);
 }
 
 .btn-success:hover {
-    background: #218838;
+    background: var(--success-dark, #218838);
 }
 
 /* Responsive */
