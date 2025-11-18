@@ -57,7 +57,7 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.cursor()
-        cur.execute("SELECT numero, fecha, total FROM tickets WHERE id = ?", (ticket_id,))
+        cur.execute("SELECT numero, fecha, total, empresa_id FROM tickets WHERE id = ?", (ticket_id,))
         trow = cur.fetchone()
         cur.execute(
             "SELECT hash FROM registro_facturacion WHERE factura_id = ? LIMIT 1",
@@ -175,8 +175,11 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
     now = datetime.now()
     timestamp = now.strftime("%Y%m%d%H%M%S")
     base_dir = "/var/www/html/aeat_responses"
-    # Organizar por año/mes: aeat_responses/YYYY/MM
-    year_dir = os.path.join(base_dir, now.strftime("%Y"))
+    # Obtener empresa_id del ticket
+    empresa_id = trow.get('empresa_id', 'default') if trow else 'default'
+    # Organizar por empresa/año/mes: aeat_responses/empresa_id/YYYY/MM
+    empresa_dir = os.path.join(base_dir, str(empresa_id))
+    year_dir = os.path.join(empresa_dir, now.strftime("%Y"))
     resp_dir = os.path.join(year_dir, now.strftime("%m"))
     try:
         os.makedirs(resp_dir, mode=0o777, exist_ok=True)

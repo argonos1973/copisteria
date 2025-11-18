@@ -115,14 +115,16 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
     if not ruta_salida_xml:
         fecha = datos_factura.get('fecha')
         numero = datos_factura.get('numero', 'factura')
+        empresa_id = datos_factura.get('empresa_id', 'default')
+        
         if fecha:
             ano, mes = fecha.split('-')[0], fecha.split('-')[1]
         else:
             now = datetime.now()
             ano, mes = str(now.year), str(now.month).zfill(2)
             
-        # Usar la ruta de producción para guardar las facturas
-        dir_destino = f"/var/www/html/factura_e/{ano}/{mes}"
+        # Usar la ruta de producción para guardar las facturas con multiempresa
+        dir_destino = f"/var/www/html/factura_e/{empresa_id}/{ano}/{mes}"
         print(f"Usando directorio de salida: {dir_destino}")
         os.makedirs(dir_destino, exist_ok=True)
         ruta_salida_xml = os.path.join(dir_destino, f"{numero}.xml")

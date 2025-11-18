@@ -445,6 +445,7 @@ def enviar_registro_aeat(factura_id: int) -> dict:
        f.total   AS importe_total,
        f.hash_factura,
        f.nif     AS nif_emisor,
+       f.empresa_id,
        c.identificador AS nif_receptor,
        c.razonsocial   AS nombre_receptor
   FROM factura f
@@ -609,8 +610,11 @@ def enviar_registro_aeat(factura_id: int) -> dict:
     now = datetime.now()
     timestamp = now.strftime("%Y%m%d%H%M%S")
     base_dir = "/var/www/html/aeat_responses"
-    # Organizar por año/mes: aeat_responses/YYYY/MM
-    year_dir = os.path.join(base_dir, now.strftime("%Y"))
+    # Obtener empresa_id de la factura
+    empresa_id = row.get('empresa_id', 'default')
+    # Organizar por empresa/año/mes: aeat_responses/empresa_id/YYYY/MM
+    empresa_dir = os.path.join(base_dir, str(empresa_id))
+    year_dir = os.path.join(empresa_dir, now.strftime("%Y"))
     resp_dir = os.path.join(year_dir, now.strftime("%m"))
     try:
         os.makedirs(resp_dir, mode=0o777, exist_ok=True)

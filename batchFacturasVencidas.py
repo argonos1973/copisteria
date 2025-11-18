@@ -26,8 +26,8 @@ logging.basicConfig(
 
 logger = logging.getLogger('batchFacturasVencidas')
 
-# Directorio para guardar las cartas de reclamación
-CARTAS_DIR = '/var/www/html/cartas_reclamacion'
+# Directorio base para guardar las cartas de reclamación
+CARTAS_BASE_DIR = '/var/www/html/cartas_reclamacion'
 
 def generar_carta_reclamacion(factura_data, dias_vencidos):
     """
@@ -41,8 +41,12 @@ def generar_carta_reclamacion(factura_data, dias_vencidos):
         str: Ruta del archivo PDF generado o None si hay error
     """
     try:
-        # Crear directorio si no existe
-        os.makedirs(CARTAS_DIR, exist_ok=True)
+        # Obtener empresa_id de la factura
+        empresa_id = factura_data.get('empresa_id', 'default')
+        
+        # Crear directorio específico para la empresa
+        cartas_dir = os.path.join(CARTAS_BASE_DIR, str(empresa_id))
+        os.makedirs(cartas_dir, exist_ok=True)
         
         # Leer datos del emisor desde JSON
         import json
@@ -165,7 +169,7 @@ def generar_carta_reclamacion(factura_data, dias_vencidos):
         
         # Generar PDF
         pdf_filename = f"carta_reclamacion_{factura_data['numero']}_{datetime.now().strftime('%Y%m%d')}.pdf"
-        pdf_path = os.path.join(CARTAS_DIR, pdf_filename)
+        pdf_path = os.path.join(cartas_dir, pdf_filename)
         
         HTML(string=html_content).write_pdf(pdf_path)
         logger.info(f"Carta de reclamación generada: {pdf_path}")
