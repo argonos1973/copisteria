@@ -41,10 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function configurarEventListeners() {
-    // Botones de acción
-    document.getElementById('btnExportar').addEventListener('click', exportarExcel);
-    document.getElementById('btnSubir').addEventListener('click', subirFactura);
-    
     // Búsqueda interactiva en todos los filtros con debounce
     const filtros = ['proveedorFilter', 'estadoFilter', 'startDate', 'endDate', 'busquedaFilter'];
     filtros.forEach(filtroId => {
@@ -69,13 +65,6 @@ function configurarEventListeners() {
         sessionStorage.setItem('facturas_por_pagina', porPagina);
         paginaActual = 1;
         cargarFacturas();
-    });
-    
-    
-    // Select all checkboxes
-    document.getElementById('selectAll').addEventListener('change', (e) => {
-        const checkboxes = document.querySelectorAll('.select-factura');
-        checkboxes.forEach(cb => cb.checked = e.target.checked);
     });
 }
 
