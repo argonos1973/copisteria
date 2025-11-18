@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1763503991';
 import { formatearImporte, formatearFecha, formatearFechaSoloDia } from './scripts_utils.js';
 import { mostrarNotificacion } from './notificaciones.js';
 
@@ -206,6 +206,31 @@ async function rellenarFactura(datos, emisor) {
     // Verificar datos obligatorios
     if (!factura.numero || !factura.fecha) {
         throw new Error('Datos básicos de factura incompletos');
+    }
+    
+    // Cargar logo de la empresa
+    try {
+        const brandingResponse = await fetch('/api/auth/branding', { credentials: 'include' });
+        if (brandingResponse.ok) {
+            const branding = await brandingResponse.json();
+            const logoElement = document.getElementById('logo');
+            
+            if (logoElement && branding.logo_header) {
+                // Construir URL completa del logo
+                const logoUrl = branding.logo_header.startsWith('/') 
+                    ? branding.logo_header 
+                    : `/static/logos/${branding.logo_header}`;
+                    
+                logoElement.src = logoUrl;
+                logoElement.onerror = function() {
+                    console.error('[FACTURA] Error cargando logo:', logoUrl);
+                    this.src = '/static/logos/default_header.png';
+                };
+                console.log('[FACTURA] Logo configurado:', logoUrl);
+            }
+        }
+    } catch (error) {
+        console.error('[FACTURA] Error cargando branding:', error);
     }
 
     // Actualizar el título y datos de factura
