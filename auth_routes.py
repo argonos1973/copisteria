@@ -377,20 +377,10 @@ def obtener_menu():
                     # Admin ve todo, pero necesitamos agregar permisos a submódulos para el frontend
                     submenu_con_permisos = []
                     for submenu_item in submenu_completo:
-                        # Mapeo de nombres de submenús a códigos de módulo
-                        nombre_modulo_map = {
-                            'Tickets': 'tickets',
-                            'Facturas': 'facturas',
-                            'Proformas': 'proformas',
-                            'Exportar': 'exportar'
-                        }
-                        
                         submenu_item_copia = submenu_item.copy()
-                        nombre_sub = submenu_item.get('nombre', '')
-                        modulo_codigo_sub = nombre_modulo_map.get(nombre_sub)
                         
-                        # Si tiene código de módulo, agregar permisos completos
-                        if modulo_codigo_sub:
+                        # Si el submódulo tiene código (tickets, facturas, proformas), agregar permisos completos
+                        if 'codigo' in submenu_item:
                             submenu_item_copia['permisos'] = {
                                 'ver': 1,
                                 'crear': 1,
