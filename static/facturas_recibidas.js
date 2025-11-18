@@ -333,7 +333,7 @@ function renderizarTabla(facturas) {
                     </button>
                 ` : ''}
                 <button class="btn-action btn-danger" onclick="event.stopPropagation(); eliminarFactura(${factura.id})" title="Eliminar">
-                    ×
+                    &times;
                 </button>
             </td>
         `;
