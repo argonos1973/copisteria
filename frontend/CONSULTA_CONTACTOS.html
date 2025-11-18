@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <script src="/static/session_manager.js?v=1763502187"></script>
-    <script src="/static/permisos.js?v=1763502187"></script>
+    <script src="/static/session_manager.js?v=1762757322"></script>
+    <script src="/static/permisos.js?v=1762757322"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Consulta de Contactos</title>
@@ -170,7 +170,7 @@
               <td class="acciones-col">
                 <button
                   v-if="contacto.identificador"
-                  data-modulo="presupuestos"
+                  data-modulo="proformas"
                   data-accion="crear"
                   class="btn-icon"
                   :title="contacto.numero_proforma_abierta ? 'Modificar Proforma' : 'Crear Proforma'"
@@ -182,7 +182,7 @@
               <td class="acciones-col">
                 <button
                   v-if="contacto.identificador"
-                  data-modulo="facturas_emitidas"
+                  data-modulo="facturas"
                   data-accion="crear"
                   class="btn-icon"
                   title="Crear Factura"
@@ -321,7 +321,7 @@
         const crearProforma = (id) => {
           // Verificar permiso
           if (typeof verificarPermisoConAlerta !== 'undefined') {
-            if (!verificarPermisoConAlerta('presupuestos', 'crear')) {
+            if (!verificarPermisoConAlerta('proformas', 'crear')) {
               return;
             }
           }
@@ -336,7 +336,7 @@
         const crearFactura = (id) => {
           // Verificar permiso
           if (typeof verificarPermisoConAlerta !== 'undefined') {
-            if (!verificarPermisoConAlerta('facturas_emitidas', 'crear')) {
+            if (!verificarPermisoConAlerta('facturas', 'crear')) {
               return;
             }
           }
@@ -344,7 +344,7 @@
           console.log(`Crear Factura para el contacto ID:&& ${id}`);
           guardarFiltros();
           // Guardar origen para volver a la lista de facturas
-          sessionStorage.setItem('origenFactura', 'facturas_emitidas');
+          sessionStorage.setItem('origenFactura', 'facturas');
           window.location.href = `GESTION_FACTURAS.html?idContacto=${id}`;
           // TODO: Implementar la creación de factura
         };
