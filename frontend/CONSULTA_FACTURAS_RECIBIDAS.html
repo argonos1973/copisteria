@@ -57,19 +57,19 @@
         gap: 8px;
       }
       .alerta.roja {
-        background: #fee;
-        border-left: 4px solid #d32f2f;
-        color: #c62828;
+        background: var(--alert-danger-bg, #fee);
+        border-left: 4px solid var(--alert-danger-border, #d32f2f);
+        color: var(--alert-danger-text, #c62828);
       }
       .alerta.amarilla {
-        background: #fffbf0;
-        border-left: 4px solid #f57c00;
-        color: #e65100;
+        background: var(--alert-warning-bg, #fffbf0);
+        border-left: 4px solid var(--alert-warning-border, #f57c00);
+        color: var(--alert-warning-text, #e65100);
       }
       .alerta.naranja {
-        background: #fff3e0;
-        border-left: 4px solid #ff9800;
-        color: #e65100;
+        background: var(--alert-info-bg, #fff3e0);
+        border-left: 4px solid var(--alert-info-border, #ff9800);
+        color: var(--alert-info-text, #e65100);
       }
       .alerta a {
         color: inherit;
@@ -141,20 +141,20 @@
         color: white;
       }
       .btn-action.btn-success {
-        background: #28a745;
-        color: white;
+        background: var(--success-color, #28a745);
+        color: var(--button-text, white);
       }
       .btn-action.btn-info {
-        background: #17a2b8;
-        color: white;
+        background: var(--info-color, #17a2b8);
+        color: var(--button-text, white);
       }
       .btn-action.btn-warning {
-        background: #ffc107;
-        color: #333;
+        background: var(--warning-color, #ffc107);
+        color: var(--text-primary, #333);
       }
       .btn-action.btn-danger {
-        background: #dc3545;
-        color: white;
+        background: var(--danger-color, #dc3545);
+        color: var(--button-text, white);
       }
     </style>
 </head>
@@ -220,7 +220,7 @@
                 <label for="busquedaFilter">Buscar:</label>
                 <div style="position: relative; display: inline-block;">
                     <input type="text" id="busquedaFilter" placeholder="Nº factura, concepto...">
-                    <span id="searchingIndicator" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #ffc107;">
+                    <span id="searchingIndicator" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: var(--warning-color, #ffc107);">
                         <i class="fas fa-spinner fa-spin"></i>
                     </span>
                 </div>
@@ -228,7 +228,7 @@
         </div>
 
         <!-- Paginación superior -->
-        <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;">
+        <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid var(--border-color, #e0e0e0);border-radius:8px;">
           <div style="display:flex;align-items:center;gap:12px;">
             <button id="prevPage" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟨</button>
             <span id="pageInfo">Página 1 de 1</span>
