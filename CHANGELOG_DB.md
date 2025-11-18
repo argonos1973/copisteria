@@ -1,5 +1,18 @@
 # Changelog de Base de Datos
 
+## 2025-11-18 - Revertir nombre de módulo
+
+### Cambio
+Revertido el nombre del módulo de "Consultar" a "Facturas Emitidas"
+
+```sql
+UPDATE modulos SET nombre = 'Facturas Emitidas' WHERE codigo = 'facturas_emitidas';
+```
+
+**Base de datos:** `db/usuarios_sistema.db`
+
+---
+
 ## 2025-11-18 - Prevención de Duplicados (Código)
 
 ### Mejoras Implementadas
