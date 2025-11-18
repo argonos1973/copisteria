@@ -153,16 +153,20 @@
         color: var(--text-primary, #333);
       }
       .btn-action.btn-danger {
-        background: #dc3545 !important;
-        color: #ffffff !important;
-        font-size: 20px !important;
-        font-weight: 300 !important;
+        background: var(--danger-color, #dc3545) !important;
+        color: var(--button-text, white) !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
         line-height: 1 !important;
-        padding: 2px 8px !important;
+        padding: 4px 10px !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        min-width: 28px !important;
+        min-width: 32px !important;
+      }
+      .btn-action.btn-danger span {
+        display: block !important;
+        color: inherit !important;
       }
       .btn-action i {
         color: inherit !important;
@@ -296,6 +300,6 @@
             })
             .catch(error => console.error('Error cargando modales:', error));
     </script>
-    <script type="module" src="/static/facturas_recibidas.js?v=1763491988"></script>
+    <script type="module" src="/static/facturas_recibidas.js?v=1763492159"></script>
 </body>
 </html>

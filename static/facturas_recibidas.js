@@ -332,7 +332,7 @@ function renderizarTabla(facturas) {
                         <i class="fas fa-file-pdf"></i>
                     </button>
                 ` : ''}
-                <button class="btn-action btn-danger" style="color: white !important; background-color: #dc3545 !important;" onclick="event.stopPropagation(); eliminarFactura(${factura.id})" title="Eliminar">X</button>
+                <button class="btn-action btn-danger" onclick="event.stopPropagation(); eliminarFactura(${factura.id})" title="Eliminar"><span style="font-family: Arial, sans-serif;">X</span></button>
             </td>
         `;
         
