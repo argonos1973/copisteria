@@ -493,19 +493,61 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
     cursor.execute(query, params)
     facturas = [dict(row) for row in cursor.fetchall()]
     
-    # Calcular resúmenes
-    cursor.execute("""
+    # Calcular resúmenes CON LOS MISMOS FILTROS
+    query_resumen = """
         SELECT 
-            COALESCE(SUM(base_imponible), 0) as total_base,
-            COALESCE(SUM(iva_importe), 0) as total_iva,
-            COALESCE(SUM(total), 0) as total_general,
-            COALESCE(SUM(CASE WHEN estado = 'pendiente' THEN total ELSE 0 END), 0) as total_pendiente,
-            COALESCE(SUM(CASE WHEN estado = 'pagada' THEN total ELSE 0 END), 0) as total_pagado,
-            COALESCE(SUM(CASE WHEN fecha_vencimiento < date('now') AND estado != 'pagada' THEN total ELSE 0 END), 0) as total_vencido
-        FROM facturas_proveedores
-        WHERE empresa_id = ?
-    """, [empresa_id])
+            COALESCE(SUM(f.base_imponible), 0) as total_base,
+            COALESCE(SUM(f.iva_importe), 0) as total_iva,
+            COALESCE(SUM(f.total), 0) as total_general,
+            COALESCE(SUM(CASE WHEN f.estado = 'pendiente' THEN f.total ELSE 0 END), 0) as total_pendiente,
+            COALESCE(SUM(CASE WHEN f.estado = 'pagada' THEN f.total ELSE 0 END), 0) as total_pagado,
+            COALESCE(SUM(CASE WHEN f.fecha_vencimiento < date('now') AND f.estado != 'pagada' THEN f.total ELSE 0 END), 0) as total_vencido
+        FROM facturas_proveedores f
+        INNER JOIN proveedores p ON f.proveedor_id = p.id
+        WHERE f.empresa_id = ?
+    """
     
+    params_resumen = [empresa_id]
+    
+    # Aplicar los mismos filtros que a la consulta principal
+    if filtros.get('proveedor_id'):
+        query_resumen += " AND f.proveedor_id = ?"
+        params_resumen.append(filtros['proveedor_id'])
+    
+    if filtros.get('estado') and filtros['estado'] != 'todos':
+        if filtros['estado'] == 'vencida':
+            query_resumen += " AND f.fecha_vencimiento < date('now') AND f.estado != 'pagada'"
+        else:
+            query_resumen += " AND f.estado = ?"
+            params_resumen.append(filtros['estado'])
+    
+    if filtros.get('fecha_desde'):
+        query_resumen += " AND f.fecha_emision >= ?"
+        params_resumen.append(filtros['fecha_desde'])
+    
+    if filtros.get('fecha_hasta'):
+        query_resumen += " AND f.fecha_emision <= ?"
+        params_resumen.append(filtros['fecha_hasta'])
+    
+    if filtros.get('trimestre') and filtros['trimestre'] != 'todos':
+        if filtros['trimestre'] == 'actual':
+            trimestre, año, _, _ = obtener_trimestre_actual()
+            query_resumen += " AND f.trimestre = ? AND f.año = ?"
+            params_resumen.extend([trimestre, año])
+        else:
+            query_resumen += " AND f.trimestre = ?"
+            params_resumen.append(filtros['trimestre'])
+    
+    if filtros.get('busqueda'):
+        query_resumen += """ AND (
+            f.numero_factura LIKE ? OR
+            p.nombre LIKE ? OR
+            f.concepto LIKE ?
+        )"""
+        busqueda = f"%{filtros['busqueda']}%"
+        params_resumen.extend([busqueda, busqueda, busqueda])
+    
+    cursor.execute(query_resumen, params_resumen)
     resumen = dict(cursor.fetchone())
     
     conn.close()
