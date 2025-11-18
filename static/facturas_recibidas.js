@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function configurarEventListeners() {
     // Búsqueda interactiva en todos los filtros con debounce
-    const filtros = ['proveedorFilter', 'estadoFilter', 'startDate', 'endDate', 'busquedaFilter'];
+    const filtros = ['proveedorFilter', 'startDate', 'endDate', 'busquedaFilter'];
     filtros.forEach(filtroId => {
         const elemento = document.getElementById(filtroId);
         if (elemento) {
@@ -226,11 +226,6 @@ async function cargarFacturas() {
             filtros.proveedor_id = parseInt(proveedorId);
         }
         
-        // Filtro de estado
-        const estado = document.getElementById('estadoFilter').value;
-        if (estado !== 'todos') {
-            filtros.estado = estado;
-        }
         
         // Filtro de fechas
         const fechaDesde = document.getElementById('startDate').value;
@@ -410,9 +405,8 @@ function cambiarPagina(delta) {
 }
 
 function filtrarVencidas() {
-    document.getElementById('estadoFilter').value = 'vencida';
-    paginaActual = 1;
-    cargarFacturas();
+    // Función deshabilitada - filtro de estado eliminado
+    mostrarNotificacion('Filtro de estado eliminado', 'info');
 }
 
 async function exportarExcel() {
