@@ -332,6 +332,11 @@ function renderizarTabla(facturas) {
             <td style="text-align: right;">${formatearImporte(factura.iva_importe)}</td>
             <td style="text-align: right;"><strong>${formatearImporte(factura.total)}</strong></td>
             <td style="text-align: center;">
+                ${factura.ruta_archivo ? `
+                    <button class="btn-action btn-success" onclick="event.stopPropagation(); descargarPDF(${factura.id})" title="Descargar PDF">
+                        <i class="fas fa-file-pdf"></i>
+                    </button>
+                ` : ''}
                 <button class="btn-action btn-danger" onclick="event.stopPropagation(); eliminarFactura(${factura.id})" title="Eliminar">
                     <i class="fas fa-trash"></i>
                 </button>
