@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1763503991';
+import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1763504647';
 import { formatearImporte, formatearFecha, formatearFechaSoloDia } from './scripts_utils.js';
 import { mostrarNotificacion } from './notificaciones.js';
 
@@ -9,25 +9,37 @@ import { mostrarNotificacion } from './notificaciones.js';
 async function obtenerDatosEmisor() {
     try {
         const response = await fetch('/api/auth/emisor', { credentials: 'include' });
+        console.log('[EMISOR] Response status:', response.status);
+        
         if (!response.ok) {
-            throw new Error('No se pudo obtener datos del emisor');
+            const errorText = await response.text();
+            console.error('[EMISOR] Error response:', errorText);
+            throw new Error(`No se pudo obtener datos del emisor: ${response.status}`);
         }
+        
         const data = await response.json();
-        console.log('Datos emisor cargados:', data);
-        return data.emisor || {};
+        console.log('[EMISOR] Datos completos recibidos:', data);
+        
+        if (data.emisor) {
+            console.log('[EMISOR] Datos emisor extraídos:', data.emisor);
+            return data.emisor;
+        } else {
+            console.warn('[EMISOR] No se encontró objeto emisor en la respuesta');
+            return {};
+        }
     } catch (error) {
-        console.error('Error al obtener datos del emisor:', error);
-        // Retornar datos vacíos en caso de error
+        console.error('[EMISOR] Error crítico:', error);
+        // Datos de respaldo para pruebas
         return {
-            nombre: '',
-            nif: '',
-            direccion: '',
-            cp: '',
-            ciudad: '',
-            provincia: '',
+            nombre: 'COPISTERIA ALEPH70',
+            nif: 'B16488413',
+            direccion: 'ATALAYA 30',
+            cp: '28692',
+            ciudad: 'VILLAFRANCA DEL CASTILLO',
+            provincia: 'MADRID',
             pais: 'ESP',
-            email: '',
-            telefono: ''
+            email: 'info@copisteria.com',
+            telefono: '918150123'
         };
     }
 }
