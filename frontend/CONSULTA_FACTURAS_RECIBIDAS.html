@@ -78,6 +78,15 @@
         cursor: pointer;
       }
       
+      /* Filas clicables */
+      #facturasTable tbody tr {
+        transition: background-color 0.2s ease;
+      }
+      #facturasTable tbody tr:hover {
+        background-color: rgba(0, 123, 255, 0.05) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      
       /* Resumen de importes */
       .resumen-importes {
         display: flex;
@@ -253,10 +262,6 @@
                 <table id="facturasTable">
                     <thead>
                         <tr>
-                            <th style="width: 40px;">
-                                <input type="checkbox" id="selectAll">
-                            </th>
-                            <th style="width: 50px;">Estado</th>
                             <th>Proveedor</th>
                             <th>NIF</th>
                             <th>Nº Factura</th>
@@ -265,12 +270,12 @@
                             <th style="text-align: right;">Base</th>
                             <th style="text-align: right;">IVA</th>
                             <th style="text-align: right;">Total</th>
-                            <th style="width: 220px;">Acciones</th>
+                            <th style="width: 80px;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="facturasBody">
                         <tr>
-                            <td colspan="11" style="text-align: center; padding: 40px;">
+                            <td colspan="9" style="text-align: center; padding: 40px;">
                                 <i class="fas fa-spinner fa-spin"></i> Cargando facturas...
                             </td>
                         </tr>
@@ -285,8 +290,6 @@
     <div class="fixed-footer fixed-footer-factura">
         <table class="grid">
             <tr>
-                <td style="width: 40px;"></td>
-                <td style="width: 50px;"></td>
                 <td><span class="content-cell hidden"><strong>Totales:</strong></span></td>
                 <td></td>
                 <td></td>
@@ -295,7 +298,7 @@
                 <td style="text-align: right;"><span class="content-cell hidden" id="footerBase">0,00€</span></td>
                 <td style="text-align: right;"><span class="content-cell hidden" id="footerIVA">0,00€</span></td>
                 <td style="text-align: right;"><span class="content-cell hidden" id="footerTotal">0,00€</span></td>
-                <td style="width: 220px;">
+                <td style="width: 80px;">
                     <div class="toggle-totals" role="button" tabindex="0" aria-pressed="false" aria-label="Mostrar/Ocultar totales">
                         <i class="fas fa-eye-slash"></i>
                     </div>

@@ -317,49 +317,33 @@ function renderizarTabla(facturas) {
         const tr = document.createElement('tr');
         
         // Determinar color de fila según estado
+        // Color de fondo según estado
         if (factura.icono_estado === '🔴') {
             tr.style.backgroundColor = '#fff5f5';
         } else if (factura.icono_estado === '⚠️') {
             tr.style.backgroundColor = '#fffbf0';
         }
         
+        // Hacer toda la fila clicable (excepto botones)
+        tr.style.cursor = 'pointer';
+        tr.onclick = function(e) {
+            // No abrir si se hace click en un botón
+            if (!e.target.closest('button')) {
+                editarFactura(factura.id);
+            }
+        };
+        
         tr.innerHTML = `
-            <td>
-                <input type="checkbox" class="select-factura" data-id="${factura.id}">
-            </td>
-            <td class="estado-icon" title="${obtenerTituloEstado(factura)}">
-                ${factura.icono_estado}
-            </td>
             <td>${factura.proveedor_nombre}</td>
             <td>${factura.proveedor_nif}</td>
-            <td>
-                <a href="#" onclick="verDetalle(${factura.id}); return false;" style="font-weight: 600;">
-                    ${factura.numero_factura}
-                </a>
-            </td>
+            <td style="font-weight: 600;">${factura.numero_factura}</td>
             <td>${formatearFecha(factura.fecha_emision)}</td>
             <td>${formatearFecha(factura.fecha_vencimiento)}</td>
             <td style="text-align: right;">${formatearImporte(factura.base_imponible)}</td>
             <td style="text-align: right;">${formatearImporte(factura.iva_importe)}</td>
             <td style="text-align: right;"><strong>${formatearImporte(factura.total)}</strong></td>
-            <td>
-                <button class="btn-action btn-primary" onclick="verDetalle(${factura.id})" title="Ver detalle">
-                    <i class="fas fa-eye"></i>
-                </button>
-                ${factura.ruta_archivo ? `
-                    <button class="btn-action btn-success" onclick="descargarPDF(${factura.id})" title="Descargar PDF">
-                        <i class="fas fa-file-pdf"></i>
-                    </button>
-                ` : ''}
-                ${factura.estado !== 'pagada' ? `
-                    <button class="btn-action btn-info" onclick="marcarPagada(${factura.id})" title="Marcar como pagada">
-                        <i class="fas fa-check"></i>
-                    </button>
-                ` : ''}
-                <button class="btn-action btn-warning" onclick="editarFactura(${factura.id})" title="Editar">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn-action btn-danger" onclick="eliminarFactura(${factura.id})" title="Eliminar">
+            <td style="text-align: center;">
+                <button class="btn-action btn-danger" onclick="event.stopPropagation(); eliminarFactura(${factura.id})" title="Eliminar">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
