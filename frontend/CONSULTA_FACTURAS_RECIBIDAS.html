@@ -8,12 +8,12 @@
     <script src="/static/branding.js?v=1762757322"></script>
     <script src="/static/auto_branding.js?v=1762757322"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <link rel="stylesheet" href="../static/page_header.css?v=1763488231">
+    <link rel="stylesheet" href="../static/page_header.css?v=1763490551">
     <link rel="stylesheet" href="/static/theme-consumer.css?v=1762757322">
     <link rel="stylesheet" href="../static/styles.css?v=1762757322">
-    <link rel="stylesheet" href="../static/notificaciones.css?v=1763488231">
-    <link rel="stylesheet" href="../static/footer.css?v=1763488231">
-    <link rel="stylesheet" href="../static/modales_facturas.css?v=1763488003">
+    <link rel="stylesheet" href="../static/notificaciones.css?v=1763490551">
+    <link rel="stylesheet" href="../static/footer.css?v=1763490551">
+    <link rel="stylesheet" href="../static/modales_facturas.css?v=1763490551">
     <style>
       /* Vista Facturas Recibidas: layout a pantalla completa */
       .facturas-recibidas-page { padding-bottom: 0 !important; }
@@ -153,12 +153,16 @@
         color: var(--text-primary, #333);
       }
       .btn-action.btn-danger {
-        background: var(--danger-color, #dc3545) !important;
-        color: var(--button-text, white) !important;
-        font-size: 20px;
-        font-weight: 300;
-        line-height: 1;
-        padding: 2px 8px;
+        background: #dc3545 !important;
+        color: #ffffff !important;
+        font-size: 20px !important;
+        font-weight: 300 !important;
+        line-height: 1 !important;
+        padding: 2px 8px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-width: 28px !important;
       }
       .btn-action i {
         color: inherit !important;
@@ -292,6 +296,6 @@
             })
             .catch(error => console.error('Error cargando modales:', error));
     </script>
-    <script type="module" src="/static/facturas_recibidas.js?v=1763490213"></script>
+    <script type="module" src="/static/facturas_recibidas.js?v=1763490551"></script>
 </body>
 </html>
