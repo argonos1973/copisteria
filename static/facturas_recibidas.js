@@ -473,8 +473,27 @@ window.verDetalle = async function(facturaId) {
     }
 };
 
-window.descargarPDF = function(facturaId) {
-    window.open(`/api/facturas-proveedores/${facturaId}/pdf`, '_blank');
+window.descargarPDF = async function(facturaId) {
+    try {
+        // Verificar si el PDF existe
+        const response = await fetch(`/api/facturas-proveedores/${facturaId}/pdf`, {
+            method: 'HEAD' // Solo verificar headers, no descargar el archivo
+        });
+        
+        if (response.ok) {
+            // El archivo existe, abrirlo
+            window.open(`/api/facturas-proveedores/${facturaId}/pdf`, '_blank');
+        } else if (response.status === 404) {
+            // Archivo no encontrado
+            mostrarNotificacion('❌ El archivo PDF no existe en el servidor', 'error');
+        } else {
+            // Otro error
+            mostrarNotificacion('❌ Error al acceder al archivo PDF', 'error');
+        }
+    } catch (error) {
+        console.error('Error al verificar PDF:', error);
+        mostrarNotificacion('❌ Error al verificar el archivo PDF', 'error');
+    }
 };
 
 window.marcarPagada = async function(facturaId) {
@@ -676,9 +695,28 @@ window.cerrarModal = function(modalId) {
     }
 };
 
-window.descargarPDFDesdeModal = function() {
+window.descargarPDFDesdeModal = async function() {
     if (window.facturaDetalleId) {
-        window.open(`/api/facturas-proveedores/${window.facturaDetalleId}/pdf`, '_blank');
+        try {
+            // Verificar si el PDF existe
+            const response = await fetch(`/api/facturas-proveedores/${window.facturaDetalleId}/pdf`, {
+                method: 'HEAD'
+            });
+            
+            if (response.ok) {
+                // El archivo existe, abrirlo
+                window.open(`/api/facturas-proveedores/${window.facturaDetalleId}/pdf`, '_blank');
+            } else if (response.status === 404) {
+                // Archivo no encontrado
+                mostrarNotificacion('❌ El archivo PDF no existe en el servidor', 'error');
+            } else {
+                // Otro error
+                mostrarNotificacion('❌ Error al acceder al archivo PDF', 'error');
+            }
+        } catch (error) {
+            console.error('Error al verificar PDF:', error);
+            mostrarNotificacion('❌ Error al verificar el archivo PDF', 'error');
+        }
     }
 };
 
