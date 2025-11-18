@@ -163,17 +163,64 @@ def obtener_proveedor_por_id(proveedor_id, empresa_id):
     return dict(proveedor) if proveedor else None
 
 
+def normalizar_nif(nif):
+    """
+    Normaliza un NIF eliminando guiones, espacios y puntos
+    y convirtiéndolo a mayúsculas para comparación
+    
+    Args:
+        nif: NIF a normalizar
+    
+    Returns:
+        str: NIF normalizado (sin guiones, espacios, puntos, en mayúsculas)
+    """
+    if not nif:
+        return ''
+    
+    # Eliminar guiones, espacios, puntos y convertir a mayúsculas
+    nif_normalizado = nif.upper().strip()
+    nif_normalizado = nif_normalizado.replace('-', '')
+    nif_normalizado = nif_normalizado.replace(' ', '')
+    nif_normalizado = nif_normalizado.replace('.', '')
+    
+    return nif_normalizado
+
+
 def obtener_proveedor_por_nif(nif, empresa_id):
-    """Obtiene un proveedor por su NIF"""
+    """
+    Obtiene un proveedor por su NIF
+    Busca tanto por NIF exacto como por NIF normalizado para evitar duplicados
+    """
+    if not nif:
+        return None
+    
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    # Normalizar el NIF de búsqueda
+    nif_normalizado = normalizar_nif(nif)
+    
+    # Buscar por NIF exacto primero
     cursor.execute("""
         SELECT * FROM proveedores
         WHERE nif = ? AND empresa_id = ?
     """, (nif.upper().strip(), empresa_id))
     
     proveedor = cursor.fetchone()
+    
+    # Si no se encuentra, buscar por NIF normalizado
+    if not proveedor and nif_normalizado:
+        cursor.execute("""
+            SELECT * FROM proveedores
+            WHERE REPLACE(REPLACE(REPLACE(UPPER(nif), '-', ''), ' ', ''), '.', '') = ? 
+            AND empresa_id = ?
+        """, (nif_normalizado, empresa_id))
+        
+        proveedor = cursor.fetchone()
+        
+        if proveedor:
+            logger.info(f"✓ Proveedor encontrado por NIF normalizado: {dict(proveedor)['nombre']} (NIF original: {dict(proveedor)['nif']}, buscado: {nif})")
+    
     conn.close()
     
     return dict(proveedor) if proveedor else None
@@ -285,7 +332,8 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
 
 def obtener_o_crear_proveedor(nif, nombre, empresa_id, datos_adicionales=None, email_origen=None):
     """
-    Busca un proveedor por NIF, si no existe lo crea automáticamente
+    Busca un proveedor por NIF y nombre, si no existe lo crea automáticamente
+    Previene duplicados buscando por NIF normalizado y nombre similar
     
     Args:
         nif: NIF del proveedor
@@ -297,14 +345,29 @@ def obtener_o_crear_proveedor(nif, nombre, empresa_id, datos_adicionales=None, e
     Returns:
         int: ID del proveedor
     """
-    # Buscar proveedor existente
-    proveedor = obtener_proveedor_por_nif(nif, empresa_id)
+    # 1. Buscar por NIF (con normalización)
+    if nif:
+        proveedor = obtener_proveedor_por_nif(nif, empresa_id)
+        if proveedor:
+            logger.info(f"✓ Proveedor encontrado por NIF: {proveedor['nombre']} (ID: {proveedor['id']})")
+            return proveedor['id']
     
-    if proveedor:
-        logger.info(f"✓ Proveedor encontrado: {proveedor['nombre']} (ID: {proveedor['id']})")
-        return proveedor['id']
+    # 2. Buscar por nombre exacto (si no se encontró por NIF)
+    if nombre:
+        proveedor = obtener_proveedor_por_nombre(nombre, empresa_id)
+        if proveedor:
+            logger.warning(f"⚠️ Proveedor encontrado por nombre (NIF diferente): {proveedor['nombre']} (ID: {proveedor['id']}, NIF: {proveedor.get('nif')} vs {nif})")
+            # Actualizar NIF si el proveedor no tenía NIF o era diferente
+            if not proveedor.get('nif') and nif:
+                logger.info(f"Actualizando NIF del proveedor {proveedor['id']}: {nif}")
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("UPDATE proveedores SET nif = ? WHERE id = ?", (nif, proveedor['id']))
+                conn.commit()
+                conn.close()
+            return proveedor['id']
     
-    # No existe, crear nuevo
+    # 3. No existe, crear nuevo
     logger.info(f"⚠️ Proveedor no encontrado, creando automáticamente: {nombre} ({nif})")
     
     datos = {
