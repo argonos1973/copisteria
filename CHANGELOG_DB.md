@@ -1,5 +1,21 @@
 # Changelog de Base de Datos
 
+## 2025-11-18 - Prevención de Duplicados (Código)
+
+### Mejoras Implementadas
+Se ha modificado el código para **prevenir la creación de proveedores duplicados** en el futuro:
+
+1. **Normalización de NIF:** Elimina guiones, espacios y puntos para comparación
+2. **Búsqueda mejorada:** Busca por NIF normalizado y por nombre exacto
+3. **Actualización automática:** Si encuentra proveedor por nombre, actualiza NIF si falta
+
+**Formatos de NIF detectados como iguales:**
+- `A50561132` = `A-50561132` = `A 50561132` = `A.50.561.132`
+
+**Archivo modificado:** `facturas_proveedores.py`
+
+---
+
 ## 2025-11-18 - Consolidación de Proveedores Duplicados
 
 ### Problema
