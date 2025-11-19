@@ -279,9 +279,10 @@ def autenticar_usuario(username, password, empresa_codigo):
         else:
             # Verificar acceso a empresa
             cursor.execute('''
-                SELECT ue.rol, ue.es_admin_empresa, e.id, e.nombre, e.db_path, e.logo_header
+                SELECT u.rol, ue.es_admin_empresa, e.id, e.nombre, e.db_path, e.logo_header
                 FROM usuario_empresa ue
                 JOIN empresas e ON ue.empresa_id = e.id
+                JOIN usuarios u ON ue.usuario_id = u.id
                 WHERE ue.usuario_id = ? 
                 AND e.codigo = ?
                 AND e.activa = 1
