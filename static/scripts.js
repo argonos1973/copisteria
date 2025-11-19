@@ -266,6 +266,55 @@ function asociarEventos() {
     });
   }
 
+  // Botón "Anular" => anularTicket
+  const btnAnular = document.getElementById("btn-anular-ticket");
+  if (btnAnular) {
+    btnAnular.addEventListener('click', async () => {
+      const idticket = document.getElementById('idticket').value;
+      if (!idticket) {
+        mostrarNotificacion('No hay ticket seleccionado', 'error');
+        return;
+      }
+      
+      const confirmacion = await mostrarConfirmacion(
+        '¿Está seguro de que desea anular este ticket?',
+        'Esta acción creará un ticket rectificativo y no se puede deshacer.'
+      );
+      
+      if (!confirmacion) {
+        return;
+      }
+      
+      try {
+        mostrarCargando();
+        const response = await fetch(`${API_URL}/api/tickets/anular/${idticket}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'same-origin'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          mostrarNotificacion('Ticket anulado correctamente', 'success');
+          // Recargar el ticket para ver el estado actualizado
+          setTimeout(() => {
+            window.location.href = `CONSULTA_TICKETS.html`;
+          }, 1500);
+        } else {
+          mostrarNotificacion(data.error || 'Error al anular el ticket', 'error');
+        }
+      } catch (error) {
+        console.error('[TICKETS] Error al anular ticket:', error);
+        mostrarNotificacion('Error de conexión al anular el ticket', 'error');
+      } finally {
+        ocultarCargando();
+      }
+    });
+  }
+
   // Input "busqueda-producto" => filtrarProductos
   const busquedaProducto = document.getElementById('busqueda-producto');
   if (busquedaProducto) {
