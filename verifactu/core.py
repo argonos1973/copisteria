@@ -350,6 +350,35 @@ def generar_datos_verifactu_para_ticket(ticket_id: int, push_notif=None):
 
         if not resultado_envio.get('success'):
             logger.error("La AEAT devolvió error para el ticket %s: %s", ticket_id, resultado_envio.get('mensaje'))
+            
+            # Marcar como ERROR en la base de datos
+            _ensure_column_exists('estado_envio')
+            _ensure_column_exists('errores')
+            _ensure_column_exists('fecha_envio')
+            
+            # Construir mensaje de error desde los errores devueltos
+            mensaje_error = resultado_envio.get('mensaje', 'Error desconocido')
+            if resultado_envio.get('errores'):
+                errores_str = ' | '.join([
+                    f"{err.get('codigo', 'N/A')}: {err.get('descripcion', 'Sin descripción')}"
+                    for err in resultado_envio['errores']
+                ])
+                mensaje_error = errores_str
+            
+            cursor.execute(
+                """
+                UPDATE registro_facturacion
+                   SET estado_envio = 'ERROR',
+                       errores = ?,
+                       fecha_envio = ?,
+                       enviado_aeat = 0
+                 WHERE factura_id = ?
+                """,
+                (mensaje_error, datetime.now().isoformat(), ticket_id)
+            )
+            conn.commit()
+            logger.info(f"Estado ERROR registrado para ticket {ticket_id}")
+            
             if push_notif:
                 push_notif("Error AEAT en ticket", tipo='error', scope='ticket')
             # Devolver igualmente la respuesta para que el frontend la muestre

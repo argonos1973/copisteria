@@ -253,16 +253,16 @@ async function rellenarFactura(datos, emisor) {
         document.getElementById('fecha-vencimiento').textContent = formatearFechaSoloDia(factura.fvencimiento);
     }
 
-    // Datos del emisor desde JSON del emisor
-    document.getElementById('emisor-nombre').textContent = emisor.nombre || '';
-    document.getElementById('emisor-direccion').textContent = emisor.direccion || '';
+    // Datos del emisor desde JSON del emisor (convertidos a mayúsculas)
+    document.getElementById('emisor-nombre').textContent = (emisor.nombre || '').toUpperCase();
+    document.getElementById('emisor-direccion').textContent = (emisor.direccion || '').toUpperCase();
     
     // Construir CP-Ciudad-Provincia
     const cpCiudad = [emisor.ciudad, `(${emisor.cp})`, emisor.provincia]
-        .filter(Boolean)
-        .join(', ');
-    document.getElementById('emisor-cp-ciudad').textContent = cpCiudad;
-    document.getElementById('emisor-nif').textContent = emisor.nif || '';
+        .filter(x => x)
+        .join(' ');
+    document.getElementById('emisor-ciudad').textContent = cpCiudad.toUpperCase();
+    document.getElementById('emisor-nif').textContent = (emisor.nif || '').toUpperCase();
     document.getElementById('emisor-email').textContent = emisor.email || '';
     
     console.log('Datos del emisor aplicados:', {

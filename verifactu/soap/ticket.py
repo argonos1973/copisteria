@@ -29,9 +29,24 @@ logger = logging.getLogger("verifactu")
 
 
 def _load_emisor_nif() -> str:
+    """Carga el NIF del emisor desde el archivo JSON correspondiente.
+    
+    Obtiene el código de empresa del entorno y carga el JSON del emisor directamente.
+    """
     try:
-        from utils_emisor import cargar_datos_emisor
-        return (cargar_datos_emisor().get("nif") or "").strip().upper()
+        import json
+        empresa_codigo = os.getenv('EMPRESA_CODIGO', 'default')
+        emisor_path = f'/var/www/html/emisores/{empresa_codigo}_emisor.json'
+        
+        if os.path.exists(emisor_path):
+            with open(emisor_path, 'r', encoding='utf-8') as f:
+                emisor_data = json.load(f)
+                nif = emisor_data.get('nif', '')
+                if nif:
+                    return nif.strip().upper()
+        
+        logger.warning(f"No se encontró archivo emisor en {emisor_path}")
+        return ""
     except Exception as exc:
         logger.warning("No se pudo cargar NIF emisor: %s", exc)
         return ""
@@ -57,7 +72,7 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
     conn.row_factory = sqlite3.Row
     try:
         cur = conn.cursor()
-        cur.execute("SELECT numero, fecha, total, empresa_id FROM tickets WHERE id = ?", (ticket_id,))
+        cur.execute("SELECT numero, fecha, total FROM tickets WHERE id = ?", (ticket_id,))
         trow = cur.fetchone()
         cur.execute(
             "SELECT hash FROM registro_facturacion WHERE factura_id = ? LIMIT 1",
@@ -175,10 +190,10 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
     now = datetime.now()
     timestamp = now.strftime("%Y%m%d%H%M%S")
     base_dir = "/var/www/html/aeat_responses"
-    # Obtener empresa_id del ticket
-    empresa_id = trow.get('empresa_id', 'default') if trow else 'default'
-    # Organizar por empresa/año/mes: aeat_responses/empresa_id/YYYY/MM
-    empresa_dir = os.path.join(base_dir, str(empresa_id))
+    # Obtener código de empresa del entorno (multiempresa)
+    empresa_codigo = os.getenv('EMPRESA_CODIGO', 'default')
+    # Organizar por empresa/año/mes: aeat_responses/empresa_codigo/YYYY/MM
+    empresa_dir = os.path.join(base_dir, str(empresa_codigo))
     year_dir = os.path.join(empresa_dir, now.strftime("%Y"))
     resp_dir = os.path.join(year_dir, now.strftime("%m"))
     try:
