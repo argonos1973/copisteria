@@ -1,13 +1,14 @@
 {
-    "nombre": "COPISTERIA ALEPH70",
-    "nif": "B16488413",
-    "direccion": "ATALAYA 30",
-    "cp": "28692",
-    "ciudad": "VILLAFRANCA DEL CASTILLO",
-    "provincia": "MADRID",
+    "nombre": "CACA",
+    "razon_social": "CACA",
+    "nif": "B38975348",
+    "direccion": "Calle de la Capilleta, 15",
+    "cp": "38004",
+    "ciudad": "Santa Cruz de Tenerife",
+    "provincia": "Santa Cruz",
     "pais": "ESP",
-    "email": "info@copisteria.com",
-    "telefono": "918150123",
-    "registro_mercantil": "Madrid, Tomo 12345, Folio 67, Hoja M-123456",
-    "logo": "/static/logos/copisteria_logo.png"
+    "email": "aleph70soluciones@gmail.com",
+    "telefono": "",
+    "registro_mercantil": "",
+    "logo": "/static/logos/caca_logo.png"
 }
