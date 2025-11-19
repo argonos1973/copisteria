@@ -367,6 +367,16 @@ def obtener_menu():
                     'exportar': 1
                 }
             
+            # Ajustar permisos según rol del usuario
+            rol_usuario = session.get('rol', 'admin')
+            if rol_usuario == 'consultor':
+                # Consultor solo puede ver, no puede crear/editar/eliminar
+                item['permisos']['crear'] = 0
+                item['permisos']['editar'] = 0
+                item['permisos']['eliminar'] = 0
+                item['permisos']['anular'] = 0
+                item['permisos']['exportar'] = 0
+            
             # Agregar submódulos según el código del módulo
             codigo_modulo = item['codigo']
             if codigo_modulo in submenu_map:
@@ -376,19 +386,33 @@ def obtener_menu():
                 if es_admin_empresa:
                     # Admin ve todo, pero necesitamos agregar permisos a submódulos para el frontend
                     submenu_con_permisos = []
+                    rol_usuario = session.get('rol', 'admin')
+                    
                     for submenu_item in submenu_completo:
                         submenu_item_copia = submenu_item.copy()
                         
-                        # Si el submódulo tiene código (tickets, facturas, proformas), agregar permisos completos
+                        # Si el submódulo tiene código (tickets, facturas, proformas), agregar permisos
                         if 'codigo' in submenu_item:
-                            submenu_item_copia['permisos'] = {
-                                'ver': 1,
-                                'crear': 1,
-                                'editar': 1,
-                                'eliminar': 1,
-                                'anular': 1,
-                                'exportar': 1
-                            }
+                            if rol_usuario == 'consultor':
+                                # Consultor solo puede ver
+                                submenu_item_copia['permisos'] = {
+                                    'ver': 1,
+                                    'crear': 0,
+                                    'editar': 0,
+                                    'eliminar': 0,
+                                    'anular': 0,
+                                    'exportar': 0
+                                }
+                            else:
+                                # Admin y editor tienen todos los permisos
+                                submenu_item_copia['permisos'] = {
+                                    'ver': 1,
+                                    'crear': 1,
+                                    'editar': 1,
+                                    'eliminar': 1,
+                                    'anular': 1,
+                                    'exportar': 1
+                                }
                         
                         submenu_con_permisos.append(submenu_item_copia)
                     
@@ -496,8 +520,12 @@ def obtener_menu():
         
         logger.info(f"[MENU] Total items en menú: {len(menu)}")
         
-        # Agregar opciones de administración si es admin de empresa
-        if es_admin_empresa:
+        # Obtener rol del usuario
+        rol_usuario = session.get('rol', 'consultor')
+        logger.info(f"[MENU] Rol del usuario: {rol_usuario}")
+        
+        # Agregar opciones de administración solo si es admin de empresa Y tiene rol 'admin'
+        if es_admin_empresa and rol_usuario == 'admin':
             menu.append({
                 'codigo': 'admin',
                 'nombre': 'Administración',
