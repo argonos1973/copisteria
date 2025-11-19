@@ -169,19 +169,6 @@
     color: var(--header-text, var(--modal-header-text, #fff)) !important;
 }
 
-/* Asegurar que el botón cerrar sea visible con sombra */
-#modal-pagos .close {
-    opacity: 0.7 !important;
-    transition: all 0.3s ease;
-    text-shadow: 0 0 3px rgba(0,0,0,0.3);
-}
-
-#modal-pagos .close:hover {
-    opacity: 1 !important;
-    background: rgba(0,0,0,0.1) !important;
-    transform: scale(1.1);
-}
-
 .modal-content.modal-large {
     max-width: 1200px;
 }
@@ -203,6 +190,7 @@
     flex-grow: 1;
 }
 
+/* Botón cerrar universal con animación y sombra para visibilidad */
 .cerrar-modal,
 .modal-close,
 .close {
@@ -219,6 +207,9 @@
     align-items: center;
     justify-content: center;
     border-radius: 50%;
+    opacity: 0.7 !important;
+    transition: all 0.3s ease;
+    text-shadow: 0 0 3px rgba(0,0,0,0.3);
 }
 
 .cerrar-modal:hover,
@@ -227,8 +218,9 @@
 .modal-close:focus,
 .close:hover,
 .close:focus {
-    background: rgba(255,255,255,0.2) !important;
-    color: var(--header-text, #fff) !important;
+    opacity: 1 !important;
+    background: rgba(0,0,0,0.1) !important;
+    transform: scale(1.1);
 }
 
 /* Forzar que los h2, h3, p dentro del BODY de modales usen el color del tema */
