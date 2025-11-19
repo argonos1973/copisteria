@@ -159,8 +159,8 @@
 }
 
 .modal-header {
-    background: var(--header-bg) !important;
-    color: var(--header-text, #fff) !important;
+    background: var(--header-bg, var(--modal-header-bg, var(--primary, #000))) !important;
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
     padding: 20px 24px;
     border-radius: 12px 12px 0 0;
     display: flex;
@@ -171,14 +171,14 @@
 .modal-header h2,
 .modal-header h3 {
     margin: 0;
-    color: var(--header-text) !important;
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
     flex-grow: 1;
 }
 
 .cerrar-modal,
 .modal-close,
 .close {
-    color: var(--header-text, #fff) !important;
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
     font-size: 32px;
     font-weight: 300;
     cursor: pointer;
@@ -203,10 +203,11 @@
     color: var(--header-text, #fff) !important;
 }
 
-/* Forzar que los h2, h3, p dentro de modales usen el color del tema */
-.modal-content h2,
-.modal-content h3,
-.modal-content h4,
+/* Forzar que los h2, h3, p dentro del BODY de modales usen el color del tema */
+/* IMPORTANTE: No aplicar a modal-header para evitar conflictos */
+.modal-body h2,
+.modal-body h3,
+.modal-body h4,
 .modal-content p,
 .modal-content label,
 .modal-content span {
