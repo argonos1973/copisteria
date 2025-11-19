@@ -20,6 +20,10 @@ function applyThemeToModals() {
     const buttonBg = style.getPropertyValue('--button-bg').trim() || '#6c757d';
     const buttonText = style.getPropertyValue('--button-text').trim() || '#ffffff';
     const buttonHoverBg = style.getPropertyValue('--button-hover-bg').trim() || '#5a6268';
+    const tabActiveBg = style.getPropertyValue('--tab-active-bg').trim() || '#f5f5f5';
+    const tabActiveText = style.getPropertyValue('--tab-active-text').trim() || '#000000';
+    const tabInactiveText = style.getPropertyValue('--tab-inactive-text').trim() || '#999999';
+    const tabBorder = style.getPropertyValue('--tab-border').trim() || '#000000';
     
     const temaActual = root.dataset.theme || 'unknown';
     
@@ -82,11 +86,16 @@ function applyThemeToModals() {
     
     // Aplicar a todos los botones de tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.style.setProperty('color', modalText, 'important');
         if (btn.classList.contains('active')) {
-            btn.style.setProperty('color', modalHeaderBg, 'important');
-            btn.style.setProperty('border-bottom-color', modalHeaderBg, 'important');
-            btn.style.setProperty('background-color', modalBg, 'important');
+            btn.style.setProperty('color', tabActiveText, 'important');
+            btn.style.setProperty('background-color', tabActiveBg, 'important');
+            btn.style.setProperty('border-bottom-color', tabBorder, 'important');
+            btn.style.setProperty('border-bottom-width', '3px', 'important');
+            btn.style.setProperty('border-bottom-style', 'solid', 'important');
+        } else {
+            btn.style.setProperty('color', tabInactiveText, 'important');
+            btn.style.setProperty('background-color', 'transparent', 'important');
+            btn.style.setProperty('border-bottom-color', 'transparent', 'important');
         }
     });
     
@@ -162,11 +171,13 @@ function applyThemeToModals() {
     // Aplicar a botones de tabs de avatares
     document.querySelectorAll('.avatar-tab-btn').forEach(btn => {
         if (btn.classList.contains('active')) {
-            btn.style.setProperty('background-color', modalHeaderBg, 'important');
-            btn.style.setProperty('color', modalHeaderText, 'important');
+            btn.style.setProperty('background-color', tabActiveBg, 'important');
+            btn.style.setProperty('color', tabActiveText, 'important');
+            btn.style.setProperty('border', `2px solid ${tabBorder}`, 'important');
         } else {
-            btn.style.setProperty('background-color', buttonBg, 'important');
-            btn.style.setProperty('color', buttonText, 'important');
+            btn.style.setProperty('background-color', 'transparent', 'important');
+            btn.style.setProperty('color', tabInactiveText, 'important');
+            btn.style.setProperty('border', `1px solid ${modalBorder}`, 'important');
         }
     });
     

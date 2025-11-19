@@ -116,7 +116,9 @@
     },
     "tab": {
       "active-bg": "{palette.base700}",
-      "active-text": "{palette.white}"
+      "active-text": "{semantic.primary}",
+      "inactive-text": "{semantic.text-muted}",
+      "border": "{semantic.primary}"
     },
     "disabled": {
       "bg": "{palette.base800}",
