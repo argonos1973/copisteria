@@ -9,6 +9,7 @@ para generar, registrar y enviar facturas a AEAT
 
 import base64
 import json
+import os
 from datetime import datetime
 
 from .config import AEAT_CONFIG, VERIFACTU_CONSTANTS, logger
