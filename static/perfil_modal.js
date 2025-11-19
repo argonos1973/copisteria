@@ -42,12 +42,13 @@ async function abrirModalPerfil() {
         // Mostrar modal
         document.getElementById('modal-perfil').style.display = 'block';
         
-        // Aplicar tema a la modal
+        // Aplicar tema a la modal (esperar un poco más para que el DOM esté listo)
         setTimeout(() => {
             if (typeof window.applyThemeToModals === 'function') {
                 window.applyThemeToModals();
+                console.log('[PERFIL] Estilos de tema aplicados a modal');
             }
-        }, 50);
+        }, 150);
     } catch (error) {
         console.error('Error cargando perfil:', error);
         alert('Error al cargar datos del perfil');

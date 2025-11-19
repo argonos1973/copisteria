@@ -68,6 +68,12 @@ function applyThemeToModals() {
         modalPerfilTabs.style.setProperty('border-bottom', `2px solid ${modalBorder}`, 'important');
     }
     
+    // Aplicar a los contenidos de tabs
+    document.querySelectorAll('.tab-content').forEach(tabContent => {
+        tabContent.style.setProperty('background-color', modalBg, 'important');
+        tabContent.style.setProperty('color', modalText, 'important');
+    });
+    
     // Aplicar a todos los botones de tabs
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.style.setProperty('color', modalText, 'important');
