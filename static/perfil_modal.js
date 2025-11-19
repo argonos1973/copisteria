@@ -313,6 +313,14 @@ async function cambiarPlantillaUsuario(plantilla, clickedElement) {
             if (typeof applyTheme === 'function') {
                 await applyTheme(result.colores);
                 console.log(`✅ Plantilla "${plantilla}" aplicada al documento`);
+                
+                // Reaplicar estilos a las modales inmediatamente
+                setTimeout(() => {
+                    if (typeof window.applyThemeToModals === 'function') {
+                        window.applyThemeToModals();
+                        console.log(`✅ Estilos de modales actualizados para "${plantilla}"`);
+                    }
+                }, 100);
             } else {
                 console.error('❌ Función applyTheme no disponible');
             }
