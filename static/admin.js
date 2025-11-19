@@ -368,17 +368,14 @@ function mostrarUsuarios(lista) {
         const avatarHtml = `<img src="${avatarUrl}" alt="${usuario.username}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; vertical-align: middle; margin-right: 8px; border: 2px solid #ddd;">`;
         
         html += `
-            <tr>
+            <tr onclick="editarUsuario(${usuario.id})" style="cursor: pointer;" title="Click para editar">
                 <td>${avatarHtml}<strong>${usuario.username}</strong></td>
                 <td>${usuario.nombre_completo}</td>
                 <td>${usuario.email || '-'}</td>
                 <td>${usuario.empresas || 'Sin asignar'}</td>
                 <td>${estado}</td>
                 <td>${rol}</td>
-                <td>
-                    <button class="btn btn-primary btn-small" onclick="editarUsuario(${usuario.id})">
-                        <i class="fas fa-edit"></i>
-                    </button>
+                <td onclick="event.stopPropagation()">
                     <button class="btn btn-danger btn-small" onclick="eliminarUsuario(${usuario.id}, '${usuario.username}')">
                         <i class="fas fa-trash"></i>
                     </button>
