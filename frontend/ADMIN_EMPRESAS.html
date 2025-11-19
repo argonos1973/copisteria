@@ -8,7 +8,7 @@
     <script src="/static/branding.js?v=1762757322"></script>
     <script src="/static/auto_branding.js?v=1762757322"></script>
     <link rel="stylesheet" href="/static/theme-consumer.css?v=1762757322">
-    
+    <link rel="stylesheet" href="/static/modales.css?v=1763555500">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -16,18 +16,13 @@
         .container { max-width: 1400px; margin: 0 auto; }
         h1 { color: #2c3e50; margin-bottom: 30px; }
         
-        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; transition: 0.3s; }
+        .btn { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
         .btn-primary { background: #3498db; color: white; }
         .btn-primary:hover { background: #2980b9; }
         .btn-success { background: #27ae60; color: white; }
         .btn-success:hover { background: #229954; }
         
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; }
-        .modal.active { display: flex; align-items: center; justify-content: center; }
-        .modal-content { background: white; padding: 12px; border-radius: 10px; max-width: 1100px; width: 95%; max-height: 98vh; overflow-y: auto; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-header h2 { color: #2c3e50; }
-        .close { font-size: 28px; cursor: pointer; color: #7f8c8d; }
+        .modal.active { display: flex; }
         .close:hover { color: #2c3e50; }
         
         .form-group { margin-bottom: 3px; }
