@@ -4,9 +4,9 @@
     "direccion": "Carrer de la Legalitat, 70",
     "cp": "08024",
     "ciudad": "Barcelona",
-    "provincia": "Cataluña",
+    "provincia": "Barcelona",
     "pais": "ESP",
-    "email": "aleph70copisteria@gmail.com",
+    "email": "info@aleph70.com",
     "db_path": "/var/www/html/db/caca/caca.db",
     "codigo": "caca"
 }

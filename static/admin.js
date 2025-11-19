@@ -3243,27 +3243,43 @@ async function cargarConfiguracionEmpresa() {
         
         // Cargar logo existente si existe (usar setTimeout para asegurar que el DOM esté listo)
         setTimeout(() => {
-            console.log('[LOGO] Verificando logo existente...', empresa.emisor_data);
+            console.log('[LOGO] Verificando logo existente...');
+            console.log('[LOGO] Estructura empresa completa:', empresa);
+            
+            // Buscar logo en múltiples ubicaciones posibles
+            let logoUrl = null;
             
             if (empresa.emisor_data && empresa.emisor_data.logo) {
-                console.log('[LOGO] Logo encontrado:', empresa.emisor_data.logo);
-                
+                logoUrl = empresa.emisor_data.logo;
+                console.log('[LOGO] Logo encontrado en emisor_data.logo:', logoUrl);
+            } else if (empresa.logo_header && !empresa.logo_header.startsWith('default_')) {
+                logoUrl = `/static/logos/${empresa.logo_header}`;
+                console.log('[LOGO] Logo encontrado en logo_header:', logoUrl);
+            } else if (empresa.logo) {
+                logoUrl = empresa.logo;
+                console.log('[LOGO] Logo encontrado en logo:', logoUrl);
+            }
+            
+            if (logoUrl) {
                 const logoPreviewContainer = document.getElementById('logo-preview-container');
                 const logoPreview = document.getElementById('logo-preview');
                 
-                console.log('[LOGO] Elementos DOM:', { logoPreviewContainer, logoPreview });
+                console.log('[LOGO] Elementos DOM:', { 
+                    container: logoPreviewContainer ? 'Encontrado' : 'NO encontrado',
+                    preview: logoPreview ? 'Encontrado' : 'NO encontrado'
+                });
                 
                 if (logoPreviewContainer && logoPreview) {
                     // Agregar timestamp para evitar caché del navegador
                     const timestamp = new Date().getTime();
-                    logoPreview.src = empresa.emisor_data.logo + '?t=' + timestamp;
+                    logoPreview.src = logoUrl + '?t=' + timestamp;
                     logoPreviewContainer.style.display = 'block';
-                    console.log('[LOGO] Vista previa mostrada con timestamp:', timestamp);
+                    console.log('[LOGO] ✅ Vista previa mostrada:', logoUrl);
                 } else {
-                    console.error('[LOGO] No se encontraron elementos DOM para la vista previa');
+                    console.error('[LOGO] ❌ No se encontraron elementos DOM para la vista previa');
                 }
             } else {
-                console.log('[LOGO] No hay logo en emisor_data');
+                console.log('[LOGO] ℹ️ No hay logo guardado aún');
             }
         }, 100);
         
