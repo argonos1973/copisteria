@@ -363,7 +363,12 @@ def guardar_ticket():
             if VERIFACTU_HABILITADO:
                 logger.info(f"[VERIFACTU] Generando datos VERI*FACTU para ticket {id_ticket}...")
                 try:
-                    resultado = generar_datos_verifactu_para_ticket(id_ticket)
+                    # Obtener código de empresa de la sesión
+                    from flask import session
+                    empresa_codigo = session.get('empresa_codigo', 'default')
+                    logger.info(f"[VERIFACTU] Usando empresa_codigo={empresa_codigo}")
+                    
+                    resultado = generar_datos_verifactu_para_ticket(id_ticket, empresa_codigo=empresa_codigo)
                     if resultado:
                         logger.info(f"[VERIFACTU] Datos generados correctamente para ticket {id_ticket}")
                     else:

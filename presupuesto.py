@@ -709,7 +709,10 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
         conn.commit()
 
         try:
-            generar_datos_verifactu_para_ticket(ticket_id)
+            # Obtener código de empresa de la sesión
+            from flask import session
+            empresa_codigo = session.get('empresa_codigo', 'default')
+            generar_datos_verifactu_para_ticket(ticket_id, empresa_codigo=empresa_codigo)
         except Exception as vf_exc:
             logger.info(f"[VERIFACTU][WARN] Error generando datos para ticket {ticket_id}: {vf_exc}")
 

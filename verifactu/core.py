@@ -286,7 +286,7 @@ def generar_datos_verifactu_para_factura(factura_id):
         logger.error("No se pudo crear la tabla tickets: %s", exc)
 
 
-def generar_datos_verifactu_para_ticket(ticket_id: int, push_notif=None):
+def generar_datos_verifactu_para_ticket(ticket_id: int, push_notif=None, empresa_codigo=None):
     """Flujo VERI*FACTU adaptado a tickets.
     Genera hash encadenado, QR y crea registro en registro_facturacion con
     tipo_factura = 'F2'. Por ahora enviamos al servicio AEAT en modo test
@@ -294,6 +294,11 @@ def generar_datos_verifactu_para_ticket(ticket_id: int, push_notif=None):
     más adelante. De momento sólo generamos y guardamos los datos para poder
     imprimir el QR.
     """
+    # Asegurar que EMPRESA_CODIGO esté en variables de entorno si se pasa
+    if empresa_codigo:
+        os.environ['EMPRESA_CODIGO'] = empresa_codigo
+        logger.info(f"Estableciendo EMPRESA_CODIGO={empresa_codigo} para generación de ticket")
+    
     conn = None
     try:
         conn = get_db_connection()

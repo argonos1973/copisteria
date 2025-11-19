@@ -127,7 +127,9 @@ def anular_ticket(id_ticket: int):
         resultado_envio = None
         try:
             from verifactu.core import generar_datos_verifactu_para_ticket
-            resultado_envio = generar_datos_verifactu_para_ticket(id_rect)
+            from flask import session
+            empresa_codigo = session.get('empresa_codigo', 'default')
+            resultado_envio = generar_datos_verifactu_para_ticket(id_rect, empresa_codigo=empresa_codigo)
         except Exception:
             traceback.print_exc()
 
