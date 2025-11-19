@@ -136,7 +136,7 @@
 .modal-content {
     background-color: var(--modal-bg, #fff) !important;
     color: var(--modal-text) !important;
-    margin: auto;
+    margin: 5% auto;
     padding: 0;
     border: 1px solid var(--modal-border, #ddd);
     border-radius: 12px;
@@ -147,6 +147,11 @@
     display: flex;
     flex-direction: column;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+/* Modal de usuario más compacta */
+#modalUsuario .modal-content {
+    max-width: 600px;
 }
 
 .modal-content.modal-large {

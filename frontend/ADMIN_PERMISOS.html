@@ -88,34 +88,39 @@
                 <div id="alert-usuario"></div>
                 <form id="formUsuario" onsubmit="guardarUsuario(event)">
                     <input type="hidden" id="usuario-id">
-                    <div class="form-group">
-                        <label>Usuario *</label>
-                        <input type="text" id="usuario-username" required autocomplete="username">
+                    <input type="hidden" id="usuario-activo" value="1">
+                    <input type="hidden" id="usuario-superadmin" value="0">
+                    
+                    <!-- Fila 1: Usuario y Contraseña -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Usuario *</label>
+                            <input type="text" id="usuario-username" required autocomplete="username">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Contraseña *</label>
+                            <input type="password" id="usuario-password" autocomplete="new-password">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Contraseña *</label>
-                        <input type="password" id="usuario-password" autocomplete="new-password">
-                    </div>
+                    
+                    <!-- Fila 2: Nombre completo (ancho completo) -->
                     <div class="form-group">
                         <label>Nombre completo *</label>
                         <input type="text" id="usuario-nombre" required>
                     </div>
-                    <div class="form-group">
-                        <label>Email</label>
-                        <input type="email" id="usuario-email" autocomplete="email">
+                    
+                    <!-- Fila 3: Email y Teléfono -->
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 16px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Email</label>
+                            <input type="email" id="usuario-email" autocomplete="email">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Teléfono</label>
+                            <input type="text" id="usuario-telefono">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Teléfono</label>
-                        <input type="text" id="usuario-telefono">
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="usuario-superadmin">
-                        <label for="usuario-superadmin">Superadministrador</label>
-                    </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="usuario-activo" checked>
-                        <label for="usuario-activo">Activo</label>
-                    </div>
+                    
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-success">
                             <i class="fas fa-save"></i> Guardar

@@ -406,7 +406,9 @@ function mostrarModalNuevoUsuario() {
     document.getElementById('formUsuario').reset();
     document.getElementById('usuario-id').value = '';
     document.getElementById('usuario-password').required = true;
-    document.getElementById('usuario-activo').checked = true;
+    // Por defecto: activo=1, superadmin=0
+    document.getElementById('usuario-activo').value = '1';
+    document.getElementById('usuario-superadmin').value = '0';
     document.getElementById('modalUsuario').classList.add('active');
 }
 
@@ -425,8 +427,8 @@ async function guardarUsuario(event) {
         nombre_completo: document.getElementById('usuario-nombre').value,
         email: document.getElementById('usuario-email').value,
         telefono: document.getElementById('usuario-telefono').value,
-        es_superadmin: document.getElementById('usuario-superadmin').checked ? 1 : 0,
-        activo: document.getElementById('usuario-activo').checked ? 1 : 0
+        es_superadmin: parseInt(document.getElementById('usuario-superadmin').value) || 0,
+        activo: parseInt(document.getElementById('usuario-activo').value) || 1
     };
 
     try {
@@ -473,8 +475,8 @@ async function editarUsuario(id) {
     document.getElementById('usuario-nombre').value = usuario.nombre_completo;
     document.getElementById('usuario-email').value = usuario.email || '';
     document.getElementById('usuario-telefono').value = usuario.telefono || '';
-    document.getElementById('usuario-superadmin').checked = usuario.es_superadmin === 1;
-    document.getElementById('usuario-activo').checked = usuario.activo === 1;
+    document.getElementById('usuario-superadmin').value = usuario.es_superadmin === 1 ? '1' : '0';
+    document.getElementById('usuario-activo').value = usuario.activo === 1 ? '1' : '0';
     
     document.getElementById('modalUsuario').classList.add('active');
 }
