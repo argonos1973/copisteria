@@ -79,56 +79,53 @@
 
     <!-- Modal: Usuario -->
     <div id="modalUsuario" class="modal">
-        <div class="modal-content" style="max-width: 350px !important; padding: 0 !important;">
-            <div class="modal-header" style="padding: 10px 14px !important; border-bottom: 1px solid var(--color-border, #ddd);">
-                <h3 id="modal-usuario-titulo" style="margin: 0 !important; font-size: 14px !important; font-weight: 600;">Nuevo Usuario</h3>
-                <span class="close" onclick="cerrarModalUsuario()" style="font-size: 20px !important; line-height: 1; cursor: pointer;">&times;</span>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-usuario-titulo">Nuevo Usuario</h3>
+                <span class="close" onclick="cerrarModalUsuario()">&times;</span>
             </div>
-            <div id="alert-usuario"></div>
-            <form id="formUsuario" onsubmit="guardarUsuario(event)" style="padding: 12px !important;">
-                <input type="hidden" id="usuario-id">
-                <div class="form-group" style="margin-bottom: 10px !important;">
-                    <label style="display: block !important; margin-bottom: 3px !important; font-size: 11px !important; font-weight: 500;">Usuario *</label>
-                    <input type="text" id="usuario-username" required autocomplete="username" 
-                           style="width: 100% !important; padding: 5px 7px !important; font-size: 12px !important; border: 1px solid var(--color-border, #ddd) !important; border-radius: 3px !important; box-sizing: border-box !important;">
-                </div>
-                <div class="form-group" style="margin-bottom: 10px !important;">
-                    <label style="display: block !important; margin-bottom: 3px !important; font-size: 11px !important; font-weight: 500;">Contraseña *</label>
-                    <input type="password" id="usuario-password" autocomplete="new-password"
-                           style="width: 100% !important; padding: 5px 7px !important; font-size: 12px !important; border: 1px solid var(--color-border, #ddd) !important; border-radius: 3px !important; box-sizing: border-box !important;">
-                </div>
-                <div class="form-group" style="margin-bottom: 10px !important;">
-                    <label style="display: block !important; margin-bottom: 3px !important; font-size: 11px !important; font-weight: 500;">Nombre completo *</label>
-                    <input type="text" id="usuario-nombre" required
-                           style="width: 100% !important; padding: 5px 7px !important; font-size: 12px !important; border: 1px solid var(--color-border, #ddd) !important; border-radius: 3px !important; box-sizing: border-box !important;">
-                </div>
-                <div class="form-group" style="margin-bottom: 10px !important;">
-                    <label style="display: block !important; margin-bottom: 3px !important; font-size: 11px !important; font-weight: 500;">Email</label>
-                    <input type="email" id="usuario-email" autocomplete="email"
-                           style="width: 100% !important; padding: 5px 7px !important; font-size: 12px !important; border: 1px solid var(--color-border, #ddd) !important; border-radius: 3px !important; box-sizing: border-box !important;">
-                </div>
-                <div class="form-group" style="margin-bottom: 10px !important;">
-                    <label style="display: block !important; margin-bottom: 3px !important; font-size: 11px !important; font-weight: 500;">Teléfono</label>
-                    <input type="text" id="usuario-telefono"
-                           style="width: 100% !important; padding: 5px 7px !important; font-size: 12px !important; border: 1px solid var(--color-border, #ddd) !important; border-radius: 3px !important; box-sizing: border-box !important;">
-                </div>
-                <div class="checkbox-group" style="margin-bottom: 8px !important; display: flex; align-items: center; gap: 5px;">
-                    <input type="checkbox" id="usuario-superadmin" style="width: auto !important; margin: 0 !important;">
-                    <label for="usuario-superadmin" style="margin: 0 !important; font-size: 11px !important; cursor: pointer;">Superadministrador</label>
-                </div>
-                <div class="checkbox-group" style="margin-bottom: 12px !important; display: flex; align-items: center; gap: 5px;">
-                    <input type="checkbox" id="usuario-activo" checked style="width: auto !important; margin: 0 !important;">
-                    <label for="usuario-activo" style="margin: 0 !important; font-size: 11px !important; cursor: pointer;">Activo</label>
-                </div>
-                <div class="modal-footer" style="display: flex; gap: 6px; justify-content: flex-end; padding-top: 10px !important; border-top: 1px solid var(--color-border, #ddd);">
-                    <button type="submit" class="btn btn-success" style="padding: 5px 10px !important; font-size: 12px !important; border-radius: 3px;">
-                        <i class="fas fa-save"></i> Guardar
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="cerrarModalUsuario()" style="padding: 5px 10px !important; font-size: 12px !important; border-radius: 3px; background: #6c757d !important; color: white !important; border: none;">
-                        <i class="fas fa-times"></i> Cancelar
-                    </button>
-                </div>
-            </form>
+            <div class="modal-body">
+                <div id="alert-usuario"></div>
+                <form id="formUsuario" onsubmit="guardarUsuario(event)">
+                    <input type="hidden" id="usuario-id">
+                    <div class="form-group">
+                        <label>Usuario *</label>
+                        <input type="text" id="usuario-username" required autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label>Contraseña *</label>
+                        <input type="password" id="usuario-password" autocomplete="new-password">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre completo *</label>
+                        <input type="text" id="usuario-nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="usuario-email" autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label>Teléfono</label>
+                        <input type="text" id="usuario-telefono">
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="usuario-superadmin">
+                        <label for="usuario-superadmin">Superadministrador</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="usuario-activo" checked>
+                        <label for="usuario-activo">Activo</label>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Guardar
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="cerrarModalUsuario()">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 

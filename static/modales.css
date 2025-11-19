@@ -233,6 +233,93 @@
 }
 
 /* ================================= */
+/* FORM GROUPS Y CHECKBOXES */
+/* ================================= */
+.modal-body .form-group {
+    margin-bottom: 16px;
+}
+
+.modal-body .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.modal-body .form-group input[type="text"],
+.modal-body .form-group input[type="email"],
+.modal-body .form-group input[type="password"],
+.modal-body .form-group input[type="number"],
+.modal-body .form-group select {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 14px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 6px;
+    box-sizing: border-box;
+    background: var(--bg-primary, #fff);
+    color: var(--text-primary, #333);
+}
+
+.modal-body .form-group input:focus,
+.modal-body .form-group select:focus {
+    outline: none;
+    border-color: var(--primary, #3498db);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.modal-body .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.modal-body .checkbox-group input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    cursor: pointer;
+}
+
+.modal-body .checkbox-group label {
+    margin: 0;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: normal;
+}
+
+/* ================================= */
+/* BOTONES EN MODALES */
+/* ================================= */
+.modal-footer .btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.modal-footer .btn-success {
+    background: #27ae60;
+    color: white;
+}
+
+.modal-footer .btn-success:hover {
+    background: #229954;
+}
+
+.modal-footer .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.modal-footer .btn-secondary:hover {
+    background: #5a6268;
+}
+
+/* ================================= */
 /* LOADING OVERLAY - Semi-transparente */
 /* ================================= */
 #loading-overlay {
