@@ -402,6 +402,14 @@ function mostrarSubirPersonalizado() {
     document.getElementById('btn-personalizado').classList.add('active');
 }
 
+// Agregar evento al user-profile-link después de que el DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+    const userProfileLink = document.getElementById('user-profile-link');
+    if (userProfileLink) {
+        userProfileLink.addEventListener('click', abrirModalPerfil);
+    }
+});
+
 // Cerrar modal al hacer click fuera
 window.onclick = function(event) {
     const modal = document.getElementById('modal-perfil');
