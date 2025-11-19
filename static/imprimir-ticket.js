@@ -86,7 +86,9 @@ function obtenerIdTicket() {
 function obtenerDatosDelTicket(idTicket) {
     const url = `${API_URL}/api/tickets/obtenerTicket/${encodeURIComponent(idTicket)}`;
     console.log('[TICKET] Obteniendo datos de:', url);
-    return fetch(url)
+    return fetch(url, {
+        credentials: 'same-origin'  // Importante: enviar cookies de sesión
+    })
         .then(response => {
             console.log('[TICKET] Respuesta recibida:', response.status);
             if (!response.ok) {

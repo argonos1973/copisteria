@@ -141,7 +141,7 @@ async function obtenerDatosDeLaFactura(idFactura) {
         const url = `${API_URL}/api/facturas/consulta/${idFactura}`;
         console.log('URL de la solicitud:', url);
         
-        const response = await fetch(url);
+        const response = await fetch(url, { credentials: 'same-origin' });
         console.log('Estado de la respuesta:', response.status);
         
         if (!response.ok) {
@@ -346,7 +346,7 @@ async function rellenarFactura(datos, emisor) {
             if (factura.id_factura_rectificada) {
                 try {
                     // Obtener directamente del backend número y fecha
-                    const respOrig = await fetch(`${API_URL}/api/facturas/consulta/${factura.id_factura_rectificada}`);
+                    const respOrig = await fetch(`${API_URL}/api/facturas/consulta/${factura.id_factura_rectificada}`, { credentials: 'same-origin' });
                     if (respOrig.ok) {
                         const datosOrig = await respOrig.json();
                         if (datosOrig && datosOrig.factura) {
