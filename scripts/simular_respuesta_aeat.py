@@ -65,13 +65,13 @@ def simular_respuesta_exitosa(factura_id, empresa='caca'):
         logger.info(f"CSV generado: {csv_aeat}")
         
         # Obtener NIF del emisor
-        emisor_path = f'/var/www/html/static/emisores/{empresa}_emisor.json'
-        nif_emisor = 'B16488413'  # Por defecto
+        emisor_path = f'/var/www/html/emisores/{empresa}_emisor.json'
+        nif_emisor = '44007535W'  # Por defecto
         if os.path.exists(emisor_path):
             import json
             with open(emisor_path, 'r') as f:
                 emisor_data = json.load(f)
-                nif_emisor = emisor_data.get('nif', 'B16488413')
+                nif_emisor = emisor_data.get('nif', '44007535W')
         
         # Generar QR
         from verifactu.qr.generator import generar_qr_verifactu
@@ -104,6 +104,7 @@ def simular_respuesta_exitosa(factura_id, empresa='caca'):
             SET codigo_qr = ?,
                 csv_aeat = ?,
                 csv = ?,
+                nif_emisor = ?,
                 estado_envio = 'ENVIADO',
                 enviado_aeat = 1,
                 validado_aeat = 1,
@@ -114,6 +115,7 @@ def simular_respuesta_exitosa(factura_id, empresa='caca'):
             qr_bytes,
             csv_aeat,
             csv_aeat,
+            nif_emisor,
             datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             '<?xml version="1.0"?><response><status>OK</status><csv>' + csv_aeat + '</csv></response>',
             factura_id

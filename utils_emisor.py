@@ -37,7 +37,7 @@ def cargar_datos_emisor(codigo_empresa=None):
     
     # Construir ruta al archivo JSON del emisor
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    emisor_path = os.path.join(base_dir, 'static', 'emisores', f'{codigo_empresa}_emisor.json')
+    emisor_path = os.path.join(base_dir, 'emisores', f'{codigo_empresa}_emisor.json')
     
     if os.path.exists(emisor_path):
         with open(emisor_path, 'r', encoding='utf-8') as f:

@@ -469,7 +469,7 @@ def enviar_registro_aeat(factura_id: int) -> dict:
         try:
             import json
             empresa_codigo = os.environ.get('EMPRESA_CODIGO', 'caca')
-            emisor_path = f'/var/www/html/static/emisores/{empresa_codigo}_emisor.json'
+            emisor_path = f'/var/www/html/emisores/{empresa_codigo}_emisor.json'
             if os.path.exists(emisor_path):
                 with open(emisor_path, 'r') as f:
                     emisor_data = json.load(f)
