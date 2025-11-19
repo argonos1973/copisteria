@@ -166,8 +166,56 @@ def generar_datos_verifactu_para_factura(factura_id):
                         )
                         conn.commit()
                         logger.info(f"Código QR actualizado con CSV para factura {factura_id}")
+            else:
+                # Error de AEAT - marcar como ERROR y guardar mensaje
+                logger.error(f"Error al enviar factura {factura_id} a AEAT: {resultado_envio.get('mensaje')}")
+                
+                _ensure_column_exists('estado_envio')
+                _ensure_column_exists('errores')
+                _ensure_column_exists('fecha_envio')
+                
+                # Construir mensaje de error desde los errores devueltos
+                mensaje_error = resultado_envio.get('mensaje', 'Error desconocido')
+                if resultado_envio.get('errores'):
+                    errores_str = ' | '.join([
+                        f"{err.get('codigo', 'N/A')}: {err.get('descripcion', 'Sin descripción')}"
+                        for err in resultado_envio['errores']
+                    ])
+                    mensaje_error = errores_str
+                
+                cursor.execute(
+                    """
+                    UPDATE registro_facturacion
+                       SET estado_envio = 'ERROR',
+                           errores = ?,
+                           fecha_envio = ?,
+                           enviado_aeat = 0
+                     WHERE factura_id = ?
+                    """,
+                    (mensaje_error, datetime.now().isoformat(), factura_id)
+                )
+                conn.commit()
+                logger.info(f"Estado ERROR registrado para factura {factura_id}")
+                
         except Exception as e:
             logger.error(f"Error procesando respuesta AEAT: {e}")
+            
+            # Marcar como ERROR también en caso de excepción
+            try:
+                _ensure_column_exists('estado_envio')
+                _ensure_column_exists('errores')
+                cursor.execute(
+                    """
+                    UPDATE registro_facturacion
+                       SET estado_envio = 'ERROR',
+                           errores = ?
+                     WHERE factura_id = ?
+                    """,
+                    (f"Excepción al procesar: {str(e)}", factura_id)
+                )
+                conn.commit()
+            except Exception as e2:
+                logger.error(f"No se pudo registrar el error: {e2}")
                         
 #                         # Actualizar QR en la factura principal
 #                         cursor.execute(

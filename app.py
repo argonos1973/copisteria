@@ -2961,10 +2961,10 @@ def obtener_factura_para_imprimir(factura_id):
             resultado = dict(zip(columnas, row))
             resultados_dict.append(resultado)
 
-        # Obtener código QR, hash y CSV de la tabla registro_facturacion si existe
+        # Obtener código QR, hash, CSV, estado y errores de la tabla registro_facturacion si existe
         logger.debug(f"[DEBUG] Obteniendo QR, hash y CSV para factura_id: {factura_id}")
         cursor.execute("""
-            SELECT codigo_qr, hash, csv FROM registro_facturacion
+            SELECT codigo_qr, hash, csv, estado_envio, errores FROM registro_facturacion
             WHERE factura_id = ?
         """, (factura_id,))
         registro = cursor.fetchone()
@@ -2974,12 +2974,14 @@ def obtener_factura_para_imprimir(factura_id):
             logger.debug(f"[DEBUG] Tipo de datos de registro['codigo_qr']: {type(registro['codigo_qr']) if registro['codigo_qr'] else 'None'}")
             logger.debug(f"[DEBUG] Tamaño de datos QR: {len(registro['codigo_qr']) if registro['codigo_qr'] else 0} bytes")
         
-        # Definimos variables para el QR, hash y CSV
+        # Definimos variables para el QR, hash, CSV, estado y errores
         qr_code_base64 = None
         hash_value = 'No disponible'
         csv_value = None
+        estado_envio = None
+        errores_aeat = None
         
-        # Obtener hash, CSV desde registro_facturacion si existe
+        # Obtener hash, CSV, estado y errores desde registro_facturacion si existe
         if registro:
             if registro['hash']:
                 hash_value = registro['hash']
@@ -2987,6 +2989,12 @@ def obtener_factura_para_imprimir(factura_id):
             if registro['csv']:
                 csv_value = registro['csv']
                 logger.debug(f"[DEBUG] CSV encontrado: {csv_value}")
+            if registro['estado_envio']:
+                estado_envio = registro['estado_envio']
+                logger.debug(f"[DEBUG] Estado envío: {estado_envio}")
+            if registro['errores']:
+                errores_aeat = registro['errores']
+                logger.debug(f"[DEBUG] Errores AEAT: {errores_aeat[:100]}...")
         # Si no hay hash en registro, usar el hash de la tabla factura
         if hash_value == 'No disponible' and resultados_dict[0]['hash_factura']:
             hash_value = resultados_dict[0]['hash_factura']
@@ -3100,6 +3108,9 @@ def obtener_factura_para_imprimir(factura_id):
             'hash_verifactu': (hash_value if VERIFACTU_HABILITADO else None),
             'qr_verifactu': (qr_code_base64 if VERIFACTU_HABILITADO else None),
             'codigo_qr': (qr_code_base64 if VERIFACTU_HABILITADO else None),  # Alias para compatibilidad
+            'csv': csv_value,
+            'estado_envio': estado_envio,
+            'errores_aeat': errores_aeat,
             'contacto': {
                 'id': resultados_dict[0]['idcontacto'],
                 'razonsocial': resultados_dict[0]['razonsocial'],
