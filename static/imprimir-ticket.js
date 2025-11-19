@@ -257,11 +257,14 @@ async function rellenarFactura(datos, emisor) {
         tiene_codigo_qr: !!datos.codigo_qr,
         longitud_qr: datos.codigo_qr ? datos.codigo_qr.length : 0,
         tiene_csv: !!datos.csv,
-        csv: datos.csv
+        csv: datos.csv,
+        estado_envio: datos.estado_envio,
+        errores_aeat: datos.errores_aeat
     });
 
-    // Mostrar información VERI*FACTU solo si está habilitado
+    // Mostrar información VERI*FACTU
     const bloqueVerifactu = document.getElementById('hash-ticket')?.parentElement?.parentElement;
+    const tieneQR = !!(datos.codigo_qr && datos.codigo_qr.length > 50);
     
     if (!verifactuHabilitado) {
         // Si VERIFACTU está desactivado, ocultar toda la sección
@@ -270,29 +273,58 @@ async function rellenarFactura(datos, emisor) {
             bloqueVerifactu.style.display = 'none';
         }
     } else {
-        // Si está habilitado, mostrar solo si hay datos
-        const verifactuDisponible = datos.codigo_qr && datos.codigo_qr.length > 50;
-        console.log('[VERIFACTU] Disponible:', verifactuDisponible);
+        console.log('[VERIFACTU] Habilitado - mostrando datos disponibles (QR:', tieneQR, ')');
         
-        if (!verifactuDisponible && bloqueVerifactu) {
-            console.log('[VERIFACTU] No hay datos - ocultando bloque');
-            bloqueVerifactu.style.display = 'none';
-        } else {
-            console.log('[VERIFACTU] Mostrando QR y CSV');
-            // QR
-            if (verifactuDisponible) {
-                const imgQR = document.getElementById('qr-verifactu');
-                imgQR.src = `data:image/png;base64,${datos.codigo_qr}`;
-                console.log('[VERIFACTU] QR asignado a imagen');
-            }
-
-            // CSV / Hash (se usa CSV como identificador comprobante)
+        // Mostrar bloque VERIFACTU
+        if (bloqueVerifactu) {
+            bloqueVerifactu.style.display = 'block';
+        }
+        
+        // 1. Mostrar CSV si existe
+        const csvElem = document.getElementById('hash-ticket');
+        if (csvElem) {
             if (datos.csv) {
-                const csvElem = document.getElementById('hash-ticket');
-                if (csvElem) {
-                    csvElem.textContent = `CSV: ${datos.csv}`;
-                    console.log('[VERIFACTU] CSV asignado:', datos.csv);
-                }
+                csvElem.textContent = `CSV: ${datos.csv}`;
+                console.log('[VERIFACTU] CSV asignado:', datos.csv);
+            } else {
+                csvElem.textContent = 'CSV: Pendiente de envío a AEAT';
+            }
+        }
+        
+        // 2. Gestionar QR o mensaje de error
+        const imgQR = document.getElementById('qr-verifactu');
+        if (imgQR) {
+            if (tieneQR) {
+                // Hay QR válido - mostrarlo
+                imgQR.src = `data:image/png;base64,${datos.codigo_qr}`;
+                imgQR.style.display = 'block';
+                console.log('[VERIFACTU] QR asignado a imagen');
+            } else if (datos.estado_envio === 'ERROR' && datos.errores_aeat) {
+                // Error de AEAT - mostrar mensaje de error
+                console.error('[VERIFACTU] Error de AEAT:', datos.errores_aeat);
+                const errorMatch = datos.errores_aeat.match(/Codigo\[(\d+)\]\.([^:]+)/);
+                const codigoError = errorMatch ? errorMatch[1] : 'N/A';
+                const mensajeCorto = errorMatch ? errorMatch[2].substring(0, 40) + '...' : 'Error de AEAT';
+                
+                // Crear div con mensaje de error
+                const errorDiv = document.createElement('div');
+                errorDiv.style.cssText = 'width:140px;height:140px;border:2px solid #dc3545;display:flex;justify-content:center;align-items:center;text-align:center;padding:10px;font-size:10px;background:#fff5f5;';
+                errorDiv.innerHTML = `
+                    <div>
+                        <div style="color:#dc3545;font-weight:bold;margin-bottom:5px;">❌ ERROR AEAT</div>
+                        <div style="font-size:9px;color:#666;">Código: ${codigoError}</div>
+                        <div style="font-size:8px;color:#888;margin-top:5px;" title="${datos.errores_aeat}">${mensajeCorto}</div>
+                    </div>
+                `;
+                imgQR.replaceWith(errorDiv);
+                console.log('[VERIFACTU] Mensaje de error mostrado');
+            } else {
+                // Pendiente de envío
+                console.log('[VERIFACTU] QR pendiente - mostrando mensaje');
+                const pendienteDiv = document.createElement('div');
+                pendienteDiv.style.cssText = 'width:140px;height:140px;border:1px solid #ddd;display:flex;justify-content:center;align-items:center;text-align:center;padding:10px;font-size:11px;';
+                pendienteDiv.textContent = 'QR pendiente';
+                imgQR.replaceWith(pendienteDiv);
             }
         }
     }

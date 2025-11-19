@@ -425,11 +425,13 @@ def obtener_ticket_con_detalles(id_ticket):
         ticket_dict['total'] = format_currency_es_two(total_total_dec)
         ticket_dict['importe_cobrado'] = format_currency_es_two(ticket_dict.get('importe_cobrado'))
 
-        # Obtener datos VERI*FACTU (QR y CSV) si existen
-        cursor.execute('SELECT codigo_qr, csv FROM registro_facturacion WHERE ticket_id = ?', (id_ticket,))
+        # Obtener datos VERI*FACTU (QR, CSV, estado y errores) si existen
+        cursor.execute('SELECT codigo_qr, csv, estado_envio, errores FROM registro_facturacion WHERE ticket_id = ?', (id_ticket,))
         reg = cursor.fetchone()
         codigo_qr = reg['codigo_qr'] if reg else None
         csv = reg['csv'] if reg else None
+        estado_envio = reg['estado_envio'] if reg else None
+        errores_aeat = reg['errores'] if reg else None
 
         formatted_detalles = []
         for detalle in detalles_list:
@@ -446,6 +448,8 @@ def obtener_ticket_con_detalles(id_ticket):
             'detalles': formatted_detalles,
             'codigo_qr': codigo_qr,
             'csv': csv,
+            'estado_envio': estado_envio,
+            'errores_aeat': errores_aeat,
             'verifactu_enabled': VERIFACTU_HABILITADO
         }
 
