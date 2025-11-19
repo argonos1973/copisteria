@@ -458,6 +458,11 @@ def obtener_ticket_con_detalles(id_ticket):
             'errores_aeat': errores_aeat,
             'verifactu_enabled': VERIFACTU_HABILITADO
         }
+        
+        # Log de debug para verificar datos VERIFACTU
+        logger.info(f"[API] Ticket {id_ticket}: verifactu_enabled={VERIFACTU_HABILITADO}, "
+                   f"tiene_qr={bool(codigo_qr)}, qr_len={len(codigo_qr) if codigo_qr else 0}, "
+                   f"csv={csv}, estado={estado_envio}")
 
         return jsonify(resultado)
 

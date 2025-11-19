@@ -256,6 +256,8 @@ async function rellenarFactura(datos, emisor) {
         verifactuHabilitado,
         tiene_codigo_qr: !!datos.codigo_qr,
         longitud_qr: datos.codigo_qr ? datos.codigo_qr.length : 0,
+        tipo_codigo_qr: typeof datos.codigo_qr,
+        codigo_qr_preview: datos.codigo_qr ? datos.codigo_qr.substring(0, 50) : 'null/undefined',
         tiene_csv: !!datos.csv,
         csv: datos.csv,
         estado_envio: datos.estado_envio,
