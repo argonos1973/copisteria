@@ -107,11 +107,7 @@
     </div>
 
     <link rel="stylesheet" href="/static/notificaciones.css">
-    <script type="module">
-        import { mostrarConfirmacion, mostrarNotificacion } from '/static/notificaciones.js';
-        window.mostrarConfirmacion = mostrarConfirmacion;
-        window.mostrarNotificacion = mostrarNotificacion;
-    </script>
+    <script type="module" src="/static/notificaciones_loader.js"></script>
     
     <!-- Cargador de menú dinámico -->
     <script src="/static/menu_loader.js?v=1762757322"></script>
@@ -127,22 +123,9 @@
 
     <!-- Funciones principales de la aplicación -->
     <script src="/static/app_private.js?v=1762757322"></script>
-
+    
     <!-- Cargar versión de la aplicación -->
-    <script>
-        window.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const response = await fetch('/api/version');
-                const data = await response.json();
-                const versionElement = document.getElementById('app-version');
-                if (versionElement && data.version) {
-                    versionElement.textContent = `v${data.version}`;
-                }
-            } catch (error) {
-                console.error('[MENU] Error cargando versión:', error);
-            }
-        });
-    </script>
+    <script src="/static/app_version.js"></script>
 
     <!-- Modal de Perfil de Usuario -->
     <div id="modal-perfil" class="modal-perfil" style="display: none;">
@@ -650,11 +633,6 @@
     <script src="/static/menu_loader.js?v=1763502969"></script>
     <script src="/static/app_init.js?v=1762757322"></script>
     <script src="/static/perfil_modal.js"></script>
-    
-    <!-- ✅ Todas las funciones del modal de perfil se cargan desde /static/perfil_modal.js -->
-    <script>
-        // Este script inline está vacío porque todas las funciones están en perfil_modal.js
-    </script>
     
     <!-- Modal Selector de Avatares -->
     <div id="modal-selector-avatares" class="modal-avatares" style="display: none;">
