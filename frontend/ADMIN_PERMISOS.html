@@ -92,7 +92,7 @@
                     <input type="hidden" id="usuario-superadmin" value="0">
                     
                     <!-- Fila 1: Usuario y Contraseña -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                    <div style="display: grid; grid-template-columns: 200px 200px; gap: 12px; margin-bottom: 16px;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label>Usuario *</label>
                             <input type="text" id="usuario-username" required autocomplete="username">
@@ -103,14 +103,14 @@
                         </div>
                     </div>
                     
-                    <!-- Fila 2: Nombre completo (ancho completo) -->
-                    <div class="form-group">
+                    <!-- Fila 2: Nombre completo -->
+                    <div class="form-group" style="max-width: 412px;">
                         <label>Nombre completo *</label>
                         <input type="text" id="usuario-nombre" required>
                     </div>
                     
                     <!-- Fila 3: Email y Teléfono -->
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 16px;">
+                    <div style="display: grid; grid-template-columns: 300px 150px; gap: 12px; margin-bottom: 16px;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label>Email</label>
                             <input type="email" id="usuario-email" autocomplete="email">

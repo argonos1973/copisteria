@@ -134,11 +134,11 @@
 }
 
 .modal-content {
-    background-color: var(--modal-bg, #fff) !important;
-    color: var(--modal-text) !important;
+    background: var(--modal-bg, var(--bg, #fff)) !important;
+    color: var(--modal-text, var(--text, #333)) !important;
     margin: 5% auto;
     padding: 0;
-    border: 1px solid var(--modal-border, #ddd);
+    border: 1px solid var(--modal-border, var(--border, #ddd));
     border-radius: 12px;
     width: 90%;
     max-width: 900px;
@@ -151,7 +151,7 @@
 
 /* Modal de usuario más compacta */
 #modalUsuario .modal-content {
-    max-width: 600px;
+    max-width: 520px;
 }
 
 .modal-content.modal-large {
@@ -232,10 +232,11 @@
 
 .modal-footer {
     padding: 16px 24px;
-    background: var(--modal-bg, var(--bg-elevated, #f8f9fa));
+    background: var(--modal-bg, var(--bg-elevated, var(--bg, #f8f9fa)));
     border-top: 1px solid var(--border, var(--border-color, #e0e0e0));
     display: flex;
     justify-content: flex-end;
+    align-items: center;
     gap: 12px;
     border-radius: 0 0 12px 12px;
 }
