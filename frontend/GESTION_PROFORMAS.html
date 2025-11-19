@@ -14,40 +14,19 @@
     />
     <link rel="stylesheet" href="../static/page_header.css">
     <link rel="stylesheet" href="/static/theme-consumer.css?v=1762757322">
+    <link rel="stylesheet" href="/static/modales.css?v=1763555500">
     
     <!-- Enlace a tus hojas de estilos -->
     <link rel="stylesheet" href="../static/styles.css?v=1762757322?t=1761596755">
     <link rel="stylesheet" href="../static/notificaciones.css?v=1762757322">
     <style>
-        /* Estilos para el modal */
+        /* Estilos específicos para modal de pagos */
         #modal-pagos {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
         }
-
-        .modal-content {
-            background-color: white;
-            padding: 20px;
-            border-radius: 5px;
-            width: 80%;
-            max-width: 600px;
-            position: relative;
-        }
-
-        .close {
-            position: absolute;
-            right: 10px;
-            top: 10px;
-            font-size: 24px;
-            cursor: pointer;
+        
+        #modal-pagos.show {
+            display: flex;
         }
 
         .modal-linea {
