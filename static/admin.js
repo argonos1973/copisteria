@@ -405,9 +405,10 @@ function mostrarModalNuevoUsuario() {
     document.getElementById('usuario-password').required = true;
     document.getElementById('usuario-password').placeholder = '••••••••';
     document.getElementById('usuario-avatar-preview').src = '/static/avatars/default.svg';
-    // Por defecto: activo=1, superadmin=0
+    // Por defecto: activo=1, superadmin=0, rol=admin
     document.getElementById('usuario-activo').value = '1';
     document.getElementById('usuario-superadmin').value = '0';
+    document.getElementById('usuario-rol').value = 'admin';
     document.getElementById('modalUsuario').style.display = 'block';
 }
 
@@ -426,6 +427,7 @@ async function guardarUsuario(event) {
         nombre_completo: document.getElementById('usuario-nombre').value,
         email: document.getElementById('usuario-email').value,
         telefono: document.getElementById('usuario-telefono').value,
+        rol: document.getElementById('usuario-rol').value || 'admin',
         es_superadmin: parseInt(document.getElementById('usuario-superadmin').value) || 0,
         activo: parseInt(document.getElementById('usuario-activo').value) || 1
     };
@@ -475,6 +477,7 @@ async function editarUsuario(id) {
     document.getElementById('usuario-nombre').value = usuario.nombre_completo;
     document.getElementById('usuario-email').value = usuario.email || '';
     document.getElementById('usuario-telefono').value = usuario.telefono || '';
+    document.getElementById('usuario-rol').value = usuario.rol || 'admin';
     
     // Cargar avatar del usuario o mostrar default
     const avatarPath = usuario.avatar || usuario.foto || '/static/avatars/default.svg';

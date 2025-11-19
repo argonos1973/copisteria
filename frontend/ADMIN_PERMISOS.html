@@ -132,6 +132,20 @@
                         <input type="tel" id="usuario-telefono">
                     </div>
                     
+                    <div class="form-group">
+                        <label><i class="fas fa-user-shield"></i> Rol *</label>
+                        <select id="usuario-rol" required style="width: 100%; padding: 12px; border: 1px solid var(--border, #ddd); border-radius: 8px; background: var(--input-bg, #fff); color: var(--text, #333);">
+                            <option value="admin">Administrador - Acceso total</option>
+                            <option value="editor">Editor - Sin acceso a Administración</option>
+                            <option value="consultor">Consultor - Solo lectura</option>
+                        </select>
+                        <small style="font-size: 11px; color: var(--text-muted, #666); display: block; margin-top: 4px;">
+                            • Admin: Todos los permisos<br>
+                            • Editor: Igual que admin pero sin menú Administración<br>
+                            • Consultor: Solo puede consultar datos
+                        </small>
+                    </div>
+                    
                     <button type="submit" class="btn-guardar-usuario"><i class="fas fa-save"></i> Guardar Cambios</button>
                 </form>
             </div>
