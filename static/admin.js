@@ -407,6 +407,7 @@ function mostrarModalNuevoUsuario() {
     document.getElementById('usuario-id').value = '';
     document.getElementById('usuario-password').required = true;
     document.getElementById('usuario-password').placeholder = '••••••••';
+    document.getElementById('usuario-avatar-preview').src = '/static/avatars/default.svg';
     // Por defecto: activo=1, superadmin=0
     document.getElementById('usuario-activo').value = '1';
     document.getElementById('usuario-superadmin').value = '0';
@@ -477,6 +478,11 @@ async function editarUsuario(id) {
     document.getElementById('usuario-nombre').value = usuario.nombre_completo;
     document.getElementById('usuario-email').value = usuario.email || '';
     document.getElementById('usuario-telefono').value = usuario.telefono || '';
+    
+    // Cargar avatar del usuario o mostrar default
+    const avatarPath = usuario.avatar || usuario.foto || '/static/avatars/default.svg';
+    document.getElementById('usuario-avatar-preview').src = avatarPath;
+    
     document.getElementById('usuario-superadmin').value = usuario.es_superadmin === 1 ? '1' : '0';
     document.getElementById('usuario-activo').value = usuario.activo === 1 ? '1' : '0';
     
