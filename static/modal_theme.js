@@ -50,10 +50,16 @@ function applyThemeToModals() {
     const modalPerfilHeader = document.querySelector('.modal-perfil-header');
     if (modalPerfilHeader) {
         console.log('[MODAL_THEME] ✓ Aplicando a .modal-perfil-header:', modalHeaderBg);
+        
+        // Limpiar cualquier background previo
+        modalPerfilHeader.style.removeProperty('background');
+        modalPerfilHeader.style.removeProperty('background-image');
+        
+        // Aplicar nuevos estilos
         modalPerfilHeader.style.setProperty('background-color', modalHeaderBg, 'important');
+        modalPerfilHeader.style.setProperty('background', modalHeaderBg, 'important');
         modalPerfilHeader.style.setProperty('color', modalHeaderText, 'important');
         
-        // También aplicar al h2 dentro del header
         const h2 = modalPerfilHeader.querySelector('h2');
         if (h2) {
             h2.style.setProperty('color', modalHeaderText, 'important');
@@ -123,7 +129,13 @@ function applyThemeToModals() {
     
     const modalAvataresHeader = document.querySelector('.modal-avatares-header');
     if (modalAvataresHeader) {
+        // Limpiar cualquier background previo
+        modalAvataresHeader.style.removeProperty('background');
+        modalAvataresHeader.style.removeProperty('background-image');
+        
+        // Aplicar nuevos estilos
         modalAvataresHeader.style.setProperty('background-color', modalHeaderBg, 'important');
+        modalAvataresHeader.style.setProperty('background', modalHeaderBg, 'important');
         modalAvataresHeader.style.setProperty('color', modalHeaderText, 'important');
         
         const h3 = modalAvataresHeader.querySelector('h3');
