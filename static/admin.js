@@ -406,7 +406,7 @@ function mostrarModalNuevoUsuario() {
     document.getElementById('formUsuario').reset();
     document.getElementById('usuario-id').value = '';
     document.getElementById('usuario-password').required = true;
-    document.getElementById('usuario-avatar-preview').src = '/static/avatars/default.svg';
+    document.getElementById('usuario-password').placeholder = '••••••••';
     // Por defecto: activo=1, superadmin=0
     document.getElementById('usuario-activo').value = '1';
     document.getElementById('usuario-superadmin').value = '0';
@@ -473,10 +473,10 @@ async function editarUsuario(id) {
     document.getElementById('usuario-username').value = usuario.username;
     document.getElementById('usuario-password').value = '';
     document.getElementById('usuario-password').required = false;
+    document.getElementById('usuario-password').placeholder = '••••••••';
     document.getElementById('usuario-nombre').value = usuario.nombre_completo;
     document.getElementById('usuario-email').value = usuario.email || '';
     document.getElementById('usuario-telefono').value = usuario.telefono || '';
-    document.getElementById('usuario-avatar-preview').src = '/static/avatars/default.svg';
     document.getElementById('usuario-superadmin').value = usuario.es_superadmin === 1 ? '1' : '0';
     document.getElementById('usuario-activo').value = usuario.activo === 1 ? '1' : '0';
     
