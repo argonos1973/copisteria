@@ -72,8 +72,10 @@ async function applyTheme(themeJson) {
         --color-texto: var(--text);
         --color-texto-secundario: var(--text-muted);
         --color-fondo: var(--bg);
-        --color-header-bg: var(--header-bg);
-        --color-header-text: var(--header-text);
+        --color-header-bg: var(--modal-header-bg);
+        --color-header-text: var(--modal-header-text);
+        --header-bg: var(--modal-header-bg);
+        --header-text: var(--modal-header-text);
         --color-button: var(--button-bg);
         --color-button-text: var(--button-text);
         --color-button-hover: var(--button-hover-bg);
