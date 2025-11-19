@@ -275,8 +275,8 @@
         
         .modal-perfil-header {
             padding: 20px 25px;
-            background: var(--primary, var(--color-primario, #3498db));
-            color: white;
+            background: var(--header-bg, var(--primary, var(--color-primario, #3498db)));
+            color: var(--header-text, #ffffff);
             border-radius: 12px 12px 0 0;
             display: flex;
             justify-content: space-between;
@@ -287,10 +287,11 @@
             margin: 0;
             font-size: 22px;
             font-weight: 600;
+            color: var(--header-text, #ffffff);
         }
         
         .modal-perfil-close {
-            color: white;
+            color: var(--header-text, #ffffff);
             font-size: 32px;
             font-weight: bold;
             cursor: pointer;
@@ -502,11 +503,11 @@
         }
         
         .modal-avatares-content {
-            background: var(--modal-bg, #ffffff);
-            color: var(--modal-text, #000000);
+            background: var(--card-bg, #ffffff);
+            color: var(--text, #000000);
             margin: 5% auto;
             padding: 0;
-            border: 1px solid var(--modal-border, #d4d4d4);
+            border: 1px solid var(--border, #d4d4d4);
             border-radius: 12px;
             width: 90%;
             max-width: 700px;
@@ -516,8 +517,8 @@
         
         .modal-avatares-header {
             padding: 20px 25px;
-            background: var(--modal-header-bg, var(--primary, #2c3e50)) !important;
-            color: var(--modal-header-text, #ffffff) !important;
+            background: var(--header-bg, var(--primary, #2c3e50)) !important;
+            color: var(--header-text, #ffffff) !important;
             border-radius: 12px 12px 0 0;
             display: flex;
             justify-content: space-between;
@@ -528,11 +529,11 @@
             margin: 0;
             font-size: 20px;
             font-weight: 600;
-            color: var(--modal-header-text, #ffffff) !important;
+            color: var(--header-text, #ffffff) !important;
         }
         
         .modal-avatares-close {
-            color: var(--modal-header-text, #ffffff) !important;
+            color: var(--header-text, #ffffff) !important;
             font-size: 32px;
             font-weight: bold;
             cursor: pointer;
@@ -548,22 +549,22 @@
         
         .modal-avatares-body {
             padding: 25px;
-            background: var(--modal-bg, #ffffff);
+            background: var(--card-bg, #ffffff);
         }
         
         .modal-avatares-tabs {
             display: flex;
             gap: 15px;
             margin-bottom: 20px;
-            border-bottom: 2px solid var(--modal-border, #d4d4d4);
+            border-bottom: 2px solid var(--border, #d4d4d4);
             padding-bottom: 15px;
         }
         
         .avatar-tab-btn {
             flex: 1;
             padding: 10px 20px;
-            background: var(--button-bg, #6c757d);
-            color: var(--button-text, #ffffff);
+            background: var(--button-secondary-bg, #6c757d);
+            color: var(--button-secondary-text, #ffffff);
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -573,7 +574,7 @@
         }
         
         .avatar-tab-btn:hover {
-            background: var(--button-hover-bg, #5a6268);
+            background: var(--button-hover-bg, var(--button-secondary-hover, #5a6268));
         }
         
         .avatar-tab-btn.active {
@@ -596,7 +597,7 @@
         }
         
         .subir-avatar-area {
-            border: 2px dashed var(--modal-border, #d4d4d4);
+            border: 2px dashed var(--border, #d4d4d4);
             border-radius: 8px;
             padding: 40px;
             cursor: pointer;
@@ -605,7 +606,7 @@
         }
         
         .subir-avatar-area:hover {
-            background-color: var(--bg-hover, rgba(0,0,0,0.02));
+            background-color: var(--hover-bg, rgba(0,0,0,0.02));
             border-color: var(--primary, #3b82f6);
         }
         
@@ -619,7 +620,7 @@
         .subir-avatar-text {
             margin: 0;
             font-size: 14px;
-            color: var(--modal-text, #000000);
+            color: var(--text, #000000);
         }
         
         .subir-avatar-hint {
