@@ -781,8 +781,8 @@ function crearModalPagos(titulo = 'Añadir Pago') {
   modal.innerHTML = `
     <div class="modal-content">
       <div class="modal-header">
-        <h3>${titulo}</h3>
-        <span class="close" id="closeModal">&times;</span>
+        <h3><i class="fas fa-money-bill-wave"></i> ${titulo}</h3>
+        <span class="close" id="closeModal" style="opacity: 0.8;">&times;</span>
       </div>
       <div class="modal-body">
         <div class="modal-linea">
