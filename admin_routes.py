@@ -78,6 +78,11 @@ def crear_usuario():
         nombre_completo = data.get('nombre_completo', '').strip()
         email = data.get('email', '').strip()
         telefono = data.get('telefono', '').strip()
+        rol = data.get('rol', 'admin').strip()  # admin, editor, consultor
+        
+        # Validar rol
+        if rol not in ['admin', 'editor', 'consultor']:
+            rol = 'admin'  # Por defecto admin si el rol es inválido
         
         if not username or not password or not nombre_completo:
             return jsonify({'error': 'Faltan campos requeridos'}), 400
@@ -98,9 +103,9 @@ def crear_usuario():
         
         # es_superadmin siempre 0 (ya no hay superadmins)
         cursor.execute('''
-            INSERT INTO usuarios (username, password_hash, nombre_completo, email, telefono, es_superadmin, activo)
-            VALUES (?, ?, ?, ?, ?, 0, 1)
-        ''', (username, password_hash, nombre_completo, email, telefono))
+            INSERT INTO usuarios (username, password_hash, nombre_completo, email, telefono, rol, es_superadmin, activo)
+            VALUES (?, ?, ?, ?, ?, ?, 0, 1)
+        ''', (username, password_hash, nombre_completo, email, telefono, rol))
         
         usuario_id = cursor.lastrowid
         
@@ -165,6 +170,13 @@ def actualizar_usuario(usuario_id):
         if 'telefono' in data:
             campos.append('telefono = ?')
             valores.append(data['telefono'])
+        
+        if 'rol' in data:
+            rol = data['rol'].strip()
+            # Validar rol
+            if rol in ['admin', 'editor', 'consultor']:
+                campos.append('rol = ?')
+                valores.append(rol)
         
         if 'activo' in data:
             campos.append('activo = ?')
