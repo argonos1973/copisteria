@@ -443,9 +443,9 @@ async function rellenarFactura(datos, emisor) {
         });
     }
     
-    // Insertar código QR si VERI*FACTU está disponible
-    console.log('[VERIFACTU] Intentando insertar QR. qrElement:', !!qrElement, 'verifactuDisponible:', verifactuDisponible);
-    if (qrElement && verifactuDisponible) {
+    // Insertar código QR solo si existe
+    console.log('[VERIFACTU] Intentando insertar QR. qrElement:', !!qrElement, 'tieneQR:', tieneQR);
+    if (qrElement && tieneQR) {
         // Limpiar el contenedor QR primero
         qrElement.innerHTML = '';
         
@@ -527,12 +527,15 @@ async function rellenarFactura(datos, emisor) {
         function mostrarQRNoDisponible() {
             qrElement.innerHTML = '<div style="width:150px;height:150px;border:1px solid #ddd;display:flex;justify-content:center;align-items:center;text-align:center;">QR no disponible</div>';
         }
+    } else if (qrElement && verifactuDisponible && !tieneQR) {
+        // VERIFACTU habilitado pero sin QR todavía (pendiente de envío a AEAT)
+        console.log('[VERIFACTU] Hash disponible pero QR pendiente de generación (envío a AEAT pendiente)');
+        qrElement.innerHTML = '<div style="width:150px;height:150px;border:1px solid #ddd;display:flex;justify-content:center;align-items:center;text-align:center;padding:10px;font-size:12px;">QR pendiente<br><small>(Envío a AEAT pendiente)</small></div>';
     } else {
         if (!qrElement) {
             console.error('[VERIFACTU] No se encontró el elemento #qr-verifactu en el DOM');
         } else {
-            console.warn('[VERIFACTU] Elemento QR existe pero no se insertó imagen: verifactuDisponible =', verifactuDisponible);
-            console.warn('[VERIFACTU] Verificar que factura.codigo_qr tenga datos válidos (longitud > 50)');
+            console.log('[VERIFACTU] QR no mostrado - verifactuDisponible:', verifactuDisponible, 'tieneQR:', tieneQR);
         }
     }
 
