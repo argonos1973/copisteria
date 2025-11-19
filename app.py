@@ -3423,9 +3423,10 @@ def descargar_carta_reclamacion(numero_factura):
         # Buscar el archivo de carta más reciente para esta factura en el directorio de la empresa
         cartas_base_dir = '/var/www/html/cartas_reclamacion'
         cartas_dir = os.path.join(cartas_base_dir, str(empresa_id))
-        patron = f'{cartas_dir}/carta_reclamacion_{numero_factura}_*.pdf'
+        # Buscar recursivamente en subdirectorios año/mes
+        patron = f'{cartas_dir}/**/carta_reclamacion_{numero_factura}_*.pdf'
         
-        archivos = glob.glob(patron)
+        archivos = glob.glob(patron, recursive=True)
         
         if not archivos:
             return jsonify({'error': f'No se encontró carta de reclamación para la factura {numero_factura}'}), 404

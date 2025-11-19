@@ -44,8 +44,13 @@ def generar_carta_reclamacion(factura_data, dias_vencidos):
         # Obtener empresa_id de la factura
         empresa_id = factura_data.get('empresa_id', 'default')
         
-        # Crear directorio específico para la empresa
-        cartas_dir = os.path.join(CARTAS_BASE_DIR, str(empresa_id))
+        # Obtener año y mes actual
+        now = datetime.now()
+        year = now.strftime('%Y')
+        month = now.strftime('%m')
+        
+        # Crear directorio específico para la empresa/año/mes
+        cartas_dir = os.path.join(CARTAS_BASE_DIR, str(empresa_id), year, month)
         os.makedirs(cartas_dir, exist_ok=True)
         
         # Leer datos del emisor desde JSON
