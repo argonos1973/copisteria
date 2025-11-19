@@ -78,57 +78,55 @@
     </div>
 
     <!-- Modal: Usuario -->
-    <div id="modalUsuario" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modal-usuario-titulo">Nuevo Usuario</h3>
-                <span class="close" onclick="cerrarModalUsuario()">&times;</span>
+    <div id="modalUsuario" class="modal-usuario" style="display: none;">
+        <div class="modal-usuario-content">
+            <div class="modal-usuario-header">
+                <h2 id="modal-usuario-titulo"><i class="fas fa-user-circle"></i> Nuevo Usuario</h2>
+                <span class="modal-usuario-close" onclick="cerrarModalUsuario()">&times;</span>
             </div>
-            <div class="modal-body">
+            
+            <div class="modal-usuario-body">
                 <div id="alert-usuario"></div>
                 <form id="formUsuario" onsubmit="guardarUsuario(event)">
                     <input type="hidden" id="usuario-id">
                     <input type="hidden" id="usuario-activo" value="1">
                     <input type="hidden" id="usuario-superadmin" value="0">
                     
-                    <!-- Fila 1: Usuario y Contraseña -->
-                    <div style="display: grid; grid-template-columns: 170px 170px; gap: 12px; margin-bottom: 16px;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Usuario *</label>
-                            <input type="text" id="usuario-username" required autocomplete="username">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Contraseña *</label>
-                            <input type="password" id="usuario-password" autocomplete="new-password">
+                    <!-- Avatar -->
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div style="position: relative; display: inline-block; width: 100px; height: 100px;">
+                            <img id="usuario-avatar-preview" src="/static/avatars/default.svg" alt="" 
+                                 style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid var(--color-primario, #007bff); display: block;">
                         </div>
                     </div>
                     
-                    <!-- Fila 2: Nombre completo -->
-                    <div class="form-group" style="max-width: 352px;">
-                        <label>Nombre completo *</label>
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> Nombre de usuario *</label>
+                        <input type="text" id="usuario-username" required autocomplete="username">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-lock"></i> Contraseña *</label>
+                        <input type="password" id="usuario-password" autocomplete="new-password">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-id-card"></i> Nombre completo *</label>
                         <input type="text" id="usuario-nombre" required>
                     </div>
                     
-                    <!-- Fila 3: Email y Teléfono -->
-                    <div style="display: grid; grid-template-columns: 230px 120px; gap: 12px; margin-bottom: 16px;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Email</label>
-                            <input type="email" id="usuario-email" autocomplete="email">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Teléfono</label>
-                            <input type="text" id="usuario-telefono">
-                        </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> Email</label>
+                        <input type="email" id="usuario-email" autocomplete="email">
                     </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-phone"></i> Teléfono</label>
+                        <input type="tel" id="usuario-telefono">
+                    </div>
+                    
+                    <button type="submit" class="btn-guardar-usuario"><i class="fas fa-save"></i> Guardar Cambios</button>
                 </form>
-            </div>
-            <div class="modal-footer">
-                <button type="submit" form="formUsuario" class="btn btn-success">
-                    Guardar
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="cerrarModalUsuario()">
-                    Cancelar
-                </button>
             </div>
         </div>
     </div>
@@ -156,6 +154,133 @@
             border-color: var(--color-primario);
             box-shadow: 0 0 0 3px rgba(var(--color-primario-rgb, 0, 123, 255), 0.1);
         }
+        
+        /* Estilos Modal Usuario (similar a Mi Perfil) */
+        .modal-usuario {
+            display: none;
+            position: fixed;
+            z-index: 10000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s;
+        }
+        
+        .modal-usuario-content {
+            background: var(--bg, #fff);
+            color: var(--text, #333);
+            margin: 3% auto;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .modal-usuario-header {
+            padding: 20px 25px;
+            background: var(--primary, var(--color-primario, #3498db));
+            color: white;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-usuario-header h2 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .modal-usuario-close {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            opacity: 1;
+        }
+        
+        .modal-usuario-close:hover {
+            opacity: 0.8;
+        }
+        
+        .modal-usuario-body {
+            padding: 30px;
+        }
+        
+        .modal-usuario-body .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .modal-usuario-body .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            color: var(--text, #333);
+        }
+        
+        .modal-usuario-body .form-group label i {
+            margin-right: 8px;
+            color: var(--primary, #3498db);
+            width: 16px;
+            text-align: center;
+        }
+        
+        .modal-usuario-body .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border, #ddd);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--bg, #fff);
+            color: var(--text, #333);
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .modal-usuario-body .form-group input:focus {
+            outline: none;
+            border-color: var(--primary, #3498db);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .btn-guardar-usuario {
+            width: 100%;
+            padding: 14px 20px;
+            background: var(--primary, #3498db);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .btn-guardar-usuario:hover {
+            background: var(--primary-hover, #2980b9);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-guardar-usuario i {
+            margin-right: 8px;
+        }
     </style>
     
     <!-- Inicializar plantillas al cargar -->
@@ -164,6 +289,14 @@
             await cargarPlantillas();
             console.log('✅ Plantillas cargadas y disponibles en window.plantillasColores');
         });
+        
+        // Cerrar modal al hacer click fuera
+        window.onclick = function(event) {
+            const modal = document.getElementById('modalUsuario');
+            if (event.target === modal) {
+                cerrarModalUsuario();
+            }
+        };
     </script>
     <script src="/static/branding.js?v=1762757322"></script>
     <script src="/static/auto_branding.js?v=1762757322"></script>
