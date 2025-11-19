@@ -151,7 +151,7 @@
 
 /* Modal de usuario más compacta */
 #modalUsuario .modal-content {
-    max-width: 520px;
+    max-width: 480px;
 }
 
 .modal-content.modal-large {
@@ -233,9 +233,9 @@
 .modal-footer {
     padding: 16px 24px;
     background: var(--modal-bg, var(--bg-elevated, var(--bg, #f8f9fa)));
-    border-top: 1px solid var(--border, var(--border-color, #e0e0e0));
+    border-top: none;
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     align-items: center;
     gap: 12px;
     border-radius: 0 0 12px 12px;
