@@ -242,6 +242,7 @@ export function inicializarInfoPrecioPopup() {
 }
 
 /* ================= Loading Overlay ================= */
+/* Usa estilos CSS definidos en modales.css - sin animaciones ni inline styles */
 let overlayDiv;
 
 function crearOverlay() {
@@ -249,40 +250,19 @@ function crearOverlay() {
   overlayDiv = document.createElement('div');
   overlayDiv.id = 'loading-overlay';
   overlayDiv.innerHTML = '<div class="loading-spinner"></div>';
-  overlayDiv.style.position = 'fixed';
-  overlayDiv.style.top = '0';
-  overlayDiv.style.left = '0';
-  overlayDiv.style.width = '100%';
-  overlayDiv.style.height = '100%';
-  overlayDiv.style.background = 'transparent';
-  overlayDiv.style.display = 'flex';
-  overlayDiv.style.alignItems = 'center';
-  overlayDiv.style.justifyContent = 'center';
-  overlayDiv.style.zIndex = '9999';
-  overlayDiv.style.visibility = 'hidden';
-  overlayDiv.style.opacity = '0';
-  overlayDiv.style.transition = 'opacity 0.3s ease, visibility 0.3s ease';
-
-  // Estilos del spinner
-  const style = document.createElement('style');
-  style.textContent = `#loading-overlay .loading-spinner { border: 8px solid #f3f3f3; border-top: 8px solid #3498db; border-radius: 50%; width: 64px; height: 64px; animation: loading-spin 1s linear infinite; } @keyframes loading-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`;
-  document.head.appendChild(style);
+  // Los estilos están en modales.css - no usar inline styles
   document.body.appendChild(overlayDiv);
   return overlayDiv;
 }
 
 export function mostrarCargando() {
   const ov = crearOverlay();
-  ov.style.visibility = 'visible';
-  ov.style.opacity = '1';
+  ov.classList.add('show');
 }
 
 export function ocultarCargando() {
   if (!overlayDiv) return;
-  overlayDiv.style.opacity = '0';
-  overlayDiv.addEventListener('transitionend', () => {
-    overlayDiv.style.visibility = 'hidden';
-  }, { once: true });
+  overlayDiv.classList.remove('show');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
