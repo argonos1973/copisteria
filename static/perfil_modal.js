@@ -41,6 +41,13 @@ async function abrirModalPerfil() {
         
         // Mostrar modal
         document.getElementById('modal-perfil').style.display = 'block';
+        
+        // Aplicar tema a la modal
+        setTimeout(() => {
+            if (typeof window.applyThemeToModals === 'function') {
+                window.applyThemeToModals();
+            }
+        }, 50);
     } catch (error) {
         console.error('Error cargando perfil:', error);
         alert('Error al cargar datos del perfil');
@@ -341,6 +348,13 @@ async function abrirSelectorAvatares() {
     modal.style.display = 'block';
     await cargarAvataresPredefinidos();
     mostrarAvataresPredefinidos();
+    
+    // Aplicar tema a la modal
+    setTimeout(() => {
+        if (typeof window.applyThemeToModals === 'function') {
+            window.applyThemeToModals();
+        }
+    }, 50);
 }
 
 function cerrarSelectorAvatares() {
