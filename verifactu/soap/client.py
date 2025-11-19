@@ -195,12 +195,24 @@ def crear_envelope_soap(
     # ------------------------------------------------------------------ #
     #  Cargar datos del emisor desde emisor_config.json, si existe
     # ------------------------------------------------------------------ #
+    cfg_emisor = {}
     try:
         from utils_emisor import cargar_datos_emisor
         cfg_emisor = cargar_datos_emisor()
     except Exception as e_cfg:
-        logger.warning(f"No se pudo cargar emisor_config.json: {e_cfg}")
-        cfg_emisor = {}
+        logger.warning(f"No se pudo cargar desde utils_emisor: {e_cfg}")
+        # Fallback: cargar directamente desde JSON sin contexto Flask
+        try:
+            import json
+            empresa_codigo = os.getenv('EMPRESA_CODIGO', 'default')
+            emisor_path = f'/var/www/html/emisores/{empresa_codigo}_emisor.json'
+            if os.path.exists(emisor_path):
+                with open(emisor_path, 'r', encoding='utf-8') as f:
+                    cfg_emisor = json.load(f)
+                    logger.info(f"Datos emisor cargados desde {emisor_path}")
+        except Exception as e_json:
+            logger.warning(f"No se pudo cargar JSON directamente: {e_json}")
+            cfg_emisor = {}
 
     # Prioridad: valor explícito en registro_factura > configuración JSON > valor por defecto
     nombre = registro_factura.get("nombre_emisor", cfg_emisor.get("nombre", "EMISOR VERIFACTU"))
