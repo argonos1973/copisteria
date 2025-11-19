@@ -32,15 +32,27 @@ function applyThemeToModals() {
     // MODAL DE PERFIL
     const modalPerfilContent = document.querySelector('.modal-perfil-content');
     if (modalPerfilContent) {
-        modalPerfilContent.style.backgroundColor = modalBg;
-        modalPerfilContent.style.color = modalText;
-        modalPerfilContent.style.borderColor = modalBorder;
+        console.log('[MODAL_THEME] ✓ Aplicando a .modal-perfil-content:', modalBg);
+        modalPerfilContent.style.setProperty('background-color', modalBg, 'important');
+        modalPerfilContent.style.setProperty('color', modalText, 'important');
+        modalPerfilContent.style.setProperty('border-color', modalBorder, 'important');
+    } else {
+        console.log('[MODAL_THEME] ⚠️ No se encontró .modal-perfil-content');
     }
     
     const modalPerfilHeader = document.querySelector('.modal-perfil-header');
     if (modalPerfilHeader) {
-        modalPerfilHeader.style.backgroundColor = modalHeaderBg;
-        modalPerfilHeader.style.color = modalHeaderText;
+        console.log('[MODAL_THEME] ✓ Aplicando a .modal-perfil-header:', modalHeaderBg);
+        modalPerfilHeader.style.setProperty('background-color', modalHeaderBg, 'important');
+        modalPerfilHeader.style.setProperty('color', modalHeaderText, 'important');
+        
+        // También aplicar al h2 dentro del header
+        const h2 = modalPerfilHeader.querySelector('h2');
+        if (h2) {
+            h2.style.setProperty('color', modalHeaderText, 'important');
+        }
+    } else {
+        console.log('[MODAL_THEME] ⚠️ No se encontró .modal-perfil-header');
     }
     
     const modalPerfilTabs = document.querySelector('.modal-perfil-tabs');
