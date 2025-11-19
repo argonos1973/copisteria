@@ -92,7 +92,8 @@ function tienePermiso(modulo, accion) {
     }
     
     const tiene = permisos[modulo][accion] === 1;
-    console.log(`[PERMISOS] tienePermiso('${modulo}', '${accion}') = ${tiene}`, permisos[modulo]);
+    // Log deshabilitado para reducir ruido en consola
+    // console.log(`[PERMISOS] tienePermiso('${modulo}', '${accion}') = ${tiene}`, permisos[modulo]);
     return tiene;
 }
 

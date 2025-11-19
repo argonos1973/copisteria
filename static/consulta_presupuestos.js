@@ -320,17 +320,24 @@ function restaurarFiltros() {
   
   // Botón Nuevo Presupuesto
   // Selector de registros por página
-  document.getElementById('pageSizeSelectPresupuestos').addEventListener('change', () => { guardarFiltros(); buscarPresupuestos(); });
-  document.getElementById('nuevoPresupuesto').addEventListener('click', () => {
-    // Verificar permiso de crear presupuestos
-    if (typeof verificarPermisoConAlerta !== 'undefined') {
-      if (!verificarPermisoConAlerta('presupuestos', 'crear')) {
-        return;
+  const pageSizeSelect = document.getElementById('pageSizeSelectPresupuestos');
+  if (pageSizeSelect) {
+    pageSizeSelect.addEventListener('change', () => { guardarFiltros(); buscarPresupuestos(); });
+  }
+  
+  const btnNuevoPresupuesto = document.getElementById('nuevoPresupuesto');
+  if (btnNuevoPresupuesto) {
+    btnNuevoPresupuesto.addEventListener('click', () => {
+      // Verificar permiso de crear presupuestos
+      if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('presupuestos', 'crear')) {
+          return;
+        }
       }
-    }
-    
-    window.location.href = 'GESTION_PRESUPUESTOS.html';
-  });
+      
+      window.location.href = 'GESTION_PRESUPUESTOS.html';
+    });
+  }
   
   // Aplicar permisos a los elementos
   setTimeout(() => {

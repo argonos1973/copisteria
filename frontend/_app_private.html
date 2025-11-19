@@ -39,7 +39,6 @@
             <!-- Información de sesión -->
             <div style="padding: 0.5rem 1rem; border-top: 1px solid rgba(255,255,255,0.1); margin-bottom: 1rem;">
                 <div id="user-profile-link" style="color: rgba(255,255,255,0.7); font-size: 13px; margin-bottom: 5px; cursor: pointer; display: flex; align-items: flex-start; gap: 10px; padding: 4px; border-radius: 4px;" 
-                     onclick="abrirModalPerfil()" 
                      onmouseover="this.style.background='rgba(255,255,255,0.1)'"
                      onmouseout="this.style.background='transparent'"
                      title="Click para ver tu perfil">
@@ -650,10 +649,17 @@
     <script src="/static/menu_loader.js?v=1763502969"></script>
     <script src="/static/app_init.js?v=1762757322"></script>
     
-    <!-- Scripts inline eliminados - movidos a archivos externos -->
-    <!--
+    <!-- Scripts inline para funciones de perfil -->
     <script>
         let datosUsuarioActual = {};
+        
+        // Agregar evento al user-profile-link después de que el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            const userProfileLink = document.getElementById('user-profile-link');
+            if (userProfileLink) {
+                userProfileLink.addEventListener('click', abrirModalPerfil);
+            }
+        });
         
         async function abrirModalPerfil() {
             try {
@@ -945,7 +951,7 @@
                 cerrarModalPerfil();
             }
         }
-    -->
+    </script>
     
     <!-- Modal Selector de Avatares -->
     <div id="modal-selector-avatares" class="modal-avatares" style="display: none;">
