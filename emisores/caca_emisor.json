@@ -1,12 +1,12 @@
 {
-    "nif": "44007535w",
-    "nombre": "CACA",
-    "direccion": "Carrer de la Legalitat, 70",
-    "cp": "08024",
-    "ciudad": "Barcelona",
-    "provincia": "Cataluña",
-    "pais": "ESP",
-    "email": "aleph70copisteria@gmail.com",
-    "db_path": "/var/www/html/db/caca/caca.db",
-    "codigo": "caca"
+  "nif": "44007535W",
+  "nombre": "CACA",
+  "direccion": "Carrer de la Legalitat, 70",
+  "cp": "08024",
+  "ciudad": "Barcelona",
+  "provincia": "Cataluña",
+  "pais": "ESP",
+  "email": "aleph70copisteria@gmail.com",
+  "db_path": "/var/www/html/db/caca/caca.db",
+  "codigo": "caca"
 }
