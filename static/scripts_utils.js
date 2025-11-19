@@ -775,6 +775,7 @@ function crearModalPagos(titulo = 'Añadir Pago') {
   // Crear nuevo modal con título actualizado
   let modal = document.createElement('div');
   modal.id = 'modal-pagos';
+  modal.className = 'modal';
   modal.style.display = 'none';
   
   modal.innerHTML = `

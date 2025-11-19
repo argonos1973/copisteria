@@ -151,7 +151,22 @@
 
 /* Modal de usuario más compacta */
 #modalUsuario .modal-content {
-    max-width: 480px;
+    max-width: 450px;
+}
+
+/* Modal de pagos compacta */
+#modal-pagos .modal-content {
+    max-width: 700px;
+}
+
+/* Asegurar que el título de modal-pagos sea visible */
+#modal-pagos .modal-header {
+    background: var(--header-bg, var(--modal-header-bg, var(--primary, #000))) !important;
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
+}
+
+#modal-pagos .modal-header h3 {
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
 }
 
 .modal-content.modal-large {
