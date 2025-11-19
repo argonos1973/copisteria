@@ -1123,6 +1123,24 @@ export function mostrarDatosTicket(ticket) {
       btnImprimir.classList.add('hidden');
     }
   }
+  
+  // Solo mostrar botón anular si el ticket está cobrado
+  const btnAnular = document.getElementById('btn-anular-ticket');
+  if (btnAnular) {
+    if (ticket.id && ticket.estado === "C") {
+      // Verificar permisos antes de mostrar
+      if (typeof tienePermiso === 'function' && tienePermiso('tickets', 'anular')) {
+        btnAnular.classList.remove('hidden');
+        console.log('[TICKETS] Botón anular mostrado para ticket cobrado');
+      } else {
+        btnAnular.classList.add('hidden');
+        console.log('[TICKETS] Botón anular oculto: sin permisos');
+      }
+    } else {
+      btnAnular.classList.add('hidden');
+      console.log('[TICKETS] Botón anular oculto: ticket no cobrado o sin ID');
+    }
+  }
 }
 
 /**
