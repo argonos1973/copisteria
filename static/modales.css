@@ -226,12 +226,14 @@
     padding: 24px;
     overflow-y: auto;
     flex: 1;
+    background: var(--modal-bg, var(--modal-body-bg, var(--bg, #fff))) !important;
+    color: var(--modal-text, var(--modal-body-text, var(--text, #333))) !important;
 }
 
 .modal-footer {
     padding: 16px 24px;
-    background: var(--bg-secondary, #f8f9fa);
-    border-top: 1px solid var(--border-color, #e0e0e0);
+    background: var(--modal-bg, var(--bg-elevated, #f8f9fa));
+    border-top: 1px solid var(--border, var(--border-color, #e0e0e0));
     display: flex;
     justify-content: flex-end;
     gap: 12px;
@@ -260,11 +262,11 @@
     width: 100%;
     padding: 8px 12px;
     font-size: 14px;
-    border: 1px solid var(--border-color, #ddd);
+    border: 1px solid var(--input-border, var(--modal-input-border, var(--border, #ddd)));
     border-radius: 6px;
     box-sizing: border-box;
-    background: var(--bg-primary, #fff);
-    color: var(--text-primary, #333);
+    background: var(--input-bg, var(--modal-input-bg, var(--bg, #fff)));
+    color: var(--input-text, var(--modal-input-text, var(--text, #333)));
 }
 
 .modal-body .form-group input:focus,
@@ -298,13 +300,17 @@
 /* BOTONES EN MODALES */
 /* ================================= */
 .modal-footer .btn {
-    padding: 8px 16px;
+    padding: 8px 20px;
     font-size: 14px;
     border-radius: 6px;
     border: none;
     cursor: pointer;
     font-weight: 500;
     transition: all 0.2s;
+    min-width: 100px;
+    max-width: 200px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .modal-footer .btn-success {

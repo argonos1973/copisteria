@@ -110,7 +110,7 @@
                     </div>
                     
                     <!-- Fila 3: Email y Teléfono -->
-                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 16px;">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 16px;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label>Email</label>
                             <input type="email" id="usuario-email" autocomplete="email">
@@ -120,16 +120,15 @@
                             <input type="text" id="usuario-telefono">
                         </div>
                     </div>
-                    
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save"></i> Guardar
-                        </button>
-                        <button type="button" class="btn btn-secondary" onclick="cerrarModalUsuario()">
-                            <i class="fas fa-times"></i> Cancelar
-                        </button>
-                    </div>
                 </form>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" form="formUsuario" class="btn btn-success">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalUsuario()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
             </div>
         </div>
     </div>
