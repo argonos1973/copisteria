@@ -384,7 +384,9 @@ async function rellenarFactura(datos, emisor) {
     });
     
     const verifactuHabilitado = datos.verifactu_enabled === true;
-    const verifactuDisponible = verifactuHabilitado && !!(factura.codigo_qr && factura.codigo_qr.length > 50);
+    // Mostrar VERIFACTU si está habilitado Y hay al menos hash
+    const verifactuDisponible = verifactuHabilitado && !!(factura.hash_verifactu);
+    const tieneQR = !!(factura.codigo_qr && factura.codigo_qr.length > 50);
     
     if (!verifactuHabilitado) {
         console.log('[VERIFACTU] Desactivado - ocultando secciones');
@@ -401,7 +403,7 @@ async function rellenarFactura(datos, emisor) {
             console.error('Error ocultando secciones VERI*FACTU:', err);
         }
     } else if (!verifactuDisponible) {
-        console.warn('[VERIFACTU] Habilitado pero sin datos - ocultando secciones');
+        console.warn('[VERIFACTU] Habilitado pero sin hash - ocultando secciones');
         // Ocultar si no hay datos disponibles
         try {
             const qrContainerOuter = document.getElementById('qr-verifactu')?.parentElement?.parentElement;
@@ -412,7 +414,7 @@ async function rellenarFactura(datos, emisor) {
             console.error('Error ocultando secciones VERI*FACTU:', err);
         }
     } else {
-        console.log('[VERIFACTU] Mostrando QR y datos');
+        console.log('[VERIFACTU] Mostrando datos VERIFACTU (Hash:', !!factura.hash_verifactu, 'QR:', tieneQR, ')');
     }
     
     // Insertar Hash de la factura (siempre) y CSV (si está disponible)
@@ -528,9 +530,26 @@ async function rellenarFactura(datos, emisor) {
             qrElement.innerHTML = '<div style="width:150px;height:150px;border:1px solid #ddd;display:flex;justify-content:center;align-items:center;text-align:center;">QR no disponible</div>';
         }
     } else if (qrElement && verifactuDisponible && !tieneQR) {
-        // VERIFACTU habilitado pero sin QR todavía (pendiente de envío a AEAT)
-        console.log('[VERIFACTU] Hash disponible pero QR pendiente de generación (envío a AEAT pendiente)');
-        qrElement.innerHTML = '<div style="width:150px;height:150px;border:1px solid #ddd;display:flex;justify-content:center;align-items:center;text-align:center;padding:10px;font-size:12px;">QR pendiente<br><small>(Envío a AEAT pendiente)</small></div>';
+        // VERIFACTU habilitado pero sin QR todavía
+        // Verificar si hay error de AEAT
+        if (factura.estado_envio === 'ERROR' && factura.errores_aeat) {
+            console.error('[VERIFACTU] Error de AEAT:', factura.errores_aeat);
+            // Extraer el código de error para mensaje resumido
+            const errorMatch = factura.errores_aeat.match(/Codigo\[(\d+)\]\.([^:]+)/);
+            const codigoError = errorMatch ? errorMatch[1] : 'N/A';
+            const mensajeCorto = errorMatch ? errorMatch[2].substring(0, 50) + '...' : 'Error de AEAT';
+            qrElement.innerHTML = `<div style="width:150px;height:150px;border:2px solid #dc3545;display:flex;justify-content:center;align-items:center;text-align:center;padding:10px;font-size:11px;background:#fff5f5;">
+                <div>
+                    <div style="color:#dc3545;font-weight:bold;margin-bottom:5px;">❌ ERROR AEAT</div>
+                    <div style="font-size:10px;color:#666;">Código: ${codigoError}</div>
+                    <div style="font-size:9px;color:#888;margin-top:5px;" title="${factura.errores_aeat}">${mensajeCorto}</div>
+                </div>
+            </div>`;
+        } else {
+            // Pendiente de envío a AEAT
+            console.log('[VERIFACTU] Hash disponible pero QR pendiente de generación (envío a AEAT pendiente)');
+            qrElement.innerHTML = '<div style="width:150px;height:150px;border:1px solid #ddd;display:flex;justify-content:center;align-items:center;text-align:center;padding:10px;font-size:12px;">QR pendiente<br><small>(Envío a AEAT pendiente)</small></div>';
+        }
     } else {
         if (!qrElement) {
             console.error('[VERIFACTU] No se encontró el elemento #qr-verifactu en el DOM');
