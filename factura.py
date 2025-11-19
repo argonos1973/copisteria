@@ -404,7 +404,19 @@ def crear_factura():
                 # Generar datos VERI*FACTU para la factura (solo si está disponible)
                 if VERIFACTU_DISPONIBLE:
                     try:
-                        datos_verifactu = verifactu.generar_datos_verifactu_para_factura(factura_id)
+                        # Obtener código de empresa de la ruta de la BD
+                        import re
+                        db_path = conn.execute('PRAGMA database_list').fetchone()[2]
+                        match = re.search(r'/db/([^/]+)/\1\.db', db_path)
+                        if match:
+                            empresa_codigo = match.group(1)
+                        else:
+                            import os
+                            db_name = os.path.basename(db_path)
+                            empresa_codigo = db_name.replace('.db', '')
+                        
+                        logger.info(f"[VERIFACTU] Usando empresa_codigo={empresa_codigo} (extraído de BD: {db_path})")
+                        datos_verifactu = verifactu.generar_datos_verifactu_para_factura(factura_id, empresa_codigo=empresa_codigo)
                         if datos_verifactu and 'datos' in datos_verifactu and 'hash' in datos_verifactu['datos']:
                             logger.info(f"[VERIFACTU]Datos generados correctamente: hash={datos_verifactu['datos']['hash'][:10]}...")
                             push_notif("QR generado")

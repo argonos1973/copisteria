@@ -21,7 +21,7 @@ from .qr.generator import generar_qr_verifactu
 from .soap.client import enviar_registro_aeat
 
 
-def generar_datos_verifactu_para_factura(factura_id):
+def generar_datos_verifactu_para_factura(factura_id, empresa_codigo=None):
     """
     Flujo completo de VERI*FACTU para una factura:
     - Calcula hash encadenado
@@ -32,10 +32,16 @@ def generar_datos_verifactu_para_factura(factura_id):
     
     Args:
         factura_id: ID de la factura
+        empresa_codigo: Código de empresa (opcional, se establece en env)
         
     Returns:
         dict: Datos VERI*FACTU para incluir en la factura (QR, etc)
     """
+    # Asegurar que EMPRESA_CODIGO esté en variables de entorno si se pasa
+    if empresa_codigo:
+        os.environ['EMPRESA_CODIGO'] = empresa_codigo
+        logger.info(f"Estableciendo EMPRESA_CODIGO={empresa_codigo} para generación de factura")
+    
     conn = None
     try:
         conn = get_db_connection()

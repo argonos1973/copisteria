@@ -231,7 +231,18 @@ def anular_factura(id_factura: int):
         resultado_envio = None
         if verifactu_disponible:
             try:
-                resultado_envio = verifactu.generar_datos_verifactu_para_factura(id_rect)
+                # Obtener código de empresa de la ruta de la BD
+                import re
+                db_path = conn.execute('PRAGMA database_list').fetchone()[2]
+                match = re.search(r'/db/([^/]+)/\1\.db', db_path)
+                if match:
+                    empresa_codigo = match.group(1)
+                else:
+                    import os
+                    db_name = os.path.basename(db_path)
+                    empresa_codigo = db_name.replace('.db', '')
+                
+                resultado_envio = verifactu.generar_datos_verifactu_para_factura(id_rect, empresa_codigo=empresa_codigo)
             except Exception:
                 # Mostramos traza para depurar, pero no detenemos la anulación
                 traceback.print_exc()

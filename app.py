@@ -3512,7 +3512,24 @@ def procesar_factura_xsig(id_factura):
             }), 400
             
         # Generar datos VERI*FACTU para la factura
-        resultados = verifactu.generar_datos_verifactu_para_factura(id_factura)
+        # Intentar obtener empresa_codigo de la sesión, si no, de la BD
+        empresa_codigo = session.get('empresa_codigo')
+        if not empresa_codigo:
+            # Fallback: obtener de la ruta de la BD
+            from db_utils import get_db_connection
+            import re
+            conn = get_db_connection()
+            db_path = conn.execute('PRAGMA database_list').fetchone()[2]
+            match = re.search(r'/db/([^/]+)/\1\.db', db_path)
+            if match:
+                empresa_codigo = match.group(1)
+            else:
+                import os
+                db_name = os.path.basename(db_path)
+                empresa_codigo = db_name.replace('.db', '')
+            conn.close()
+        
+        resultados = verifactu.generar_datos_verifactu_para_factura(id_factura, empresa_codigo=empresa_codigo)
         
         if not resultados:
             return jsonify({
