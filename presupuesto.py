@@ -709,9 +709,17 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
         conn.commit()
 
         try:
-            # Obtener código de empresa de la sesión
-            from flask import session
-            empresa_codigo = session.get('empresa_codigo', 'default')
+            # Obtener código de empresa de la ruta de la BD (para tickets no hay sesión)
+            import re
+            db_path = conn.execute('PRAGMA database_list').fetchone()[2]
+            match = re.search(r'/db/([^/]+)/\1\.db', db_path)
+            if match:
+                empresa_codigo = match.group(1)
+            else:
+                import os
+                db_name = os.path.basename(db_path)
+                empresa_codigo = db_name.replace('.db', '')
+            
             generar_datos_verifactu_para_ticket(ticket_id, empresa_codigo=empresa_codigo)
         except Exception as vf_exc:
             logger.info(f"[VERIFACTU][WARN] Error generando datos para ticket {ticket_id}: {vf_exc}")

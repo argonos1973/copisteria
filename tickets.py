@@ -363,10 +363,21 @@ def guardar_ticket():
             if VERIFACTU_HABILITADO:
                 logger.info(f"[VERIFACTU] Generando datos VERI*FACTU para ticket {id_ticket}...")
                 try:
-                    # Obtener código de empresa de la sesión
-                    from flask import session
-                    empresa_codigo = session.get('empresa_codigo', 'default')
-                    logger.info(f"[VERIFACTU] Usando empresa_codigo={empresa_codigo}")
+                    # Obtener código de empresa de la ruta de la BD (para tickets no hay sesión)
+                    # conn es la conexión actual, extraer empresa_codigo de su ruta
+                    import re
+                    db_path = conn.execute('PRAGMA database_list').fetchone()[2]
+                    # Ruta típica: /var/www/html/db/caca/caca.db
+                    match = re.search(r'/db/([^/]+)/\1\.db', db_path)
+                    if match:
+                        empresa_codigo = match.group(1)
+                    else:
+                        # Fallback: extraer del nombre de archivo
+                        import os
+                        db_name = os.path.basename(db_path)
+                        empresa_codigo = db_name.replace('.db', '')
+                    
+                    logger.info(f"[VERIFACTU] Usando empresa_codigo={empresa_codigo} (extraído de BD: {db_path})")
                     
                     resultado = generar_datos_verifactu_para_ticket(id_ticket, empresa_codigo=empresa_codigo)
                     if resultado:

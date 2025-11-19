@@ -127,8 +127,16 @@ def anular_ticket(id_ticket: int):
         resultado_envio = None
         try:
             from verifactu.core import generar_datos_verifactu_para_ticket
-            from flask import session
-            empresa_codigo = session.get('empresa_codigo', 'default')
+            import re
+            db_path = conn.execute('PRAGMA database_list').fetchone()[2]
+            match = re.search(r'/db/([^/]+)/\1\.db', db_path)
+            if match:
+                empresa_codigo = match.group(1)
+            else:
+                import os
+                db_name = os.path.basename(db_path)
+                empresa_codigo = db_name.replace('.db', '')
+            
             resultado_envio = generar_datos_verifactu_para_ticket(id_rect, empresa_codigo=empresa_codigo)
         except Exception:
             traceback.print_exc()
