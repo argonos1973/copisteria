@@ -71,10 +71,10 @@ function tienePermiso(modulo, accion) {
     
     // Si no hay permisos locales y estamos en iframe, buscar en el padre
     if (permisosVacios && window.parent && window.parent !== window) {
-        console.log('[PERMISOS] No hay permisos locales (vacío o undefined), buscando en window.parent');
+        // console.log('[PERMISOS] No hay permisos locales (vacío o undefined), buscando en window.parent');
         try {
             permisos = window.parent.usuarioPermisos;
-            console.log('[PERMISOS] Permisos obtenidos del padre:', permisos ? Object.keys(permisos) : 'undefined');
+            // console.log('[PERMISOS] Permisos obtenidos del padre:', permisos ? Object.keys(permisos) : 'undefined');
         } catch (e) {
             console.error('[PERMISOS] Error accediendo a window.parent.usuarioPermisos:', e.message);
         }
@@ -129,17 +129,17 @@ function aplicarPermisosAElementos() {
                     });
                     if (hijosVisibles.length === 0) {
                         padre.style.setProperty('display', 'none', 'important');
-                        console.log(`[PERMISOS] Padre también ocultado: ${padre.tagName}`);
+                        // console.log(`[PERMISOS] Padre también ocultado: ${padre.tagName}`);
                     }
                 }
                 
-                console.log(`[PERMISOS] Ocultado: ${elemento.tagName} - ${modulo}.${accion}`);
+                // console.log(`[PERMISOS] Ocultado: ${elemento.tagName} - ${modulo}.${accion}`);
             } else if (modo === 'deshabilitar') {
                 elemento.disabled = true;
                 elemento.style.opacity = '0.5';
                 elemento.style.cursor = 'not-allowed';
                 elemento.title = 'No tienes permisos para esta acción';
-                console.log(`[PERMISOS] Deshabilitado: ${elemento.tagName} - ${modulo}.${accion}`);
+                // console.log(`[PERMISOS] Deshabilitado: ${elemento.tagName} - ${modulo}.${accion}`);
             }
         }
     });

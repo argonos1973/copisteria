@@ -311,11 +311,11 @@
             font-weight: bold;
             cursor: pointer;
             line-height: 1;
-            transition: transform 0.2s;
+            opacity: 1;
         }
         
         .modal-perfil-close:hover {
-            transform: rotate(90deg);
+            opacity: 0.8;
         }
         
         .modal-perfil-tabs {
@@ -673,6 +673,12 @@
                 document.getElementById('perfil-username').value = data.username || '';
                 document.getElementById('perfil-email').value = data.email || '';
                 document.getElementById('perfil-telefono').value = data.telefono || '';
+                
+                // Llenar username en tab de contraseña
+                const usernameInfo = document.getElementById('password-info-username');
+                if (usernameInfo) {
+                    usernameInfo.textContent = data.username || '-';
+                }
                 
                 // Cargar avatar si existe
                 const avatarPreview = document.getElementById('perfil-avatar-preview');
