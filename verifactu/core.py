@@ -313,12 +313,29 @@ def generar_datos_verifactu_para_ticket(ticket_id: int, push_notif=None):
             logger.error("No se encontró el ticket %s", ticket_id)
             return None
 
-        # Cargar NIF emisor desde configuración
+        # Cargar NIF y nombre del emisor desde configuración
+        nif_emisor = ''
+        nombre_emisor = ''
         try:
             from utils_emisor import cargar_datos_emisor
-            nif_emisor = cargar_datos_emisor().get('nif', '')
-        except Exception:
-            nif_emisor = ''
+            datos_emisor = cargar_datos_emisor()
+            nif_emisor = datos_emisor.get('nif', '')
+            nombre_emisor = datos_emisor.get('nombre', '')
+        except Exception as e:
+            logger.warning(f"No se pudo cargar desde utils_emisor: {e}")
+            # Fallback: cargar directamente desde JSON sin contexto Flask
+            try:
+                import json
+                empresa_codigo = os.getenv('EMPRESA_CODIGO', 'default')
+                emisor_path = f'/var/www/html/emisores/{empresa_codigo}_emisor.json'
+                if os.path.exists(emisor_path):
+                    with open(emisor_path, 'r', encoding='utf-8') as f:
+                        datos_emisor = json.load(f)
+                        nif_emisor = datos_emisor.get('nif', '')
+                        nombre_emisor = datos_emisor.get('nombre', '')
+                        logger.info(f"Datos emisor cargados desde {emisor_path}")
+            except Exception as e_json:
+                logger.warning(f"No se pudo cargar JSON directamente: {e_json}")
 
         # 1. Calcular hash encadenado (cadena común con facturas)
         hash_anterior = obtener_ultimo_hash()
@@ -400,6 +417,7 @@ def generar_datos_verifactu_para_ticket(ticket_id: int, push_notif=None):
 
         # 4. Generar QR con CSV recibido
         total_formateado = redondear_importe(ticket['total'])
+        logger.info(f"Generando QR para ticket {ticket_id}: nif={nif_emisor}, numero={ticket['numero']}, fecha={ticket['fecha']}, total={total_formateado}, csv={csv_final}")
         qr_data = generar_qr_verifactu(
             nif=nif_emisor,
             numero_factura=ticket['numero'],
