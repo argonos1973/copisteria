@@ -445,7 +445,6 @@ def enviar_registro_aeat(factura_id: int) -> dict:
        f.total   AS importe_total,
        f.hash_factura,
        f.nif     AS nif_emisor,
-       f.empresa_id,
        c.identificador AS nif_receptor,
        c.razonsocial   AS nombre_receptor
   FROM factura f
@@ -462,8 +461,27 @@ def enviar_registro_aeat(factura_id: int) -> dict:
         logger.error("Factura con id %s no encontrada", factura_id)
         return {'success': False, 'message': f'No existe la factura con id {factura_id}'}
 
-    # Obtener NIF emisor
+    # Obtener NIF emisor (primero de la factura, si no hay usar el del archivo de configuración)
     nif_emisor = (row['nif_emisor'] or '').strip().upper()
+    
+    # Si no hay NIF en la factura, obtenerlo del archivo de configuración del emisor
+    if not nif_emisor:
+        try:
+            import json
+            empresa_codigo = os.environ.get('EMPRESA_CODIGO', 'caca')
+            emisor_path = f'/var/www/html/static/emisores/{empresa_codigo}_emisor.json'
+            if os.path.exists(emisor_path):
+                with open(emisor_path, 'r') as f:
+                    emisor_data = json.load(f)
+                    nif_emisor = emisor_data.get('nif', '').strip().upper()
+                    logger.info(f"NIF emisor obtenido de configuración: {nif_emisor}")
+            else:
+                logger.warning(f"No existe archivo de configuración del emisor: {emisor_path}")
+        except Exception as e:
+            logger.error(f"Error obteniendo NIF del emisor desde configuración: {e}")
+    
+    if not nif_emisor:
+        return {'success': False, 'message': 'No se pudo determinar el NIF del emisor'}
 
     # Obtener serie y número para esta factura
     serie, numero_factura = procesar_serie_numero(row['numero_factura'])
@@ -610,8 +628,8 @@ def enviar_registro_aeat(factura_id: int) -> dict:
     now = datetime.now()
     timestamp = now.strftime("%Y%m%d%H%M%S")
     base_dir = "/var/www/html/aeat_responses"
-    # Obtener empresa_id de la factura
-    empresa_id = row.get('empresa_id', 'default')
+    # Obtener empresa_id de la sesión o usar por defecto
+    empresa_id = os.environ.get('EMPRESA_CODIGO', 'caca')
     # Organizar por empresa/año/mes: aeat_responses/empresa_id/YYYY/MM
     empresa_dir = os.path.join(base_dir, str(empresa_id))
     year_dir = os.path.join(empresa_dir, now.strftime("%Y"))
