@@ -261,7 +261,7 @@ async function rellenarFactura(datos, emisor) {
     const cpCiudad = [emisor.ciudad, `(${emisor.cp})`, emisor.provincia]
         .filter(x => x)
         .join(' ');
-    document.getElementById('emisor-ciudad').textContent = cpCiudad.toUpperCase();
+    document.getElementById('emisor-cp-ciudad').textContent = cpCiudad.toUpperCase();
     document.getElementById('emisor-nif').textContent = (emisor.nif || '').toUpperCase();
     document.getElementById('emisor-email').textContent = emisor.email || '';
     
