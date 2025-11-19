@@ -839,13 +839,13 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <input type="text" 
                            id="modal-total-ticket" 
                            value="${formatearImporte(totalProforma)}" 
-                           class="right-aligned total-proforma-display"
-                           style="background-color: #4CAF50 !important; color: white !important; font-weight: bold;"
+                           inputmode="decimal"
+                           class="right-aligned"
                            readonly />
                   </div>
                   <div class="modal-campo">
                     <label for="modal-metodo-pago">Forma de Pago:</label>
-                    <select id="modal-metodo-pago" style="padding: 8px; border: 1px solid var(--color-borde); border-radius: 4px; background: var(--color-fondo); color: var(--color-texto);">
+                    <select id="modal-metodo-pago">
                       <option value="E">Efectivo</option>
                       <option value="T">Tarjeta</option>
                       <option value="R">Transferencia</option>
@@ -857,18 +857,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                            id="modal-fecha-ticket"
                            value="${fechaFormateada}"
                            class="readonly-field right-aligned"
-                           style="width: 140px; background: var(--color-base-700, #2f3136); color: var(--color-white, #ffffff); border: 1px solid var(--color-borde, #3a3a3a);"
                            readonly />
                   </div>
                 </div>
-                <div class="modal-linea" style="background-color: var(--color-base-700, #2f3136); padding: 10px; border-radius: 4px; border-left: 4px solid var(--color-green-500, #57e389);">
+                <div class="modal-linea">
                   <div class="modal-campo">
-                    <label style="color: var(--color-green-500, #57e389); font-weight: bold;">Estado:</label>
-                    <input type="text" value="Pendiente" class="readonly-field" readonly style="font-weight: bold; color: var(--color-green-500, #57e389); background: var(--color-base-700, #2f3136); border: 1px solid var(--color-green-500, #57e389);" />
+                    <label>Estado:</label>
+                    <input type="text" value="Pendiente" class="readonly-field" readonly />
                   </div>
                   <div class="modal-campo">
-                    <label style="color: var(--color-green-500, #57e389); font-weight: bold;">Importe Cobrado:</label>
-                    <input type="text" value="0,00" class="readonly-field right-aligned" readonly style="font-weight: bold; color: var(--color-green-500, #57e389); background: var(--color-base-700, #2f3136); border: 1px solid var(--color-green-500, #57e389);" />
+                    <label>Importe Cobrado:</label>
+                    <input type="text" value="0,00" class="readonly-field right-aligned" readonly />
                   </div>
                   <div class="modal-campo" style="visibility: hidden;">
                     <!-- Campo invisible para mantener la estructura -->
@@ -876,9 +875,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                     <input type="text" readonly />
                   </div>
                 </div>
-              </div>
-              <div class="modal-footer" style="text-align: center; display: flex; justify-content: center; margin-top: 20px;">
-                <button id="btn-guardar-modal" class="btn-principal">Guardar</button>
+                <div class="modal-linea boton-centro">
+                  <button type="button" id="btn-guardar-modal" class="btn-principal">Guardar</button>
+                </div>
               </div>
             </div>
           </div>
@@ -976,13 +975,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             <input type="text" 
                    id="modal-total-ticket" 
                    value="${formatearImporte(totalProforma)}" 
-                   class="right-aligned total-proforma-display"
-                   style="background-color: #4CAF50 !important; color: white !important; font-weight: bold;" 
+                   inputmode="decimal"
+                   class="right-aligned" 
                    readonly />
           </div>
           <div class="modal-campo">
             <label for="modal-metodo-pago">Forma de Pago:</label>
-            <select id="modal-metodo-pago" style="padding: 8px; border: 1px solid var(--color-borde); border-radius: 4px; background: var(--color-fondo); color: var(--color-texto);">
+            <select id="modal-metodo-pago">
               <option value="E">Efectivo</option>
               <option value="T">Tarjeta</option>
               <option value="R">Transferencia</option>
@@ -994,18 +993,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                    id="modal-fecha-ticket"
                    value="${fechaFormateada}"
                    class="readonly-field right-aligned"
-                   style="width: 140px; background: var(--color-base-700, #2f3136); color: var(--color-white, #ffffff); border: 1px solid var(--color-borde, #3a3a3a);"
                    readonly />
           </div>
         </div>
         <div class="modal-linea">
           <div class="modal-campo">
             <label for="modal-total-entregado">Total Entregado (€):</label>
-            <input type="text" id="modal-total-entregado" value="${formatearImporte(totalProforma)}" class="right-aligned" style="background: var(--color-base-700, #2f3136); color: var(--color-white, #ffffff); border: 1px solid var(--color-borde, #3a3a3a);" />
+            <input type="text" id="modal-total-entregado" value="${formatearImporte(totalProforma)}" inputmode="decimal" class="right-aligned" />
           </div>
           <div class="modal-campo">
             <label for="modal-cambio">Total Cambio (€):</label>
-            <input type="text" id="modal-cambio" value="${formatearImporte(0)}" readonly class="readonly-field right-aligned" style="background: var(--color-base-700, #2f3136); color: var(--color-white, #ffffff); border: 1px solid var(--color-borde, #3a3a3a);" />
+            <input type="text" id="modal-cambio" value="${formatearImporte(0)}" readonly class="readonly-field right-aligned" />
           </div>
           <div class="modal-campo" style="visibility: hidden;">
             <!-- Campo invisible para mantener la estructura -->
@@ -1013,9 +1011,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             <input type="text" readonly />
           </div>
         </div>
-      </div>
-      <div class="modal-footer" style="text-align: center; display: flex; justify-content: center; margin-top: 20px;">
-        <button id="btn-cobrar-modal" class="btn-principal">Cobrar</button>
+        <div class="modal-linea boton-centro">
+          <button type="button" id="btn-cobrar-modal" class="btn-principal">Cobrar</button>
+        </div>
       </div>
     </div>
   </div>
