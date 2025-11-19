@@ -3135,15 +3135,15 @@ async function cargarConfiguracionEmpresa() {
         // Renderizar contenido
         const contenedor = document.getElementById('tab-empresas');
         contenedor.innerHTML = `
+            <div class="page-header">
+                <h1><i class="fas fa-building"></i> Configuración de Empresa</h1>
+            </div>
             <div class="card">
-                <div class="card-header">
-                    <h2><i class="fas fa-building"></i> Configuración de Empresa</h2>
-                </div>
                 <div style="padding: 20px;">
                     <div style="display: grid; grid-template-columns: 55% 40%; gap: 20px;">
                         <!-- Información de la empresa -->
-                        <div style="border: 1px solid var(--color-border, #ddd); border-radius: 8px; padding: 16px; background: var(--bg-elevated, rgba(255,255,255,0.5));">
-                            <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--color-texto, #333); border-bottom: 2px solid var(--color-primario, #007bff); padding-bottom: 8px;">📋 Datos de la Empresa</h3>
+                        <div style="border: 1px solid var(--border, var(--color-border, #ddd)); border-radius: 8px; padding: 16px; background: var(--card-bg, rgba(255,255,255,0.9));">
+                            <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--primary, var(--color-primario, #007bff)); border-bottom: 2px solid var(--primary, var(--color-primario, #007bff)); padding-bottom: 8px;">📋 Datos de la Empresa</h3>
                             <div style="display: grid; grid-template-columns: repeat(2, minmax(150px, 300px)); gap: 8px; max-width: 620px;">
                                 <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Nombre Comercial:</label>
@@ -3211,26 +3211,26 @@ async function cargarConfiguracionEmpresa() {
                         </div>
                         
                         <!-- Información sobre plantillas -->
-                        <div style="border: 1px solid var(--color-border, #ddd); border-radius: 8px; padding: 16px; background: var(--bg-elevated, rgba(255,255,255,0.5));">
-                            <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--color-texto, #333); border-bottom: 2px solid var(--color-primario, #007bff); padding-bottom: 8px;">
+                        <div style="border: 1px solid var(--border, var(--color-border, #ddd)); border-radius: 8px; padding: 16px; background: var(--card-bg, rgba(255,255,255,0.9));">
+                            <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--primary, var(--color-primario, #007bff)); border-bottom: 2px solid var(--primary, var(--color-primario, #007bff)); padding-bottom: 8px;">
                                 ℹ️ Información
                             </h3>
-                            <div style="padding: 12px; background: var(--bg, white); border: 1px solid var(--color-border, #ddd); border-radius: 4px;">
-                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--color-texto, #333);">
+                            <div style="padding: 12px; background: var(--card-bg, white); border: 1px solid var(--border, var(--color-border, #ddd)); border-radius: 4px;">
+                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--text, var(--color-texto, #333));">
                                     <strong>📋 Datos de Emisor:</strong><br>
                                     Los datos de la empresa se guardan en un archivo JSON individual (<code style="background: var(--bg-elevated, #f5f5f5); padding: 2px 5px; border-radius: 3px; font-size: 11px;">${empresa.codigo}_emisor.json</code>).
                                 </p>
-                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--color-texto, #333);">
+                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--text, var(--color-texto, #333));">
                                     Este archivo se utiliza automáticamente como datos del emisor en:
                                 </p>
-                                <ul style="margin: 5px 0 10px 20px; padding: 0; font-size: 11px; color: var(--color-texto, #666);">
+                                <ul style="margin: 5px 0 10px 20px; padding: 0; font-size: 11px; color: var(--text-muted, var(--color-texto, #666));">
                                     <li>Facturas</li>
                                     <li>Presupuestos</li>
                                     <li>Proformas</li>
                                     <li>Tickets</li>
                                     <li>Verifactu</li>
                                 </ul>
-                                <p style="margin: 0; font-size: 12px; color: var(--color-texto, #333);">
+                                <p style="margin: 0; font-size: 12px; color: var(--text, var(--color-texto, #333));">
                                     <strong>🎨 Plantillas:</strong><br>
                                     Cada usuario puede elegir su plantilla personal haciendo click en su nombre en el menú.
                                 </p>
