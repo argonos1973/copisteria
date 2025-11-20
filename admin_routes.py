@@ -11,7 +11,7 @@ Requiere permisos de superadmin o admin_empresa
 import sqlite3
 import hashlib
 from flask import Blueprint, jsonify, request, session
-from auth_middleware import login_required, require_admin
+from auth_middleware import login_required, require_admin, hash_password
 from multiempresa_config import DB_USUARIOS_PATH
 from logger_config import get_logger
 
@@ -19,9 +19,62 @@ logger = get_logger(__name__)
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
-def hash_password(password):
-    """Genera hash SHA256 de una contraseña"""
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+def asignar_permisos_segun_rol(usuario_id, empresa_id, rol, cursor):
+    """
+    Asigna permisos automáticamente a un usuario según su rol.
+    
+    - admin: Todos los permisos
+    - editor: Todos los permisos
+    - consultor: Solo puede ver
+    """
+    # Obtener todos los módulos activos
+    cursor.execute('SELECT codigo FROM modulos WHERE activo = 1')
+    modulos = cursor.fetchall()
+    
+    # Definir permisos según rol
+    if rol in ['admin', 'editor']:
+        # Admin y editor tienen todos los permisos
+        puede_ver = 1
+        puede_crear = 1
+        puede_editar = 1
+        puede_eliminar = 1
+        puede_anular = 1
+        puede_exportar = 1
+    elif rol == 'consultor':
+        # Consultor solo puede ver
+        puede_ver = 1
+        puede_crear = 0
+        puede_editar = 0
+        puede_eliminar = 0
+        puede_anular = 0
+        puede_exportar = 0
+    else:
+        # Por defecto: todos los permisos
+        puede_ver = 1
+        puede_crear = 1
+        puede_editar = 1
+        puede_eliminar = 1
+        puede_anular = 1
+        puede_exportar = 1
+    
+    # Eliminar permisos existentes del usuario para esta empresa
+    cursor.execute('''
+        DELETE FROM permisos_usuario_modulo 
+        WHERE usuario_id = ? AND empresa_id = ?
+    ''', (usuario_id, empresa_id))
+    
+    # Asignar permisos para cada módulo
+    for modulo in modulos:
+        modulo_codigo = modulo[0]
+        cursor.execute('''
+            INSERT INTO permisos_usuario_modulo 
+            (usuario_id, empresa_id, modulo_codigo, puede_ver, puede_crear, puede_editar, 
+             puede_eliminar, puede_anular, puede_exportar)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (usuario_id, empresa_id, modulo_codigo, puede_ver, puede_crear, puede_editar,
+              puede_eliminar, puede_anular, puede_exportar))
+    
+    logger.info(f"Permisos asignados a usuario {usuario_id} según rol '{rol}': {len(modulos)} módulos")
 
 # ============================================================================
 # USUARIOS
@@ -117,6 +170,9 @@ def crear_usuario():
                 VALUES (?, ?, 'usuario', 0)
             ''', (usuario_id, empresa_id_creador))
             logger.info(f"Usuario {username} asignado automáticamente a empresa ID {empresa_id_creador}")
+            
+            # Asignar permisos automáticamente según el rol
+            asignar_permisos_segun_rol(usuario_id, empresa_id_creador, rol, cursor)
         else:
             logger.info(f"Usuario {username} creado sin empresa asignada")
         
@@ -195,6 +251,20 @@ def actualizar_usuario(usuario_id):
         
         query = f"UPDATE usuarios SET {', '.join(campos)} WHERE id = ?"
         cursor.execute(query, valores)
+        
+        # Si se actualizó el rol, actualizar permisos automáticamente
+        if 'rol' in data:
+            rol_actualizado = data['rol'].strip()
+            if rol_actualizado in ['admin', 'editor', 'consultor']:
+                # Obtener empresa del usuario
+                cursor.execute('''
+                    SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ?
+                ''', (usuario_id,))
+                empresa_row = cursor.fetchone()
+                if empresa_row:
+                    empresa_id_usuario = empresa_row[0]
+                    asignar_permisos_segun_rol(usuario_id, empresa_id_usuario, rol_actualizado, cursor)
+                    logger.info(f"Permisos actualizados para usuario {usuario_id} con rol {rol_actualizado}")
         
         conn.commit()
         conn.close()
