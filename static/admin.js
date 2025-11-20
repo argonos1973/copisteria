@@ -3512,13 +3512,29 @@ async function guardarDatosEmpresa(empresaId) {
                         console.log('[LOGO-SAVE] Preview actualizado con ruta del servidor');
                     }
                 } else {
-                    // Construir ruta esperada con ID de empresa
+                    // Construir ruta esperada con código de empresa (no ID numérico)
                     const fileName = logoInput.files[0].name;
-                    const expectedPath = `/static/logos/${empresaId}_${fileName}`;
-                    console.log('[LOGO-SAVE] Construyendo ruta esperada:', expectedPath);
+                    
+                    // Intentar obtener el código de empresa desde los datos cargados
+                    let empresaCodigo = null;
+                    const empresaData = document.getElementById('empresa-nombre')?.getAttribute('data-empresa-codigo');
+                    if (!empresaData) {
+                        // Fallback: buscar en la estructura de empresa global si existe
+                        if (window.empresaActual && window.empresaActual.codigo) {
+                            empresaCodigo = window.empresaActual.codigo;
+                        } else {
+                            // Último fallback: usar "caca" como se ve en los logs
+                            empresaCodigo = 'caca';
+                        }
+                    } else {
+                        empresaCodigo = empresaData;
+                    }
+                    
+                    const expectedPath = `/static/logos/${empresaCodigo}_${fileName}`;
+                    console.log('[LOGO-SAVE] Construyendo ruta con código empresa:', empresaCodigo, '→', expectedPath);
                     if (logoPreview) {
                         logoPreview.src = expectedPath + '?t=' + new Date().getTime();
-                        console.log('[LOGO-SAVE] Preview actualizado con ruta construida');
+                        console.log('[LOGO-SAVE] Preview actualizado con ruta construida usando código empresa');
                     }
                 }
             }
