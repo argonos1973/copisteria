@@ -3279,7 +3279,7 @@ async function cargarConfiguracionEmpresa() {
                 logoUrl = empresa.emisor_data.logo;
                 console.log('[LOGO] Logo encontrado en emisor_data.logo:', logoUrl);
             } else if (empresa.logo_header && !empresa.logo_header.startsWith('default_')) {
-                logoUrl = `/static/logos/${empresa.logo_header}`;
+                logoUrl = empresa.logo_header; // Usar ruta completa del JSON
                 console.log('[LOGO] Logo encontrado en logo_header:', logoUrl);
             } else if (empresa.logo) {
                 logoUrl = empresa.logo;
