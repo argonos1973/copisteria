@@ -2992,12 +2992,12 @@ body select option {
 
 .aeat-qr-box {
     display: inline-block;
-    padding: 15px;
-    border-radius: 8px;
+    padding: 8px;
+    border-radius: 6px;
     background: linear-gradient(135deg, var(--bg-elevated) 0%, rgba(255,255,255,0.8) 100%);
     border: 1px solid var(--primary);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    margin: 15px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin: 8px 0;
     transition: all 0.3s ease;
 }
 
@@ -3007,9 +3007,9 @@ body select option {
 }
 
 .aeat-qr-box img {
-    max-width: 50px;
-    width: 100%;
-    height: auto;
+    max-width: 50px !important;
+    width: 50px !important;
+    height: 50px !important;
     display: block;
     border-radius: 4px;
     background: white;
