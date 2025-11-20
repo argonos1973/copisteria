@@ -3007,13 +3007,13 @@ body select option {
 }
 
 .aeat-qr-box img {
-    max-width: 150px;
+    max-width: 100px;
     width: 100%;
     height: auto;
     display: block;
-    border-radius: 8px;
+    border-radius: 6px;
     background: white;
-    padding: 8px;
+    padding: 5px;
 }
 
 .aeat-no-data {
