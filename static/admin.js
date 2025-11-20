@@ -3527,6 +3527,13 @@ async function guardarDatosEmpresa(empresaId) {
                         console.log('[LOGO-SAVE] ✅ Archivo confirmado en:', expectedPath);
                         if (logoPreview) {
                             logoPreview.src = expectedPath + '?t=' + new Date().getTime();
+                            // Asegurar que el contenedor esté visible
+                            const logoPreviewContainer = document.getElementById('logo-preview-container');
+                            if (logoPreviewContainer) {
+                                logoPreviewContainer.style.display = 'block';
+                                logoPreviewContainer.classList.remove('empresa-hidden');
+                                console.log('[LOGO-SAVE] ✅ Contenedor preview forzado a visible');
+                            }
                             console.log('[LOGO-SAVE] Preview actualizado con ruta confirmada');
                         }
                     };
