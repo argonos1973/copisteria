@@ -3449,12 +3449,12 @@ function previsualizarLogoEmpresa(event) {
             console.log('[LOGO-PREVIEW] Archivo leído correctamente');
             if (img) {
                 img.src = e.target.result;
-                console.log('[LOGO-PREVIEW] Imagen src asignada');
+                console.log('[LOGO-PREVIEW] Imagen src asignada para preview temporal');
             }
             if (preview) {
                 preview.style.display = 'block';
                 preview.classList.remove('empresa-hidden');
-                console.log('[LOGO-PREVIEW] Contenedor mostrado');
+                console.log('[LOGO-PREVIEW] Contenedor mostrado - preview temporal activo');
             }
         };
         reader.readAsDataURL(file);
