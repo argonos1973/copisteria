@@ -3152,70 +3152,70 @@ async function cargarConfiguracionEmpresa() {
         // Renderizar contenido
         const contenedor = document.getElementById('tab-empresas');
         contenedor.innerHTML = `
-            <div class="page-header">
-                <h1><i class="fas fa-building"></i> Configuración de Empresa</h1>
+            <div class="page-header" style="background: var(--bg, #fff); color: var(--text, #333); padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px var(--shadow, rgba(0,0,0,0.1));">
+                <h1 style="color: var(--text, #333); margin: 0;"><i class="fas fa-building" style="color: var(--primary, #3498db);"></i> Configuración de Empresa</h1>
             </div>
-            <div class="card">
-                <div style="padding: 20px;">
+            <div class="card" style="background: var(--bg-elevated, var(--bg, #fff)); color: var(--text, #333); border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 8px; box-shadow: 0 2px 8px var(--shadow, rgba(0,0,0,0.1));">
+                <div style="padding: 20px; background: var(--bg-elevated, var(--bg, #fff)); color: var(--text, #333);">
                     <div style="display: grid; grid-template-columns: 55% 40%; gap: 20px;">
                         <!-- Información de la empresa -->
-                        <div style="border: 1px solid var(--border, var(--color-border, #ddd)); border-radius: 8px; padding: 16px; background: var(--card-bg, rgba(255,255,255,0.9));">
+                        <div style="border: 1px solid var(--border, var(--border, #ddd)); border-radius: 8px; padding: 16px; background: var(--bg-elevated, var(--bg, #fff)); color: var(--text, #333);">
                             <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--primary, var(--color-primario, #007bff)); border-bottom: 2px solid var(--primary, var(--color-primario, #007bff)); padding-bottom: 8px;">📋 Datos de la Empresa</h3>
                             <div style="display: grid; grid-template-columns: repeat(2, minmax(150px, 300px)); gap: 8px; max-width: 620px;">
                                 <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Nombre Comercial:</label>
                                     <input type="text" id="empresa-nombre" value="${empresa.nombre || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; box-sizing: border-box;">
                                 </div>
                                 <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Razón Social:</label>
                                     <input type="text" id="empresa-razon-social" value="${empresa.razon_social || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; box-sizing: border-box;">
                                 </div>
                                 <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">CIF/NIF:</label>
                                     <input type="text" id="empresa-cif" value="${empresa.cif || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; box-sizing: border-box;">
                                 </div>
                                 <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Teléfono:</label>
                                     <input type="text" id="empresa-telefono" value="${empresa.telefono || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; box-sizing: border-box;">
                                 </div>
                                 <div style="grid-column: 1 / -1;">
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Dirección:</label>
                                     <input type="text" id="empresa-direccion" value="${empresa.direccion || ''}" 
-                                           style="max-width: 620px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 620px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; box-sizing: border-box;">
                                 </div>
                                 <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Código Postal:</label>
                                     <input type="text" id="empresa-codigo-postal" value="${empresa.codigo_postal || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; box-sizing: border-box;">
                                 </div>
                                 <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Ciudad:</label>
                                     <input type="text" id="empresa-ciudad" value="${empresa.ciudad || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; box-sizing: border-box;">
                                 </div>
                                 <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Provincia:</label>
                                     <input type="text" id="empresa-provincia" value="${empresa.provincia || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; box-sizing: border-box;">
                                 </div>
                                 <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Email:</label>
                                     <input type="email" id="empresa-email" value="${empresa.email || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; box-sizing: border-box;">
                                 </div>
                                 <div>
                                     <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Logo:</label>
                                     <input type="file" id="empresa-logo" accept="image/*" onchange="previsualizarLogoEmpresa(event)"
-                                           style="max-width: 300px; width: 100%; padding: 4px; font-size: 11px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           style="max-width: 300px; width: 100%; padding: 4px; font-size: 11px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; box-sizing: border-box;">
                                     <small style="font-size: 10px; color: #7f8c8d; display: block; margin-top: 2px;">PNG, JPG, SVG (máx. 2MB)</small>
                                 </div>
                                 <div id="logo-preview-container" style="grid-column: 1 / -1; display: none; margin-top: 8px;">
                                     <img id="logo-preview" src="" alt="Vista previa del logo" 
-                                         style="max-width: 150px; max-height: 75px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; padding: 3px; background: #f9f9f9;">
+                                         style="max-width: 150px; max-height: 75px; border: 1px solid var(--border, #ddd); background: var(--bg, #fff); color: var(--text, #333); border-radius: 3px; padding: 3px; background: #f9f9f9;">
                                 </div>
                             </div>
                             <div style="display: flex; justify-content: flex-start; margin-top: 12px; gap: 8px;">
@@ -3228,16 +3228,16 @@ async function cargarConfiguracionEmpresa() {
                         </div>
                         
                         <!-- Información sobre plantillas -->
-                        <div style="border: 1px solid var(--border, var(--color-border, #ddd)); border-radius: 8px; padding: 16px; background: var(--card-bg, rgba(255,255,255,0.9));">
+                        <div style="border: 1px solid var(--border, var(--border, #ddd)); border-radius: 8px; padding: 16px; background: var(--bg-elevated, var(--bg, #fff)); color: var(--text, #333);">
                             <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--primary, var(--color-primario, #007bff)); border-bottom: 2px solid var(--primary, var(--color-primario, #007bff)); padding-bottom: 8px;">
                                 ℹ️ Información
                             </h3>
-                            <div style="padding: 12px; background: var(--card-bg, white); border: 1px solid var(--border, var(--color-border, #ddd)); border-radius: 4px;">
-                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--text, var(--color-texto, #333));">
+                            <div style="padding: 12px; background: var(--card-bg, white); border: 1px solid var(--border, var(--border, #ddd)); border-radius: 4px;">
+                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--text, #333);">
                                     <strong>📋 Datos de Emisor:</strong><br>
                                     Los datos de la empresa se guardan en un archivo JSON individual (<code style="background: var(--bg-elevated, #f5f5f5); padding: 2px 5px; border-radius: 3px; font-size: 11px;">${empresa.codigo}_emisor.json</code>).
                                 </p>
-                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--text, var(--color-texto, #333));">
+                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--text, #333);">
                                     Este archivo se utiliza automáticamente como datos del emisor en:
                                 </p>
                                 <ul style="margin: 5px 0 10px 20px; padding: 0; font-size: 11px; color: var(--text-muted, var(--color-texto, #666));">
@@ -3247,7 +3247,7 @@ async function cargarConfiguracionEmpresa() {
                                     <li>Tickets</li>
                                     <li>Verifactu</li>
                                 </ul>
-                                <p style="margin: 0; font-size: 12px; color: var(--text, var(--color-texto, #333));">
+                                <p style="margin: 0; font-size: 12px; color: var(--text, #333);">
                                     <strong>🎨 Plantillas:</strong><br>
                                     Cada usuario puede elegir su plantilla personal haciendo click en su nombre en el menú.
                                 </p>
