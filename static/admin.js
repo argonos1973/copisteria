@@ -3497,13 +3497,29 @@ async function guardarDatosEmpresa(empresaId) {
         if (response.ok) {
             mostrarAlerta('✅ Datos de empresa guardados correctamente', 'success');
             
-            // Si se subió un logo, actualizar el preview con la nueva ruta del servidor
-            if (result.logo_url) {
-                console.log('[LOGO-SAVE] Nuevo logo guardado en:', result.logo_url);
+            console.log('[LOGO-SAVE] Respuesta del servidor:', result);
+            
+            // Si se subió un logo, intentar actualizar preview inmediatamente
+            const logoInput = document.getElementById('empresa-logo');
+            if (logoInput && logoInput.files && logoInput.files[0]) {
                 const logoPreview = document.getElementById('logo-preview');
-                if (logoPreview) {
-                    logoPreview.src = result.logo_url + '?t=' + new Date().getTime();
-                    console.log('[LOGO-SAVE] Preview actualizado con ruta final del servidor');
+                
+                if (result.logo_url) {
+                    // Usar ruta devuelta por el servidor
+                    console.log('[LOGO-SAVE] Usando ruta del servidor:', result.logo_url);
+                    if (logoPreview) {
+                        logoPreview.src = result.logo_url + '?t=' + new Date().getTime();
+                        console.log('[LOGO-SAVE] Preview actualizado con ruta del servidor');
+                    }
+                } else {
+                    // Construir ruta esperada con ID de empresa
+                    const fileName = logoInput.files[0].name;
+                    const expectedPath = `/static/logos/${empresaId}_${fileName}`;
+                    console.log('[LOGO-SAVE] Construyendo ruta esperada:', expectedPath);
+                    if (logoPreview) {
+                        logoPreview.src = expectedPath + '?t=' + new Date().getTime();
+                        console.log('[LOGO-SAVE] Preview actualizado con ruta construida');
+                    }
                 }
             }
             
