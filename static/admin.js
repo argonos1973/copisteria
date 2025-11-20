@@ -3532,7 +3532,30 @@ async function guardarDatosEmpresa(empresaId) {
                             if (logoPreviewContainer) {
                                 logoPreviewContainer.style.display = 'block';
                                 logoPreviewContainer.classList.remove('empresa-hidden');
+                                logoPreviewContainer.classList.add('visible');
                                 console.log('[LOGO-SAVE] ✅ Contenedor preview forzado a visible');
+                                console.log('[LOGO-SAVE] 📊 Estilos aplicados:', {
+                                    display: logoPreviewContainer.style.display,
+                                    classList: logoPreviewContainer.className,
+                                    offsetWidth: logoPreviewContainer.offsetWidth,
+                                    offsetHeight: logoPreviewContainer.offsetHeight,
+                                    computedDisplay: window.getComputedStyle(logoPreviewContainer).display,
+                                    computedVisibility: window.getComputedStyle(logoPreviewContainer).visibility,
+                                    clientWidth: logoPreviewContainer.clientWidth,
+                                    clientHeight: logoPreviewContainer.clientHeight
+                                });
+                                
+                                // También verificar la imagen dentro
+                                if (logoPreview) {
+                                    console.log('[LOGO-SAVE] 🖼️ Estado de la imagen:', {
+                                        src: logoPreview.src,
+                                        offsetWidth: logoPreview.offsetWidth,
+                                        offsetHeight: logoPreview.offsetHeight,
+                                        naturalWidth: logoPreview.naturalWidth,
+                                        naturalHeight: logoPreview.naturalHeight,
+                                        complete: logoPreview.complete
+                                    });
+                                }
                             }
                             console.log('[LOGO-SAVE] Preview actualizado con ruta confirmada');
                         }
