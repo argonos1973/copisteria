@@ -320,6 +320,21 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 <td class="text-right">${totalRaw} €</td>
                 <td class="text-center ${getEstadoClassFactura(factura.estado)}">${getEstadoFormateadoFactura(factura.estado)}</td>
                 <td class="text-center">
+                    ${factura.csv || factura.estado_envio ? 
+                        `<i class="fas fa-info-circle aeat-icon" 
+                            style="cursor: pointer; color: ${factura.estado_envio === 'ENVIADO' ? '#28a745' : '#ffc107'};" 
+                            data-factura='${JSON.stringify({
+                                csv: factura.csv || '',
+                                estado_envio: factura.estado_envio || '',
+                                id_envio_aeat: factura.id_envio_aeat || '',
+                                numero: factura.numero
+                            }).replace(/'/g, "&apos;")}'
+                            title="${factura.estado_envio === 'ENVIADO' ? 'Enviado a AEAT' : 'Info AEAT disponible'}"
+                        ></i>` : 
+                        '<span style="color: #ccc;" title="Sin información AEAT">-</span>'
+                    }
+                </td>
+                <td class="text-center">
                     ${(['A'].includes(factura.estado)) ? '' : `<i class=\"fas fa-print print-icon\" style=\"cursor: pointer;\" data-id=\"${factura.id}\"></i>`}
                 </td>
                 <td class="text-center">
@@ -449,6 +464,16 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                     // Abrir la carta en una nueva ventana/pestaña
                     const url = `${API_URL}/api/carta-reclamacion/${numeroFactura}`;
                     window.open(url, '_blank');
+                });
+            }
+            
+            // Añadir evento de clic para mostrar información AEAT
+            const aeatIcon = row.querySelector('.aeat-icon');
+            if (aeatIcon) {
+                aeatIcon.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const facturaData = JSON.parse(aeatIcon.getAttribute('data-factura').replace(/&apos;/g, "'"));
+                    mostrarModalAEAT(facturaData);
                 });
             }
             
@@ -611,4 +636,94 @@ document.addEventListener("DOMContentLoaded", function () {
     if (prevBtn) prevBtn.addEventListener('click', (e) => { e.preventDefault(); gotoPrevPage(); });
     const nextBtn = document.getElementById('nextPageFacturas');
     if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); gotoNextPage(); });
+});
+
+// Función para mostrar modal con información de la AEAT
+window.mostrarModalAEAT = function(facturaData) {
+    const modal = document.getElementById('modalAEAT');
+    const contenido = document.getElementById('contenidoAEAT');
+    
+    let html = `
+        <div style="padding: 15px;">
+            <h3 style="margin-top: 0; color: var(--text, #333);">
+                Factura ${facturaData.numero}
+            </h3>
+    `;
+    
+    if (facturaData.csv) {
+        html += `
+            <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px; margin-right: 10px;"></i>
+                    <strong style="font-size: 16px;">CSV (Código Seguro de Verificación)</strong>
+                </div>
+                <div style="font-family: monospace; font-size: 14px; background: white; padding: 10px; border-radius: 4px; word-break: break-all;">
+                    ${facturaData.csv}
+                </div>
+                <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                    Este código identifica de forma única la factura en el sistema de la AEAT.
+                </div>
+            </div>
+        `;
+    }
+    
+    if (facturaData.estado_envio) {
+        const estadoColor = facturaData.estado_envio === 'ENVIADO' ? '#28a745' : 
+                           facturaData.estado_envio === 'ERROR' ? '#dc3545' : '#ffc107';
+        const estadoIcono = facturaData.estado_envio === 'ENVIADO' ? 'fa-check-circle' : 
+                           facturaData.estado_envio === 'ERROR' ? 'fa-times-circle' : 'fa-clock';
+        
+        html += `
+            <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid ${estadoColor};">
+                <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                    <i class="fas ${estadoIcono}" style="color: ${estadoColor}; font-size: 20px; margin-right: 10px;"></i>
+                    <strong>Estado de Envío:</strong>
+                </div>
+                <div style="margin-left: 30px; font-size: 14px;">
+                    ${facturaData.estado_envio}
+                </div>
+            </div>
+        `;
+    }
+    
+    if (facturaData.id_envio_aeat) {
+        html += `
+            <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                <div style="margin-bottom: 5px;">
+                    <strong><i class="fas fa-hashtag"></i> ID de Envío AEAT:</strong>
+                </div>
+                <div style="font-family: monospace; font-size: 13px; margin-left: 25px; word-break: break-all;">
+                    ${facturaData.id_envio_aeat}
+                </div>
+            </div>
+        `;
+    }
+    
+    if (!facturaData.csv && !facturaData.estado_envio && !facturaData.id_envio_aeat) {
+        html += `
+            <div style="text-align: center; padding: 20px; color: #666;">
+                <i class="fas fa-info-circle" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
+                <p>No hay información de la AEAT disponible para esta factura.</p>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    
+    contenido.innerHTML = html;
+    modal.style.display = 'block';
+};
+
+// Función para cerrar modal de AEAT
+window.cerrarModalAEAT = function() {
+    const modal = document.getElementById('modalAEAT');
+    modal.style.display = 'none';
+};
+
+// Cerrar modal al hacer clic fuera
+window.addEventListener('click', function(event) {
+    const modal = document.getElementById('modalAEAT');
+    if (event.target === modal) {
+        cerrarModalAEAT();
+    }
 });

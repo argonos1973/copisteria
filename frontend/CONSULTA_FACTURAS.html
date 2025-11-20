@@ -123,6 +123,7 @@
                             <th class="text-right" style="width: 100px;">Cobrado</th>
                             <th class="text-right" style="width: 100px;">Total</th>
                             <th class="text-center" style="width: 100px;">Estado</th>
+                            <th class="text-center" style="width: 50px;" title="Estado AEAT"><i class="fas fa-landmark"></i></th>
                             <th class="text-center" style="width: 50px;"><i class="fas fa-print"></i></th>
                             <th class="text-center" style="width: 50px;"><i class="fas fa-envelope"></i></th>
                             <th class="text-center" style="width: 50px;"><i class="fas fa-file-pdf"></i></th>
@@ -157,11 +158,28 @@
                 <td class="text-center" style="width: 50px;"></td>
                 <td class="text-center" style="width: 50px;"></td>
                 <td class="text-center" style="width: 50px;"></td>
+                <td class="text-center" style="width: 50px;"></td>
             </tr>
         </table>
     </div>
 
     <div id="notificaciones-contenedor"></div>
+
+    <!-- Modal información AEAT -->
+    <div id="modalAEAT" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-landmark"></i> Información AEAT</h2>
+                <span class="close" onclick="cerrarModalAEAT()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="contenidoAEAT"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalAEAT()">Cerrar</button>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="../static/consulta_facturas.js?v=1762757322" defer></script>
     

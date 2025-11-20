@@ -716,9 +716,13 @@ def consultar_facturas():
                 c.razonsocial,
                 COALESCE(c.mail, '') as mail,
                 COALESCE(f.enviado, 0) as enviado,
-                f.fechaCobro
+                f.fechaCobro,
+                rf.csv,
+                rf.estado_envio,
+                rf.id_envio_aeat
             FROM factura f
             LEFT JOIN contactos c ON f.idcontacto = c.idContacto
+            LEFT JOIN registro_facturacion rf ON f.id = rf.factura_id
             WHERE 1=1
         """
         params = []
