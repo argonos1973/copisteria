@@ -2968,28 +2968,52 @@ body select option {
 
 .aeat-qr-container {
     text-align: center;
+    margin: 20px 0;
 }
 
 .aeat-qr-header {
-    margin-bottom: 10px;
+    margin-bottom: 15px;
+    padding: 10px 0;
+    border-bottom: 2px solid var(--primary);
 }
 
 .aeat-qr-header strong {
-    color: var(--text);
+    color: var(--primary);
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.aeat-qr-header i {
+    font-size: 1.3em;
 }
 
 .aeat-qr-box {
     display: inline-block;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    border: 1px solid var(--border);
+    padding: 25px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--bg-elevated) 0%, rgba(255,255,255,0.8) 100%);
+    border: 2px solid var(--primary);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    margin: 20px 0;
+    transition: all 0.3s ease;
+}
+
+.aeat-qr-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(0,0,0,0.15);
 }
 
 .aeat-qr-box img {
-    max-width: 200px;
+    max-width: 280px;
+    width: 100%;
     height: auto;
     display: block;
+    border-radius: 8px;
+    background: white;
+    padding: 10px;
 }
 
 .aeat-no-data {
@@ -3007,7 +3031,31 @@ body select option {
 
 /* Modal AEAT específico */
 #modalAEAT .modal-content {
-    max-width: 600px;
+    max-width: 650px;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.2);
+}
+
+#modalAEAT .modal-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark, #1e3a8a) 100%);
+    color: white;
+    padding: 20px 25px;
+    border-bottom: none;
+}
+
+#modalAEAT .modal-header h2 {
+    margin: 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#modalAEAT .modal-body {
+    padding: 25px;
+    max-height: 80vh;
+    overflow-y: auto;
 }
 
 /* ================================================

@@ -123,8 +123,8 @@
     display: none;
     margin-top: 10px;
     min-height: 80px;
-    background: rgba(0,255,0,0.1); /* Verde temporal para debugging */
-    border: 2px dashed #00ff00; /* Borde verde para ver el contenedor */
+    /* background: rgba(0,255,0,0.1); Verde temporal para debugging - REMOVIDO */
+    /* border: 2px dashed #00ff00; Borde verde para ver el contenedor - REMOVIDO */
 }
 
 .empresa-logo-preview-container.visible {

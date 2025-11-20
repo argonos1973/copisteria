@@ -3299,8 +3299,19 @@ async function cargarConfiguracionEmpresa() {
                     // Agregar timestamp para evitar caché del navegador
                     const timestamp = new Date().getTime();
                     logoPreview.src = logoUrl + '?t=' + timestamp;
+                    
+                    // Asegurar que el contenedor sea visible desde la carga inicial
+                    logoPreviewContainer.style.display = 'block';
                     logoPreviewContainer.classList.remove('empresa-hidden');
-                    console.log('[LOGO] ✅ Vista previa mostrada:', logoUrl);
+                    logoPreviewContainer.classList.add('visible');
+                    
+                    console.log('[LOGO] ✅ Vista previa mostrada y forzada visible:', logoUrl);
+                    console.log('[LOGO] 📊 Estado contenedor:', {
+                        display: logoPreviewContainer.style.display,
+                        classList: logoPreviewContainer.className,
+                        offsetWidth: logoPreviewContainer.offsetWidth,
+                        offsetHeight: logoPreviewContainer.offsetHeight
+                    });
                 } else {
                     console.error('[LOGO] ❌ No se encontraron elementos DOM para la vista previa');
                 }

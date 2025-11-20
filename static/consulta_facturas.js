@@ -710,11 +710,13 @@ window.mostrarModalAEAT = function(facturaData) {
                 <div class="aeat-qr-header">
                     <strong><i class="fas fa-qrcode"></i> Código QR VeriFactu</strong>
                 </div>
-                <div class="aeat-qr-box">
-                    <img src="data:image/png;base64,${facturaData.codigo_qr}" alt="QR VeriFactu" />
+                <div class="aeat-qr-box" onclick="ampliarQR('${facturaData.codigo_qr}')">
+                    <img src="data:image/png;base64,${facturaData.codigo_qr}" alt="QR VeriFactu" title="Haz clic para ampliar" />
                 </div>
                 <div class="aeat-help-text">
+                    <i class="fas fa-info-circle"></i>
                     Escanea este código QR para verificar la factura en la AEAT
+                    <br><small><i class="fas fa-search-plus"></i> Haz clic en el QR para ampliar</small>
                 </div>
             </div>
         `;
@@ -739,6 +741,42 @@ window.mostrarModalAEAT = function(facturaData) {
 window.cerrarModalAEAT = function() {
     const modal = document.getElementById('modalAEAT');
     modal.style.display = 'none';
+};
+
+// Función para ampliar QR en modal separada
+window.ampliarQR = function(qrBase64) {
+    const modalQR = document.createElement('div');
+    modalQR.className = 'modal-qr-ampliado';
+    modalQR.innerHTML = `
+        <div class="modal-qr-content">
+            <div class="modal-qr-header">
+                <h3><i class="fas fa-qrcode"></i> Código QR VeriFactu - Vista Ampliada</h3>
+                <button class="modal-qr-close" onclick="cerrarModalQR()">&times;</button>
+            </div>
+            <div class="modal-qr-body">
+                <img src="data:image/png;base64,${qrBase64}" alt="QR VeriFactu Ampliado" />
+                <p><i class="fas fa-info-circle"></i> Escanea con tu dispositivo móvil para verificar la factura</p>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modalQR);
+    modalQR.style.display = 'flex';
+    
+    // Cerrar al hacer clic fuera
+    modalQR.addEventListener('click', function(e) {
+        if (e.target === modalQR) {
+            cerrarModalQR();
+        }
+    });
+};
+
+// Función para cerrar modal QR ampliado
+window.cerrarModalQR = function() {
+    const modalQR = document.querySelector('.modal-qr-ampliado');
+    if (modalQR) {
+        modalQR.remove();
+    }
 };
 
 // Cerrar modal al hacer clic fuera
