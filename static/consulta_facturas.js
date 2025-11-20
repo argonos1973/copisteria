@@ -324,15 +324,15 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 <td class="text-center ${getEstadoClassFactura(factura.estado)}">${getEstadoFormateadoFactura(factura.estado)}</td>
                 <td class="text-center">
                     ${factura.csv || factura.estado_envio ? 
-                        `<i class="fas fa-info-circle aeat-icon" 
-                            style="cursor: pointer; color: ${factura.estado_envio === 'ENVIADO' ? '#28a745' : '#ffc107'};" 
+                        `<i class="fas ${factura.estado_envio === 'SIMULADO' ? 'fa-flask' : 'fa-info-circle'} aeat-icon" 
+                            style="cursor: pointer; color: ${factura.estado_envio === 'ENVIADO' ? '#28a745' : factura.estado_envio === 'SIMULADO' ? '#6c757d' : '#ffc107'};" 
                             data-factura='${JSON.stringify({
                                 csv: factura.csv || '',
                                 estado_envio: factura.estado_envio || '',
                                 id_envio_aeat: factura.id_envio_aeat || '',
                                 numero: factura.numero
                             }).replace(/'/g, "&apos;")}'
-                            title="${factura.estado_envio === 'ENVIADO' ? 'Enviado a AEAT' : 'Info AEAT disponible'}"
+                            title="${factura.estado_envio === 'ENVIADO' ? 'Enviado a AEAT' : factura.estado_envio === 'SIMULADO' ? 'Modo de pruebas (no enviado a AEAT)' : 'Info AEAT disponible'}"
                         ></i>` : 
                         '<span style="color: #ccc;" title="Sin información AEAT">-</span>'
                     }
@@ -671,10 +671,13 @@ window.mostrarModalAEAT = function(facturaData) {
     }
     
     if (facturaData.estado_envio) {
+        const esSimulado = facturaData.estado_envio === 'SIMULADO';
         const estadoColor = facturaData.estado_envio === 'ENVIADO' ? '#28a745' : 
-                           facturaData.estado_envio === 'ERROR' ? '#dc3545' : '#ffc107';
+                           facturaData.estado_envio === 'ERROR' ? '#dc3545' : 
+                           esSimulado ? '#6c757d' : '#ffc107';
         const estadoIcono = facturaData.estado_envio === 'ENVIADO' ? 'fa-check-circle' : 
-                           facturaData.estado_envio === 'ERROR' ? 'fa-times-circle' : 'fa-clock';
+                           facturaData.estado_envio === 'ERROR' ? 'fa-times-circle' : 
+                           esSimulado ? 'fa-flask' : 'fa-clock';
         
         html += `
             <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid ${estadoColor};">
@@ -685,6 +688,13 @@ window.mostrarModalAEAT = function(facturaData) {
                 <div style="margin-left: 30px; font-size: 14px;">
                     ${facturaData.estado_envio}
                 </div>
+                ${esSimulado ? `
+                    <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 4px; font-size: 12px; color: #856404;">
+                        <i class="fas fa-exclamation-triangle"></i> 
+                        <strong>Modo de pruebas:</strong> Esta factura no se ha enviado realmente a la AEAT. 
+                        El sistema está en modo simulación para pruebas y desarrollo.
+                    </div>
+                ` : ''}
             </div>
         `;
     }
