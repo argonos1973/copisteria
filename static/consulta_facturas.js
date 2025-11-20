@@ -669,7 +669,7 @@ window.mostrarModalAEAT = function(facturaData) {
         `;
     }
     
-    if (facturaData.estado_envio) {
+    if (facturaData.estado_envio && facturaData.estado_envio !== 'SIMULADO') {
         const estadoClass = facturaData.estado_envio === 'ENVIADO' ? 'estado-enviado' : 
                            facturaData.estado_envio === 'ERROR' ? 'estado-error' : 'estado-pendiente';
         const estadoColorClass = facturaData.estado_envio === 'ENVIADO' ? 'text-success' : 
@@ -690,7 +690,7 @@ window.mostrarModalAEAT = function(facturaData) {
         `;
     }
     
-    if (facturaData.id_envio_aeat) {
+    if (facturaData.id_envio_aeat && facturaData.id_envio_aeat !== 'SIMULADO') {
         html += `
             <div class="aeat-card">
                 <div class="aeat-id-header">
@@ -722,7 +722,9 @@ window.mostrarModalAEAT = function(facturaData) {
         `;
     }
     
-    if (!facturaData.csv && !facturaData.estado_envio && !facturaData.id_envio_aeat) {
+    if (!facturaData.csv && 
+        (!facturaData.estado_envio || facturaData.estado_envio === 'SIMULADO') && 
+        (!facturaData.id_envio_aeat || facturaData.id_envio_aeat === 'SIMULADO')) {
         html += `
             <div class="aeat-no-data">
                 <i class="fas fa-info-circle"></i>
@@ -751,7 +753,6 @@ window.ampliarQR = function(qrBase64) {
         <div class="modal-qr-content">
             <div class="modal-qr-header">
                 <h3><i class="fas fa-qrcode"></i> Código QR VeriFactu - Vista Ampliada</h3>
-                <button class="modal-qr-close" onclick="cerrarModalQR()">&times;</button>
             </div>
             <div class="modal-qr-body">
                 <img src="data:image/png;base64,${qrBase64}" alt="QR VeriFactu Ampliado" />
