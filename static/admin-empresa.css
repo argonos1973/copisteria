@@ -112,7 +112,7 @@
 
 .empresa-form-help {
     font-size: 10px;
-    color: var(--text-muted, #7f8c8d);
+    color: var(--text-muted, #7f8c8d) !important;
     display: block;
     margin-top: 2px;
 }
@@ -126,10 +126,10 @@
 .empresa-logo-preview {
     max-width: 150px;
     max-height: 75px;
-    border: 1px solid var(--border, #ddd);
+    border: 1px solid var(--border, #ddd) !important;
     border-radius: 3px;
     padding: 3px;
-    background: var(--bg-elevated, #f9f9f9);
+    background: var(--bg-elevated, #f9f9f9) !important;
 }
 
 .empresa-actions {
@@ -148,7 +148,7 @@
 
 .empresa-save-info {
     font-size: 11px;
-    color: var(--text-muted, #666);
+    color: var(--text-muted, #666) !important;
     align-self: center;
 }
 
