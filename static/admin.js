@@ -1235,7 +1235,7 @@ async function editarEmpresa(empresaId) {
                                 <div id="live-preview-container" style="display: grid; gap: 12px;">
                                     
                                     <!-- Encabezado / Header -->
-                                    <div>
+                                    <div class="empresa-form-group">
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Encabezado / Header</div>
                                         <div class="preview-header" style="padding: 12px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
                                             <div style="display: flex; align-items: center; gap: 10px;">
@@ -1250,7 +1250,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Colores Primario y Secundario -->
-                                    <div>
+                                    <div class="empresa-form-group">
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Colores Principales</div>
                                         <div style="display: flex; gap: 10px;">
                                             <div class="preview-badge-primary" style="flex: 1; padding: 10px; border-radius: 4px; text-align: center; font-size: 11px; font-weight: 600;">
@@ -1263,7 +1263,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Botones -->
-                                    <div>
+                                    <div class="empresa-form-group">
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Botones</div>
                                         <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                                             <button class="preview-btn-primary" type="button" style="padding: 8px 14px; border-radius: 4px; border: none; font-size: 12px; cursor: pointer; transition: all 0.2s;">Primario</button>
@@ -1273,7 +1273,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Notificaciones -->
-                                    <div>
+                                    <div class="empresa-form-group">
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Notificaciones</div>
                                         <div style="display: grid; gap: 5px;">
                                             <div class="preview-notif-success" style="padding: 8px 10px; border-radius: 4px; font-size: 11px; border-left: 3px solid; display: flex; align-items: center; gap: 6px;">
@@ -1289,7 +1289,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Inputs y Selectores -->
-                                    <div>
+                                    <div class="empresa-form-group">
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Inputs y Selectores</div>
                                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
                                             <input class="preview-input" type="text" value="Texto ejemplo" style="padding: 7px; border: 1px solid; border-radius: 3px; font-size: 12px;">
@@ -1303,7 +1303,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Tabla -->
-                                    <div>
+                                    <div class="empresa-form-group">
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Tabla</div>
                                         <div style="border: 1px solid #dddddd; border-radius: 4px; overflow: hidden;">
                                             <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
@@ -1331,7 +1331,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Iconos -->
-                                    <div>
+                                    <div class="empresa-form-group">
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Iconos</div>
                                         <div style="display: flex; gap: 10px; justify-content: center;">
                                             <div class="preview-icon" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">
@@ -1742,11 +1742,11 @@ async function editarEmpresa(empresaId) {
                             <div style="margin-top: 12px; padding: 10px; background: white; border-radius: 4px; border-left: 3px solid #3498db;">
                                 <div style="font-size: 11px; color: #666; margin-bottom: 6px;"><strong>Nota:</strong> Overlay y Sombra usan transparencias (rgba)</div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px;">
-                                    <div>
+                                    <div class="empresa-form-group">
                                         <label for="edit_color_modal_overlay" style="margin-bottom: 2px; display: block;">Overlay (ej: rgba(0,0,0,0.6))</label>
                                         <input type="text" id="edit_color_modal_overlay" name="color_modal_overlay" value="${empresa.color_modal_overlay || 'rgba(0,0,0,0.6)'}" oninput="actualizarVistaPrevia()" style="width: 100%; padding: 4px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px;">
                                     </div>
-                                    <div>
+                                    <div class="empresa-form-group">
                                         <label for="edit_color_modal_shadow" style="margin-bottom: 2px; display: block;">Sombra (ej: rgba(0,0,0,0.4))</label>
                                         <input type="text" id="edit_color_modal_shadow" name="color_modal_shadow" value="${empresa.color_modal_shadow || 'rgba(0,0,0,0.4)'}" oninput="actualizarVistaPrevia()" style="width: 100%; padding: 4px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px;">
                                     </div>
@@ -3152,102 +3152,101 @@ async function cargarConfiguracionEmpresa() {
         // Renderizar contenido
         const contenedor = document.getElementById('tab-empresas');
         contenedor.innerHTML = `
-            <div class="page-header" style="background: var(--bg, #fff); color: var(--text, #333); padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px var(--shadow, rgba(0,0,0,0.1));">
-                <h1 style="color: var(--text, #333); margin: 0;"><i class="fas fa-building" style="color: var(--primary, #3498db);"></i> Configuración de Empresa</h1>
+            <div class="empresa-page-header">
+                <h1><i class="fas fa-building"></i> Configuración de Empresa</h1>
             </div>
-            <div class="card" style="background: var(--bg-elevated, var(--bg, #fff)); color: var(--text, #333); border: 1px solid var(--border, #ddd); border-radius: 8px; box-shadow: 0 2px 8px var(--shadow, rgba(0,0,0,0.1));">
-                <div style="padding: 20px; background: var(--bg-elevated, var(--bg, #fff)); color: var(--text, #333);">
-                    <div style="display: grid; grid-template-columns: 55% 40%; gap: 20px;">
+            <div class="empresa-card">
+                <div class="empresa-card-content">
+                    <div class="empresa-grid-container">
                         <!-- Información de la empresa -->
-                        <div style="border: 1px solid var(--border, var(--color-border, #ddd)); border-radius: 8px; padding: 16px; background: var(--card-bg, rgba(255,255,255,0.9));">
-                            <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--primary, var(--color-primario, #007bff)); border-bottom: 2px solid var(--primary, var(--color-primario, #007bff)); padding-bottom: 8px;">📋 Datos de la Empresa</h3>
-                            <div style="display: grid; grid-template-columns: repeat(2, minmax(150px, 300px)); gap: 8px; max-width: 620px;">
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Nombre Comercial:</label>
-                                    <input type="text" id="empresa-nombre" value="${empresa.nombre || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--border, #ddd); border-radius: 3px; box-sizing: border-box; background: var(--bg, #fff); color: var(--text, #333);">
+                        <div class="empresa-section">
+                            <h3 class="empresa-section-title">📋 Datos de la Empresa</h3>
+                            <div class="empresa-form-grid">
+                                <div class="empresa-form-group">
+                                    <label class="empresa-form-label">Nombre Comercial:</label>
+                                    <input type="text" id="empresa-nombre" value="${empresa.nombre || ''}" class="empresa-form-input">
                                 </div>
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Razón Social:</label>
+                                <div class="empresa-form-group">
+                                    <label class="empresa-form-label">Razón Social:</label>
                                     <input type="text" id="empresa-razon-social" value="${empresa.razon_social || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           class="empresa-form-input">
                                 </div>
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">CIF/NIF:</label>
+                                <div class="empresa-form-group">
+                                    <label class="empresa-form-label">CIF/NIF:</label>
                                     <input type="text" id="empresa-cif" value="${empresa.cif || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           class="empresa-form-input">
                                 </div>
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Teléfono:</label>
+                                <div class="empresa-form-group">
+                                    <label class="empresa-form-label">Teléfono:</label>
                                     <input type="text" id="empresa-telefono" value="${empresa.telefono || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           class="empresa-form-input">
                                 </div>
-                                <div style="grid-column: 1 / -1;">
-                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Dirección:</label>
+                                <div class="empresa-form-group full-width">
+                                    <label class="empresa-form-label">Dirección:</label>
                                     <input type="text" id="empresa-direccion" value="${empresa.direccion || ''}" 
-                                           style="max-width: 620px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           class="empresa-form-input full-width">
                                 </div>
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Código Postal:</label>
+                                <div class="empresa-form-group">
+                                    <label class="empresa-form-label">Código Postal:</label>
                                     <input type="text" id="empresa-codigo-postal" value="${empresa.codigo_postal || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           class="empresa-form-input">
                                 </div>
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Ciudad:</label>
+                                <div class="empresa-form-group">
+                                    <label class="empresa-form-label">Ciudad:</label>
                                     <input type="text" id="empresa-ciudad" value="${empresa.ciudad || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           class="empresa-form-input">
                                 </div>
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Provincia:</label>
+                                <div class="empresa-form-group">
+                                    <label class="empresa-form-label">Provincia:</label>
                                     <input type="text" id="empresa-provincia" value="${empresa.provincia || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           class="empresa-form-input">
                                 </div>
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Email:</label>
+                                <div class="empresa-form-group">
+                                    <label class="empresa-form-label">Email:</label>
                                     <input type="email" id="empresa-email" value="${empresa.email || ''}" 
-                                           style="max-width: 300px; width: 100%; padding: 5px 7px; font-size: 12px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
+                                           class="empresa-form-input">
                                 </div>
-                                <div>
-                                    <label style="font-size: 11px; font-weight: 500; display: block; margin-bottom: 3px;">Logo:</label>
+                                <div class="empresa-form-group">
+                                    <label class="empresa-form-label">Logo:</label>
                                     <input type="file" id="empresa-logo" accept="image/*" onchange="previsualizarLogoEmpresa(event)"
-                                           style="max-width: 300px; width: 100%; padding: 4px; font-size: 11px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; box-sizing: border-box;">
-                                    <small style="font-size: 10px; color: #7f8c8d; display: block; margin-top: 2px;">PNG, JPG, SVG (máx. 2MB)</small>
+                                           class="empresa-form-input file-input">
+                                    <small class="empresa-form-help">PNG, JPG, SVG (máx. 2MB)</small>
                                 </div>
-                                <div id="logo-preview-container" style="grid-column: 1 / -1; display: none; margin-top: 8px;">
+                                <div id="logo-preview-container" class="empresa-logo-preview-container">
                                     <img id="logo-preview" src="" alt="Vista previa del logo" 
-                                         style="max-width: 150px; max-height: 75px; border: 1px solid var(--color-border, #ddd); border-radius: 3px; padding: 3px; background: #f9f9f9;">
+                                         class="empresa-logo-preview">
                                 </div>
                             </div>
-                            <div style="display: flex; justify-content: flex-start; margin-top: 12px; gap: 8px;">
+                            <div class="empresa-actions">
                                 <button class="btn btn-primary" onclick="guardarDatosEmpresa(${empresaId})" 
-                                        style="padding: 6px 14px; font-size: 12px; border-radius: 3px;">
+                                        class="empresa-save-btn">
                                     <i class="fas fa-save"></i> Guardar Datos de Emisor
                                 </button>
-                                <span style="font-size: 11px; color: var(--color-texto-secundario, #666); align-self: center;">💾 Se guardarán en ${empresa.codigo}_emisor.json</span>
+                                <span class="empresa-save-info">💾 Se guardarán en ${empresa.codigo}_emisor.json</span>
                             </div>
                         </div>
                         
                         <!-- Información sobre plantillas -->
-                        <div style="border: 1px solid var(--border, var(--color-border, #ddd)); border-radius: 8px; padding: 16px; background: var(--card-bg, rgba(255,255,255,0.9));">
-                            <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--primary, var(--color-primario, #007bff)); border-bottom: 2px solid var(--primary, var(--color-primario, #007bff)); padding-bottom: 8px;">
+                        <div class="empresa-section">
+                            <h3 class="empresa-section-title">
                                 ℹ️ Información
                             </h3>
-                            <div style="padding: 12px; background: var(--card-bg, white); border: 1px solid var(--border, var(--color-border, #ddd)); border-radius: 4px;">
-                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--text, var(--color-texto, #333));">
+                            <div class="empresa-info-section">
+                                <p class="empresa-info-text">
                                     <strong>📋 Datos de Emisor:</strong><br>
-                                    Los datos de la empresa se guardan en un archivo JSON individual (<code style="background: var(--bg-elevated, #f5f5f5); padding: 2px 5px; border-radius: 3px; font-size: 11px;">${empresa.codigo}_emisor.json</code>).
+                                    Los datos de la empresa se guardan en un archivo JSON individual (<code class="empresa-info-code">${empresa.codigo}_emisor.json</code>).
                                 </p>
-                                <p style="margin: 0 0 10px 0; font-size: 12px; color: var(--text, var(--color-texto, #333));">
+                                <p class="empresa-info-text">
                                     Este archivo se utiliza automáticamente como datos del emisor en:
                                 </p>
-                                <ul style="margin: 5px 0 10px 20px; padding: 0; font-size: 11px; color: var(--text-muted, var(--color-texto, #666));">
+                                <ul class="empresa-info-list">
                                     <li>Facturas</li>
                                     <li>Presupuestos</li>
                                     <li>Proformas</li>
                                     <li>Tickets</li>
                                     <li>Verifactu</li>
                                 </ul>
-                                <p style="margin: 0; font-size: 12px; color: var(--text, var(--color-texto, #333));">
+                                <p class="empresa-info-text">
                                     <strong>🎨 Plantillas:</strong><br>
                                     Cada usuario puede elegir su plantilla personal haciendo click en su nombre en el menú.
                                 </p>
