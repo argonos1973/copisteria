@@ -3411,27 +3411,48 @@ async function aplicarPlantilla(plantilla, empresaId) {
 }
 
 function previsualizarLogoEmpresa(event) {
+    console.log('[LOGO-PREVIEW] Función llamada');
     const file = event.target.files[0];
     const preview = document.getElementById('logo-preview-container');
     const img = document.getElementById('logo-preview');
     
+    console.log('[LOGO-PREVIEW] Elementos:', {
+        file: file ? file.name : 'No hay archivo',
+        preview: preview ? 'Encontrado' : 'NO encontrado',
+        img: img ? 'Encontrado' : 'NO encontrado'
+    });
+    
     if (file) {
         // Validar tamaño (2MB máximo)
         if (file.size > 2 * 1024 * 1024) {
+            console.log('[LOGO-PREVIEW] Archivo demasiado grande:', file.size);
             mostrarAlerta('❌ El archivo es demasiado grande. Máximo 2MB', 'error');
             event.target.value = '';
-            preview.style.display = 'none';
+            if (preview) preview.style.display = 'none';
             return;
         }
         
+        console.log('[LOGO-PREVIEW] Procesando archivo:', file.name, file.size);
+        
         const reader = new FileReader();
         reader.onload = function(e) {
-            img.src = e.target.result;
-            preview.style.display = 'block';
+            console.log('[LOGO-PREVIEW] Archivo leído correctamente');
+            if (img) {
+                img.src = e.target.result;
+                console.log('[LOGO-PREVIEW] Imagen src asignada');
+            }
+            if (preview) {
+                preview.style.display = 'block';
+                preview.classList.remove('empresa-hidden');
+                console.log('[LOGO-PREVIEW] Contenedor mostrado');
+            }
         };
         reader.readAsDataURL(file);
     } else {
-        preview.style.display = 'none';
+        console.log('[LOGO-PREVIEW] No hay archivo seleccionado');
+        if (preview) {
+            preview.style.display = 'none';
+        }
     }
 }
 
