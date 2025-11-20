@@ -912,9 +912,13 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                 COALESCE(c.mail, '') as mail,
                 COALESCE(f.enviado, 0) as enviado,
                 COALESCE(f.carta_enviada, 0) as carta_enviada,
-                f.fechaCobro
+                f.fechaCobro,
+                rf.csv,
+                rf.estado_envio,
+                rf.id_envio_aeat
             FROM factura f
             LEFT JOIN contactos c ON f.idcontacto = c.idContacto
+            LEFT JOIN registro_facturacion rf ON f.id = rf.factura_id
             {where_sql}
             ORDER BY {sort_col} {order_dir}, f.fecha DESC, f.timestamp DESC
             LIMIT ? OFFSET ?

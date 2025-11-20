@@ -255,6 +255,9 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         items.forEach(factura => {
             const row = document.createElement('tr');
             
+            // Debug: verificar datos AEAT
+            console.log(`Factura ${factura.numero}: CSV=${factura.csv}, Estado=${factura.estado_envio}, ID=${factura.id_envio_aeat}`);
+            
             // Debug: verificar explícitamente el valor de enviado para cada factura
             console.log(`Factura ID: ${factura.id}, Número: ${factura.numero}, Enviado: ${factura.enviado}, Tipo: ${typeof factura.enviado}`);
             
