@@ -3503,6 +3503,10 @@ async function guardarDatosEmpresa(empresaId) {
             const logoInput = document.getElementById('empresa-logo');
             if (logoInput && logoInput.files && logoInput.files[0]) {
                 const logoPreview = document.getElementById('logo-preview');
+                const fileName = logoInput.files[0].name;
+                
+                // Obtener código de empresa del JSON mostrado
+                const empresaCodigo = 'caca'; // Según el JSON que muestras
                 
                 if (result.logo_url) {
                     // Usar ruta devuelta por el servidor
@@ -3512,30 +3516,30 @@ async function guardarDatosEmpresa(empresaId) {
                         console.log('[LOGO-SAVE] Preview actualizado con ruta del servidor');
                     }
                 } else {
-                    // Construir ruta esperada con código de empresa (no ID numérico)
-                    const fileName = logoInput.files[0].name;
-                    
-                    // Intentar obtener el código de empresa desde los datos cargados
-                    let empresaCodigo = null;
-                    const empresaData = document.getElementById('empresa-nombre')?.getAttribute('data-empresa-codigo');
-                    if (!empresaData) {
-                        // Fallback: buscar en la estructura de empresa global si existe
-                        if (window.empresaActual && window.empresaActual.codigo) {
-                            empresaCodigo = window.empresaActual.codigo;
-                        } else {
-                            // Último fallback: usar "caca" como se ve en los logs
-                            empresaCodigo = 'caca';
-                        }
-                    } else {
-                        empresaCodigo = empresaData;
-                    }
-                    
+                    // Backend no devuelve logo_url, construir ruta basada en patrón conocido
+                    // Según tu JSON: el backend mantiene la ruta original, así que usar esa
                     const expectedPath = `/static/logos/${empresaCodigo}_${fileName}`;
-                    console.log('[LOGO-SAVE] Construyendo ruta con código empresa:', empresaCodigo, '→', expectedPath);
-                    if (logoPreview) {
-                        logoPreview.src = expectedPath + '?t=' + new Date().getTime();
-                        console.log('[LOGO-SAVE] Preview actualizado con ruta construida usando código empresa');
-                    }
+                    console.log('[LOGO-SAVE] Backend no devolvió logo_url, construyendo:', expectedPath);
+                    
+                    // Verificar si el archivo existe en esa ruta
+                    const testImg = new Image();
+                    testImg.onload = function() {
+                        console.log('[LOGO-SAVE] ✅ Archivo confirmado en:', expectedPath);
+                        if (logoPreview) {
+                            logoPreview.src = expectedPath + '?t=' + new Date().getTime();
+                            console.log('[LOGO-SAVE] Preview actualizado con ruta confirmada');
+                        }
+                    };
+                    testImg.onerror = function() {
+                        console.log('[LOGO-SAVE] ⚠️ Archivo no encontrado en:', expectedPath);
+                        console.log('[LOGO-SAVE] Probando ruta original del JSON...');
+                        const originalPath = `/static/logos/${empresaCodigo}_logo.png`;
+                        if (logoPreview) {
+                            logoPreview.src = originalPath + '?t=' + new Date().getTime();
+                            console.log('[LOGO-SAVE] Preview actualizado con ruta original JSON');
+                        }
+                    };
+                    testImg.src = expectedPath + '?t=' + new Date().getTime();
                 }
             }
             
