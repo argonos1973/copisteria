@@ -3286,6 +3286,17 @@ async function cargarConfiguracionEmpresa() {
                 console.log('[LOGO] Logo encontrado en logo:', logoUrl);
             }
             
+            // Corregir ruta para multiempresa
+            if (logoUrl && !logoUrl.includes('/empresa_')) {
+                const empresaId = empresa.id || empresa.empresa_id;
+                if (empresaId) {
+                    // Construir ruta correcta para multiempresa
+                    const fileName = logoUrl.split('/').pop(); // Obtener solo el nombre del archivo
+                    logoUrl = `/static/logos/empresa_${empresaId}/${fileName}`;
+                    console.log('[LOGO] Ruta corregida para multiempresa:', logoUrl);
+                }
+            }
+            
             if (logoUrl) {
                 const logoPreviewContainer = document.getElementById('logo-preview-container');
                 const logoPreview = document.getElementById('logo-preview');
