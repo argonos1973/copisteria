@@ -3495,19 +3495,23 @@ async function guardarDatosEmpresa(empresaId) {
         const result = await response.json();
         
         if (response.ok) {
-            mostrarAlerta(`✅ Datos de emisor guardados en ${result.emisor_json}`, 'success');
+            const data = await response.json();
+            mostrarAlerta('✅ Datos de empresa guardados correctamente', 'success');
             
-            // Recargar la configuración de empresa para mostrar el logo actualizado
-            setTimeout(() => {
-                cargarConfiguracionEmpresa();
-                
-                // Recargar el branding global (menú lateral y logo)
-                if (window.parent && typeof window.parent.cargarColoresEmpresa === 'function') {
-                    window.parent.cargarColoresEmpresa();
+            // Si se subió un logo, actualizar el preview con la nueva ruta del servidor
+            if (data.logo_url) {
+                console.log('[LOGO-SAVE] Nuevo logo guardado en:', data.logo_url);
+                const logoPreview = document.getElementById('logo-preview');
+                if (logoPreview) {
+                    logoPreview.src = data.logo_url + '?t=' + new Date().getTime();
+                    console.log('[LOGO-SAVE] Preview actualizado con ruta final del servidor');
                 }
-                
-                // Recargar el menú si existe la función
-                if (window.parent && typeof window.parent.cargarMenu === 'function') {
+            }
+            
+            // Recargar la configuración para mostrar los datos actualizados
+            setTimeout(async () => {
+                await cargarConfiguracionEmpresa();
+            }, 1000);
                     window.parent.cargarMenu();
                 }
             }, 500);
