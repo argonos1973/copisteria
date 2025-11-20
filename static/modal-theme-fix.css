@@ -1,0 +1,57 @@
+/* ================================================
+   FIX MODAL THEME - Máxima prioridad
+   Se carga al final para sobrescribir todos los demás estilos
+   ================================================ */
+
+/* Fondo semitransparente del modal-content */
+.modal-content {
+    background: var(--modal-bg) !important;
+    color: var(--modal-text) !important;
+}
+
+/* Header y body transparentes */
+.modal-header {
+    background: var(--modal-header-bg) !important;
+    color: var(--modal-header-text) !important;
+}
+
+.modal-body {
+    background: var(--modal-body-bg) !important;
+    color: var(--modal-body-text) !important;
+}
+
+.modal-footer {
+    background: var(--modal-bg) !important;
+}
+
+/* Asegurar que los headers específicos también usen las variables */
+.modal-perfil-header,
+.modal-header-custom,
+.modal-title-bar {
+    background: var(--modal-header-bg) !important;
+    color: var(--modal-header-text) !important;
+}
+
+/* Modales específicos */
+#modalAEAT .modal-content,
+#modal-pagos .modal-content,
+#modalUsuario .modal-content,
+#modalCrear .modal-content,
+#modalEditar .modal-content,
+#modalContactos .modal-content,
+.modal-tickets .modal-content {
+    background: var(--modal-bg) !important;
+    color: var(--modal-text) !important;
+}
+
+/* Headers de modales específicos */
+#modalAEAT .modal-header,
+#modal-pagos .modal-header,
+#modalUsuario .modal-header,
+#modalCrear .modal-header,
+#modalEditar .modal-header,
+#modalContactos .modal-header,
+.modal-tickets .modal-header {
+    background: var(--modal-header-bg) !important;
+    color: var(--modal-header-text) !important;
+}

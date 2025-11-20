@@ -361,7 +361,18 @@ function mostrarUsuarios(lista) {
 
     lista.forEach(usuario => {
         const estado = usuario.activo ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-danger">Inactivo</span>';
-        const rol = usuario.es_superadmin ? '<span class="badge badge-info">Superadmin</span>' : '<span class="badge">Usuario</span>';
+        
+        // Mostrar rol real del usuario
+        let rolBadge = '<span class="badge">Usuario</span>';
+        if (usuario.es_admin_empresa) {
+            rolBadge = '<span class="badge badge-warning">Admin Empresa</span>';
+        } else if (usuario.rol === 'admin') {
+            rolBadge = '<span class="badge badge-primary">Admin</span>';
+        } else if (usuario.rol === 'editor') {
+            rolBadge = '<span class="badge badge-info">Editor</span>';
+        } else if (usuario.rol === 'consultor') {
+            rolBadge = '<span class="badge badge-secondary">Consultor</span>';
+        }
         
         // Avatar con fallback a default
         const avatarUrl = usuario.avatar || '/static/avatars/default.svg';
@@ -374,7 +385,7 @@ function mostrarUsuarios(lista) {
                 <td>${usuario.email || '-'}</td>
                 <td>${usuario.empresas || 'Sin asignar'}</td>
                 <td>${estado}</td>
-                <td>${rol}</td>
+                <td>${rolBadge}</td>
                 <td onclick="event.stopPropagation()">
                     <button class="btn btn-danger btn-small" onclick="eliminarUsuario(${usuario.id}, '${usuario.username}')">
                         <i class="fas fa-trash"></i>
@@ -600,53 +611,59 @@ async function cargarPermisosUsuario(usuarioId, empresaId) {
 
 function mostrarMatrizPermisos(usuarioId, empresaId, permisos) {
     const container = document.getElementById('matriz-permisos');
-    
-    let html = '<div class="permissions-grid">';
-    
-    // Header
-    html += `
-        <div class="permission-row header">
-            <div>Módulo</div>
-            <div style="text-align: center;">Ver</div>
-            <div style="text-align: center;">Crear</div>
-            <div style="text-align: center;">Editar</div>
-            <div style="text-align: center;">Anular</div>
-            <div style="text-align: center;">Exportar</div>
-        </div>
+
+    let html = `
+        <div class="permissions-table-wrapper">
+            <table class="permissions-table">
+                <thead>
+                    <tr>
+                        <th class="permission-module">Módulo</th>
+                        <th>Ver</th>
+                        <th>Crear</th>
+                        <th>Editar</th>
+                        <th>Anular</th>
+                        <th>Exportar</th>
+                    </tr>
+                </thead>
+                <tbody>
     `;
-    
-    // Filas
+
     modulos.forEach(modulo => {
         const permiso = permisos.find(p => p.modulo_codigo === modulo.codigo) || {};
-        
+
         html += `
-            <div class="permission-row">
-                <div><strong>${modulo.nombre}</strong></div>
-                <div style="text-align: center;">
-                    <input type="checkbox" ${permiso.puede_ver ? 'checked' : ''} 
+            <tr>
+                <td class="permission-module"><strong>${modulo.nombre}</strong></td>
+                <td class="permission-check">
+                    <input type="checkbox" ${permiso.puede_ver ? 'checked' : ''}
                         onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_ver', this.checked)">
-                </div>
-                <div style="text-align: center;">
-                    <input type="checkbox" ${permiso.puede_crear ? 'checked' : ''} 
+                </td>
+                <td class="permission-check">
+                    <input type="checkbox" ${permiso.puede_crear ? 'checked' : ''}
                         onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_crear', this.checked)">
-                </div>
-                <div style="text-align: center;">
-                    <input type="checkbox" ${permiso.puede_editar ? 'checked' : ''} 
+                </td>
+                <td class="permission-check">
+                    <input type="checkbox" ${permiso.puede_editar ? 'checked' : ''}
                         onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_editar', this.checked)">
-                </div>
-                <div style="text-align: center;">
-                    <input type="checkbox" ${permiso.puede_anular ? 'checked' : ''} 
+                </td>
+                <td class="permission-check">
+                    <input type="checkbox" ${permiso.puede_anular ? 'checked' : ''}
                         onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_anular', this.checked)">
-                </div>
-                <div style="text-align: center;">
-                    <input type="checkbox" ${permiso.puede_exportar ? 'checked' : ''} 
+                </td>
+                <td class="permission-check">
+                    <input type="checkbox" ${permiso.puede_exportar ? 'checked' : ''}
                         onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_exportar', this.checked)">
-                </div>
-            </div>
+                </td>
+            </tr>
         `;
     });
-    
-    html += '</div>';
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
     container.innerHTML = html;
 }
 
@@ -3273,7 +3290,7 @@ async function cargarConfiguracionEmpresa() {
                     // Agregar timestamp para evitar caché del navegador
                     const timestamp = new Date().getTime();
                     logoPreview.src = logoUrl + '?t=' + timestamp;
-                    logoPreviewContainer.style.display = 'block';
+                    logoPreviewContainer.classList.remove('empresa-hidden');
                     console.log('[LOGO] ✅ Vista previa mostrada:', logoUrl);
                 } else {
                     console.error('[LOGO] ❌ No se encontraron elementos DOM para la vista previa');

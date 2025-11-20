@@ -324,17 +324,18 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 <td class="text-center ${getEstadoClassFactura(factura.estado)}">${getEstadoFormateadoFactura(factura.estado)}</td>
                 <td class="text-center">
                     ${factura.csv || factura.estado_envio ? 
-                        `<i class="fas ${factura.estado_envio === 'SIMULADO' ? 'fa-flask' : 'fa-info-circle'} aeat-icon" 
-                            style="cursor: pointer; color: ${factura.estado_envio === 'ENVIADO' ? '#28a745' : factura.estado_envio === 'SIMULADO' ? '#6c757d' : '#ffc107'};" 
+                        `<i class="fas fa-info-circle aeat-icon ${factura.estado_envio === 'ENVIADO' ? 'text-success' : factura.estado_envio === 'ERROR' ? 'text-danger' : 'text-warning'}" 
+                            style="cursor: pointer;" 
                             data-factura='${JSON.stringify({
                                 csv: factura.csv || '',
                                 estado_envio: factura.estado_envio || '',
                                 id_envio_aeat: factura.id_envio_aeat || '',
-                                numero: factura.numero
+                                numero: factura.numero,
+                                codigo_qr: factura.codigo_qr || null
                             }).replace(/'/g, "&apos;")}'
-                            title="${factura.estado_envio === 'ENVIADO' ? 'Enviado a AEAT' : factura.estado_envio === 'SIMULADO' ? 'Modo de pruebas (no enviado a AEAT)' : 'Info AEAT disponible'}"
+                            title="${factura.estado_envio === 'ENVIADO' ? 'Enviado a AEAT' : factura.estado_envio === 'ERROR' ? 'Error en envío' : 'Info AEAT disponible'}"
                         ></i>` : 
-                        '<span style="color: #ccc;" title="Sin información AEAT">-</span>'
+                        '<span class="text-muted" title="Sin información AEAT">-</span>'
                     }
                 </td>
                 <td class="text-center">
@@ -647,23 +648,21 @@ window.mostrarModalAEAT = function(facturaData) {
     const contenido = document.getElementById('contenidoAEAT');
     
     let html = `
-        <div style="padding: 15px;">
-            <h3 style="margin-top: 0; color: var(--text, #333);">
-                Factura ${facturaData.numero}
-            </h3>
+        <div class="aeat-content">
+            <h3>Factura ${facturaData.numero}</h3>
     `;
     
     if (facturaData.csv) {
         html += `
-            <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #28a745;">
-                <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                    <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px; margin-right: 10px;"></i>
-                    <strong style="font-size: 16px;">CSV (Código Seguro de Verificación)</strong>
+            <div class="aeat-card aeat-card-bordered">
+                <div class="aeat-card-header">
+                    <i class="fas fa-check-circle text-success"></i>
+                    <strong>CSV (Código Seguro de Verificación)</strong>
                 </div>
-                <div style="font-family: monospace; font-size: 14px; background: white; padding: 10px; border-radius: 4px; word-break: break-all;">
+                <div class="aeat-code-box">
                     ${facturaData.csv}
                 </div>
-                <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                <div class="aeat-help-text">
                     Este código identifica de forma única la factura en el sistema de la AEAT.
                 </div>
             </div>
@@ -671,42 +670,51 @@ window.mostrarModalAEAT = function(facturaData) {
     }
     
     if (facturaData.estado_envio) {
-        const esSimulado = facturaData.estado_envio === 'SIMULADO';
-        const estadoColor = facturaData.estado_envio === 'ENVIADO' ? '#28a745' : 
-                           facturaData.estado_envio === 'ERROR' ? '#dc3545' : 
-                           esSimulado ? '#6c757d' : '#ffc107';
+        const estadoClass = facturaData.estado_envio === 'ENVIADO' ? 'estado-enviado' : 
+                           facturaData.estado_envio === 'ERROR' ? 'estado-error' : 'estado-pendiente';
+        const estadoColorClass = facturaData.estado_envio === 'ENVIADO' ? 'text-success' : 
+                                facturaData.estado_envio === 'ERROR' ? 'text-danger' : 'text-warning';
         const estadoIcono = facturaData.estado_envio === 'ENVIADO' ? 'fa-check-circle' : 
-                           facturaData.estado_envio === 'ERROR' ? 'fa-times-circle' : 
-                           esSimulado ? 'fa-flask' : 'fa-clock';
+                           facturaData.estado_envio === 'ERROR' ? 'fa-times-circle' : 'fa-clock';
         
         html += `
-            <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid ${estadoColor};">
-                <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                    <i class="fas ${estadoIcono}" style="color: ${estadoColor}; font-size: 20px; margin-right: 10px;"></i>
+            <div class="aeat-card aeat-card-bordered ${estadoClass}">
+                <div class="aeat-estado-header">
+                    <i class="fas ${estadoIcono} ${estadoColorClass}"></i>
                     <strong>Estado de Envío:</strong>
                 </div>
-                <div style="margin-left: 30px; font-size: 14px;">
+                <div class="aeat-estado-valor">
                     ${facturaData.estado_envio}
                 </div>
-                ${esSimulado ? `
-                    <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 4px; font-size: 12px; color: #856404;">
-                        <i class="fas fa-exclamation-triangle"></i> 
-                        <strong>Modo de pruebas:</strong> Esta factura no se ha enviado realmente a la AEAT. 
-                        El sistema está en modo simulación para pruebas y desarrollo.
-                    </div>
-                ` : ''}
             </div>
         `;
     }
     
     if (facturaData.id_envio_aeat) {
         html += `
-            <div style="margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <div style="margin-bottom: 5px;">
+            <div class="aeat-card">
+                <div class="aeat-id-header">
                     <strong><i class="fas fa-hashtag"></i> ID de Envío AEAT:</strong>
                 </div>
-                <div style="font-family: monospace; font-size: 13px; margin-left: 25px; word-break: break-all;">
+                <div class="aeat-id-valor">
                     ${facturaData.id_envio_aeat}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Mostrar código QR si existe
+    if (facturaData.codigo_qr) {
+        html += `
+            <div class="aeat-card aeat-qr-container">
+                <div class="aeat-qr-header">
+                    <strong><i class="fas fa-qrcode"></i> Código QR VeriFactu</strong>
+                </div>
+                <div class="aeat-qr-box">
+                    <img src="data:image/png;base64,${facturaData.codigo_qr}" alt="QR VeriFactu" />
+                </div>
+                <div class="aeat-help-text">
+                    Escanea este código QR para verificar la factura en la AEAT
                 </div>
             </div>
         `;
@@ -714,8 +722,8 @@ window.mostrarModalAEAT = function(facturaData) {
     
     if (!facturaData.csv && !facturaData.estado_envio && !facturaData.id_envio_aeat) {
         html += `
-            <div style="text-align: center; padding: 20px; color: #666;">
-                <i class="fas fa-info-circle" style="font-size: 48px; color: #ccc; margin-bottom: 10px;"></i>
+            <div class="aeat-no-data">
+                <i class="fas fa-info-circle"></i>
                 <p>No hay información de la AEAT disponible para esta factura.</p>
             </div>
         `;

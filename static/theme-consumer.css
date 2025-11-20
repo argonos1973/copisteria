@@ -557,7 +557,13 @@ input::placeholder, textarea::placeholder {
 }
 
 /* ==================== MODALES ==================== */
-.modal, .modal-content,
+/* Overlay del modal */
+.modal {
+    background: var(--modal-overlay) !important;
+}
+
+/* Contenido del modal */
+.modal-content,
 .modal-perfil-content,
 .confirmacion-dialog,
 .dropdown-menu,
@@ -665,7 +671,7 @@ input::placeholder, textarea::placeholder {
 
 /* Body de modales */
 .modal-body {
-    background: var(--modal-body-bg) !important;
+    background: transparent !important;
     color: var(--modal-body-text) !important;
 }
 
@@ -683,8 +689,8 @@ input::placeholder, textarea::placeholder {
 
 #modal-pagos .modal-content,
 .modal-tickets .modal-content {
-    background: var(--modal-bg, #ffffff) !important;
-    color: var(--modal-text, #333333) !important;
+    background: var(--modal-bg) !important;
+    color: var(--modal-text) !important;
 }
 
 /* Labels en modales */

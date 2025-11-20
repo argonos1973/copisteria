@@ -1406,7 +1406,7 @@ td .fas {
 
 /* Estilos para el modal */
 .modal-content {
-    background-color: var(--color-fondo);
+    background-color: var(--modal-bg) !important;
     padding: 20px;
     border-radius: 8px;
     width: 80%;
@@ -1417,7 +1417,7 @@ td .fas {
     transform: translate(-50%, -50%);
     box-shadow: 0 4px 8px var(--color-shadow);
     z-index: 10000000;
-    border: 2px solid #ffffff !important; /* borde blanco visible */
+    border: var(--modal-border-width, 2px) solid var(--modal-border, #ffffff) !important;
 }
 
 /* Borde blanco en modales solo en modo oscuro del sistema */
@@ -2808,9 +2808,565 @@ body select option {
 .margin-bottom-10 { margin-bottom: 10px; }
 .margin-top-30 { margin-top: 30px; }
 
-/* Text Danger */
+/* Text utility classes - adaptadas a plantillas */
 .text-danger {
-    color: #d9534f !important;
+    color: var(--amount-negative, #d9534f) !important;
+}
+
+.text-success {
+    color: var(--amount-positive, #28a745) !important;
+}
+
+.text-warning {
+    color: var(--warning, #ffc107) !important;
+}
+
+.text-muted {
+    color: var(--text-muted, #999999) !important;
+}
+
+/* Badge utility classes - adaptadas a plantillas */
+.badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--bg-elevated, #e5e7eb);
+    color: var(--text, #333);
+}
+
+.badge-success {
+    background: var(--amount-positive, #28a745) !important;
+    color: #ffffff !important;
+}
+
+.badge-danger {
+    background: var(--amount-negative, #dc3545) !important;
+    color: #ffffff !important;
+}
+
+.badge-warning {
+    background: var(--warning, #ffc107) !important;
+    color: var(--text, #212529) !important;
+}
+
+.badge-primary {
+    background: var(--primary, #007bff) !important;
+    color: #ffffff !important;
+}
+
+.badge-info {
+    background: var(--info, #17a2b8) !important;
+    color: #ffffff !important;
+}
+
+.badge-secondary {
+    background: var(--text-muted, #6c757d) !important;
+    color: #ffffff !important;
+}
+
+/* ================================================
+   MODAL AEAT - Clases para información de facturación AEAT
+   ================================================ */
+
+.aeat-content {
+    padding: 15px;
+}
+
+.aeat-content h3 {
+    margin-top: 0;
+    color: var(--text);
+}
+
+.aeat-card {
+    margin: 15px 0;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.aeat-card-bordered {
+    border-left: 4px solid var(--amount-positive);
+}
+
+.aeat-card-bordered.estado-error {
+    border-left-color: var(--amount-negative);
+}
+
+.aeat-card-bordered.estado-pendiente {
+    border-left-color: var(--warning);
+}
+
+.aeat-card-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.aeat-card-header i {
+    font-size: 24px;
+    margin-right: 10px;
+}
+
+.aeat-card-header strong {
+    font-size: 16px;
+    color: var(--text);
+}
+
+.aeat-code-box {
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--text);
+    padding: 10px;
+    border-radius: 4px;
+    word-break: break-all;
+    border: 1px solid var(--border);
+}
+
+.aeat-help-text {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.aeat-estado-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.aeat-estado-header i {
+    font-size: 20px;
+    margin-right: 10px;
+}
+
+.aeat-estado-header strong {
+    color: var(--text);
+}
+
+.aeat-estado-valor {
+    margin-left: 30px;
+    font-size: 14px;
+    color: var(--text);
+}
+
+.aeat-id-header {
+    margin-bottom: 5px;
+}
+
+.aeat-id-header strong {
+    color: var(--text);
+}
+
+.aeat-id-valor {
+    font-family: monospace;
+    font-size: 13px;
+    margin-left: 25px;
+    word-break: break-all;
+    color: var(--text);
+}
+
+.aeat-qr-container {
+    text-align: center;
+}
+
+.aeat-qr-header {
+    margin-bottom: 10px;
+}
+
+.aeat-qr-header strong {
+    color: var(--text);
+}
+
+.aeat-qr-box {
+    display: inline-block;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid var(--border);
+}
+
+.aeat-qr-box img {
+    max-width: 200px;
+    height: auto;
+    display: block;
+}
+
+.aeat-no-data {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+}
+
+.aeat-no-data i {
+    font-size: 48px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: block;
+}
+
+/* Modal AEAT específico */
+#modalAEAT .modal-content {
+    max-width: 600px;
+}
+
+/* ================================================
+   ADMINISTRACIÓN - Estilos específicos
+   ================================================ */
+
+.header {
+    padding: 20px 30px;
+    background: var(--primary);
+    color: var(--text);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 24px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: var(--bg-elevated, var(--bg));
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.tab {
+    padding: 12px 24px;
+    border: none;
+    background: var(--button-bg);
+    color: var(--button-text);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.7;
+}
+
+.tab.active {
+    opacity: 1;
+    background: var(--primary);
+    color: var(--button-text);
+}
+
+.tab:hover {
+    opacity: 1;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.card {
+    background: var(--bg-elevated, var(--bg));
+    color: var(--text);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 20px;
+}
+
+.card-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border);
+}
+
+.card-header h2 {
+    margin: 0;
+    color: var(--primary);
+}
+
+.search-box {
+    margin-bottom: 20px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 12px 15px;
+    background: var(--input-bg);
+    color: var(--input-text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.search-box input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.permissions-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.permissions-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-elevated, var(--bg));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.permissions-table thead {
+    background: var(--primary);
+    color: var(--button-text);
+}
+
+.permissions-table th,
+.permissions-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+
+.permissions-table tbody tr:hover {
+    background: var(--table-row-hover, rgba(0,0,0,0.03));
+}
+
+.permission-module {
+    text-align: left;
+}
+
+.permission-check {
+    text-align: center;
+}
+
+.permissions-table input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.btn-back {
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    background: var(--button-bg);
+    color: var(--button-text);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ================================================
+   ADMINISTRACIÓN - Configuración de Empresa - FUERZA BRUTA
+   ================================================ */
+
+/* Container principal */
+#tab-empresas .empresa-card {
+    background: var(--bg-elevated, var(--bg)) !important;
+    color: var(--text) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05) !important;
+    margin: 20px 0 !important;
+    padding: 0 !important;
+    border: 1px solid var(--border) !important;
+}
+
+#tab-empresas .empresa-card-body {
+    padding: 24px !important;
+    margin: 0 !important;
+}
+
+/* Layout de dos columnas */
+#tab-empresas .empresa-layout {
+    display: grid !important;
+    grid-template-columns: 1.2fr 0.8fr !important;
+    gap: 24px !important;
+    width: 100% !important;
+    max-width: none !important;
+}
+
+/* Paneles */
+#tab-empresas .empresa-panel {
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    padding: 24px !important;
+    background: var(--bg-elevated) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+    margin: 0 !important;
+}
+
+#tab-empresas .empresa-panel-title {
+    margin: 0 0 16px 0 !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--primary) !important;
+    border-bottom: 2px solid var(--primary) !important;
+    padding-bottom: 8px !important;
+}
+
+/* Grid de campos */
+#tab-empresas .empresa-fields {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 14px 18px !important;
+    width: 100% !important;
+}
+
+#tab-empresas .empresa-field {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+    margin: 0 !important;
+}
+
+#tab-empresas .empresa-field-span2 {
+    grid-column: 1 / -1 !important;
+}
+
+/* Labels e inputs */
+#tab-empresas .empresa-label {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--text) !important;
+    margin: 0 0 4px 0 !important;
+}
+
+#tab-empresas .empresa-input {
+    width: 100% !important;
+    padding: 11px 14px !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--border) !important;
+    background: var(--input-bg, var(--bg)) !important;
+    color: var(--input-text, var(--text)) !important;
+    font-size: 13px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+}
+
+#tab-empresas .empresa-input:focus {
+    outline: none !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 2px rgba(53, 132, 228, 0.2) !important;
+}
+
+#tab-empresas .empresa-note {
+    font-size: 12px !important;
+    color: var(--text-muted, var(--text)) !important;
+    margin: 4px 0 0 0 !important;
+}
+
+/* Logo preview */
+#tab-empresas .empresa-logo-preview {
+    margin: 18px 0 !important;
+    padding: 16px !important;
+    border: 1px dashed var(--border) !important;
+    border-radius: 12px !important;
+    background: var(--bg) !important;
+    display: block !important;
+    text-align: center !important;
+}
+
+#tab-empresas .empresa-logo-preview img {
+    max-width: 180px !important;
+    max-height: 90px !important;
+    width: auto !important;
+    height: auto !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--border) !important;
+    background: var(--bg-elevated, var(--bg)) !important;
+    padding: 8px !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin: 0 auto !important;
+}
+
+#tab-empresas .empresa-hidden {
+    display: none !important;
+}
+
+/* Acciones */
+#tab-empresas .empresa-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin-top: 16px !important;
+    flex-wrap: wrap !important;
+}
+
+#tab-empresas .empresa-save-btn {
+    padding: 10px 18px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+}
+
+#tab-empresas .empresa-code {
+    background: var(--bg-elevated, rgba(0,0,0,0.05)) !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+}
+
+/* Panel de información */
+#tab-empresas .empresa-info-card {
+    padding: 16px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    background: var(--bg-elevated, var(--bg)) !important;
+    color: var(--text) !important;
+    font-size: 13px !important;
+    margin: 0 !important;
+}
+
+#tab-empresas .empresa-info-list {
+    margin: 8px 0 12px 18px !important;
+    padding: 0 !important;
+    color: var(--text-muted) !important;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    #tab-empresas .empresa-layout {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+    }
+    
+    #tab-empresas .empresa-fields {
+        grid-template-columns: 1fr !important;
+    }
+    
+    #tab-empresas .empresa-field-span2 {
+        grid-column: 1 !important;
+    }
+}
+
+/* Fix para logo preview - evitar fondo rojo */
+#logo-preview-container {
+    background: transparent !important;
+}
+
+#logo-preview {
+    background: transparent !important;
+    max-width: 180px !important;
+    max-height: 90px !important;
 }
 
 /* Row hover para tablas */
@@ -2957,7 +3513,7 @@ table input[type="number"] {
 .confirmacion-dialog,
 .dropdown-menu,
 .modal-content {
-  background-color: var(--color-modal-bg, var(--color-app-bg, #1b1b1b)) !important;
-  color: var(--color-modal-text, var(--color-texto, #e6e6e6)) !important;
+  background-color: var(--modal-bg, var(--bg, #1b1b1b)) !important;
+  color: var(--modal-text, var(--text, #e6e6e6)) !important;
 }
 }

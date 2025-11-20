@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="../static/styles.css?v=1762757322">
     <link rel="stylesheet" href="../static/notificaciones.css">
     <link rel="stylesheet" href="../static/footer.css">
+    <link rel="stylesheet" href="../static/modal-theme-fix.css">
     <style>
       /* Vista Facturas: layout a pantalla completa, reservando espacio del footer */
       .facturas-page { padding-bottom: 0 !important; }
@@ -167,7 +168,7 @@
 
     <!-- Modal información AEAT -->
     <div id="modalAEAT" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-content">
             <div class="modal-header">
                 <h2><i class="fas fa-landmark"></i> Información AEAT</h2>
                 <span class="close" onclick="cerrarModalAEAT()">&times;</span>
@@ -182,6 +183,20 @@
     </div>
 
     <script type="module" src="../static/consulta_facturas.js?v=1762757322" defer></script>
+    <script>
+        // Debug: Verificar variables CSS del modal
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const root = document.documentElement;
+                const modalBg = getComputedStyle(root).getPropertyValue('--modal-bg').trim();
+                const modalHeaderBg = getComputedStyle(root).getPropertyValue('--modal-header-bg').trim();
+                const modalBodyBg = getComputedStyle(root).getPropertyValue('--modal-body-bg').trim();
+                console.log('[MODAL DEBUG] --modal-bg:', modalBg);
+                console.log('[MODAL DEBUG] --modal-header-bg:', modalHeaderBg);
+                console.log('[MODAL DEBUG] --modal-body-bg:', modalBodyBg);
+            }, 500);
+        });
+    </script>
     
     <div id="overlay" class="overlay">
         <div class="progress-container">
