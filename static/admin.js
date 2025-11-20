@@ -3208,8 +3208,7 @@ async function cargarConfiguracionEmpresa() {
                                 </div>
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">Logo:</label>
-                                    <input type="file" id="empresa-logo" accept="image/*" onchange="previsualizarLogoEmpresa(event)"
-                                           class="empresa-form-input file-input">
+                                    <input type="file" id="empresa-logo" accept="image/*" class="empresa-form-input file-input">
                                     <small class="empresa-form-help">PNG, JPG, SVG (máx. 2MB)</small>
                                 </div>
                                 <div id="logo-preview-container" class="empresa-logo-preview-container">
