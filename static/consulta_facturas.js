@@ -710,13 +710,12 @@ window.mostrarModalAEAT = function(facturaData) {
                 <div class="aeat-qr-header">
                     <strong><i class="fas fa-qrcode"></i> Código QR VeriFactu</strong>
                 </div>
-                <div class="aeat-qr-box" onclick="ampliarQR('${facturaData.codigo_qr}')">
-                    <img src="data:image/png;base64,${facturaData.codigo_qr}" alt="QR VeriFactu" title="Haz clic para ampliar" />
+                <div class="aeat-qr-box">
+                    <img src="data:image/png;base64,${facturaData.codigo_qr}" alt="QR VeriFactu" />
                 </div>
                 <div class="aeat-help-text">
                     <i class="fas fa-info-circle"></i>
                     Escanea este código QR para verificar la factura en la AEAT
-                    <br><small><i class="fas fa-search-plus"></i> Haz clic en el QR para ampliar</small>
                 </div>
             </div>
         `;
