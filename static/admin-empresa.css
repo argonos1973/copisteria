@@ -121,14 +121,14 @@
 .empresa-logo-preview-container {
     grid-column: 1 / -1;
     display: none;
+    margin-top: 10px;
+    min-height: 80px;
+    background: rgba(0,255,0,0.1); /* Verde temporal para debugging */
+    border: 2px dashed #00ff00; /* Borde verde para ver el contenedor */
 }
 
 .empresa-logo-preview-container.visible {
     display: block !important;
-}
-
-.empresa-logo-preview-container {
-    margin-top: 10px;
 }
 
 .empresa-logo-preview {

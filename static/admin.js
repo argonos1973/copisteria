@@ -3577,8 +3577,9 @@ async function guardarDatosEmpresa(empresaId) {
             setTimeout(async () => {
                 // Guardar estado del preview antes de recargar
                 const logoPreviewContainer = document.getElementById('logo-preview-container');
+                const logoPreviewElement = document.getElementById('logo-preview');
                 const wasVisible = logoPreviewContainer && logoPreviewContainer.style.display === 'block';
-                const currentSrc = logoPreview ? logoPreview.src : null;
+                const currentSrc = logoPreviewElement ? logoPreviewElement.src : null;
                 
                 console.log('[LOGO-RELOAD] Guardando estado antes de recargar:', { wasVisible, currentSrc });
                 
