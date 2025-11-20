@@ -3575,7 +3575,31 @@ async function guardarDatosEmpresa(empresaId) {
             
             // Recargar la configuración para mostrar los datos actualizados
             setTimeout(async () => {
+                // Guardar estado del preview antes de recargar
+                const logoPreviewContainer = document.getElementById('logo-preview-container');
+                const wasVisible = logoPreviewContainer && logoPreviewContainer.style.display === 'block';
+                const currentSrc = logoPreview ? logoPreview.src : null;
+                
+                console.log('[LOGO-RELOAD] Guardando estado antes de recargar:', { wasVisible, currentSrc });
+                
                 await cargarConfiguracionEmpresa();
+                
+                // Restaurar estado del preview después de recargar
+                if (wasVisible && currentSrc) {
+                    setTimeout(() => {
+                        const newLogoPreviewContainer = document.getElementById('logo-preview-container');
+                        const newLogoPreview = document.getElementById('logo-preview');
+                        
+                        if (newLogoPreviewContainer && newLogoPreview) {
+                            newLogoPreview.src = currentSrc;
+                            newLogoPreviewContainer.style.display = 'block';
+                            newLogoPreviewContainer.classList.remove('empresa-hidden');
+                            newLogoPreviewContainer.classList.add('visible');
+                            console.log('[LOGO-RELOAD] ✅ Preview restaurado después de recargar');
+                        }
+                    }, 100);
+                }
+                
                 // Recargar menú para actualizar logo en sidebar
                 if (typeof window.parent.cargarMenu === 'function') {
                     window.parent.cargarMenu();
