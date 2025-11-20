@@ -758,21 +758,32 @@ input::placeholder, textarea::placeholder {
     color: var(--text) !important;
     border: 1px solid var(--border) !important;
     cursor: pointer !important;
+    padding: 12px 24px !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
 }
 
 .tab.active, .tab-active {
-    background: var(--tab-active-bg) !important;
-    color: var(--tab-active-text) !important;
+    background: var(--tab-active-bg, var(--primary)) !important;
+    color: var(--tab-active-text, var(--primary-text)) !important;
+    border-color: var(--tab-active-bg, var(--primary)) !important;
+    font-weight: 600 !important;
 }
 
 .tab:hover {
-    background: var(--table-row-hover) !important;
+    background: var(--table-row-hover, var(--bg-elevated-hover)) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px var(--shadow, rgba(0,0,0,0.1)) !important;
 }
 
 .tab-content {
     display: none !important;
     background: var(--bg) !important;
     color: var(--text) !important;
+    padding: 20px !important;
+    border-radius: 8px !important;
+    margin-top: 16px !important;
 }
 
 .tab-content.active {
@@ -781,7 +792,12 @@ input::placeholder, textarea::placeholder {
 
 .tabs {
     display: flex !important;
-    gap: 4px !important;
+    gap: 8px !important;
+    margin-bottom: 20px !important;
+    padding: 8px !important;
+    background: var(--bg-elevated, rgba(255,255,255,0.5)) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 8px var(--shadow, rgba(0,0,0,0.05)) !important;
 }
 
 /* ==================== ICONOS ==================== */
