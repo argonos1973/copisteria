@@ -1,0 +1,203 @@
+/* Estilos para la pestaña de configuración de empresas */
+
+.empresa-page-header {
+    background: var(--bg, #fff);
+    color: var(--text, #333);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px var(--shadow, rgba(0,0,0,0.1));
+}
+
+.empresa-page-header h1 {
+    color: var(--text, #333);
+    margin: 0;
+}
+
+.empresa-page-header h1 i {
+    color: var(--primary, #3498db);
+}
+
+.empresa-card {
+    background: var(--bg-elevated, var(--bg, #fff));
+    color: var(--text, #333);
+    border: 1px solid var(--border, #ddd);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px var(--shadow, rgba(0,0,0,0.1));
+}
+
+.empresa-card-content {
+    padding: 20px;
+    background: var(--bg-elevated, var(--bg, #fff));
+    color: var(--text, #333);
+}
+
+.empresa-grid-container {
+    display: grid;
+    grid-template-columns: 55% 40%;
+    gap: 20px;
+}
+
+.empresa-section {
+    border: 1px solid var(--border, #ddd);
+    border-radius: 8px;
+    padding: 16px;
+    background: var(--bg-elevated, var(--bg, #fff));
+    color: var(--text, #333);
+}
+
+.empresa-section-title {
+    margin-bottom: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary, #007bff);
+    border-bottom: 2px solid var(--primary, #007bff);
+    padding-bottom: 8px;
+}
+
+.empresa-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(150px, 300px));
+    gap: 8px;
+    max-width: 620px;
+}
+
+.empresa-form-group {
+    /* Base styles - no positioning here */
+}
+
+.empresa-form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.empresa-form-label {
+    font-size: 11px;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 3px;
+    color: var(--text, #333);
+}
+
+.empresa-form-input {
+    max-width: 300px;
+    width: 100%;
+    padding: 5px 7px;
+    font-size: 12px;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 3px;
+    box-sizing: border-box;
+    background: var(--bg, #fff);
+    color: var(--text, #333);
+    transition: border-color 0.3s ease;
+}
+
+.empresa-form-input:focus {
+    outline: none;
+    border-color: var(--primary, #3498db);
+    box-shadow: 0 0 0 2px var(--primary-alpha, rgba(52, 152, 219, 0.2));
+}
+
+.empresa-form-input.full-width {
+    max-width: 620px;
+}
+
+.empresa-form-input.file-input {
+    max-width: 300px;
+    padding: 4px;
+    font-size: 11px;
+}
+
+.empresa-form-help {
+    font-size: 10px;
+    color: var(--text-muted, #7f8c8d);
+    display: block;
+    margin-top: 2px;
+}
+
+.empresa-logo-preview-container {
+    grid-column: 1 / -1;
+    display: none;
+    margin-top: 8px;
+}
+
+.empresa-logo-preview {
+    max-width: 150px;
+    max-height: 75px;
+    border: 1px solid var(--border, #ddd);
+    border-radius: 3px;
+    padding: 3px;
+    background: var(--bg-elevated, #f9f9f9);
+}
+
+.empresa-actions {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 12px;
+    gap: 8px;
+    align-items: center;
+}
+
+.empresa-save-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    border-radius: 3px;
+}
+
+.empresa-save-info {
+    font-size: 11px;
+    color: var(--text-muted, #666);
+    align-self: center;
+}
+
+.empresa-info-section {
+    padding: 12px;
+    background: var(--bg, white);
+    border: 1px solid var(--border, #ddd);
+    border-radius: 4px;
+}
+
+.empresa-info-text {
+    margin: 0 0 10px 0;
+    font-size: 12px;
+    color: var(--text, #333);
+}
+
+.empresa-info-text strong {
+    color: var(--text, #333);
+}
+
+.empresa-info-code {
+    background: var(--bg-elevated, #f5f5f5);
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+    color: var(--text, #333);
+}
+
+.empresa-info-list {
+    margin: 5px 0 10px 20px;
+    padding: 0;
+    font-size: 11px;
+    color: var(--text-muted, #666);
+}
+
+/* Estados especiales */
+.empresa-hidden {
+    display: none !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .empresa-grid-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .empresa-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .empresa-form-input,
+    .empresa-form-input.full-width {
+        max-width: 100%;
+    }
+}
