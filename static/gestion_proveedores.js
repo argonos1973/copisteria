@@ -29,7 +29,6 @@ function configurarEventListeners() {
     
     // Filtros
     document.getElementById('busquedaProveedor').addEventListener('input', filtrarProveedores);
-    document.getElementById('estadoProveedor').addEventListener('change', filtrarProveedores);
     
     // Cerrar modal al hacer clic fuera
     window.addEventListener('click', (e) => {
@@ -101,13 +100,9 @@ function crearCardProveedor(proveedor) {
     const card = document.createElement('div');
     card.className = 'card';
     
-    const badgeClass = proveedor.activo ? 'badge-active' : 'badge-inactive';
-    const badgeText = proveedor.activo ? 'Activo' : 'Inactivo';
-    
     card.innerHTML = `
         <div class="card-header">
             <div class="card-title">${proveedor.nombre}</div>
-            <span class="card-badge ${badgeClass}">${badgeText}</span>
         </div>
         <div class="card-body">
             <div class="card-info">
@@ -133,10 +128,9 @@ function crearCardProveedor(proveedor) {
             <button class="btn btn-sm btn-primary" onclick="editarProveedor(${proveedor.id})">
                 <i class="fas fa-edit"></i> Editar
             </button>
-            <button class="btn btn-sm ${proveedor.activo ? 'btn-warning' : 'btn-success'}" 
-                    onclick="toggleEstadoProveedor(${proveedor.id}, ${proveedor.activo})">
-                <i class="fas fa-${proveedor.activo ? 'ban' : 'check'}"></i> 
-                ${proveedor.activo ? 'Desactivar' : 'Activar'}
+            <button class="btn btn-sm btn-danger" onclick="eliminarProveedor(${proveedor.id}, '${proveedor.nombre.replace(/'/g, "\\'")}')"
+                    title="Eliminar proveedor">
+                <i class="fas fa-trash"></i> Eliminar
             </button>
         </div>
     `;
@@ -150,7 +144,6 @@ function crearCardProveedor(proveedor) {
 
 function filtrarProveedores() {
     const busqueda = document.getElementById('busquedaProveedor').value.toLowerCase();
-    const estado = document.getElementById('estadoProveedor').value;
     
     const proveedoresFiltrados = proveedores.filter(proveedor => {
         // Filtro de búsqueda
@@ -159,12 +152,7 @@ function filtrarProveedores() {
             proveedor.nif.toLowerCase().includes(busqueda) ||
             (proveedor.email && proveedor.email.toLowerCase().includes(busqueda));
         
-        // Filtro de estado
-        const coincideEstado = estado === 'todos' || 
-            (estado === 'activo' && proveedor.activo) ||
-            (estado === 'inactivo' && !proveedor.activo);
-        
-        return coincideBusqueda && coincideEstado;
+        return coincideBusqueda;
     });
     
     // Renderizar solo los filtrados
@@ -206,12 +194,10 @@ function abrirModal(proveedor = null) {
         document.getElementById('telefono').value = proveedor.telefono || '';
         document.getElementById('direccion').value = proveedor.direccion || '';
         document.getElementById('notas').value = proveedor.notas || '';
-        document.getElementById('activo').checked = proveedor.activo;
     } else {
         title.textContent = 'Nuevo Proveedor';
         document.getElementById('formProveedor').reset();
         document.getElementById('proveedorId').value = '';
-        document.getElementById('activo').checked = true;
     }
     
     modal.style.display = 'block';
@@ -253,8 +239,7 @@ async function guardarProveedor() {
         email: document.getElementById('email').value.trim(),
         telefono: document.getElementById('telefono').value.trim(),
         direccion: document.getElementById('direccion').value.trim(),
-        notas: document.getElementById('notas').value.trim(),
-        activo: document.getElementById('activo').checked
+        notas: document.getElementById('notas').value.trim()
     };
     
     try {
@@ -292,35 +277,29 @@ async function guardarProveedor() {
 }
 
 // ============================================================================
-// CAMBIAR ESTADO
+// ELIMINAR PROVEEDOR
 // ============================================================================
 
-window.toggleEstadoProveedor = async function(id, estadoActual) {
-    const accion = estadoActual ? 'desactivar' : 'activar';
-    
-    if (!confirm(`¿Deseas ${accion} este proveedor?`)) {
+window.eliminarProveedor = async function(id, nombre) {
+    if (!confirm(`¿Estás seguro de eliminar el proveedor "${nombre}"?\n\nEsta acción no se puede deshacer.`)) {
         return;
     }
     
     try {
         const response = await fetch(`/api/proveedores/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ activo: !estadoActual })
+            method: 'DELETE'
         });
         
         const data = await response.json();
         
         if (data.success) {
-            mostrarNotificacion(`Proveedor ${accion}do correctamente`, 'success');
+            mostrarNotificacion('Proveedor eliminado correctamente', 'success');
             cargarProveedores();
         } else {
-            throw new Error(data.error || 'Error al cambiar estado');
+            throw new Error(data.error || 'Error al eliminar proveedor');
         }
     } catch (error) {
         console.error('[Proveedores] Error:', error);
-        mostrarNotificacion('Error: ' + error.message, 'error');
+        mostrarNotificacion('Error al eliminar: ' + error.message, 'error');
     }
 };

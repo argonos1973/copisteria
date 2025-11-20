@@ -1191,8 +1191,8 @@ def listar_proveedores_endpoint():
         return jsonify({'error': 'No hay empresa seleccionada'}), 400
     
     try:
-        activos_solo = request.args.get('activos', 'true').lower() == 'true'
-        proveedores = facturas_proveedores.obtener_proveedores(empresa_id, activos_solo)
+        # Mostrar todos los proveedores (activos e inactivos)
+        proveedores = facturas_proveedores.obtener_proveedores(empresa_id, activos_solo=False)
         
         return jsonify({
             'success': True,
@@ -1308,6 +1308,58 @@ def crear_proveedor_endpoint():
         
     except Exception as e:
         logger.error(f"Error creando proveedor: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/proveedores/<int:proveedor_id>', methods=['PUT'])
+@login_required
+def actualizar_proveedor_endpoint(proveedor_id):
+    """
+    Actualiza un proveedor existente
+    """
+    empresa_id = session.get('empresa_id')
+    usuario = session.get('username')
+    
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        datos = request.json
+        
+        facturas_proveedores.actualizar_proveedor(proveedor_id, empresa_id, datos, usuario)
+        
+        return jsonify({
+            'success': True,
+            'mensaje': 'Proveedor actualizado correctamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error actualizando proveedor: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/proveedores/<int:proveedor_id>', methods=['DELETE'])
+@login_required
+def eliminar_proveedor_endpoint(proveedor_id):
+    """
+    Elimina un proveedor (solo si no tiene facturas asociadas)
+    """
+    empresa_id = session.get('empresa_id')
+    usuario = session.get('username')
+    
+    if not empresa_id:
+        return jsonify({'error': 'No hay empresa seleccionada'}), 400
+    
+    try:
+        facturas_proveedores.eliminar_proveedor(proveedor_id, empresa_id, usuario)
+        
+        return jsonify({
+            'success': True,
+            'mensaje': 'Proveedor eliminado correctamente'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error eliminando proveedor: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 

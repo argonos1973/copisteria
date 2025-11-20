@@ -330,6 +330,130 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
         conn.close()
 
 
+def actualizar_proveedor(proveedor_id, empresa_id, datos, usuario='sistema'):
+    """
+    Actualiza los datos de un proveedor existente
+    
+    Args:
+        proveedor_id: ID del proveedor
+        empresa_id: ID de la empresa (para validar pertenencia)
+        datos: Diccionario con datos del proveedor a actualizar
+        usuario: Usuario que actualiza el proveedor
+    
+    Returns:
+        bool: True si se actualizó correctamente
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Verificar que el proveedor pertenece a la empresa
+        cursor.execute('SELECT id FROM proveedores WHERE id = ? AND empresa_id = ?', 
+                      (proveedor_id, empresa_id))
+        if not cursor.fetchone():
+            raise Exception('Proveedor no encontrado o no pertenece a esta empresa')
+        
+        # Construir campos a actualizar
+        campos = []
+        valores = []
+        
+        if 'nombre' in datos:
+            campos.append('nombre = ?')
+            valores.append(datos['nombre'].upper().strip())
+        
+        if 'nif' in datos:
+            campos.append('nif = ?')
+            valores.append(datos['nif'].upper().strip())
+        
+        if 'email' in datos:
+            campos.append('email = ?')
+            valores.append(datos['email'])
+        
+        if 'telefono' in datos:
+            campos.append('telefono = ?')
+            valores.append(datos['telefono'])
+        
+        if 'direccion' in datos:
+            campos.append('direccion = ?')
+            valores.append(datos['direccion'].upper().strip() if datos['direccion'] else '')
+        
+        if 'notas' in datos:
+            campos.append('notas = ?')
+            valores.append(datos['notas'])
+        
+        if not campos:
+            return True  # No hay nada que actualizar
+        
+        # Agregar ID al final
+        valores.append(proveedor_id)
+        
+        query = f"UPDATE proveedores SET {', '.join(campos)} WHERE id = ?"
+        cursor.execute(query, valores)
+        conn.commit()
+        
+        logger.info(f"✓ Proveedor actualizado: ID {proveedor_id} por {usuario}")
+        return True
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error actualizando proveedor {proveedor_id}: {e}")
+        raise
+    finally:
+        conn.close()
+
+
+def eliminar_proveedor(proveedor_id, empresa_id, usuario='sistema'):
+    """
+    Elimina un proveedor (solo si no tiene facturas asociadas)
+    
+    Args:
+        proveedor_id: ID del proveedor
+        empresa_id: ID de la empresa (para validar pertenencia)
+        usuario: Usuario que elimina el proveedor
+    
+    Returns:
+        bool: True si se eliminó correctamente
+    
+    Raises:
+        Exception: Si el proveedor tiene facturas asociadas
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Verificar que el proveedor pertenece a la empresa
+        cursor.execute('SELECT nombre FROM proveedores WHERE id = ? AND empresa_id = ?', 
+                      (proveedor_id, empresa_id))
+        proveedor = cursor.fetchone()
+        
+        if not proveedor:
+            raise Exception('Proveedor no encontrado o no pertenece a esta empresa')
+        
+        nombre_proveedor = proveedor['nombre']
+        
+        # Verificar si tiene facturas asociadas
+        cursor.execute('SELECT COUNT(*) as total FROM facturas_proveedores WHERE proveedor_id = ?', 
+                      (proveedor_id,))
+        total_facturas = cursor.fetchone()['total']
+        
+        if total_facturas > 0:
+            raise Exception(f'No se puede eliminar el proveedor porque tiene {total_facturas} facturas asociadas')
+        
+        # Eliminar el proveedor
+        cursor.execute('DELETE FROM proveedores WHERE id = ?', (proveedor_id,))
+        conn.commit()
+        
+        logger.info(f"✓ Proveedor eliminado: {nombre_proveedor} (ID: {proveedor_id}) por {usuario}")
+        return True
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error eliminando proveedor {proveedor_id}: {e}")
+        raise
+    finally:
+        conn.close()
+
+
 def obtener_o_crear_proveedor(nif, nombre, empresa_id, datos_adicionales=None, email_origen=None):
     """
     Busca un proveedor por NIF y nombre, si no existe lo crea automáticamente
