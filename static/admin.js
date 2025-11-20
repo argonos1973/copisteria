@@ -3256,6 +3256,17 @@ async function cargarConfiguracionEmpresa() {
             </div>
         `;
         
+        // Añadir event listener al input de archivo después de crear el DOM
+        setTimeout(() => {
+            const logoInput = document.getElementById('empresa-logo');
+            if (logoInput) {
+                logoInput.addEventListener('change', previsualizarLogoEmpresa);
+                console.log('[LOGO-INPUT] Event listener añadido correctamente');
+            } else {
+                console.error('[LOGO-INPUT] ❌ Input #empresa-logo no encontrado');
+            }
+        });
+        
         // Cargar logo existente si existe (usar setTimeout para asegurar que el DOM esté listo)
         setTimeout(() => {
             console.log('[LOGO] Verificando logo existente...');
