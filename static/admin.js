@@ -245,13 +245,22 @@ function inicializarTabs() {
         tab.addEventListener('click', () => {
             const tabName = tab.dataset.tab;
             
+            // Remover active de todos los tabs
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             
+            // Ocultar todo el contenido de tabs y limpiar clases específicas
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
+                // Limpiar clases específicas de empresa que puedan interferir
+                content.classList.remove('empresa-tab-container');
             });
-            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            // Mostrar el tab seleccionado
+            const targetTab = document.getElementById(`tab-${tabName}`);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
             
             // Cargar datos específicos de cada pestaña
             if (tabName === 'empresas') {
@@ -315,6 +324,11 @@ async function cargarPermisosUsuarioSeleccionado() {
     
     if (!usuarioId) return;
     
+    // Asegurar que los módulos estén cargados
+    if (modulos.length === 0) {
+        await cargarModulos();
+    }
+    
     // Obtener empresa del usuario logueado (admin)
     try {
         const brandingResponse = await fetch('/api/auth/branding', { credentials: 'include' });
@@ -361,18 +375,7 @@ function mostrarUsuarios(lista) {
 
     lista.forEach(usuario => {
         const estado = usuario.activo ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-danger">Inactivo</span>';
-        
-        // Mostrar rol real del usuario
-        let rolBadge = '<span class="badge">Usuario</span>';
-        if (usuario.es_admin_empresa) {
-            rolBadge = '<span class="badge badge-warning">Admin Empresa</span>';
-        } else if (usuario.rol === 'admin') {
-            rolBadge = '<span class="badge badge-primary">Admin</span>';
-        } else if (usuario.rol === 'editor') {
-            rolBadge = '<span class="badge badge-info">Editor</span>';
-        } else if (usuario.rol === 'consultor') {
-            rolBadge = '<span class="badge badge-secondary">Consultor</span>';
-        }
+        const rol = usuario.es_superadmin ? '<span class="badge badge-info">Superadmin</span>' : '<span class="badge">Usuario</span>';
         
         // Avatar con fallback a default
         const avatarUrl = usuario.avatar || '/static/avatars/default.svg';
@@ -385,7 +388,7 @@ function mostrarUsuarios(lista) {
                 <td>${usuario.email || '-'}</td>
                 <td>${usuario.empresas || 'Sin asignar'}</td>
                 <td>${estado}</td>
-                <td>${rolBadge}</td>
+                <td>${rol}</td>
                 <td onclick="event.stopPropagation()">
                     <button class="btn btn-danger btn-small" onclick="eliminarUsuario(${usuario.id}, '${usuario.username}')">
                         <i class="fas fa-trash"></i>
@@ -416,10 +419,9 @@ function mostrarModalNuevoUsuario() {
     document.getElementById('usuario-password').required = true;
     document.getElementById('usuario-password').placeholder = '••••••••';
     document.getElementById('usuario-avatar-preview').src = '/static/avatars/default.svg';
-    // Por defecto: activo=1, superadmin=0, rol=admin
+    // Por defecto: activo=1, superadmin=0
     document.getElementById('usuario-activo').value = '1';
     document.getElementById('usuario-superadmin').value = '0';
-    document.getElementById('usuario-rol').value = 'admin';
     document.getElementById('modalUsuario').style.display = 'block';
 }
 
@@ -438,7 +440,6 @@ async function guardarUsuario(event) {
         nombre_completo: document.getElementById('usuario-nombre').value,
         email: document.getElementById('usuario-email').value,
         telefono: document.getElementById('usuario-telefono').value,
-        rol: document.getElementById('usuario-rol').value || 'admin',
         es_superadmin: parseInt(document.getElementById('usuario-superadmin').value) || 0,
         activo: parseInt(document.getElementById('usuario-activo').value) || 1
     };
@@ -488,7 +489,6 @@ async function editarUsuario(id) {
     document.getElementById('usuario-nombre').value = usuario.nombre_completo;
     document.getElementById('usuario-email').value = usuario.email || '';
     document.getElementById('usuario-telefono').value = usuario.telefono || '';
-    document.getElementById('usuario-rol').value = usuario.rol || 'admin';
     
     // Cargar avatar del usuario o mostrar default
     const avatarPath = usuario.avatar || usuario.foto || '/static/avatars/default.svg';
@@ -611,59 +611,59 @@ async function cargarPermisosUsuario(usuarioId, empresaId) {
 
 function mostrarMatrizPermisos(usuarioId, empresaId, permisos) {
     const container = document.getElementById('matriz-permisos');
-
-    let html = `
-        <div class="permissions-table-wrapper">
-            <table class="permissions-table">
-                <thead>
-                    <tr>
-                        <th class="permission-module">Módulo</th>
-                        <th>Ver</th>
-                        <th>Crear</th>
-                        <th>Editar</th>
-                        <th>Anular</th>
-                        <th>Exportar</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    modulos.forEach(modulo => {
-        const permiso = permisos.find(p => p.modulo_codigo === modulo.codigo) || {};
-
-        html += `
-            <tr>
-                <td class="permission-module"><strong>${modulo.nombre}</strong></td>
-                <td class="permission-check">
-                    <input type="checkbox" ${permiso.puede_ver ? 'checked' : ''}
-                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_ver', this.checked)">
-                </td>
-                <td class="permission-check">
-                    <input type="checkbox" ${permiso.puede_crear ? 'checked' : ''}
-                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_crear', this.checked)">
-                </td>
-                <td class="permission-check">
-                    <input type="checkbox" ${permiso.puede_editar ? 'checked' : ''}
-                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_editar', this.checked)">
-                </td>
-                <td class="permission-check">
-                    <input type="checkbox" ${permiso.puede_anular ? 'checked' : ''}
-                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_anular', this.checked)">
-                </td>
-                <td class="permission-check">
-                    <input type="checkbox" ${permiso.puede_exportar ? 'checked' : ''}
-                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_exportar', this.checked)">
-                </td>
-            </tr>
-        `;
-    });
-
+    
+    // Verificar que los módulos estén cargados
+    if (!modulos || modulos.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><p>Error: No se pudieron cargar los módulos</p></div>';
+        return;
+    }
+    
+    let html = '<div class="permissions-grid">';
+    
+    // Header
     html += `
-                </tbody>
-            </table>
+        <div class="permission-row header">
+            <div>Módulo</div>
+            <div style="text-align: center;">Ver</div>
+            <div style="text-align: center;">Crear</div>
+            <div style="text-align: center;">Editar</div>
+            <div style="text-align: center;">Anular</div>
+            <div style="text-align: center;">Exportar</div>
         </div>
     `;
-
+    
+    // Filas
+    modulos.forEach(modulo => {
+        const permiso = permisos.find(p => p.modulo_codigo === modulo.codigo) || {};
+        
+        html += `
+            <div class="permission-row">
+                <div><strong>${modulo.nombre}</strong></div>
+                <div style="text-align: center;">
+                    <input type="checkbox" ${permiso.puede_ver ? 'checked' : ''} 
+                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_ver', this.checked)">
+                </div>
+                <div style="text-align: center;">
+                    <input type="checkbox" ${permiso.puede_crear ? 'checked' : ''} 
+                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_crear', this.checked)">
+                </div>
+                <div style="text-align: center;">
+                    <input type="checkbox" ${permiso.puede_editar ? 'checked' : ''} 
+                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_editar', this.checked)">
+                </div>
+                <div style="text-align: center;">
+                    <input type="checkbox" ${permiso.puede_anular ? 'checked' : ''} 
+                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_anular', this.checked)">
+                </div>
+                <div style="text-align: center;">
+                    <input type="checkbox" ${permiso.puede_exportar ? 'checked' : ''} 
+                        onchange="actualizarPermiso(${usuarioId}, ${empresaId}, '${modulo.codigo}', 'puede_exportar', this.checked)">
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
     container.innerHTML = html;
 }
 
@@ -1235,7 +1235,7 @@ async function editarEmpresa(empresaId) {
                                 <div id="live-preview-container" style="display: grid; gap: 12px;">
                                     
                                     <!-- Encabezado / Header -->
-                                    <div class="empresa-form-group">
+                                    <div>
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Encabezado / Header</div>
                                         <div class="preview-header" style="padding: 12px; border-radius: 4px; display: flex; align-items: center; justify-content: space-between;">
                                             <div style="display: flex; align-items: center; gap: 10px;">
@@ -1250,7 +1250,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Colores Primario y Secundario -->
-                                    <div class="empresa-form-group">
+                                    <div>
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Colores Principales</div>
                                         <div style="display: flex; gap: 10px;">
                                             <div class="preview-badge-primary" style="flex: 1; padding: 10px; border-radius: 4px; text-align: center; font-size: 11px; font-weight: 600;">
@@ -1263,7 +1263,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Botones -->
-                                    <div class="empresa-form-group">
+                                    <div>
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Botones</div>
                                         <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                                             <button class="preview-btn-primary" type="button" style="padding: 8px 14px; border-radius: 4px; border: none; font-size: 12px; cursor: pointer; transition: all 0.2s;">Primario</button>
@@ -1273,7 +1273,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Notificaciones -->
-                                    <div class="empresa-form-group">
+                                    <div>
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Notificaciones</div>
                                         <div style="display: grid; gap: 5px;">
                                             <div class="preview-notif-success" style="padding: 8px 10px; border-radius: 4px; font-size: 11px; border-left: 3px solid; display: flex; align-items: center; gap: 6px;">
@@ -1289,7 +1289,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Inputs y Selectores -->
-                                    <div class="empresa-form-group">
+                                    <div>
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Inputs y Selectores</div>
                                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">
                                             <input class="preview-input" type="text" value="Texto ejemplo" style="padding: 7px; border: 1px solid; border-radius: 3px; font-size: 12px;">
@@ -1303,7 +1303,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Tabla -->
-                                    <div class="empresa-form-group">
+                                    <div>
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Tabla</div>
                                         <div style="border: 1px solid #dddddd; border-radius: 4px; overflow: hidden;">
                                             <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
@@ -1331,7 +1331,7 @@ async function editarEmpresa(empresaId) {
                                     </div>
                                     
                                     <!-- Iconos -->
-                                    <div class="empresa-form-group">
+                                    <div>
                                         <div style="font-size: 10px; font-weight: 600; margin-bottom: 6px; color: #666;">Iconos</div>
                                         <div style="display: flex; gap: 10px; justify-content: center;">
                                             <div class="preview-icon" style="width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;">
@@ -1742,11 +1742,11 @@ async function editarEmpresa(empresaId) {
                             <div style="margin-top: 12px; padding: 10px; background: white; border-radius: 4px; border-left: 3px solid #3498db;">
                                 <div style="font-size: 11px; color: #666; margin-bottom: 6px;"><strong>Nota:</strong> Overlay y Sombra usan transparencias (rgba)</div>
                                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 10px;">
-                                    <div class="empresa-form-group">
+                                    <div>
                                         <label for="edit_color_modal_overlay" style="margin-bottom: 2px; display: block;">Overlay (ej: rgba(0,0,0,0.6))</label>
                                         <input type="text" id="edit_color_modal_overlay" name="color_modal_overlay" value="${empresa.color_modal_overlay || 'rgba(0,0,0,0.6)'}" oninput="actualizarVistaPrevia()" style="width: 100%; padding: 4px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px;">
                                     </div>
-                                    <div class="empresa-form-group">
+                                    <div>
                                         <label for="edit_color_modal_shadow" style="margin-bottom: 2px; display: block;">Sombra (ej: rgba(0,0,0,0.4))</label>
                                         <input type="text" id="edit_color_modal_shadow" name="color_modal_shadow" value="${empresa.color_modal_shadow || 'rgba(0,0,0,0.4)'}" oninput="actualizarVistaPrevia()" style="width: 100%; padding: 4px; font-size: 10px; border: 1px solid #ddd; border-radius: 3px;">
                                     </div>
@@ -3118,6 +3118,13 @@ function inicializarAutoGuardado() {
 // Cargar configuración de empresa
 async function cargarConfiguracionEmpresa() {
     try {
+        // Verificar que la pestaña de empresas esté activa antes de continuar
+        const tabEmpresas = document.getElementById('tab-empresas');
+        if (!tabEmpresas || !tabEmpresas.classList.contains('active')) {
+            console.log('[EMPRESA] Pestaña empresas no está activa, cancelando carga');
+            return;
+        }
+        
         // Obtener datos de la empresa actual
         const brandingResponse = await fetch('/api/auth/branding', { credentials: 'include' });
         const branding = await brandingResponse.json();
@@ -3151,13 +3158,15 @@ async function cargarConfiguracionEmpresa() {
         
         // Renderizar contenido
         const contenedor = document.getElementById('tab-empresas');
+        // Mantener las clases del sistema de tabs y añadir las específicas de empresa
+        contenedor.classList.add('empresa-tab-container');
         contenedor.innerHTML = `
             <div class="empresa-page-header">
                 <h1><i class="fas fa-building"></i> Configuración de Empresa</h1>
             </div>
-            <div class="empresa-card">
-                <div class="empresa-card-content">
-                    <div class="empresa-grid-container">
+            <div class="empresa-main-card">
+                <div class="empresa-main-card-content">
+                    <div class="empresa-grid-layout">
                         <!-- Información de la empresa -->
                         <div class="empresa-section">
                             <h3 class="empresa-section-title">📋 Datos de la Empresa</h3>
@@ -3168,57 +3177,47 @@ async function cargarConfiguracionEmpresa() {
                                 </div>
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">Razón Social:</label>
-                                    <input type="text" id="empresa-razon-social" value="${empresa.razon_social || ''}" 
-                                           class="empresa-form-input">
+                                    <input type="text" id="empresa-razon-social" value="${empresa.razon_social || ''}" class="empresa-form-input">
                                 </div>
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">CIF/NIF:</label>
-                                    <input type="text" id="empresa-cif" value="${empresa.cif || ''}" 
-                                           class="empresa-form-input">
+                                    <input type="text" id="empresa-cif" value="${empresa.cif || ''}" class="empresa-form-input">
                                 </div>
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">Teléfono:</label>
-                                    <input type="text" id="empresa-telefono" value="${empresa.telefono || ''}" 
-                                           class="empresa-form-input">
+                                    <input type="text" id="empresa-telefono" value="${empresa.telefono || ''}" class="empresa-form-input">
                                 </div>
                                 <div class="empresa-form-group full-width">
                                     <label class="empresa-form-label">Dirección:</label>
-                                    <input type="text" id="empresa-direccion" value="${empresa.direccion || ''}" 
-                                           class="empresa-form-input full-width">
+                                    <input type="text" id="empresa-direccion" value="${empresa.direccion || ''}" class="empresa-form-input full-width">
                                 </div>
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">Código Postal:</label>
-                                    <input type="text" id="empresa-codigo-postal" value="${empresa.codigo_postal || ''}" 
-                                           class="empresa-form-input">
+                                    <input type="text" id="empresa-codigo-postal" value="${empresa.codigo_postal || ''}" class="empresa-form-input">
                                 </div>
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">Ciudad:</label>
-                                    <input type="text" id="empresa-ciudad" value="${empresa.ciudad || ''}" 
-                                           class="empresa-form-input">
+                                    <input type="text" id="empresa-ciudad" value="${empresa.ciudad || ''}" class="empresa-form-input">
                                 </div>
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">Provincia:</label>
-                                    <input type="text" id="empresa-provincia" value="${empresa.provincia || ''}" 
-                                           class="empresa-form-input">
+                                    <input type="text" id="empresa-provincia" value="${empresa.provincia || ''}" class="empresa-form-input">
                                 </div>
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">Email:</label>
-                                    <input type="email" id="empresa-email" value="${empresa.email || ''}" 
-                                           class="empresa-form-input">
+                                    <input type="email" id="empresa-email" value="${empresa.email || ''}" class="empresa-form-input">
                                 </div>
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">Logo:</label>
-                                    <input type="file" id="empresa-logo" accept="image/*" class="empresa-form-input file-input">
+                                    <input type="file" id="empresa-logo" accept="image/*" onchange="previsualizarLogoEmpresa(event)" class="empresa-form-input file-input">
                                     <small class="empresa-form-help">PNG, JPG, SVG (máx. 2MB)</small>
                                 </div>
                                 <div id="logo-preview-container" class="empresa-logo-preview-container">
-                                    <img id="logo-preview" src="" alt="Vista previa del logo" 
-                                         class="empresa-logo-preview">
+                                    <img id="logo-preview" src="" alt="Vista previa del logo" class="empresa-logo-preview">
                                 </div>
                             </div>
                             <div class="empresa-actions">
-                                <button class="btn btn-primary" onclick="guardarDatosEmpresa(${empresaId})" 
-                                        class="empresa-save-btn">
+                                <button class="empresa-save-btn" onclick="guardarDatosEmpresa(${empresaId})">
                                     <i class="fas fa-save"></i> Guardar Datos de Emisor
                                 </button>
                                 <span class="empresa-save-info">💾 Se guardarán en ${empresa.codigo}_emisor.json</span>
@@ -3227,9 +3226,7 @@ async function cargarConfiguracionEmpresa() {
                         
                         <!-- Información sobre plantillas -->
                         <div class="empresa-section">
-                            <h3 class="empresa-section-title">
-                                ℹ️ Información
-                            </h3>
+                            <h3 class="empresa-section-title">ℹ️ Información</h3>
                             <div class="empresa-info-section">
                                 <p class="empresa-info-text">
                                     <strong>📋 Datos de Emisor:</strong><br>
@@ -3256,17 +3253,6 @@ async function cargarConfiguracionEmpresa() {
             </div>
         `;
         
-        // Añadir event listener al input de archivo después de crear el DOM
-        setTimeout(() => {
-            const logoInput = document.getElementById('empresa-logo');
-            if (logoInput) {
-                logoInput.addEventListener('change', previsualizarLogoEmpresa);
-                console.log('[LOGO-INPUT] Event listener añadido correctamente');
-            } else {
-                console.error('[LOGO-INPUT] ❌ Input #empresa-logo no encontrado');
-            }
-        });
-        
         // Cargar logo existente si existe (usar setTimeout para asegurar que el DOM esté listo)
         setTimeout(() => {
             console.log('[LOGO] Verificando logo existente...');
@@ -3279,7 +3265,7 @@ async function cargarConfiguracionEmpresa() {
                 logoUrl = empresa.emisor_data.logo;
                 console.log('[LOGO] Logo encontrado en emisor_data.logo:', logoUrl);
             } else if (empresa.logo_header && !empresa.logo_header.startsWith('default_')) {
-                logoUrl = empresa.logo_header; // Usar ruta completa del JSON
+                logoUrl = `/static/logos/${empresa.logo_header}`;
                 console.log('[LOGO] Logo encontrado en logo_header:', logoUrl);
             } else if (empresa.logo) {
                 logoUrl = empresa.logo;
@@ -3299,19 +3285,8 @@ async function cargarConfiguracionEmpresa() {
                     // Agregar timestamp para evitar caché del navegador
                     const timestamp = new Date().getTime();
                     logoPreview.src = logoUrl + '?t=' + timestamp;
-                    
-                    // Asegurar que el contenedor sea visible desde la carga inicial
-                    logoPreviewContainer.style.display = 'block';
-                    logoPreviewContainer.classList.remove('empresa-hidden');
                     logoPreviewContainer.classList.add('visible');
-                    
-                    console.log('[LOGO] ✅ Vista previa mostrada y forzada visible:', logoUrl);
-                    console.log('[LOGO] 📊 Estado contenedor:', {
-                        display: logoPreviewContainer.style.display,
-                        classList: logoPreviewContainer.className,
-                        offsetWidth: logoPreviewContainer.offsetWidth,
-                        offsetHeight: logoPreviewContainer.offsetHeight
-                    });
+                    console.log('[LOGO] ✅ Vista previa mostrada:', logoUrl);
                 } else {
                     console.error('[LOGO] ❌ No se encontraron elementos DOM para la vista previa');
                 }
@@ -3411,7 +3386,10 @@ async function aplicarPlantilla(plantilla, empresaId) {
             
             // Recargar contenido del tab para mostrar la nueva activa
             setTimeout(async () => {
-                await cargarConfiguracionEmpresa();
+                // Solo recargar si la pestaña empresas está activa
+                if (document.getElementById('tab-empresas')?.classList.contains('active')) {
+                    await cargarConfiguracionEmpresa();
+                }
                 // Ocultar status después de recargar
                 setTimeout(() => {
                     statusDiv.style.display = 'none';
@@ -3432,48 +3410,27 @@ async function aplicarPlantilla(plantilla, empresaId) {
 }
 
 function previsualizarLogoEmpresa(event) {
-    console.log('[LOGO-PREVIEW] Función llamada');
     const file = event.target.files[0];
     const preview = document.getElementById('logo-preview-container');
     const img = document.getElementById('logo-preview');
     
-    console.log('[LOGO-PREVIEW] Elementos:', {
-        file: file ? file.name : 'No hay archivo',
-        preview: preview ? 'Encontrado' : 'NO encontrado',
-        img: img ? 'Encontrado' : 'NO encontrado'
-    });
-    
     if (file) {
         // Validar tamaño (2MB máximo)
         if (file.size > 2 * 1024 * 1024) {
-            console.log('[LOGO-PREVIEW] Archivo demasiado grande:', file.size);
             mostrarAlerta('❌ El archivo es demasiado grande. Máximo 2MB', 'error');
             event.target.value = '';
-            if (preview) preview.style.display = 'none';
+            preview.classList.remove('visible');
             return;
         }
         
-        console.log('[LOGO-PREVIEW] Procesando archivo:', file.name, file.size);
-        
         const reader = new FileReader();
         reader.onload = function(e) {
-            console.log('[LOGO-PREVIEW] Archivo leído correctamente');
-            if (img) {
-                img.src = e.target.result;
-                console.log('[LOGO-PREVIEW] Imagen src asignada para preview temporal');
-            }
-            if (preview) {
-                preview.style.display = 'block';
-                preview.classList.remove('empresa-hidden');
-                console.log('[LOGO-PREVIEW] Contenedor mostrado - preview temporal activo');
-            }
+            img.src = e.target.result;
+            preview.classList.add('visible');
         };
         reader.readAsDataURL(file);
     } else {
-        console.log('[LOGO-PREVIEW] No hay archivo seleccionado');
-        if (preview) {
-            preview.style.display = 'none';
-        }
+        preview.classList.remove('visible');
     }
 }
 
@@ -3506,117 +3463,25 @@ async function guardarDatosEmpresa(empresaId) {
         const result = await response.json();
         
         if (response.ok) {
-            mostrarAlerta('✅ Datos de empresa guardados correctamente', 'success');
+            mostrarAlerta(`✅ Datos de emisor guardados en ${result.emisor_json}`, 'success');
             
-            console.log('[LOGO-SAVE] Respuesta del servidor:', result);
-            
-            // Si se subió un logo, intentar actualizar preview inmediatamente
-            const logoInput = document.getElementById('empresa-logo');
-            if (logoInput && logoInput.files && logoInput.files[0]) {
-                const logoPreview = document.getElementById('logo-preview');
-                const fileName = logoInput.files[0].name;
-                
-                // Obtener código de empresa del JSON mostrado
-                const empresaCodigo = 'caca'; // Según el JSON que muestras
-                
-                if (result.logo_url) {
-                    // Usar ruta devuelta por el servidor
-                    console.log('[LOGO-SAVE] Usando ruta del servidor:', result.logo_url);
-                    if (logoPreview) {
-                        logoPreview.src = result.logo_url + '?t=' + new Date().getTime();
-                        console.log('[LOGO-SAVE] Preview actualizado con ruta del servidor');
-                    }
-                } else {
-                    // Backend no devuelve logo_url, construir ruta basada en patrón conocido
-                    // Según tu JSON: el backend mantiene la ruta original, así que usar esa
-                    const expectedPath = `/static/logos/${empresaCodigo}_${fileName}`;
-                    console.log('[LOGO-SAVE] Backend no devolvió logo_url, construyendo:', expectedPath);
-                    
-                    // Verificar si el archivo existe en esa ruta
-                    const testImg = new Image();
-                    testImg.onload = function() {
-                        console.log('[LOGO-SAVE] ✅ Archivo confirmado en:', expectedPath);
-                        if (logoPreview) {
-                            logoPreview.src = expectedPath + '?t=' + new Date().getTime();
-                            // Asegurar que el contenedor esté visible
-                            const logoPreviewContainer = document.getElementById('logo-preview-container');
-                            if (logoPreviewContainer) {
-                                logoPreviewContainer.style.display = 'block';
-                                logoPreviewContainer.classList.remove('empresa-hidden');
-                                logoPreviewContainer.classList.add('visible');
-                                console.log('[LOGO-SAVE] ✅ Contenedor preview forzado a visible');
-                                console.log('[LOGO-SAVE] 📊 Estilos aplicados:', {
-                                    display: logoPreviewContainer.style.display,
-                                    classList: logoPreviewContainer.className,
-                                    offsetWidth: logoPreviewContainer.offsetWidth,
-                                    offsetHeight: logoPreviewContainer.offsetHeight,
-                                    computedDisplay: window.getComputedStyle(logoPreviewContainer).display,
-                                    computedVisibility: window.getComputedStyle(logoPreviewContainer).visibility,
-                                    clientWidth: logoPreviewContainer.clientWidth,
-                                    clientHeight: logoPreviewContainer.clientHeight
-                                });
-                                
-                                // También verificar la imagen dentro
-                                if (logoPreview) {
-                                    console.log('[LOGO-SAVE] 🖼️ Estado de la imagen:', {
-                                        src: logoPreview.src,
-                                        offsetWidth: logoPreview.offsetWidth,
-                                        offsetHeight: logoPreview.offsetHeight,
-                                        naturalWidth: logoPreview.naturalWidth,
-                                        naturalHeight: logoPreview.naturalHeight,
-                                        complete: logoPreview.complete
-                                    });
-                                }
-                            }
-                            console.log('[LOGO-SAVE] Preview actualizado con ruta confirmada');
-                        }
-                    };
-                    testImg.onerror = function() {
-                        console.log('[LOGO-SAVE] ⚠️ Archivo no encontrado en:', expectedPath);
-                        console.log('[LOGO-SAVE] Probando ruta original del JSON...');
-                        const originalPath = `/static/logos/${empresaCodigo}_logo.png`;
-                        if (logoPreview) {
-                            logoPreview.src = originalPath + '?t=' + new Date().getTime();
-                            console.log('[LOGO-SAVE] Preview actualizado con ruta original JSON');
-                        }
-                    };
-                    testImg.src = expectedPath + '?t=' + new Date().getTime();
-                }
-            }
-            
-            // Recargar la configuración para mostrar los datos actualizados
-            setTimeout(async () => {
-                // Guardar estado del preview antes de recargar
-                const logoPreviewContainer = document.getElementById('logo-preview-container');
-                const logoPreviewElement = document.getElementById('logo-preview');
-                const wasVisible = logoPreviewContainer && logoPreviewContainer.style.display === 'block';
-                const currentSrc = logoPreviewElement ? logoPreviewElement.src : null;
-                
-                console.log('[LOGO-RELOAD] Guardando estado antes de recargar:', { wasVisible, currentSrc });
-                
-                await cargarConfiguracionEmpresa();
-                
-                // Restaurar estado del preview después de recargar
-                if (wasVisible && currentSrc) {
-                    setTimeout(() => {
-                        const newLogoPreviewContainer = document.getElementById('logo-preview-container');
-                        const newLogoPreview = document.getElementById('logo-preview');
-                        
-                        if (newLogoPreviewContainer && newLogoPreview) {
-                            newLogoPreview.src = currentSrc;
-                            newLogoPreviewContainer.style.display = 'block';
-                            newLogoPreviewContainer.classList.remove('empresa-hidden');
-                            newLogoPreviewContainer.classList.add('visible');
-                            console.log('[LOGO-RELOAD] ✅ Preview restaurado después de recargar');
-                        }
-                    }, 100);
+            // Recargar la configuración de empresa para mostrar el logo actualizado
+            setTimeout(() => {
+                // Solo recargar si la pestaña empresas está activa
+                if (document.getElementById('tab-empresas')?.classList.contains('active')) {
+                    cargarConfiguracionEmpresa();
                 }
                 
-                // Recargar menú para actualizar logo en sidebar
-                if (typeof window.parent.cargarMenu === 'function') {
+                // Recargar el branding global (menú lateral y logo)
+                if (window.parent && typeof window.parent.cargarColoresEmpresa === 'function') {
+                    window.parent.cargarColoresEmpresa();
+                }
+                
+                // Recargar el menú si existe la función
+                if (window.parent && typeof window.parent.cargarMenu === 'function') {
                     window.parent.cargarMenu();
                 }
-            }, 1000);
+            }, 500);
         } else {
             throw new Error(result.error || 'Error guardando datos');
         }

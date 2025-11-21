@@ -168,7 +168,7 @@
 
     <!-- Modal información AEAT -->
     <div id="modalAEAT" class="modal" style="display:none;">
-        <div class="modal-content">
+        <div class="modal-content aeat-modal-content">
             <div class="modal-header">
                 <h2><i class="fas fa-landmark"></i> Información AEAT</h2>
             </div>
@@ -187,9 +187,9 @@
                 const modalBg = getComputedStyle(root).getPropertyValue('--modal-bg').trim();
                 const modalHeaderBg = getComputedStyle(root).getPropertyValue('--modal-header-bg').trim();
                 const modalBodyBg = getComputedStyle(root).getPropertyValue('--modal-body-bg').trim();
-                console.log('[MODAL DEBUG] --modal-bg:', modalBg);
-                console.log('[MODAL DEBUG] --modal-header-bg:', modalHeaderBg);
-                console.log('[MODAL DEBUG] --modal-body-bg:', modalBodyBg);
+                // console.log('[MODAL DEBUG] --modal-bg:', modalBg);
+                // console.log('[MODAL DEBUG] --modal-header-bg:', modalHeaderBg);
+                // console.log('[MODAL DEBUG] --modal-body-bg:', modalBodyBg);
             }, 500);
         });
     </script>

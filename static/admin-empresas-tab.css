@@ -1,0 +1,353 @@
+/* Estilos específicos para la pestaña de empresas en administración */
+
+/* Variables CSS con soporte para plantillas */
+:root {
+    --admin-padding: 20px;
+    --admin-gap: 20px;
+    --admin-border-radius: 8px;
+    --admin-input-padding: 5px 7px;
+    --admin-input-font-size: 12px;
+    --admin-label-font-size: 11px;
+    --admin-small-font-size: 10px;
+    --admin-section-title-font-size: 14px;
+}
+
+/* Contenedor principal de la pestaña empresas */
+.empresa-tab-container {
+    background: var(--bg, var(--color-app-bg, #ffffff)) !important;
+    color: var(--text, var(--color-texto, #333333)) !important;
+    /* Remover min-height que puede causar problemas de layout */
+}
+
+.empresa-page-header {
+    background: var(--bg-elevated, var(--color-secundario, #f8f9fa)) !important;
+    color: var(--text, var(--color-texto, #333333)) !important;
+    padding: var(--admin-padding);
+    border-radius: var(--admin-border-radius);
+    margin-bottom: var(--admin-gap);
+    box-shadow: 0 2px 4px var(--shadow, rgba(0,0,0,0.1));
+}
+
+.empresa-page-header h1 {
+    margin: 0;
+    color: var(--text, var(--color-texto, #333333)) !important;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.empresa-page-header h1 i {
+    color: var(--primary, var(--color-primario, #3498db)) !important;
+    margin-right: 8px;
+}
+
+/* Card principal */
+.empresa-main-card {
+    background: var(--bg, var(--color-app-bg, #ffffff)) !important;
+    border: 1px solid var(--border, var(--color-border, #dddddd)) !important;
+    border-radius: var(--admin-border-radius);
+    box-shadow: 0 2px 8px var(--shadow, rgba(0,0,0,0.1));
+    overflow: hidden;
+}
+
+.empresa-main-card-content {
+    padding: var(--admin-padding);
+}
+
+/* Grid de dos columnas */
+.empresa-grid-layout {
+    display: grid;
+    grid-template-columns: 55% 40%;
+    gap: var(--admin-gap);
+}
+
+/* Secciones */
+.empresa-section {
+    border: 1px solid var(--border, var(--color-border, #dddddd)) !important;
+    border-radius: var(--admin-border-radius);
+    padding: 16px;
+    background: var(--card-bg, var(--bg-elevated, rgba(255,255,255,0.9))) !important;
+}
+
+.empresa-section-title {
+    margin-bottom: 12px;
+    font-size: var(--admin-section-title-font-size);
+    font-weight: 600;
+    color: var(--primary, var(--color-primario, #007bff)) !important;
+    border-bottom: 2px solid var(--primary, var(--color-primario, #007bff)) !important;
+    padding-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Grid de formulario */
+.empresa-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(150px, 300px));
+    gap: 8px;
+    max-width: 620px;
+}
+
+.empresa-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.empresa-form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.empresa-form-label {
+    font-size: var(--admin-label-font-size);
+    font-weight: 500;
+    display: block;
+    margin-bottom: 3px;
+    color: var(--text, var(--color-texto, #333333)) !important;
+}
+
+.empresa-form-input {
+    max-width: 300px;
+    width: 100%;
+    padding: var(--admin-input-padding);
+    font-size: var(--admin-input-font-size);
+    border: 1px solid var(--border, var(--color-border, #dddddd)) !important;
+    border-radius: 3px;
+    box-sizing: border-box;
+    background: var(--input-bg, var(--bg, #ffffff)) !important;
+    color: var(--input-text, var(--text, #333333)) !important;
+    transition: all 0.3s ease;
+}
+
+.empresa-form-input.full-width {
+    max-width: 620px;
+}
+
+.empresa-form-input.file-input {
+    max-width: 300px;
+    padding: 4px;
+    font-size: var(--admin-label-font-size);
+}
+
+.empresa-form-input:focus {
+    outline: none !important;
+    border-color: var(--primary, var(--color-primario, #3498db)) !important;
+    box-shadow: 0 0 0 2px var(--primary-alpha, rgba(52, 152, 219, 0.2)) !important;
+}
+
+.empresa-form-help {
+    font-size: var(--admin-small-font-size);
+    color: var(--text-muted, var(--color-texto-muted, #7f8c8d)) !important;
+    display: block;
+    margin-top: 2px;
+}
+
+/* Vista previa de logo */
+.empresa-logo-preview-container {
+    grid-column: 1 / -1;
+    display: none;
+    margin-top: 8px;
+}
+
+.empresa-logo-preview-container.visible {
+    display: block !important;
+}
+
+.empresa-logo-preview {
+    max-width: 150px;
+    max-height: 75px;
+    border: 1px solid var(--border, var(--color-border, #dddddd)) !important;
+    border-radius: 3px;
+    padding: 3px;
+    background: var(--bg-elevated, #f9f9f9) !important;
+}
+
+/* Botones de acción */
+.empresa-actions {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 12px;
+    gap: 8px;
+    align-items: center;
+}
+
+.empresa-save-btn {
+    padding: 6px 14px;
+    font-size: var(--admin-input-font-size);
+    border-radius: 3px;
+    background: var(--button-bg, var(--color-button, #3498db)) !important;
+    color: var(--button-text, #ffffff) !important;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.empresa-save-btn:hover {
+    background: var(--button-hover, var(--color-button-hover, #2980b9)) !important;
+    transform: translateY(-1px);
+}
+
+.empresa-save-info {
+    font-size: var(--admin-label-font-size);
+    color: var(--text-muted, var(--color-texto-muted, #666666)) !important;
+    align-self: center;
+}
+
+/* Selector de plantillas */
+.empresa-plantillas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.empresa-plantilla-card {
+    border: 2px solid var(--border, var(--color-border, #dddddd)) !important;
+    border-radius: var(--admin-border-radius);
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--bg, var(--color-app-bg, #ffffff)) !important;
+    color: var(--text, var(--color-texto, #333333)) !important;
+}
+
+.empresa-plantilla-card:hover {
+    border-color: var(--primary, var(--color-primario, #3498db)) !important;
+    box-shadow: 0 4px 12px var(--shadow, rgba(0,0,0,0.15));
+    transform: translateY(-2px);
+}
+
+.empresa-plantilla-card.active {
+    border-color: var(--primary, var(--color-primario, #3498db)) !important;
+    background: var(--primary-light, rgba(52, 152, 219, 0.1)) !important;
+    box-shadow: 0 4px 12px var(--primary-shadow, rgba(52, 152, 219, 0.3));
+}
+
+.empresa-plantilla-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text, var(--color-texto, #333333)) !important;
+}
+
+.empresa-plantilla-description {
+    font-size: var(--admin-small-font-size);
+    color: var(--text-muted, var(--color-texto-muted, #666666)) !important;
+}
+
+.empresa-plantilla-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* Estado de carga */
+.empresa-loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted, var(--color-texto-muted, #7f8c8d)) !important;
+}
+
+.empresa-loading i {
+    font-size: 32px;
+    margin-bottom: 16px;
+    color: var(--primary, var(--color-primario, #3498db)) !important;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Status de aplicación de plantilla */
+.empresa-status {
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 16px;
+    text-align: center;
+    font-size: var(--admin-input-font-size);
+    display: none;
+}
+
+.empresa-status.success {
+    background: var(--success-bg, rgba(46, 204, 113, 0.1)) !important;
+    color: var(--success, var(--color-success, #27ae60)) !important;
+    border: 1px solid var(--success, var(--color-success, #27ae60)) !important;
+}
+
+.empresa-status.loading {
+    background: var(--info-bg, rgba(52, 152, 219, 0.1)) !important;
+    color: var(--info, var(--color-info, #3498db)) !important;
+    border: 1px solid var(--info, var(--color-info, #3498db)) !important;
+}
+
+/* Información de la empresa */
+.empresa-info-section {
+    padding: 12px;
+    background: var(--bg-elevated, var(--color-secundario, #f8f9fa)) !important;
+    border: 1px solid var(--border, var(--color-border, #dddddd)) !important;
+    border-radius: 4px;
+}
+
+.empresa-info-text {
+    margin: 0 0 10px 0;
+    font-size: var(--admin-input-font-size);
+    color: var(--text, var(--color-texto, #333333)) !important;
+}
+
+.empresa-info-text strong {
+    color: var(--text, var(--color-texto, #333333)) !important;
+}
+
+.empresa-info-code {
+    background: var(--bg-elevated, #f5f5f5) !important;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: var(--admin-label-font-size);
+    color: var(--text, var(--color-texto, #333333)) !important;
+    font-family: monospace;
+}
+
+.empresa-info-list {
+    margin: 5px 0 10px 20px;
+    padding: 0;
+    font-size: var(--admin-label-font-size);
+    color: var(--text-muted, var(--color-texto-muted, #666666)) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .empresa-grid-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .empresa-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .empresa-form-input,
+    .empresa-form-input.full-width {
+        max-width: 100%;
+    }
+    
+    .empresa-plantillas-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .empresa-main-card-content {
+        padding: 16px;
+    }
+}
+
+/* Utilidades */
+.empresa-hidden {
+    display: none !important;
+}
+
+.empresa-mb-16 {
+    margin-bottom: 16px;
+}
+
+.empresa-mt-16 {
+    margin-top: 16px;
+}

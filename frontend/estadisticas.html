@@ -22,15 +22,15 @@
             
             // Verificar si es admin de empresa
             if (!session.es_admin_empresa) {
-                console.error('[ESTADISTICAS] Acceso denegado: usuario no es administrador');
+                // console.error('[ESTADISTICAS] Acceso denegado: usuario no es administrador');
                 // Redirigir silenciosamente a página de bienvenida
                 window.location.href = '/bienvenida.html';
                 return;
             }
             
-            console.log('[ESTADISTICAS] Acceso autorizado para admin:', session.usuario);
+            // console.log('[ESTADISTICAS] Acceso autorizado para admin:', session.usuario);
         } catch (error) {
-            console.error('[ESTADISTICAS] Error verificando sesión:', error);
+            // console.error('[ESTADISTICAS] Error verificando sesión:', error);
             window.location.href = '/LOGIN.html';
         }
     })();
@@ -48,10 +48,10 @@
             
             if (selectorFecha && selectorFecha.value) {
                 [anio] = selectorFecha.value.split('-');
-                console.log('[GRAFICO ANIO] Usando año del selector:', anio);
+                // console.log('[GRAFICO ANIO] Usando año del selector:', anio);
             } else {
                 anio = new Date().getFullYear();
-                console.log('[GRAFICO ANIO] Usando año actual:', anio);
+                // console.log('[GRAFICO ANIO] Usando año actual:', anio);
             }
             
             const apiProtocol = window.location.protocol;
@@ -60,21 +60,21 @@
             const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/gastos/por-categoria-anio?anio=${anio}`);
             
             if (!response.ok) {
-                console.error('[GRAFICO ANIO] Error en respuesta:', response.status);
+                // console.error('[GRAFICO ANIO] Error en respuesta:', response.status);
                 return;
             }
             
             const datos = await response.json();
-            console.log('[GRAFICO ANIO] Datos recibidos:', datos);
+            // console.log('[GRAFICO ANIO] Datos recibidos:', datos);
             
             if (!datos.categorias || datos.categorias.length === 0) {
-                console.log('[GRAFICO ANIO] No hay datos para mostrar');
+                // console.log('[GRAFICO ANIO] No hay datos para mostrar');
                 return;
             }
             
             const canvas = document.getElementById('grafico-gastos-anio');
             if (!canvas) {
-                console.error('[GRAFICO ANIO] Canvas no encontrado');
+                // console.error('[GRAFICO ANIO] Canvas no encontrado');
                 return;
             }
             
@@ -116,7 +116,7 @@
                         if (elements.length > 0) {
                             const index = elements[0].index;
                             const categoria = labels[index];
-                            console.log('[GRAFICO ANIO] Click en:', categoria);
+                            // console.log('[GRAFICO ANIO] Click en:', categoria);
                             abrirModalDetallesGastoAnio(categoria);
                         }
                     },
@@ -145,10 +145,10 @@
                 }
             });
             
-            console.log('[GRAFICO ANIO] Gráfico de pastel (año) renderizado');
+            // console.log('[GRAFICO ANIO] Gráfico de pastel (año) renderizado');
             
         } catch (error) {
-            console.error('[GRAFICO ANIO] Error al cargar gráfico:', error);
+            // console.error('[GRAFICO ANIO] Error al cargar gráfico:', error);
         }
     };
     </script>
@@ -1166,20 +1166,20 @@
 
 <script>
 // Script inline simple para gastos
-console.log('[INLINE] Script de gastos cargando...');
+// console.log('[INLINE] Script de gastos cargando...');
 
 // Esperar a que el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('[INLINE] DOM listo, configurando pestañas...');
+    // console.log('[INLINE] DOM listo, configurando pestañas...');
     
     // Configurar pestañas
     const tabVentas = document.querySelector('.tab[data-tab="ventas"]');
     const tabGastos = document.querySelector('.tab[data-tab="gastos"]');
     
     if (tabGastos) {
-        console.log('[INLINE] Pestaña Gastos encontrada, agregando listener...');
+        // console.log('[INLINE] Pestaña Gastos encontrada, agregando listener...');
         tabGastos.addEventListener('click', function() {
-            console.log('[INLINE] Click en pestaña Gastos detectado!');
+            // console.log('[INLINE] Click en pestaña Gastos detectado!');
             
             // Cambiar pestañas activas
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1189,16 +1189,16 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('tab-gastos').classList.add('active');
             
             // Cargar datos
-            console.log('[INLINE] Cargando datos de gastos...');
+            // console.log('[INLINE] Cargando datos de gastos...');
             window.cargarDatosGastos();
         });
     } else {
-        console.error('[INLINE] No se encontró la pestaña Gastos');
+        // console.error('[INLINE] No se encontró la pestaña Gastos');
     }
     
     if (tabVentas) {
         tabVentas.addEventListener('click', function() {
-            console.log('[INLINE] Click en pestaña Ventas');
+            // console.log('[INLINE] Click en pestaña Ventas');
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
             
@@ -1210,37 +1210,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Exponer función globalmente para que pueda ser llamada desde estadisticas_facturas.js
 window.cargarDatosGastos = async function() {
-    console.log('[INLINE] ========== INICIO CARGA GASTOS ==========');
+    // console.log('[INLINE] ========== INICIO CARGA GASTOS ==========');
     
     try {
         const selectorFecha = document.getElementById('selector-fecha');
-        console.log('[INLINE] Selector fecha:', selectorFecha, 'Valor:', selectorFecha?.value);
+        // console.log('[INLINE] Selector fecha:', selectorFecha, 'Valor:', selectorFecha?.value);
         
         if (!selectorFecha || !selectorFecha.value) {
-            console.error('[INLINE] ❌ Selector de fecha no encontrado o vacío');
+            // console.error('[INLINE] ❌ Selector de fecha no encontrado o vacío');
             alert('ERROR: No se encontró el selector de fecha');
             return;
         }
         
         const [anio, mes] = selectorFecha.value.split('-');
-        console.log(`[INLINE] ✅ Año: ${anio}, Mes: ${mes}`);
+        // console.log(`[INLINE] ✅ Año: ${anio}, Mes: ${mes}`);
         
         // Cargar estadísticas generales (usar protocolo y host dinámicos)
         const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
         const apiPort = apiProtocol === 'https:' ? '' : ':5001'; // No usar puerto si es HTTPS
         const urlEstadisticas = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`;
-        console.log('[INLINE] 📡 Haciendo fetch a:', urlEstadisticas);
+        // console.log('[INLINE] 📡 Haciendo fetch a:', urlEstadisticas);
         
         const respuesta = await fetch(urlEstadisticas);
-        console.log('[INLINE] ✅ Respuesta recibida - Status:', respuesta.status, 'OK:', respuesta.ok);
+        // console.log('[INLINE] ✅ Respuesta recibida - Status:', respuesta.status, 'OK:', respuesta.ok);
         
         if (!respuesta.ok) {
             throw new Error(`HTTP ${respuesta.status}`);
         }
         
         const datos = await respuesta.json();
-        console.log('[INLINE] ✅ Datos parseados:', JSON.stringify(datos).substring(0, 200));
+        // console.log('[INLINE] ✅ Datos parseados:', JSON.stringify(datos).substring(0, 200));
         
         // Actualizar elementos (gastos siempre en positivo)
         const elementos = [
@@ -1263,33 +1263,33 @@ window.cargarDatosGastos = async function() {
                 elem.textContent = item.valor;
                 actualizados++;
             } else {
-                console.warn('[INLINE] Elemento no encontrado:', item.id);
+                // console.warn('[INLINE] Elemento no encontrado:', item.id);
             }
         });
         
-        console.log(`[INLINE] ✅ ${actualizados} elementos actualizados de ${elementos.length}`);
+        // console.log(`[INLINE] ✅ ${actualizados} elementos actualizados de ${elementos.length}`);
         
         // Cargar Top 10
-        console.log('[INLINE] 📊 Iniciando carga de Top 10...');
+        // console.log('[INLINE] 📊 Iniciando carga de Top 10...');
         await cargarTop10GastosInline(anio);
         
         // Cargar gráfico de pastel del mes
-        console.log('[INLINE] 📊 Cargando gráfico de pastel del mes...');
+        // console.log('[INLINE] 📊 Cargando gráfico de pastel del mes...');
         await cargarGraficoGastosMes();
         
         // Cargar gráfico de pastel del año
-        console.log('[INLINE] 📊 Cargando gráfico de pastel del año...');
+        // console.log('[INLINE] 📊 Cargando gráfico de pastel del año...');
         if (typeof window.cargarGraficoGastosAnio === 'function') {
             await window.cargarGraficoGastosAnio();
         } else {
-            console.error('[INLINE] window.cargarGraficoGastosAnio no está disponible');
+            // console.error('[INLINE] window.cargarGraficoGastosAnio no está disponible');
         }
         
-        console.log('[INLINE] ========== FIN CARGA GASTOS ==========');
+        // console.log('[INLINE] ========== FIN CARGA GASTOS ==========');
         
     } catch (error) {
-        console.error('[INLINE] ❌ ERROR FATAL:', error);
-        console.error('[INLINE] Stack:', error.stack);
+        // console.error('[INLINE] ❌ ERROR FATAL:', error);
+        // console.error('[INLINE] Stack:', error.stack);
         alert('❌ Error al cargar gastos: ' + error.message);
     }
 }
@@ -1298,10 +1298,10 @@ async function cargarTop10GastosInline(anio) {
     const tbody = document.getElementById('topGastosBody');
     
     try {
-        console.log('[INLINE] Cargando Top 10 para año', anio);
+        // console.log('[INLINE] Cargando Top 10 para año', anio);
         
         if (!tbody) {
-            console.error('[INLINE] ❌ No se encontró topGastosBody');
+            // console.error('[INLINE] ❌ No se encontró topGastosBody');
             alert('ERROR: No se encontró la tabla topGastosBody');
             return;
         }
@@ -1312,29 +1312,29 @@ async function cargarTop10GastosInline(anio) {
         const apiHost = window.location.hostname;
         const apiPort = apiProtocol === 'https:' ? '' : ':5001';
         const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/top10?anio=${anio}`;
-        console.log('[INLINE] URL:', url);
+        // console.log('[INLINE] URL:', url);
         
         const respuesta = await fetch(url);
-        console.log('[INLINE] Respuesta recibida - Status:', respuesta.status);
+        // console.log('[INLINE] Respuesta recibida - Status:', respuesta.status);
         
         if (!respuesta.ok) {
             throw new Error(`HTTP ${respuesta.status}: ${respuesta.statusText}`);
         }
         
         const datos = await respuesta.json();
-        console.log('[INLINE] Top 10 recibido:', datos);
-        console.log('[INLINE] Cantidad de gastos:', datos.top_gastos ? datos.top_gastos.length : 0);
+        // console.log('[INLINE] Top 10 recibido:', datos);
+        // console.log('[INLINE] Cantidad de gastos:', datos.top_gastos ? datos.top_gastos.length : 0);
         
         if (!datos.top_gastos || datos.top_gastos.length === 0) {
             tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;">⚠️ No hay datos disponibles</td></tr>';
-            console.log('[INLINE] No hay datos de top gastos');
+            // console.log('[INLINE] No hay datos de top gastos');
             return;
         }
         
         tbody.innerHTML = ''; // Limpiar antes de agregar
         
         datos.top_gastos.forEach((gasto, i) => {
-            console.log(`[INLINE] Agregando gasto ${i+1}: ${gasto.concepto} - ${gasto.total}€`);
+            // console.log(`[INLINE] Agregando gasto ${i+1}: ${gasto.concepto} - ${gasto.total}€`);
             
             const fila = document.createElement('tr');
             fila.style.cursor = 'pointer';
@@ -1393,10 +1393,10 @@ async function cargarTop10GastosInline(anio) {
             tbody.appendChild(fila);
         });
         
-        console.log(`[INLINE] ✅ Top 10 cargado correctamente: ${datos.top_gastos.length} items`);
+        // console.log(`[INLINE] ✅ Top 10 cargado correctamente: ${datos.top_gastos.length} items`);
         
     } catch (error) {
-        console.error('[INLINE] ❌ ERROR en Top 10:', error);
+        // console.error('[INLINE] ❌ ERROR en Top 10:', error);
         if (tbody) {
             tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;padding:1rem;">❌ Error: ${error.message}</td></tr>`;
         }
@@ -1421,11 +1421,11 @@ function formatearPorcentaje(valor) {
 
 // ===== MODAL DETALLES GASTO =====
 async function abrirModalDetallesGasto(concepto, anio) {
-    console.log('[MODAL] Abriendo modal para:', concepto, anio);
+    // console.log('[MODAL] Abriendo modal para:', concepto, anio);
     
     const modal = document.getElementById('modal-detalles-gasto');
     if (!modal) {
-        console.error('[MODAL] No se encontró el modal');
+        // console.error('[MODAL] No se encontró el modal');
         return;
     }
     
@@ -1444,7 +1444,7 @@ async function abrirModalDetallesGasto(concepto, anio) {
         const apiHost = window.location.hostname;
         const apiPort = apiProtocol === 'https:' ? '' : ':5001';
         const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/detalles?concepto=${encodeURIComponent(concepto)}&anio=${anio}`;
-        console.log('[MODAL] Cargando desde:', url);
+        // console.log('[MODAL] Cargando desde:', url);
         
         const respuesta = await fetch(url);
         if (!respuesta.ok) {
@@ -1452,7 +1452,7 @@ async function abrirModalDetallesGasto(concepto, anio) {
         }
         
         const datos = await respuesta.json();
-        console.log('[MODAL] Datos recibidos:', datos);
+        // console.log('[MODAL] Datos recibidos:', datos);
         
         // Actualizar estadísticas
         document.getElementById('modal-total').textContent = formatearImporte(datos.estadisticas.total);
@@ -1501,10 +1501,10 @@ async function abrirModalDetallesGasto(concepto, anio) {
             tbody.appendChild(fila);
         });
         
-        console.log(`[MODAL] ✅ Cargados ${datos.gastos_agrupados.length} gastos agrupados`);
+        // console.log(`[MODAL] ✅ Cargados ${datos.gastos_agrupados.length} gastos agrupados`);
         
     } catch (error) {
-        console.error('[MODAL] Error:', error);
+        // console.error('[MODAL] Error:', error);
         document.getElementById('modal-detalles-body').innerHTML = 
             `<tr><td colspan="5" style="text-align:center;padding:2rem;">❌ Error: ${error.message}</td></tr>`;
     }
@@ -1519,7 +1519,7 @@ function cerrarModalDetallesGasto() {
 
 // ===== MODAL DETALLES GASTO POR CATEGORÍA (MES) =====
 async function abrirModalDetallesGastoMes(categoria) {
-    console.log('[MODAL MES] Abriendo modal para categoría:', categoria);
+    // console.log('[MODAL MES] Abriendo modal para categoría:', categoria);
     
     const selectorFecha = document.getElementById('selector-fecha');
     if (!selectorFecha || !selectorFecha.value) {
@@ -1531,7 +1531,7 @@ async function abrirModalDetallesGastoMes(categoria) {
     
     const modal = document.getElementById('modal-detalles-gasto');
     if (!modal) {
-        console.error('[MODAL MES] No se encontró el modal');
+        // console.error('[MODAL MES] No se encontró el modal');
         return;
     }
     
@@ -1545,7 +1545,7 @@ async function abrirModalDetallesGastoMes(categoria) {
         const apiHost = window.location.hostname;
         const apiPort = apiProtocol === 'https:' ? '' : ':5001';
         const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&mes=${parseInt(mes)}`;
-        console.log('[MODAL MES] Cargando desde:', url);
+        // console.log('[MODAL MES] Cargando desde:', url);
         
         const respuesta = await fetch(url);
         if (!respuesta.ok) {
@@ -1553,7 +1553,7 @@ async function abrirModalDetallesGastoMes(categoria) {
         }
         
         const datos = await respuesta.json();
-        console.log('[MODAL MES] Datos recibidos:', datos);
+        // console.log('[MODAL MES] Datos recibidos:', datos);
         
         // Mostrar total sin puntuales como valor principal
         const hayPuntuales = datos.estadisticas.total !== datos.estadisticas.total_sin_puntuales;
@@ -1610,7 +1610,7 @@ async function abrirModalDetallesGastoMes(categoria) {
         });
         
     } catch (error) {
-        console.error('[MODAL MES] Error:', error);
+        // console.error('[MODAL MES] Error:', error);
         document.getElementById('modal-detalles-body').innerHTML = 
             `<tr><td colspan="5" style="text-align:center;padding:2rem;">❌ Error: ${error.message}</td></tr>`;
     }
@@ -1618,22 +1618,22 @@ async function abrirModalDetallesGastoMes(categoria) {
 
 // ===== MODAL DETALLES GASTO POR CATEGORÍA (AÑO) =====
 async function abrirModalDetallesGastoAnio(categoria) {
-    console.log('[MODAL ANIO] Abriendo modal para categoría:', categoria);
+    // console.log('[MODAL ANIO] Abriendo modal para categoría:', categoria);
     
     const selectorFecha = document.getElementById('selector-fecha');
     let anio;
     
     if (selectorFecha && selectorFecha.value) {
         [anio] = selectorFecha.value.split('-');
-        console.log('[MODAL ANIO] Usando año del selector:', anio);
+        // console.log('[MODAL ANIO] Usando año del selector:', anio);
     } else {
         anio = new Date().getFullYear();
-        console.log('[MODAL ANIO] Usando año actual:', anio);
+        // console.log('[MODAL ANIO] Usando año actual:', anio);
     }
     
     const modal = document.getElementById('modal-detalles-gasto');
     if (!modal) {
-        console.error('[MODAL ANIO] No se encontró el modal');
+        // console.error('[MODAL ANIO] No se encontró el modal');
         return;
     }
     
@@ -1647,7 +1647,7 @@ async function abrirModalDetallesGastoAnio(categoria) {
         const apiHost = window.location.hostname;
         const apiPort = apiProtocol === 'https:' ? '' : ':5001';
         const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
-        console.log('[MODAL ANIO] Cargando desde:', url);
+        // console.log('[MODAL ANIO] Cargando desde:', url);
         
         const respuesta = await fetch(url);
         if (!respuesta.ok) {
@@ -1655,7 +1655,7 @@ async function abrirModalDetallesGastoAnio(categoria) {
         }
         
         const datos = await respuesta.json();
-        console.log('[MODAL ANIO] Datos recibidos:', datos);
+        // console.log('[MODAL ANIO] Datos recibidos:', datos);
         
         // Mostrar total sin puntuales como valor principal
         const hayPuntuales = datos.estadisticas.total !== datos.estadisticas.total_sin_puntuales;
@@ -1712,7 +1712,7 @@ async function abrirModalDetallesGastoAnio(categoria) {
         });
         
     } catch (error) {
-        console.error('[MODAL ANIO] Error:', error);
+        // console.error('[MODAL ANIO] Error:', error);
         document.getElementById('modal-detalles-body').innerHTML = 
             `<tr><td colspan="5" style="text-align:center;padding:2rem;">❌ Error: ${error.message}</td></tr>`;
     }
@@ -1733,12 +1733,12 @@ async function cargarGraficoGastosMes() {
     try {
         const selectorFecha = document.getElementById('selector-fecha');
         if (!selectorFecha || !selectorFecha.value) {
-            console.warn('[GRAFICO] Selector de fecha no disponible');
+            // console.warn('[GRAFICO] Selector de fecha no disponible');
             return;
         }
         
         const [anio, mes] = selectorFecha.value.split('-');
-        console.log('[GRAFICO] Cargando gráfico para:', mes, '/', anio);
+        // console.log('[GRAFICO] Cargando gráfico para:', mes, '/', anio);
         
         const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
@@ -1746,21 +1746,21 @@ async function cargarGraficoGastosMes() {
         const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/gastos/por-categoria-mes?anio=${anio}&mes=${parseInt(mes)}`);
         
         if (!response.ok) {
-            console.error('[GRAFICO] Error en respuesta:', response.status);
+            // console.error('[GRAFICO] Error en respuesta:', response.status);
             return;
         }
         
         const datos = await response.json();
-        console.log('[GRAFICO] Datos recibidos:', datos);
+        // console.log('[GRAFICO] Datos recibidos:', datos);
         
         if (!datos.categorias || datos.categorias.length === 0) {
-            console.log('[GRAFICO] No hay datos para mostrar');
+            // console.log('[GRAFICO] No hay datos para mostrar');
             return;
         }
         
         const canvas = document.getElementById('grafico-gastos-mes');
         if (!canvas) {
-            console.error('[GRAFICO] Canvas no encontrado');
+            // console.error('[GRAFICO] Canvas no encontrado');
             return;
         }
         
@@ -1802,7 +1802,7 @@ async function cargarGraficoGastosMes() {
                     if (elements.length > 0) {
                         const index = elements[0].index;
                         const categoria = labels[index];
-                        console.log('[GRAFICO MES] Click en:', categoria);
+                        // console.log('[GRAFICO MES] Click en:', categoria);
                         abrirModalDetallesGastoMes(categoria);
                     }
                 },
@@ -1843,10 +1843,10 @@ async function cargarGraficoGastosMes() {
             }
         });
         
-        console.log('[GRAFICO] Gráfico de pastel (mes) renderizado');
+        // console.log('[GRAFICO] Gráfico de pastel (mes) renderizado');
         
     } catch (error) {
-        console.error('[GRAFICO] Error al cargar gráfico:', error);
+        // console.error('[GRAFICO] Error al cargar gráfico:', error);
     }
 }
 
@@ -1854,11 +1854,11 @@ async function cargarGraficoGastosMes() {
 let chartGastosMeses = null;
 
 window.abrirModalGraficosGastos = async function() {
-    console.log('[MODAL GRAFICOS GASTOS] Abriendo modal...');
+    // console.log('[MODAL GRAFICOS GASTOS] Abriendo modal...');
     
     const modal = document.getElementById('modal-graficos-gastos');
     if (!modal) {
-        console.error('[MODAL GRAFICOS GASTOS] Modal no encontrado');
+        // console.error('[MODAL GRAFICOS GASTOS] Modal no encontrado');
         return;
     }
     
@@ -1879,7 +1879,7 @@ async function cargarGraficoGastosMensual(categoria) {
             anio = new Date().getFullYear();
         }
         
-        console.log('[GRAFICO MENSUAL] Cargando para:', categoria, anio);
+        // console.log('[GRAFICO MENSUAL] Cargando para:', categoria, anio);
         
         const apiProtocol = window.location.protocol;
         const apiHost = window.location.hostname;
@@ -1887,16 +1887,16 @@ async function cargarGraficoGastosMensual(categoria) {
         const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`);
         
         if (!response.ok) {
-            console.error('[GRAFICO MENSUAL] Error en respuesta:', response.status);
+            // console.error('[GRAFICO MENSUAL] Error en respuesta:', response.status);
             return;
         }
         
         const datos = await response.json();
-        console.log('[GRAFICO MENSUAL] Datos recibidos:', datos);
+        // console.log('[GRAFICO MENSUAL] Datos recibidos:', datos);
         
         const canvas = document.getElementById('chart-gastos-meses');
         if (!canvas) {
-            console.error('[GRAFICO MENSUAL] Canvas no encontrado');
+            // console.error('[GRAFICO MENSUAL] Canvas no encontrado');
             return;
         }
         
@@ -1967,10 +1967,10 @@ async function cargarGraficoGastosMensual(categoria) {
             }
         });
         
-        console.log('[GRAFICO MENSUAL] Gráfico renderizado');
+        // console.log('[GRAFICO MENSUAL] Gráfico renderizado');
         
     } catch (error) {
-        console.error('[GRAFICO MENSUAL] Error:', error);
+        // console.error('[GRAFICO MENSUAL] Error:', error);
     }
 }
 
@@ -2002,11 +2002,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-console.log('[INLINE] Funciones definidas (incluido modal y gráfico del mes)');
+// console.log('[INLINE] Funciones definidas (incluido modal y gráfico del mes)');
 
 // ===== INFORME DE SITUACIÓN =====
 async function abrirModalInformeSituacion() {
-    console.log('[INFORME] Abriendo modal de informe de situación');
+    // console.log('[INFORME] Abriendo modal de informe de situación');
     
     const selectorFecha = document.getElementById('selector-fecha');
     if (!selectorFecha || !selectorFecha.value) {
@@ -2027,7 +2027,7 @@ async function abrirModalInformeSituacion() {
         }
         
         const data = await response.json();
-        console.log('[INFORME] Datos recibidos:', data);
+        // console.log('[INFORME] Datos recibidos:', data);
         
         // Actualizar modal
         document.getElementById('informe-periodo').textContent = data.periodo;
@@ -2121,7 +2121,7 @@ async function abrirModalInformeSituacion() {
         document.getElementById('modal-informe-situacion').style.display = 'flex';
         
     } catch (error) {
-        console.error('[INFORME] Error al cargar informe:', error);
+        // console.error('[INFORME] Error al cargar informe:', error);
         alert('Error al generar el informe: ' + error.message);
     }
 }
@@ -2155,7 +2155,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-console.log('[INFORME] Sistema de informe de situación cargado');
+// console.log('[INFORME] Sistema de informe de situación cargado');
 
 // ===== SIMULADOR FINANCIERO =====
 // Mostrar botón del simulador en todos los servidores
@@ -2163,7 +2163,7 @@ const btnSimulador = document.getElementById('btn-simulador');
 if (btnSimulador) {
     btnSimulador.style.display = 'inline-block';
     btnSimulador.addEventListener('click', abrirModalSimulador);
-    console.log('[SIMULADOR] Botón habilitado en', window.location.hostname);
+    // console.log('[SIMULADOR] Botón habilitado en', window.location.hostname);
 }
 
 function abrirModalSimulador() {
@@ -2206,7 +2206,7 @@ async function ejecutarSimulacion() {
         const apiProtocol = window.location.protocol;
         const apiPort = apiProtocol === 'https:' ? '' : ':5001';
         const apiUrl = `${apiProtocol}//${window.location.hostname}${apiPort}/api/simulador-financiero`;
-        console.log('[SIMULADOR] Llamando a:', apiUrl);
+        // console.log('[SIMULADOR] Llamando a:', apiUrl);
         
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -2221,7 +2221,7 @@ async function ejecutarSimulacion() {
         }
         
         const data = await response.json();
-        console.log('[SIMULADOR] Resultados:', data);
+        // console.log('[SIMULADOR] Resultados:', data);
         
         // Mostrar resultados
         document.getElementById('sim-resultados').style.display = 'block';
@@ -2261,7 +2261,7 @@ async function ejecutarSimulacion() {
         document.getElementById('sim-eq-pct').textContent = `${data.equilibrio.pct_incremento.toFixed(2)}%`;
         
     } catch (error) {
-        console.error('[SIMULADOR] Error:', error);
+        // console.error('[SIMULADOR] Error:', error);
         alert('Error al ejecutar simulación: ' + error.message);
     }
 }
@@ -2283,7 +2283,7 @@ async function aplicarEstrategia() {
     
     const [anio, mes] = selectorFecha.value.split('-');
     
-    console.log('[ESTRATEGIA] Aplicando estrategia:', estrategiaSeleccionada);
+    // console.log('[ESTRATEGIA] Aplicando estrategia:', estrategiaSeleccionada);
     
     // Obtener datos reales primero
     const apiProtocol = window.location.protocol;
@@ -2323,7 +2323,7 @@ async function aplicarEstrategia() {
         const balanceReal = dataBase.real.balance;
         const deficit = Math.abs(balanceReal);
         
-        console.log('[ESTRATEGIA] Situación actual:', { ventasReales, gastosReales, balanceReal, deficit });
+        // console.log('[ESTRATEGIA] Situación actual:', { ventasReales, gastosReales, balanceReal, deficit });
         
         // 2. Definir todas las estrategias
         const estrategias = {
@@ -2389,7 +2389,7 @@ async function aplicarEstrategia() {
         
         // 3. Si es AUTO, calcular la mejor
         if (estrategiaSeleccionada === 'mejor') {
-            console.log('[ESTRATEGIA] Calculando mejor estrategia...');
+            // console.log('[ESTRATEGIA] Calculando mejor estrategia...');
             
             let mejorEstrategia = null;
             let mejorBalance = -Infinity;
@@ -2411,7 +2411,7 @@ async function aplicarEstrategia() {
                 
                 const data = await response.json();
                 
-                console.log(`[ESTRATEGIA] ${estrategia.nombre}: Balance=${data.simulado.balance.toFixed(2)}`);
+                // console.log(`[ESTRATEGIA] ${estrategia.nombre}: Balance=${data.simulado.balance.toFixed(2)}`);
                 
                 if (data.simulado.balance > mejorBalance) {
                     mejorBalance = data.simulado.balance;
@@ -2422,7 +2422,7 @@ async function aplicarEstrategia() {
                 }
             }
             
-            console.log('[ESTRATEGIA] Mejor encontrada:', mejorEstrategia.nombre);
+            // console.log('[ESTRATEGIA] Mejor encontrada:', mejorEstrategia.nombre);
             estrategiaAplicar = mejorEstrategia;
         } else {
             // Aplicar la estrategia seleccionada
@@ -2492,10 +2492,10 @@ async function aplicarEstrategia() {
         document.getElementById('sim-eq-incremento').textContent = formatearImporte(data.equilibrio.incremento_necesario);
         document.getElementById('sim-eq-pct').textContent = `${data.equilibrio.pct_incremento.toFixed(2)}%`;
         
-        console.log(`[ESTRATEGIA] ✅ Estrategia aplicada: ${estrategiaAplicar.nombre}`);
+        // console.log(`[ESTRATEGIA] ✅ Estrategia aplicada: ${estrategiaAplicar.nombre}`);
         
     } catch (error) {
-        console.error('[AUTO-OPT] Error:', error);
+        // console.error('[AUTO-OPT] Error:', error);
         alert('Error al optimizar: ' + error.message);
     }
 }
@@ -2510,7 +2510,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-console.log('[SIMULADOR] Sistema de simulador financiero cargado');
+// console.log('[SIMULADOR] Sistema de simulador financiero cargado');
 </script>
 
 <!-- Módulo de estadísticas de gastos -->

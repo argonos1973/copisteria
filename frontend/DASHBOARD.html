@@ -327,7 +327,7 @@
                     `Hola ${sesion.usuario}, bienvenido a ${sesion.empresa}`;
                     
             } catch (error) {
-                console.error('Error cargando sesión:', error);
+                // console.error('Error cargando sesión:', error);
                 window.location.href = '/LOGIN.html';
             }
         }
@@ -345,7 +345,7 @@
                 document.documentElement.style.setProperty('--color-secundario', branding.colores.secundario);
                 
             } catch (error) {
-                console.error('Error cargando branding:', error);
+                // console.error('Error cargando branding:', error);
             }
         }
 
@@ -376,7 +376,7 @@
                 container.style.display = 'grid';
                 
             } catch (error) {
-                console.error('Error cargando módulos:', error);
+                // console.error('Error cargando módulos:', error);
                 document.getElementById('loading').innerHTML = 
                     '<p >❌ Error cargando módulos</p>';
             }
@@ -407,7 +407,7 @@
                 await fetch('/api/auth/logout', { method: 'POST' });
                 window.location.href = '/LOGIN.html';
             } catch (error) {
-                console.error('Error en logout:', error);
+                // console.error('Error en logout:', error);
                 window.location.href = '/LOGIN.html';
             }
         }

@@ -763,7 +763,7 @@
                 renderizarEmpresas(empresas);
                 
             } catch (error) {
-                console.error('Error:', error);
+                // console.error('Error:', error);
                 document.getElementById('empresas-container').innerHTML = `
                     <div class="no-empresas">
                         <i class="fas fa-exclamation-triangle"></i>
@@ -1109,7 +1109,7 @@
                 }
                 
             } catch (error) {
-                console.error('Error:', error);
+                // console.error('Error:', error);
                 mostrarAlerta('Error de conexión con el servidor', 'error');
             } finally {
                 submitBtn.disabled = false;
@@ -1163,7 +1163,7 @@
                 }
                 
             } catch (error) {
-                console.error('Error:', error);
+                // console.error('Error:', error);
                 mostrarAlerta('Error de conexión con el servidor', 'error');
             } finally {
                 submitBtn.disabled = false;

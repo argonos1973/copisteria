@@ -10,7 +10,7 @@
         }
         
         if (typeof applyTheme !== 'function') {
-            console.warn('[AUTO-BRANDING] ⚠️ branding.js no disponible (esto es normal en páginas sin tema)');
+            console.error('[AUTO-BRANDING] branding.js no disponible');
             return;
         }
         

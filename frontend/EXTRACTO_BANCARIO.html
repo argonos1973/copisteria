@@ -417,7 +417,7 @@
                     loadTransactions();
                 }
             } catch (error) {
-                console.error('Error:', error);
+                // console.error('Error:', error);
                 document.getElementById('accounts-container').innerHTML = `
                     <div class="no-data">
                         <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ffc107; margin-bottom: 15px;"></i>
@@ -499,7 +499,7 @@
                 renderTransactions();
                 calculateStats();
             } catch (error) {
-                console.error('Error:', error);
+                // console.error('Error:', error);
                 container.innerHTML = `
                     <div class="no-data">
                         <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #ffc107; margin-bottom: 15px;"></i>
@@ -600,7 +600,7 @@
                 
                 document.getElementById('last-sync').textContent = new Date().toLocaleString('es-ES');
             } catch (error) {
-                console.error('Error:', error);
+                // console.error('Error:', error);
                 alert('Error al sincronizar las transacciones');
             } finally {
                 btn.innerHTML = originalText;

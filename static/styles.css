@@ -3668,4 +3668,194 @@ table input[type="number"] {
   background-color: var(--modal-bg, var(--bg, #1b1b1b)) !important;
   color: var(--modal-text, var(--text, #e6e6e6)) !important;
 }
+
+/* Iconos de estado AEAT */
+.aeat-icon-enviado {
+  color: #28a745 !important;
+  cursor: help;
+}
+
+.aeat-icon-rechazado {
+  color: #dc3545 !important;
+  cursor: help;
+}
+
+.aeat-icon-pendiente {
+  color: #ffc107 !important;
+  cursor: help;
+}
+
+.aeat-icon-desconocido {
+  color: #6c757d !important;
+  cursor: help;
+}
+
+/* Hover effect para iconos AEAT */
+.aeat-icon-enviado:hover,
+.aeat-icon-rechazado:hover,
+.aeat-icon-pendiente:hover,
+.aeat-icon-desconocido:hover {
+  opacity: 0.8;
+  transform: scale(1.1);
+  transition: all 0.2s ease;
+}
+
+/* Iconos AEAT clickeables */
+.aeat-icon-clickable {
+  cursor: pointer !important;
+}
+
+/* Modal AEAT específico */
+.aeat-modal-content {
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.aeat-info-container {
+  padding: 20px;
+}
+
+.aeat-info-header {
+  text-align: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--primary, #3498db);
+  padding-bottom: 15px;
+}
+
+.aeat-info-header h3 {
+  margin: 0 0 5px 0;
+  color: var(--text, #333);
+  font-size: 1.4em;
+}
+
+.aeat-razón-social {
+  margin: 0;
+  color: var(--text-muted, #666);
+  font-style: italic;
+}
+
+.aeat-info-body {
+  margin-bottom: 25px;
+}
+
+.aeat-field-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  padding: 10px;
+  background: var(--bg-elevated, #f8f9fa);
+  border-radius: 8px;
+  border-left: 4px solid var(--primary, #3498db);
+}
+
+.aeat-field-group label {
+  font-weight: 600;
+  min-width: 150px;
+  color: var(--text, #333);
+}
+
+.aeat-field-group label i {
+  margin-right: 8px;
+  color: var(--primary, #3498db);
+}
+
+.aeat-estado-badge {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.aeat-estado-enviado {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.aeat-estado-rechazado {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.aeat-estado-pendiente {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.aeat-csv-code {
+  font-family: 'Courier New', monospace;
+  background: var(--bg, #fff);
+  padding: 5px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #ddd);
+  margin-right: 10px;
+  flex: 1;
+}
+
+.btn-copy-csv {
+  background: var(--primary, #3498db);
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-copy-csv:hover {
+  background: var(--primary-dark, #2980b9);
+}
+
+.aeat-qr-section {
+  text-align: center;
+  padding: 20px;
+  background: var(--bg-elevated, #f8f9fa);
+  border-radius: 12px;
+  margin-top: 20px;
+}
+
+.aeat-qr-section h4 {
+  margin: 0 0 15px 0;
+  color: var(--text, #333);
+}
+
+.aeat-qr-container {
+  display: inline-block;
+  padding: 5px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 10px;
+}
+
+.aeat-qr-image {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
+.aeat-qr-help {
+  margin: 0;
+  color: var(--text-muted, #666);
+  font-size: 0.9em;
+}
+
+.aeat-no-qr {
+  padding: 40px;
+  color: var(--text-muted, #666);
+}
+
+.aeat-no-qr i {
+  display: block;
+  margin-bottom: 15px;
+}
+
+.aeat-no-qr p {
+  margin: 0;
+  font-style: italic;
+}
 }

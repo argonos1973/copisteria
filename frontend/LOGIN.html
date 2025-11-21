@@ -323,7 +323,7 @@
                 mostrarCargando(false);
                 
             } catch (error) {
-                console.error('Error:', error);
+                // console.error('Error:', error);
                 mostrarAlerta('Error obteniendo empresas', 'error');
                 mostrarCargando(false);
             }
@@ -350,7 +350,7 @@
                         empresa.colores = branding.colores;
                     }
                 } catch (error) {
-                    console.error(`Error cargando branding de ${empresa.codigo}:`, error);
+                    // console.error(`Error cargando branding de ${empresa.codigo}:`, error);
                 }
                 
                 item.onclick = () => realizarLogin(empresa.codigo);
@@ -422,13 +422,13 @@
                 password: currentPassword,
                 empresa: empresaCodigo
             };
-            console.log('🔍 DEBUG - Datos de login:', {
-                username: loginData.username,
-                password: '***' + loginData.password.slice(-3),
-                empresa: loginData.empresa,
-                username_length: loginData.username.length,
-                password_length: loginData.password.length
-            });
+            // console.log('🔍 DEBUG - Datos de login:', {
+            //     username: loginData.username,
+            //     password: '***' + loginData.password.slice(-3),
+            //     empresa: loginData.empresa,
+            //     username_length: loginData.username.length,
+            //     password_length: loginData.password.length
+            // });
             
             try {
                 // Usar SessionManager para login (compatible con Cloudflare)
@@ -452,7 +452,7 @@
                 }
                 
             } catch (error) {
-                console.error('Error:', error);
+                // console.error('Error:', error);
                 mostrarAlerta('Error de conexión con el servidor', 'error');
                 volverLogin();
             } finally {

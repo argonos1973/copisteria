@@ -225,7 +225,7 @@ def generar_reporte_limpieza():
     try:
         result = subprocess.run(['du', '-sh', '/var/www/html'], capture_output=True, text=True)
         tamaño_total = result.stdout.split()[0] if result.stdout else "N/A"
-    except:
+    except (IOError, OSError):
         tamaño_total = "N/A"
     
     reporte = f"""

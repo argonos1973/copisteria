@@ -210,7 +210,7 @@ def main():
     finally:
         try:
             conn.close()
-        except:
+        except (IOError, OSError):
             pass
 
 if __name__ == '__main__':

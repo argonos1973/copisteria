@@ -66,7 +66,7 @@
     function rellenarEjercicio() {
       const ejercicioSelect = document.getElementById('ejercicio');
       if (!ejercicioSelect) {
-        console.error('Elemento con id "ejercicio" no encontrado.');
+        // console.error('Elemento con id "ejercicio" no encontrado.');
         return;
       }
       const currentYear = new Date().getFullYear();
@@ -88,7 +88,7 @@
     function seleccionarTrimestreActual() {
       const trimestreSelect = document.getElementById('trimestre');
       if (!trimestreSelect) {
-        console.error('Elemento con id "trimestre" no encontrado.');
+        // console.error('Elemento con id "trimestre" no encontrado.');
         return;
       }
       const currentMonth = new Date().getMonth() + 1; // getMonth() es 0-based
@@ -200,7 +200,7 @@
         // Mostrar notificación de éxito
         mostrarNotificacion('Exportación completada exitosamente.');
       } catch (error) {
-        console.error('Error al exportar:', error);
+        // console.error('Error al exportar:', error);
         mostrarNotificacion(`Hubo un error al exportar los datos: ${error.message}`, true);
 
         const exportarBtn = document.getElementById('exportar-btn');
@@ -218,7 +218,7 @@
       if (exportarBtn) {
         exportarBtn.addEventListener('click', exportarSeleccion);
       } else {
-        console.error('Botón con id "exportar-btn" no encontrado.');
+        // console.error('Botón con id "exportar-btn" no encontrado.');
       }
       
       // Aplicar permisos a los elementos

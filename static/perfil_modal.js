@@ -41,14 +41,6 @@ async function abrirModalPerfil() {
         
         // Mostrar modal
         document.getElementById('modal-perfil').style.display = 'block';
-        
-        // Aplicar tema a la modal (esperar un poco más para que el DOM esté listo)
-        setTimeout(() => {
-            if (typeof window.applyThemeToModals === 'function') {
-                window.applyThemeToModals();
-                console.log('[PERFIL] Estilos de tema aplicados a modal');
-            }
-        }, 150);
     } catch (error) {
         console.error('Error cargando perfil:', error);
         alert('Error al cargar datos del perfil');
@@ -314,14 +306,6 @@ async function cambiarPlantillaUsuario(plantilla, clickedElement) {
             if (typeof applyTheme === 'function') {
                 await applyTheme(result.colores);
                 console.log(`✅ Plantilla "${plantilla}" aplicada al documento`);
-                
-                // Reaplicar estilos a las modales inmediatamente
-                setTimeout(() => {
-                    if (typeof window.applyThemeToModals === 'function') {
-                        window.applyThemeToModals();
-                        console.log(`✅ Estilos de modales actualizados para "${plantilla}"`);
-                    }
-                }, 100);
             } else {
                 console.error('❌ Función applyTheme no disponible');
             }
@@ -357,13 +341,6 @@ async function abrirSelectorAvatares() {
     modal.style.display = 'block';
     await cargarAvataresPredefinidos();
     mostrarAvataresPredefinidos();
-    
-    // Aplicar tema a la modal
-    setTimeout(() => {
-        if (typeof window.applyThemeToModals === 'function') {
-            window.applyThemeToModals();
-        }
-    }, 50);
 }
 
 function cerrarSelectorAvatares() {

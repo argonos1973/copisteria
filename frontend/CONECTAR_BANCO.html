@@ -218,7 +218,7 @@
                 displayAccounts(accounts);
                 
             } catch (error) {
-                console.error('Error:', error);
+                // console.error('Error:', error);
                 document.getElementById('accountsList').innerHTML = 
                     '<p style="text-align:center; color:#666;">No hay cuentas conectadas</p>';
             }
@@ -273,18 +273,18 @@
                 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    console.error('Error response:', errorData);
+                    // console.error('Error response:', errorData);
                     throw new Error(errorData.error || 'Error creando link token');
                 }
                 
                 const data = await response.json();
-                console.log('Link token recibido:', data);
+                // console.log('Link token recibido:', data);
                 
                 // Inicializar Plaid Link
                 linkHandler = Plaid.create({
                     token: data.link_token,
                     onSuccess: async (public_token, metadata) => {
-                        console.log('Conexión exitosa:', metadata);
+                        // console.log('Conexión exitosa:', metadata);
                         
                         // Intercambiar token
                         try {
@@ -299,7 +299,7 @@
                             
                             if (!exchangeResponse.ok) {
                                 const errorData = await exchangeResponse.json();
-                                console.error('Error del servidor:', errorData);
+                                // console.error('Error del servidor:', errorData);
                                 throw new Error(errorData.error || 'Error guardando conexión');
                             }
                             
@@ -310,13 +310,13 @@
                             loadAccounts();
                             
                         } catch (error) {
-                            console.error('Error completo:', error);
+                            // console.error('Error completo:', error);
                             showMessage(`Error guardando la conexión bancaria: ${error.message}`, 'error');
                         }
                     },
                     onExit: (err, metadata) => {
                         if (err) {
-                            console.error('Error en Plaid Link:', err);
+                            // console.error('Error en Plaid Link:', err);
                             showMessage('Error conectando con el banco', 'error');
                         }
                     }
@@ -326,7 +326,7 @@
                 linkHandler.open();
                 
             } catch (error) {
-                console.error('Error:', error);
+                // console.error('Error:', error);
                 showMessage('Error iniciando la conexión bancaria', 'error');
             }
         }

@@ -128,8 +128,7 @@ function crearCardProveedor(proveedor) {
             <button class="btn btn-sm btn-primary" onclick="editarProveedor(${proveedor.id})">
                 <i class="fas fa-edit"></i> Editar
             </button>
-            <button class="btn btn-sm btn-danger" onclick="eliminarProveedor(${proveedor.id}, '${proveedor.nombre.replace(/'/g, "\\'")}')"
-                    title="Eliminar proveedor">
+            <button class="btn btn-sm btn-danger" onclick="eliminarProveedor(${proveedor.id}, '${proveedor.nombre}')">
                 <i class="fas fa-trash"></i> Eliminar
             </button>
         </div>
@@ -147,12 +146,10 @@ function filtrarProveedores() {
     
     const proveedoresFiltrados = proveedores.filter(proveedor => {
         // Filtro de búsqueda
-        const coincideBusqueda = !busqueda || 
+        return !busqueda || 
             proveedor.nombre.toLowerCase().includes(busqueda) ||
             proveedor.nif.toLowerCase().includes(busqueda) ||
             (proveedor.email && proveedor.email.toLowerCase().includes(busqueda));
-        
-        return coincideBusqueda;
     });
     
     // Renderizar solo los filtrados
@@ -281,7 +278,7 @@ async function guardarProveedor() {
 // ============================================================================
 
 window.eliminarProveedor = async function(id, nombre) {
-    if (!confirm(`¿Estás seguro de eliminar el proveedor "${nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+    if (!confirm(`¿Estás seguro de que deseas eliminar el proveedor "${nombre}"?\n\nEsta acción no se puede deshacer.`)) {
         return;
     }
     
@@ -300,6 +297,8 @@ window.eliminarProveedor = async function(id, nombre) {
         }
     } catch (error) {
         console.error('[Proveedores] Error:', error);
-        mostrarNotificacion('Error al eliminar: ' + error.message, 'error');
+        mostrarNotificacion('Error: ' + error.message, 'error');
     }
 };
+
+// Versión actualizada - referencias a 'activo' eliminadas

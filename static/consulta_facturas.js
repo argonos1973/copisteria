@@ -243,7 +243,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         tbody.innerHTML = '';
 
         if (items.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="11" class="text-center">No se encontraron resultados</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="text-center">No se encontraron resultados</td></tr>';
             return;
         }
 
@@ -254,9 +254,6 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
 
         items.forEach(factura => {
             const row = document.createElement('tr');
-            
-            // Debug: verificar datos AEAT
-            console.log(`Factura ${factura.numero}: CSV=${factura.csv}, Estado=${factura.estado_envio}, ID=${factura.id_envio_aeat}`);
             
             // Debug: verificar explícitamente el valor de enviado para cada factura
             console.log(`Factura ID: ${factura.id}, Número: ${factura.numero}, Enviado: ${factura.enviado}, Tipo: ${typeof factura.enviado}`);
@@ -311,6 +308,20 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 }
             }
 
+            // Generar icono de estado AEAT
+            let eatIconHtml = '';
+            if (!['A'].includes(factura.estado)) {
+                if (factura.estado_envio === 'ENVIADO' || factura.id_envio_aeat) {
+                    eatIconHtml = `<i class="fas fa-check-circle aeat-icon-enviado aeat-icon-clickable" data-factura-id="${factura.id}" title="Clic para ver detalles AEAT"></i>`;
+                } else if (factura.estado_envio === 'RECHAZADO') {
+                    eatIconHtml = `<i class="fas fa-times-circle aeat-icon-rechazado aeat-icon-clickable" data-factura-id="${factura.id}" title="Clic para ver detalles AEAT"></i>`;
+                } else if (factura.estado_envio === 'PENDIENTE' || !factura.estado_envio) {
+                    eatIconHtml = `<i class="fas fa-clock aeat-icon-pendiente aeat-icon-clickable" data-factura-id="${factura.id}" title="Clic para ver detalles AEAT"></i>`;
+                } else {
+                    eatIconHtml = `<i class="fas fa-question-circle aeat-icon-desconocido aeat-icon-clickable" data-factura-id="${factura.id}" title="Clic para ver detalles AEAT"></i>`;
+                }
+            }
+
             row.innerHTML = `
                 <td>${formatDateToDisplay(factura.fecha)}</td>
                 <td title="${tooltipText}" style="${vencimientoStyle}">${vencimientoDisplay}</td>
@@ -322,22 +333,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 <td class="text-right">${cobradoRaw} €</td>
                 <td class="text-right">${totalRaw} €</td>
                 <td class="text-center ${getEstadoClassFactura(factura.estado)}">${getEstadoFormateadoFactura(factura.estado)}</td>
-                <td class="text-center">
-                    ${factura.csv || factura.estado_envio ? 
-                        `<i class="fas fa-info-circle aeat-icon ${factura.estado_envio === 'ENVIADO' ? 'text-success' : factura.estado_envio === 'ERROR' ? 'text-danger' : 'text-warning'}" 
-                            style="cursor: pointer;" 
-                            data-factura='${JSON.stringify({
-                                csv: factura.csv || '',
-                                estado_envio: factura.estado_envio || '',
-                                id_envio_aeat: factura.id_envio_aeat || '',
-                                numero: factura.numero,
-                                codigo_qr: factura.codigo_qr || null
-                            }).replace(/'/g, "&apos;")}'
-                            title="${factura.estado_envio === 'ENVIADO' ? 'Enviado a AEAT' : factura.estado_envio === 'ERROR' ? 'Error en envío' : 'Info AEAT disponible'}"
-                        ></i>` : 
-                        '<span class="text-muted" title="Sin información AEAT">-</span>'
-                    }
-                </td>
+                <td class="text-center">${eatIconHtml}</td>
                 <td class="text-center">
                     ${(['A'].includes(factura.estado)) ? '' : `<i class=\"fas fa-print print-icon\" style=\"cursor: pointer;\" data-id=\"${factura.id}\"></i>`}
                 </td>
@@ -472,12 +468,12 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             }
             
             // Añadir evento de clic para mostrar información AEAT
-            const aeatIcon = row.querySelector('.aeat-icon');
+            const aeatIcon = row.querySelector('.aeat-icon-clickable');
             if (aeatIcon) {
                 aeatIcon.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const facturaData = JSON.parse(aeatIcon.getAttribute('data-factura').replace(/&apos;/g, "'"));
-                    mostrarModalAEAT(facturaData);
+                    e.stopPropagation(); // Evitar que se propague al evento de la fila
+                    const facturaId = aeatIcon.getAttribute('data-factura-id');
+                    mostrarModalAEAT(facturaId, factura);
                 });
             }
             
@@ -640,149 +636,149 @@ document.addEventListener("DOMContentLoaded", function () {
     if (prevBtn) prevBtn.addEventListener('click', (e) => { e.preventDefault(); gotoPrevPage(); });
     const nextBtn = document.getElementById('nextPageFacturas');
     if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); gotoNextPage(); });
-});
 
-// Función para mostrar modal con información de la AEAT
-window.mostrarModalAEAT = function(facturaData) {
-    const modal = document.getElementById('modalAEAT');
-    const contenido = document.getElementById('contenidoAEAT');
-    
-    let html = `
-        <div class="aeat-content">
-            <h3>Factura ${facturaData.numero}</h3>
-    `;
-    
-    if (facturaData.csv) {
-        html += `
-            <div class="aeat-card aeat-card-bordered">
-                <div class="aeat-card-header">
-                    <i class="fas fa-check-circle text-success"></i>
-                    <strong>CSV (Código Seguro de Verificación)</strong>
-                </div>
-                <div class="aeat-code-box">
-                    ${facturaData.csv}
-                </div>
-                <div class="aeat-help-text">
-                    Este código identifica de forma única la factura en el sistema de la AEAT.
-                </div>
-            </div>
-        `;
-    }
-    
-    if (facturaData.estado_envio && facturaData.estado_envio !== 'SIMULADO') {
-        const estadoClass = facturaData.estado_envio === 'ENVIADO' ? 'estado-enviado' : 
-                           facturaData.estado_envio === 'ERROR' ? 'estado-error' : 'estado-pendiente';
-        const estadoColorClass = facturaData.estado_envio === 'ENVIADO' ? 'text-success' : 
-                                facturaData.estado_envio === 'ERROR' ? 'text-danger' : 'text-warning';
-        const estadoIcono = facturaData.estado_envio === 'ENVIADO' ? 'fa-check-circle' : 
-                           facturaData.estado_envio === 'ERROR' ? 'fa-times-circle' : 'fa-clock';
-        
-        html += `
-            <div class="aeat-card aeat-card-bordered ${estadoClass}">
-                <div class="aeat-estado-header">
-                    <i class="fas ${estadoIcono} ${estadoColorClass}"></i>
-                    <strong>Estado de Envío:</strong>
-                </div>
-                <div class="aeat-estado-valor">
-                    ${facturaData.estado_envio}
-                </div>
-            </div>
-        `;
-    }
-    
-    if (facturaData.id_envio_aeat && facturaData.id_envio_aeat !== 'SIMULADO') {
-        html += `
-            <div class="aeat-card">
-                <div class="aeat-id-header">
-                    <strong><i class="fas fa-hashtag"></i> ID de Envío AEAT:</strong>
-                </div>
-                <div class="aeat-id-valor">
-                    ${facturaData.id_envio_aeat}
-                </div>
-            </div>
-        `;
-    }
-    
-    // Mostrar código QR si existe
-    if (facturaData.codigo_qr) {
-        html += `
-            <div class="aeat-card aeat-qr-container">
-                <div class="aeat-qr-header">
-                    <strong><i class="fas fa-qrcode"></i> Código QR VeriFactu</strong>
-                </div>
-                <div class="aeat-qr-box">
-                    <img src="data:image/png;base64,${facturaData.codigo_qr}" alt="QR VeriFactu" />
-                </div>
-                <div class="aeat-help-text">
-                    <i class="fas fa-info-circle"></i>
-                    Escanea este código QR para verificar la factura en la AEAT
-                </div>
-            </div>
-        `;
-    }
-    
-    if (!facturaData.csv && 
-        (!facturaData.estado_envio || facturaData.estado_envio === 'SIMULADO') && 
-        (!facturaData.id_envio_aeat || facturaData.id_envio_aeat === 'SIMULADO')) {
-        html += `
-            <div class="aeat-no-data">
-                <i class="fas fa-info-circle"></i>
-                <p>No hay información de la AEAT disponible para esta factura.</p>
-            </div>
-        `;
-    }
-    
-    html += '</div>';
-    
-    contenido.innerHTML = html;
-    modal.style.display = 'block';
-};
-
-// Función para cerrar modal de AEAT
-window.cerrarModalAEAT = function() {
-    const modal = document.getElementById('modalAEAT');
-    modal.style.display = 'none';
-};
-
-// Función para ampliar QR en modal separada
-window.ampliarQR = function(qrBase64) {
-    const modalQR = document.createElement('div');
-    modalQR.className = 'modal-qr-ampliado';
-    modalQR.innerHTML = `
-        <div class="modal-qr-content">
-            <div class="modal-qr-header">
-                <h3><i class="fas fa-qrcode"></i> Código QR VeriFactu - Vista Ampliada</h3>
-            </div>
-            <div class="modal-qr-body">
-                <img src="data:image/png;base64,${qrBase64}" alt="QR VeriFactu Ampliado" />
-                <p><i class="fas fa-info-circle"></i> Escanea con tu dispositivo móvil para verificar la factura</p>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modalQR);
-    modalQR.style.display = 'flex';
-    
-    // Cerrar al hacer clic fuera
-    modalQR.addEventListener('click', function(e) {
-        if (e.target === modalQR) {
-            cerrarModalQR();
+    // Event listener para cerrar modal AEAT al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        const modal = document.getElementById('modalAEAT');
+        if (e.target === modal) {
+            cerrarModalAEAT();
         }
     });
-};
-
-// Función para cerrar modal QR ampliado
-window.cerrarModalQR = function() {
-    const modalQR = document.querySelector('.modal-qr-ampliado');
-    if (modalQR) {
-        modalQR.remove();
-    }
-};
-
-// Cerrar modal al hacer clic fuera
-window.addEventListener('click', function(event) {
-    const modal = document.getElementById('modalAEAT');
-    if (event.target === modal) {
-        cerrarModalAEAT();
-    }
 });
+
+// Función para mostrar el modal con información de AEAT
+async function mostrarModalAEAT(facturaId, facturaData) {
+    try {
+        showOverlay();
+        
+        // Obtener información detallada de AEAT para esta factura
+        const response = await fetch(`${API_URL}/api/facturas/${facturaId}/aeat`, {
+            credentials: 'include'
+        });
+        
+        let aeatData = {};
+        if (response.ok) {
+            aeatData = await response.json();
+        } else {
+            // Si no hay endpoint específico, usar los datos que ya tenemos
+            aeatData = {
+                estado_envio: facturaData.estado_envio,
+                csv: facturaData.csv,
+                id_envio_aeat: facturaData.id_envio_aeat,
+                codigo_qr: facturaData.codigo_qr
+            };
+        }
+
+        // Construir el contenido del modal
+        let contenidoHtml = `
+            <div class="aeat-info-container">
+                <div class="aeat-info-header">
+                    <h3>Factura ${facturaData.numero}</h3>
+                    <p class="aeat-razón-social">${facturaData.razonsocial || 'Sin razón social'}</p>
+                </div>
+                
+                <div class="aeat-info-body">
+                    <div class="aeat-field-group">
+                        <label><i class="fas fa-info-circle"></i> Estado de Envío:</label>
+                        <span class="aeat-estado-badge aeat-estado-${(aeatData.estado_envio || 'PENDIENTE').toLowerCase()}">
+                            ${getEstadoAEATFormateado(aeatData.estado_envio)}
+                        </span>
+                    </div>
+
+                    ${aeatData.csv ? `
+                        <div class="aeat-field-group">
+                            <label><i class="fas fa-barcode"></i> Código CSV:</label>
+                            <span class="aeat-csv-code">${aeatData.csv}</span>
+                            <button class="btn-copy-csv" onclick="copiarCSV('${aeatData.csv}')" title="Copiar CSV">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    ` : ''}
+
+                    ${aeatData.id_envio_aeat && aeatData.id_envio_aeat !== 'SIMULADO' ? `
+                        <div class="aeat-field-group">
+                            <label><i class="fas fa-paper-plane"></i> ID de Envío:</label>
+                            <span class="aeat-id-envio">${aeatData.id_envio_aeat}</span>
+                        </div>
+                    ` : ''}
+
+                    ${aeatData.fecha_envio ? `
+                        <div class="aeat-field-group">
+                            <label><i class="fas fa-calendar"></i> Fecha de Envío:</label>
+                            <span class="aeat-fecha">${formatDateToDisplay(aeatData.fecha_envio)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${aeatData.codigo_qr ? `
+                    <div class="aeat-qr-section">
+                        <h4><i class="fas fa-qrcode"></i> Código QR</h4>
+                        <div class="aeat-qr-container">
+                            <img src="data:image/png;base64,${aeatData.codigo_qr}" alt="Código QR AEAT" class="aeat-qr-image">
+                        </div>
+                        <p class="aeat-qr-help">Código QR para verificación en AEAT</p>
+                    </div>
+                ` : `
+                    <div class="aeat-qr-section">
+                        <div class="aeat-no-qr">
+                            <i class="fas fa-qrcode" style="opacity: 0.3; font-size: 48px;"></i>
+                            <p>No hay código QR disponible</p>
+                        </div>
+                    </div>
+                `}
+            </div>
+        `;
+
+        // Mostrar el modal
+        document.getElementById('contenidoAEAT').innerHTML = contenidoHtml;
+        document.getElementById('modalAEAT').style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Prevenir scroll del fondo
+
+    } catch (error) {
+        console.error('Error cargando información AEAT:', error);
+        mostrarNotificacion('Error cargando información AEAT', 'error');
+    } finally {
+        hideOverlay();
+    }
+}
+
+// Función para cerrar el modal AEAT
+function cerrarModalAEAT() {
+    document.getElementById('modalAEAT').style.display = 'none';
+    document.body.style.overflow = 'auto'; // Restaurar scroll
+}
+
+// Función para obtener estado AEAT formateado
+function getEstadoAEATFormateado(estado) {
+    const estados = {
+        'ENVIADO': '✅ Enviado',
+        'RECHAZADO': '❌ Rechazado', 
+        'PENDIENTE': '⏰ Pendiente',
+        'ERROR': '⚠️ Error'
+    };
+    return estados[estado] || '❓ Desconocido';
+}
+
+// Función para copiar CSV al portapapeles
+function copiarCSV(csv) {
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(csv).then(() => {
+            mostrarNotificacion('CSV copiado al portapapeles', 'success');
+        }).catch(() => {
+            mostrarNotificacion('Error copiando CSV', 'error');
+        });
+    } else {
+        // Fallback para navegadores antiguos
+        const textArea = document.createElement('textarea');
+        textArea.value = csv;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            mostrarNotificacion('CSV copiado al portapapeles', 'success');
+        } catch (err) {
+            mostrarNotificacion('Error copiando CSV', 'error');
+        }
+        document.body.removeChild(textArea);
+    }
+}

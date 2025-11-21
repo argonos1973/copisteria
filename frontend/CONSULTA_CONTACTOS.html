@@ -287,7 +287,7 @@
             contactos.value = data.items || [];
             pagination.totalPages = data.total_pages || 1;
           } catch (error) {
-            console.error('Error:', error);
+            // console.error('Error:', error);
             contactos.value = [];
             pagination.totalPages = 1;
           } finally {
@@ -312,7 +312,7 @@
               fetchContactos(); // Refresca la lista
             }
           } catch (error) {
-            console.error('Error al eliminar el contacto:', error);
+            // console.error('Error al eliminar el contacto:', error);
             mostrarNotificacion(error.response?.data?.error || 'No se pudo eliminar el contacto. Inténtalo de nuevo.', 'error');
           }
         };
@@ -341,7 +341,7 @@
             }
           }
           
-          console.log(`Crear Factura para el contacto ID:&& ${id}`);
+          // console.log(`Crear Factura para el contacto ID:&& ${id}`);
           guardarFiltros();
           // Guardar origen para volver a la lista de facturas
           sessionStorage.setItem('origenFactura', 'facturas');
@@ -441,14 +441,14 @@
           await fetchContactos();
           // Aplicar permisos a los elementos después de que Vue renderice
           await nextTick();
-          console.log('[CONTACTOS] Aplicando permisos...');
-          console.log('[CONTACTOS] window.usuarioPermisos:', window.usuarioPermisos);
-          console.log('[CONTACTOS] window.parent.usuarioPermisos:', window.parent?.usuarioPermisos);
+          // console.log('[CONTACTOS] Aplicando permisos...');
+          // console.log('[CONTACTOS] window.usuarioPermisos:', window.usuarioPermisos);
+          // console.log('[CONTACTOS] window.parent.usuarioPermisos:', window.parent?.usuarioPermisos);
           if (typeof aplicarPermisosAElementos !== 'undefined') {
-            console.log('[CONTACTOS] Función aplicarPermisosAElementos existe, ejecutando...');
+            // console.log('[CONTACTOS] Función aplicarPermisosAElementos existe, ejecutando...');
             aplicarPermisosAElementos();
           } else {
-            console.error('[CONTACTOS] Función aplicarPermisosAElementos NO está definida');
+            // console.error('[CONTACTOS] Función aplicarPermisosAElementos NO está definida');
           }
           // Poner el foco en el campo de razón social
           const razonSocialInput = document.getElementById('razonSocial');

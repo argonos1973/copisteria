@@ -198,6 +198,59 @@
     display: none !important;
 }
 
+/* Estilos para matriz de permisos */
+.permissions-grid {
+    border: 1px solid var(--border, #ddd);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg, #fff);
+    margin-top: 20px;
+}
+
+.permission-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border, #eee);
+}
+
+.permission-row:last-child {
+    border-bottom: none;
+}
+
+.permission-row.header {
+    background: var(--primary, #3498db);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.permission-row:not(.header):hover {
+    background: var(--bg-elevated, #f8f9fa);
+}
+
+.permission-row div {
+    padding: 4px 8px;
+}
+
+.permission-row input[type="checkbox"] {
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-muted, #7f8c8d);
+}
+
+.empty-state i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .empresa-grid-container {
@@ -211,5 +264,14 @@
     .empresa-form-input,
     .empresa-form-input.full-width {
         max-width: 100%;
+    }
+    
+    .permission-row {
+        grid-template-columns: 1.5fr 0.7fr 0.7fr 0.7fr 0.7fr 0.7fr;
+        font-size: 12px;
+    }
+    
+    .permission-row div {
+        padding: 2px 4px;
     }
 }

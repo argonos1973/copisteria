@@ -27,33 +27,33 @@ function applyThemeToModals() {
     
     const temaActual = root.dataset.theme || 'unknown';
     
-    console.log('[MODAL_THEME] 🎨 Aplicando tema a modales...');
-    console.log('[MODAL_THEME] Tema activo:', temaActual);
-    console.log('[MODAL_THEME] Variables leídas:', {
-        modalBg,
-        modalText,
-        modalBorder,
-        modalHeaderBg,
-        modalHeaderText,
-        modalBodyBg,
-        modalInputBg,
-        buttonBg
-    });
+    // console.log('[MODAL_THEME] 🎨 Aplicando tema a modales...');
+    // console.log('[MODAL_THEME] Tema activo:', temaActual);
+    // console.log('[MODAL_THEME] Variables leídas:', {
+        // modalBg,
+        // modalText,
+        // modalBorder,
+        // modalHeaderBg,
+        // modalHeaderText,
+        // modalBodyBg,
+        // modalInputBg,
+        // buttonBg
+    // });
     
     // MODAL DE PERFIL
     const modalPerfilContent = document.querySelector('.modal-perfil-content');
     if (modalPerfilContent) {
-        console.log('[MODAL_THEME] ✓ Aplicando a .modal-perfil-content:', modalBg);
+        // console.log('[MODAL_THEME] ✓ Aplicando a .modal-perfil-content:', modalBg);
         modalPerfilContent.style.setProperty('background-color', modalBg, 'important');
         modalPerfilContent.style.setProperty('color', modalText, 'important');
         modalPerfilContent.style.setProperty('border-color', modalBorder, 'important');
     } else {
-        console.log('[MODAL_THEME] ⚠️ No se encontró .modal-perfil-content');
+        // console.log('[MODAL_THEME] ⚠️ No se encontró .modal-perfil-content');
     }
     
     const modalPerfilHeader = document.querySelector('.modal-perfil-header');
     if (modalPerfilHeader) {
-        console.log('[MODAL_THEME] ✓ Aplicando a .modal-perfil-header:', modalHeaderBg);
+        // console.log('[MODAL_THEME] ✓ Aplicando a .modal-perfil-header:', modalHeaderBg);
         
         // Limpiar cualquier background previo
         modalPerfilHeader.style.removeProperty('background');
@@ -69,7 +69,7 @@ function applyThemeToModals() {
             h2.style.setProperty('color', modalHeaderText, 'important');
         }
     } else {
-        console.log('[MODAL_THEME] ⚠️ No se encontró .modal-perfil-header');
+        // console.log('[MODAL_THEME] ⚠️ No se encontró .modal-perfil-header');
     }
     
     const modalPerfilTabs = document.querySelector('.modal-perfil-tabs');
@@ -201,7 +201,7 @@ function applyThemeToModals() {
         subirHint.style.setProperty('color', modalText, 'important');
     }
     
-    console.log('[MODAL_THEME] ✅ Tema aplicado a modales');
+    // console.log('[MODAL_THEME] ✅ Tema aplicado a modales');
 }
 
 // Aplicar cuando el DOM esté listo
@@ -217,7 +217,7 @@ if (document.readyState === 'loading') {
 const observer = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'data-theme') {
-            console.log('[MODAL_THEME] 🔄 Tema cambiado, reaplicando...');
+            // console.log('[MODAL_THEME] 🔄 Tema cambiado, reaplicando...');
             setTimeout(applyThemeToModals, 100);
         }
     });
@@ -233,7 +233,7 @@ const styleObserver = new MutationObserver((mutations) => {
     mutations.forEach((mutation) => {
         mutation.addedNodes.forEach((node) => {
             if (node.id === 'theme-style') {
-                console.log('[MODAL_THEME] 🎨 Nuevo tema detectado, reaplicando...');
+                // console.log('[MODAL_THEME] 🎨 Nuevo tema detectado, reaplicando...');
                 setTimeout(applyThemeToModals, 100);
             }
         });
