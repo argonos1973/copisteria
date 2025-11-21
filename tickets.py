@@ -509,21 +509,12 @@ def obtener_numero_ticket(tipoNum):
             conn.close()
 
 def verificar_numero_ticket(numero):
-    """Verifica si existe un ticket con el número dado"""
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT COUNT(*) as count FROM tickets WHERE numero = ?", (numero,))
-        resultado = cursor.fetchone()
-        existe = resultado['count'] > 0
-        
-        return jsonify({"existe": existe})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    finally:
-        if conn:
-            conn.close()
+    """
+    REFACTORIZADA: Ahora usa función unificada
+    DEPRECATED: Usar db_utils.verificar_numero_documento('ticket', numero)
+    """
+    from db_utils import verificar_numero_documento
+    return verificar_numero_documento('ticket', numero)
 
 def obtener_actualizar_numero_ticket(tipoNum):
     """Obtiene y actualiza el numerador para el tipo indicado"""

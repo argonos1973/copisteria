@@ -3058,6 +3058,15 @@ body select option {
     overflow-y: auto;
 }
 
+/* Forzar tamaño pequeño del QR en modal AEAT */
+#modalAEAT .aeat-qr-box img {
+    max-width: 50px !important;
+    width: 50px !important;
+    height: 50px !important;
+    min-width: 50px !important;
+    min-height: 50px !important;
+}
+
 /* Modal QR ampliado */
 .modal-qr-ampliado {
     position: fixed;

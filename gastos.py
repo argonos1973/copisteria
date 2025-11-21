@@ -32,11 +32,15 @@ def ingresos_gastos_mes():
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT substr(fecha_operacion, 4, 2) as mes,
+            SELECT substr(COALESCE(fecha_operacion_iso, 
+                          substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)
+                         ), 6, 2) as mes,
                    SUM(CASE WHEN importe_eur > 0 THEN importe_eur ELSE 0 END) as ingresos,
                    SUM(CASE WHEN importe_eur < 0 THEN importe_eur ELSE 0 END) as gastos
             FROM gastos
-            WHERE substr(fecha_operacion, 7, 4) = ?
+            WHERE substr(COALESCE(fecha_operacion_iso, 
+                          substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)
+                         ), 1, 4) = ?
             GROUP BY mes
             """,
             (str(anio),)
@@ -79,10 +83,10 @@ def consulta_gastos():
         query = "SELECT fecha_operacion, fecha_valor, concepto, importe_eur FROM gastos WHERE 1=1"
         params = []
         if fecha_inicio:
-            query += " AND date(substr(fecha_operacion,7,4)||'-'||substr(fecha_operacion,4,2)||'-'||substr(fecha_operacion,1,2)) >= ?"
+            query += " AND COALESCE(fecha_operacion_iso, substr(fecha_operacion,7,4)||'-'||substr(fecha_operacion,4,2)||'-'||substr(fecha_operacion,1,2)) >= ?"
             params.append(fecha_inicio)
         if fecha_fin:
-            query += " AND date(substr(fecha_operacion,7,4)||'-'||substr(fecha_operacion,4,2)||'-'||substr(fecha_operacion,1,2)) <= ?"
+            query += " AND COALESCE(fecha_operacion_iso, substr(fecha_operacion,7,4)||'-'||substr(fecha_operacion,4,2)||'-'||substr(fecha_operacion,1,2)) <= ?"
             params.append(fecha_fin)
         if concepto:
             query += " AND lower(concepto) LIKE ?"
@@ -91,8 +95,8 @@ def consulta_gastos():
             query += " AND importe_eur > 0"
         elif tipo == 'gastos':
             query += " AND importe_eur < 0"
-        # Ordenar por fecha_valor (transformada a formato ISO para orden cronológico correcto)
-        query += " ORDER BY date(substr(fecha_valor,7,4)||'-'||substr(fecha_valor,4,2)||'-'||substr(fecha_valor,1,2)) DESC"
+        # Ordenar por fecha_valor optimizada (usar columna ISO si existe, sino convertir)
+        query += " ORDER BY COALESCE(fecha_valor_iso, substr(fecha_valor,7,4)||'-'||substr(fecha_valor,4,2)||'-'||substr(fecha_valor,1,2)) DESC"
 
         conn = get_db_connection()
         logger.info(f"[CONSULTA_GASTOS] Ejecutando consulta SQL con params: {params}")

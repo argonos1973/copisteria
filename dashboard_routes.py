@@ -25,9 +25,9 @@ def estadisticas_gastos():
         mes_param = request.args.get('mes')
         año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
         mes = int(mes_param) if mes_param and mes_param.isdigit() else ahora.month
-        cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur > 0 AND substr(fecha_operacion, 7, 4) = ?", (str(año),))
+        cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur > 0 AND substr(COALESCE(fecha_operacion_iso, substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)), 1, 4) = ?", (str(año),))
         total_ingresos = cur.fetchone()[0] or 0
-        cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur < 0 AND substr(fecha_operacion, 7, 4) = ?", (str(año),))
+        cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur < 0 AND substr(COALESCE(fecha_operacion_iso, substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)), 1, 4) = ?", (str(año),))
         total_gastos = cur.fetchone()[0] or 0
         balance = total_ingresos + total_gastos  # Balance total anual (correcto porque gastos es negativo)
 

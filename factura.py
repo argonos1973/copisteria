@@ -1,3 +1,4 @@
+import base64
 import json
 import os
 # --- Utilidades y acceso a base de datos ---
@@ -719,7 +720,8 @@ def consultar_facturas():
                 f.fechaCobro,
                 rf.csv,
                 rf.estado_envio,
-                rf.id_envio_aeat
+                rf.id_envio_aeat,
+                rf.codigo_qr
             FROM factura f
             LEFT JOIN contactos c ON f.idcontacto = c.idContacto
             LEFT JOIN registro_facturacion rf ON f.id = rf.factura_id
@@ -915,7 +917,8 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                 f.fechaCobro,
                 rf.csv,
                 rf.estado_envio,
-                rf.id_envio_aeat
+                rf.id_envio_aeat,
+                rf.codigo_qr
             FROM factura f
             LEFT JOIN contactos c ON f.idcontacto = c.idContacto
             LEFT JOIN registro_facturacion rf ON f.id = rf.factura_id
@@ -949,6 +952,15 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                     raw['enviado'] = int(raw['enviado']) if raw['enviado'] is not None else 0
                 if 'carta_enviada' in raw:
                     raw['carta_enviada'] = int(raw['carta_enviada']) if raw['carta_enviada'] is not None else 0
+                # Convertir codigo_qr de BLOB a base64 string
+                if 'codigo_qr' in raw and raw['codigo_qr']:
+                    if isinstance(raw['codigo_qr'], bytes):
+                        raw['codigo_qr'] = base64.b64encode(raw['codigo_qr']).decode('utf-8')
+                    elif isinstance(raw['codigo_qr'], str):
+                        # Ya está en base64
+                        pass
+                    else:
+                        raw['codigo_qr'] = None
                 items.append(raw)
 
         # Calcular totales globales según el estado del filtro (como numérico) y devolver formateados

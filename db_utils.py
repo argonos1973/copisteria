@@ -2,9 +2,9 @@ import sqlite3
 from datetime import datetime
 
 from flask import jsonify, session
-
-from constantes import DB_NAME
 from logger_config import get_logger
+from constantes import DB_NAME
+from database_pool import get_database_pool
 
 # Inicializar logger
 logger = get_logger(__name__)
@@ -27,98 +27,135 @@ def get_db_connection():
                 db_path = session['empresa_db']
                 logger.debug(f"[MULTIEMPRESA] Usando BD de empresa: {db_path}")
             elif has_request_context():
-                # Contexto de petición pero sin empresa_db en sesión
-                logger.error("[MULTIEMPRESA] ¡session['empresa_db'] no está definida! Usuario no autenticado o sesión corrupta")
-                raise RuntimeError("BD de empresa no definida en sesión. Usuario debe iniciar sesión.")
-            else:
-                # Sin contexto de petición (scripts batch/workers)
-                # Usar DB_NAME solo si está definido (scripts legacy)
-                if DB_NAME:
-                    db_path = DB_NAME
-                    logger.warning(f"[LEGACY] Sin contexto de petición, usando DB_NAME: {db_path}")
-                else:
-                    logger.error("[MULTIEMPRESA] Sin contexto de petición y DB_NAME=None. No se puede determinar BD.")
-                    raise RuntimeError("No se puede determinar la BD: sin sesión y sin DB_NAME")
-        except (RuntimeError, ImportError) as e:
-            if "BD de empresa no definida" in str(e) or "No se puede determinar la BD" in str(e):
-                raise  # Re-lanzar errores de BD
-            # Otros errores de import, usar DB_NAME si existe
-            if DB_NAME:
+                # Contexto de petición pero sin empresa_db en sesión - usar BD por defecto
+                logger.warning("[MULTIEMPRESA] No hay empresa_db en sesión, usando BD por defecto")
                 db_path = DB_NAME
-                logger.warning(f"[LEGACY] Error en contexto Flask, usando DB_NAME: {db_path}")
             else:
-                raise RuntimeError("No se puede determinar la BD y DB_NAME=None")
+                logger.warning("[MULTIEMPRESA] No hay contexto de petición disponible")
+        except ImportError:
+            logger.warning("[MULTIEMPRESA] Flask no disponible, usando BD por defecto")
         
         if not db_path:
-            raise RuntimeError("[MULTIEMPRESA] No se pudo determinar la ruta de la base de datos")
+            db_path = DB_NAME
+            logger.info(f"Usando BD por defecto: {db_path}")
         
+        # Temporalmente deshabilitado el pool mientras se soluciona
+        # pool = get_database_pool(db_path)
+        # return pool.get_connection().connection
+        
+        # Conexión directa como antes
         conn = sqlite3.connect(db_path, timeout=30)
         conn.row_factory = sqlite3.Row
-        conn.execute('PRAGMA encoding="UTF-8"')  # Asegura UTF-8
-        conn.execute("PRAGMA journal_mode=WAL;") 
+        conn.execute('PRAGMA encoding="UTF-8"')
+        conn.execute("PRAGMA journal_mode=WAL;")
         return conn
+        
     except Exception as e:
         logger.error(f"Error al conectar a la base de datos: {str(e)}", exc_info=True)
         raise
 
-def verificar_numero_proforma(numero):
+def get_db_connection_pooled():
+    """
+    Context manager que usa el pool de conexiones automáticamente
+    
+    Usage:
+        with get_db_connection_pooled() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM table")
+    """
+    db_path = None
+    
+    # Determinar DB path (mismo código que get_db_connection)
+    if 'empresa_seleccionada' in session:
+        empresa = session['empresa_seleccionada']
+        db_path = f"db/{empresa}/{empresa}.db"
+    else:
+        from flask import request
+        if request and hasattr(request, 'headers'):
+            empresa_header = request.headers.get('X-Empresa-DB')
+            if empresa_header:
+                db_path = f"db/{empresa_header}/{empresa_header}.db"
+    
+    if not db_path:
+        db_path = DB_NAME
+    
+    # Usar pool con context manager
+    pool = get_database_pool(db_path)
+    return pool.get_db_connection()
+
+# =====================================================
+# FUNCIONES REFACTORIZADAS - CÓDIGO UNIFICADO
+# =====================================================
+
+def verificar_numero_documento(tipo_documento, numero):
+    """
+    Función unificada para verificar números de documento.
+    Reemplaza verificar_numero_factura() y verificar_numero_proforma()
+    
+    Args:
+        tipo_documento (str): 'factura', 'proforma', 'ticket'
+        numero (str): Número del documento
+    
+    Returns:
+        JSON response con existe e id
+    """
+    TABLAS = {'factura': 'factura', 'proforma': 'proforma', 'ticket': 'tickets'}
+    
+    if tipo_documento not in TABLAS:
+        return jsonify({'error': 'Tipo documento inválido'}), 400
+    
+    conn = None
     try:
-        logger.info(f"Verificando número de proforma: {numero}")
+        logger.info(f"Verificando número de {tipo_documento}: {numero}")
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Buscar proforma con el mismo número
-        cursor.execute('SELECT id FROM proforma WHERE numero = ?', (numero,))
-        proforma = cursor.fetchone()
+        tabla = TABLAS[tipo_documento]
+        cursor.execute(f'SELECT id FROM {tabla} WHERE numero = ?', (numero,))
+        documento = cursor.fetchone()
         
-        if proforma:
-            return jsonify({
-                'existe': True,
-                'id': proforma['id']
-            })
+        if documento:
+            doc_id = documento['id'] if hasattr(documento, 'keys') else documento[0]
+            return jsonify({'existe': True, 'id': doc_id})
         
-        return jsonify({
-            'existe': False,
-            'id': None
-        })
+        return jsonify({'existe': False, 'id': None})
     
     except Exception as e:
-        logger.error(f"Error al verificar número de proforma: {str(e)}", exc_info=True)
+        logger.error(f"Error verificando {tipo_documento}: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
     finally:
-        if 'conn' in locals():
+        if conn:
             conn.close()
-            logger.info("Conexión cerrada en verificar_numero_proforma")
+            logger.info(f"Conexión cerrada en verificar_numero_{tipo_documento}")
+
+
+def transformar_fecha_ddmmyyyy_a_iso(fecha_str):
+    """
+    Convierte DD/MM/YYYY a YYYY-MM-DD
+    Función unificada para transformaciones de fecha
+    """
+    if not fecha_str or len(fecha_str) != 10:
+        return None
+    
+    try:
+        partes = fecha_str.split('/')
+        if len(partes) == 3:
+            dia, mes, año = partes
+            return f"{año}-{mes.zfill(2)}-{dia.zfill(2)}"
+    except:
+        pass
+    return None
+
+
+# Funciones legacy (mantener compatibilidad)
+def verificar_numero_proforma(numero):
+    """DEPRECATED: Usar verificar_numero_documento('proforma', numero)"""
+    return verificar_numero_documento('proforma', numero)
 
 
 def verificar_numero_factura(numero):
-    try:
-        logger.info(f"Verificando número de factura: {numero}")
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Buscar factura con el mismo número
-        cursor.execute('SELECT id FROM factura WHERE numero = ?', (numero,))
-        factura = cursor.fetchone()
-        
-        if factura:
-            return jsonify({
-                'existe': True,
-                'id': factura[0]
-            })
-        
-        return jsonify({
-            'existe': False,
-            'id': None
-        })
-    
-    except Exception as e:
-        logger.error(f"Error al verificar número de proforma: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
-    finally:
-        if 'conn' in locals():
-            conn.close()
-            logger.info("Conexión cerrada en verificar_numero_proforma")
+    """DEPRECATED: Usar verificar_numero_documento('factura', numero)"""  
+    return verificar_numero_documento('factura', numero)
 
 
 def redondear_importe(valor):

@@ -141,33 +141,34 @@ def before_request():
 
 @app.after_request
 def after_request(response):
-    # Detectar si viene de Cloudflare
-    origin = request.headers.get('Origin')
-    forwarded_proto = request.headers.get('X-Forwarded-Proto')
+    # Detectar el origen de la petición
+    origin = request.headers.get('Origin', '')
     
-    if origin and 'trycloudflare.com' in origin:
-        # Headers CORS
+    # IMPORTANTE: Permitir credenciales para peticiones del mismo dominio
+    # Si no hay Origin header, es una petición del mismo dominio
+    if not origin or origin == '':
+        # Petición del mismo dominio - no necesita CORS
+        pass
+    elif 'trycloudflare.com' in origin or 'localhost' in origin or '127.0.0.1' in origin or '192.168' in origin:
+        # Peticiones cross-origin conocidas
         response.headers['Access-Control-Allow-Origin'] = origin
         response.headers['Access-Control-Allow-Credentials'] = 'true'
-        
-        # Manejar cookies para proxy HTTPS->HTTP
-        if 'Set-Cookie' in response.headers:
-            cookies = response.headers.getlist('Set-Cookie')
-            response.headers.pop('Set-Cookie')
-            
-            for cookie in cookies:
-                # Para Cloudflare necesitamos Secure=true y SameSite=None
-                # aunque el backend reciba HTTP
-                if forwarded_proto == 'https':
-                    # Asegurar que tiene Secure
-                    if '; Secure' not in cookie:
-                        cookie += '; Secure'
-                    # Cambiar SameSite a None
-                    import re
-                    cookie = re.sub(r'; SameSite=[^;]+', '', cookie)
-                    cookie += '; SameSite=None'
-                
-                response.headers.add('Set-Cookie', cookie)
+    else:
+        # Otros orígenes
+        response.headers['Access-Control-Allow-Origin'] = '*'
+    
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PUT,DELETE,OPTIONS,PATCH'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization,X-Session-Data'
+    
+    # Headers para el proxy y caché
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    
+    # Deshabilitar caché para respuestas dinámicas
+    if 'api' in request.path:
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
     
     return response
 

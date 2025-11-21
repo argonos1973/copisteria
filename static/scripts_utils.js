@@ -292,10 +292,15 @@ export function debounce(fn, delay = 800) {
 
 // --- Global fetch wrapper ---
 const originalFetch = window.fetch.bind(window);
-window.fetch = async (...args) => {
+window.fetch = async (url, options = {}) => {
   mostrarCargando();
   try {
-    return await originalFetch(...args);
+    // Asegurar que las credenciales se incluyen en todas las llamadas
+    const opcionesFinal = {
+      ...options,
+      credentials: 'include'  // CRÍTICO: incluir cookies de sesión
+    };
+    return await originalFetch(url, opcionesFinal);
   } finally {
     ocultarCargando();
   }
@@ -1234,7 +1239,12 @@ export async function fetchConManejadorErrores(url, opciones = {}) {
 
     for (const target of candidates) {
       try {
-        const res = await fetch(target, opciones);
+        // Asegurar que las credenciales se incluyen siempre
+        const opcionesFinal = { 
+          ...opciones, 
+          credentials: 'include'  // CRÍTICO: incluir cookies de sesión
+        };
+        const res = await fetch(target, opcionesFinal);
         if (res.ok) return await res.json();
         ultimaError = new Error(`Error ${res.status} en ${target}`);
       } catch (e) {
