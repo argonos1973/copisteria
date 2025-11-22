@@ -27,7 +27,7 @@ def _formatear_detalle_proforma(detalle_row):
 
 def _obtener_detalles_formateados(cursor, proforma_id):
     detalles_rows = cursor.execute(
-        'SELECT * FROM detalle_proforma WHERE id_proforma = ? ORDER BY ts DESC', (proforma_id,)
+        'SELECT * FROM detalle_proforma WHERE id_proforma = ? ORDER BY id ASC', (proforma_id,)
     ).fetchall()
     return [_formatear_detalle_proforma(row) for row in detalles_rows]
 
@@ -38,10 +38,11 @@ def _formatear_importes_proforma(data):
             data[key] = format_currency_es_two(data.get(key))
     return data
 
-def crear_proforma():
+def crear_proforma(data=None):
     conn = None
     try:
-        data = request.get_json()
+        if data is None:
+            data = request.get_json()
         logger.info(f"Datos recibidos en crear_proforma: {data}")
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400
@@ -149,6 +150,94 @@ def crear_proforma():
         if conn:
             conn.close()
 
+def actualizar_proforma(id_proforma, data):
+    """Actualiza una proforma existente"""
+    conn = None
+    try:
+        logger.info(f"Actualizando proforma ID: {id_proforma}")
+        
+        # Recalcular importes
+        importe_bruto = 0
+        importe_impuestos = 0
+        total = 0
+        
+        for detalle in data['detalles']:
+            res = utilities.calcular_importes(detalle['cantidad'], detalle['precio'], detalle['impuestos'])
+            importe_bruto += res['subtotal']
+            importe_impuestos += res['iva']
+            total += res['total']
+            detalle['total'] = res['total']
+            
+        data['importe_bruto'] = importe_bruto
+        data['importe_impuestos'] = importe_impuestos
+        data['total'] = total
+
+        conn = get_db_connection()
+        conn.execute('PRAGMA busy_timeout = 10000')
+        conn.execute('BEGIN TRANSACTION')
+        cursor = conn.cursor()
+        
+        # Verificar existencia
+        cursor.execute('SELECT id FROM proforma WHERE id = ?', (id_proforma,))
+        if not cursor.fetchone():
+            conn.rollback()
+            return jsonify({'error': 'Proforma no encontrada'}), 404
+
+        # Actualizar cabecera
+        cursor.execute('''
+            UPDATE proforma SET 
+                fecha = ?, idContacto = ?, nif = ?, total = ?, formaPago = ?, 
+                importe_bruto = ?, importe_impuestos = ?, importe_cobrado = ?, tipo = ?
+            WHERE id = ?
+        ''', (
+            data['fecha'],
+            data['idContacto'],
+            data.get('nif', ''),
+            data['total'],
+            data.get('formaPago', 'E'),
+            data.get('importe_bruto', 0),
+            data.get('importe_impuestos', 0),
+            data.get('importe_cobrado', 0),
+            data.get('tipo', 'N'),
+            id_proforma
+        ))
+        
+        # Borrar detalles antiguos
+        cursor.execute('DELETE FROM detalle_proforma WHERE id_proforma = ?', (id_proforma,))
+        
+        # Insertar nuevos detalles
+        for detalle in data['detalles']:
+            cursor.execute('''
+                INSERT INTO detalle_proforma (id_proforma, concepto, descripcion, cantidad, 
+                                            precio, impuestos, total, formaPago, productoId, fechaDetalle)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                id_proforma,
+                detalle['concepto'],
+                detalle.get('descripcion', ''),
+                detalle['cantidad'],
+                detalle['precio'],
+                detalle['impuestos'],
+                detalle['total'],
+                detalle.get('formaPago', 'E'),
+                detalle.get('productoId', None),
+                detalle.get('fechaDetalle', data['fecha'])
+            ))
+            
+        conn.commit()
+        return jsonify({
+            'mensaje': 'Proforma actualizada exitosamente',
+            'id': id_proforma
+        })
+        
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Error actualizando proforma {id_proforma}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
 
 def obtener_proforma(id):
     conn = None

@@ -207,9 +207,9 @@ def obtener_contactos_paginados(filtros, page=1, page_size=10, sort='razonsocial
         where_sql = 'WHERE 1=1 AND COALESCE(TRIM(c.identificador), "") <> ""'
         params = []
 
-        if filtros.get('razonSocial'):
+        if filtros.get('razonsocial'):
             where_sql += ' AND LOWER(c.razonsocial) LIKE LOWER(?)'
-            params.append(f"%{filtros['razonSocial']}%")
+            params.append(f"%{filtros['razonsocial']}%")
         if filtros.get('nif'):
             where_sql += ' AND LOWER(c.identificador) LIKE LOWER(?)'
             params.append(f"%{filtros['nif']}%")

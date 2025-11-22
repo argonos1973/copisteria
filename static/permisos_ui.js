@@ -93,7 +93,7 @@ function tienePermiso(modulo, accion) {
  * Aplicar permisos a los elementos de la UI
  */
 function aplicarPermisosUI() {
-    console.log('[PERMISOS] Aplicando permisos a la UI...');
+    // console.log('[PERMISOS] Aplicando permisos a la UI...');
     
     // Buscar todos los elementos con data-modulo y data-accion
     const elementosConPermisos = document.querySelectorAll('[data-modulo][data-accion]');
@@ -106,9 +106,9 @@ function aplicarPermisosUI() {
             // Ocultar el elemento
             elemento.style.display = 'none';
             elemento.disabled = true;
-            console.log(`[PERMISOS] Ocultado: ${modulo}.${accion}`);
+            // console.log(`[PERMISOS] Ocultado: ${modulo}.${accion}`);
         } else {
-            console.log(`[PERMISOS] Permitido: ${modulo}.${accion}`);
+            // console.log(`[PERMISOS] Permitido: ${modulo}.${accion}`);
         }
     });
     

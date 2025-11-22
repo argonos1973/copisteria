@@ -36,6 +36,14 @@ def get_db_connection():
             logger.warning(f"[MULTIEMPRESA] Flask no disponible, usando BD por defecto: {e}")
         
         if not db_path:
+            # Fallback para procesos background sin sesión (ej. hilos Veri*Factu)
+            import os
+            env_db = os.getenv('EMPRESA_DB_PATH')
+            if env_db:
+                db_path = env_db
+                logger.debug(f"[MULTIEMPRESA] Usando BD de entorno: {db_path}")
+        
+        if not db_path:
             db_path = DB_NAME
             logger.info(f"Usando BD por defecto: {db_path}")
         

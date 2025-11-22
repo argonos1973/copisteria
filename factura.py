@@ -89,34 +89,19 @@ app = Flask(__name__)
 
 factura_bp = Blueprint('facturas', __name__)
 
-def crear_factura():
+def crear_factura(data=None):
     conn = None
     try:
-        data = request.get_json()
-        logger.debug("Datos recibidos en crear_factura:", data)
+        if data is None:
+            data = request.get_json()
+        logger.debug(f"Datos recibidos en crear_factura: {data}")
         # Lista para acumular mensajes de progreso que se devolverán al frontend
         notificaciones = []
         def push_notif(msg, tipo='info', scope='factura'):
-            # Prefijar con contexto para que el frontend pueda filtrar
-            if scope == 'factura':
-                msg_db = f'[FACTURA] {msg}'
-            else:
-                msg_db = msg
-            # Enviar únicamente:
-            #   - Mensajes finales ('success' / 'error')
-            #   - Mensajes informativos que incluyan la palabra AEAT (inicio de envío)
-            if tipo == 'info' and 'aeat' not in msg.lower():
-                return
-            notificaciones.append(msg_db)
-            try:
-                notif_conn = get_db_connection()
-                notif_cursor = notif_conn.cursor()
-                notif_cursor.execute("INSERT INTO notificaciones (tipo, mensaje, timestamp) VALUES (?, ?, ?)", (tipo, msg_db, datetime.now().isoformat()))
-                notif_conn.commit()
-                notif_conn.close()
-            except Exception as e:
-                logger.error(f"Error al guardar notificación: {e}")
-            time.sleep(0.4)  # retardo breve para visualización progresiva
+            # Optimización: No escribir en BD para evitar bloqueos y latencia
+            # Solo acumulamos en memoria y logueamos
+            logger.info(f"[NOTIF][{tipo}] {msg}")
+            notificaciones.append(f"[{tipo}] {msg}")
         # Primera notificación
         push_notif("Datos de factura recibidos")
 
@@ -204,6 +189,17 @@ def crear_factura():
             # Commit al final de todas las operaciones
             conn.commit()
 
+            # Extraer db_path antes de cerrar
+            db_path_val = None
+            try:
+                db_path_val = conn.execute('PRAGMA database_list').fetchone()[2]
+            except:
+                pass
+
+            # CERRAR CONEXIÓN INMEDIATAMENTE
+            conn.close()
+            conn = None
+
             # Si la factura todavía no está lista para envío (pendiente de cobro) y NO es rectificativa,
             # omitimos la generación de XML Facturae y el envío a AEAT. Las facturas rectificativas (estado 'RE',
             # tipo 'R' o cuyo número termina en '-R') deben enviarse aunque no estén cobradas.
@@ -229,12 +225,22 @@ def crear_factura():
             try:
                 logger.info("[FACTURAE] Iniciando integración Facturae para factura_id:", factura_id)
                 push_notif("Generando XML Facturae ...")
-                cursor.execute('''
-                    SELECT razonsocial, identificador, direccion, cp, localidad, provincia,
-                           dir3_oficina, dir3_organo, dir3_unidad, face_presentacion, tipo
-                    FROM contactos WHERE idContacto = ?
-                ''', (data['idContacto'],))
-                contacto = cursor.fetchone()
+                
+                # Para Facturae necesitamos datos de contacto. Usamos nueva conexión si es necesaria
+                # O mejor, extraemos datos ANTES de cerrar la conexión.
+                # Como ya cerré, debo abrir nueva conexión SOLO para leer contacto si Facturae lo hace internamente o aquí.
+                # El código original hacía query aquí.
+                
+                # RE-OPEN conexión temporal solo lectura
+                with get_db_connection() as temp_conn:
+                    temp_cursor = temp_conn.cursor()
+                    temp_cursor.execute('''
+                        SELECT razonsocial, identificador, direccion, cp, localidad, provincia,
+                               dir3_oficina, dir3_organo, dir3_unidad, face_presentacion, tipo
+                        FROM contactos WHERE idContacto = ?
+                    ''', (data['idContacto'],))
+                    contacto = temp_cursor.fetchone()
+                
                 if contacto:
                     logger.info(f"[FACTURAE]Datos de contacto encontrados: {contacto}")
                     # Convierte contacto (sqlite3.Row o tuple) a dict para acceso seguro
@@ -407,14 +413,18 @@ def crear_factura():
                     try:
                         # Obtener código de empresa de la ruta de la BD
                         import re
-                        db_path = conn.execute('PRAGMA database_list').fetchone()[2]
-                        match = re.search(r'/db/([^/]+)/\1\.db', db_path)
-                        if match:
-                            empresa_codigo = match.group(1)
-                        else:
-                            import os
-                            db_name = os.path.basename(db_path)
-                            empresa_codigo = db_name.replace('.db', '')
+                        db_path = db_path_val
+                        # Si db_path_val es None (ej: error extrayéndolo), intentar fallback o no usar empresa_codigo
+                        empresa_codigo = 'unknown'
+                        
+                        if db_path:
+                            match = re.search(r'/db/([^/]+)/\1\.db', db_path)
+                            if match:
+                                empresa_codigo = match.group(1)
+                            else:
+                                import os
+                                db_name = os.path.basename(db_path)
+                                empresa_codigo = db_name.replace('.db', '')
                         
                         logger.info(f"[VERIFACTU] Usando empresa_codigo={empresa_codigo} (extraído de BD: {db_path})")
                         datos_verifactu = verifactu.generar_datos_verifactu_para_factura(factura_id, empresa_codigo=empresa_codigo)
@@ -489,6 +499,55 @@ def crear_factura():
         return jsonify({'error': str(e)}), 500
     finally:
         if conn:
+            conn.close()
+
+def obtener_factura_completa(factura_id):
+    """Obtiene la factura completa con detalles y datos de contacto por ID de factura"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Obtener factura + contacto + registro verifactu
+        cursor.execute("""
+            SELECT 
+                f.id, f.numero, f.fecha, f.fvencimiento, f.estado, f.nif as nif_factura,
+                f.total, f.formaPago, f.importe_bruto, f.importe_impuestos, 
+                f.importe_cobrado, f.tipo, f.idContacto,
+                rf.estado_envio, rf.csv, rf.id_envio_aeat, rf.fecha_envio, rf.codigo_qr, rf.hash as hash_verifactu,
+                c.razonsocial, c.identificador as nif, c.identificador, 
+                c.direccion, c.cp, c.localidad, c.provincia, c.mail as email_contacto
+            FROM factura f
+            LEFT JOIN contactos c ON f.idContacto = c.idContacto
+            LEFT JOIN registro_facturacion rf ON f.id = rf.factura_id AND rf.ticket_id IS NULL
+            WHERE f.id = ?
+        """, (factura_id,))
+        
+        row = cursor.fetchone()
+        if not row:
+            return None
+            
+        # Convertir a dict
+        columnas = [d[0] for d in cursor.description]
+        factura_dict = dict(zip(columnas, row))
+        
+        # Detalles
+        cursor.execute("SELECT * FROM detalle_factura WHERE id_factura = ?", (factura_id,))
+        detalles = [dict(zip([d[0] for d in cursor.description], det)) for det in cursor.fetchall()]
+        
+        factura_dict['detalles'] = detalles
+        
+        # Convertir QR a base64 si es bytes
+        if factura_dict.get('codigo_qr') and isinstance(factura_dict['codigo_qr'], (bytes, bytearray)):
+            import base64
+            factura_dict['codigo_qr'] = base64.b64encode(factura_dict['codigo_qr']).decode('utf-8')
+        
+        return factura_dict
+        
+    except Exception as e:
+        logger.error(f"Error en obtener_factura_completa: {e}")
+        raise e
+    finally:
+        if 'conn' in locals() and conn:
             conn.close()
 
 def obtener_factura(idContacto, id):

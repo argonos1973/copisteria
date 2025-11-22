@@ -103,9 +103,9 @@ class DatabasePool:
         self._shutdown = False
         
         # Configuración de retry y timeout
-        self.retry_attempts = 3
+        self.retry_attempts = 5
         self.retry_delay = 1.0
-        self.default_timeout = 30.0
+        self.default_timeout = 60.0
         
         # Inicializar con 2 conexiones mínimas
         self._initialize_pool()
@@ -226,6 +226,12 @@ class DatabasePool:
     def _return_connection(self, pooled_conn: PooledConnection):
         """Devuelve conexión al pool"""
         try:
+            # CRÍTICO: Asegurar que la conexión esté limpia de transacciones
+            try:
+                pooled_conn.connection.rollback()
+            except Exception:
+                pass
+
             with self._lock:
                 self.metrics.connections_in_use = max(0, self.metrics.connections_in_use - 1)
                 

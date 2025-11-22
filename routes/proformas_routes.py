@@ -21,7 +21,48 @@ def obtener_proforma(id):
 @proformas_bp.route('/api/proformas', methods=['POST'])
 @login_required
 def crear_proforma():
-    return proforma.crear_proforma()
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No se recibieron datos'}), 400
+            
+        # Normalizaciones
+        if 'idContacto' in data and 'idcontacto' not in data:
+            data['idcontacto'] = data['idContacto']
+        
+        detalles = data.get('detalles') or data.get('lineas')
+        if detalles:
+            data['detalles'] = detalles
+            
+        return proforma.crear_proforma(data)
+    except Exception as e:
+        logger.error(f"Error creando proforma: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@proformas_bp.route('/api/proformas/actualizar', methods=['POST', 'PATCH'])
+@login_required
+def actualizar_proforma_endpoint():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No se recibieron datos'}), 400
+            
+        # Normalizaciones
+        if 'idContacto' in data and 'idcontacto' not in data:
+            data['idcontacto'] = data['idContacto']
+        
+        detalles = data.get('detalles') or data.get('lineas')
+        if detalles:
+            data['detalles'] = detalles
+            
+        id_proforma = data.get('id')
+        if not id_proforma:
+            return jsonify({'error': 'ID de proforma requerido para actualizar'}), 400
+            
+        return proforma.actualizar_proforma(id_proforma, data)
+    except Exception as e:
+        logger.error(f"Error actualizando proforma endpoint: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @proformas_bp.route('/api/proformas/<int:id>/convertir-factura', methods=['POST'])
 @login_required
@@ -33,9 +74,25 @@ def convertir_a_factura(id):
 @login_required
 def guardar_proforma_legacy():
     """Endpoint de compatibilidad para guardar proformas"""
-    # Nota: proforma.crear_proforma maneja la lógica de inserción.
-    # Si se requiere actualización, debería implementarse en proforma.py primero.
-    return proforma.crear_proforma()
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No se recibieron datos'}), 400
+            
+        # Normalizaciones
+        if 'idContacto' in data and 'idcontacto' not in data:
+            data['idcontacto'] = data['idContacto']
+        
+        detalles = data.get('detalles') or data.get('lineas')
+        if detalles:
+            data['detalles'] = detalles
+            
+        # Nota: proforma.crear_proforma maneja la lógica de inserción.
+        # Si se requiere actualización, debería implementarse en proforma.py primero.
+        return proforma.crear_proforma(data)
+    except Exception as e:
+        logger.error(f"Error en guardar_proforma_legacy: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @proformas_bp.route('/api/proformas/obtener_numerador', methods=['GET'])
 @login_required
@@ -49,3 +106,9 @@ def obtener_numerador_proforma():
     except Exception as e:
         logger.error(f"Error obteniendo numerador proforma: {e}")
         return jsonify({'error': str(e)}), 500
+
+@proformas_bp.route('/api/proforma/abierta/<int:idContacto>', methods=['GET'])
+@login_required
+def obtener_proforma_abierta_endpoint(idContacto):
+    """Obtiene la última proforma abierta de un contacto o devuelve datos para nueva"""
+    return proforma.obtener_proforma_abierta(idContacto)

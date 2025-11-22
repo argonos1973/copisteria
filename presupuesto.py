@@ -64,10 +64,11 @@ def _verificar_numero_presupuesto_local(numero):
             pass
 
 
-def crear_presupuesto():
+def crear_presupuesto(data=None):
     conn = None
     try:
-        data = request.get_json() or {}
+        if data is None:
+            data = request.get_json() or {}
         logger.info(f"[PRESUPUESTO] Datos recibidos en crear_presupuesto: {data}")
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400

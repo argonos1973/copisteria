@@ -29,18 +29,18 @@ def api_tickets_paginado():
 def obtener_ticket_detalle(ticket_id):
     """Obtiene el detalle de un ticket específico"""
     try:
-        ticket_data = tickets.obtener_ticket_completo(ticket_id)
-        if ticket_data:
-            return jsonify({
-                'success': True,
-                'ticket': ticket_data
-            })
-        else:
-            return jsonify({'error': 'Ticket no encontrado'}), 404
+        return tickets.obtener_ticket_con_detalles(ticket_id)
             
     except Exception as e:
         logger.error(f"Error obteniendo ticket {ticket_id}: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@tickets_bp.route('/api/tickets/obtenerTicket/<int:ticket_id>', methods=['GET'])
+@login_required
+def obtener_ticket_detalle_legacy(ticket_id):
+    """Endpoint legacy para obtener ticket"""
+    return obtener_ticket_detalle(ticket_id)
 
 
 @tickets_bp.route('/api/tickets', methods=['POST'])
@@ -56,13 +56,8 @@ def crear_ticket():
         if not data.get('lineas') or len(data.get('lineas', [])) == 0:
             return jsonify({'error': 'El ticket debe tener al menos una línea'}), 400
         
-        # Crear ticket
-        resultado = tickets.crear_ticket(data)
-        
-        if resultado['success']:
-            return jsonify(resultado), 201
-        else:
-            return jsonify(resultado), 400
+        # Crear ticket (usando guardar_ticket que es la función correcta)
+        return tickets.guardar_ticket(data)
             
     except Exception as e:
         logger.error(f"Error creando ticket: {e}")
@@ -84,12 +79,7 @@ def actualizar_ticket(ticket_id):
             return jsonify({'error': 'Ticket no encontrado'}), 404
         
         # Actualizar ticket
-        resultado = tickets.actualizar_ticket(ticket_id, data)
-        
-        if resultado['success']:
-            return jsonify(resultado)
-        else:
-            return jsonify(resultado), 400
+        return tickets.actualizar_ticket(ticket_id, data)
             
     except Exception as e:
         logger.error(f"Error actualizando ticket {ticket_id}: {e}")
@@ -107,12 +97,7 @@ def eliminar_ticket(ticket_id):
             return jsonify({'error': 'Ticket no encontrado'}), 404
         
         # Eliminar ticket
-        resultado = tickets.eliminar_ticket(ticket_id)
-        
-        if resultado['success']:
-            return jsonify(resultado)
-        else:
-            return jsonify(resultado), 400
+        return tickets.eliminar_ticket(ticket_id)
             
     except Exception as e:
         logger.error(f"Error eliminando ticket {ticket_id}: {e}")
@@ -184,6 +169,13 @@ def obtener_siguiente_numero(serie):
     except Exception as e:
         logger.error(f"Error obteniendo numerador {serie}: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@tickets_bp.route('/api/ticket/numero', methods=['GET'])
+@login_required
+def obtener_numero_ticket_legacy():
+    """Endpoint legacy para obtener siguiente número de ticket (asume serie T)"""
+    return obtener_siguiente_numero('T')
 
 
 @tickets_bp.route('/api/tickets/guardar', methods=['POST'])

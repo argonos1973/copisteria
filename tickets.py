@@ -226,11 +226,12 @@ def tickets_paginado():
         if 'conn' in locals():
             conn.close()
 
-def guardar_ticket():
+def guardar_ticket(data=None):
     """Guarda un nuevo ticket con lógica unificada de cálculo"""
     conn = None
     try:
-        data = request.get_json()
+        if data is None:
+            data = request.get_json()
         if not data:
             return jsonify({"error": "No se recibieron datos"}), 400
         
@@ -290,7 +291,7 @@ def guardar_ticket():
         cursor = conn.cursor()
         
         try:
-            conn.execute('BEGIN EXCLUSIVE TRANSACTION')
+            conn.execute('BEGIN IMMEDIATE')
             
             # Comprobar si ya existe un ticket con el mismo número
             cursor.execute("SELECT id FROM tickets WHERE numero = ?", (numero,))
@@ -358,34 +359,54 @@ def guardar_ticket():
             
             # Hacer commit de toda la transacción
             conn.commit()
+            
+            # Extraer datos necesarios antes de cerrar
+            db_path_val = None
+            try:
+                db_path_val = conn.execute('PRAGMA database_list').fetchone()[2]
+            except Exception:
+                pass
 
-            # Generar datos VERI*FACTU para el ticket (solo si está habilitado)
+            # CRÍTICO: Cerrar conexión inmediatamente para liberar la BD
+            conn.close()
+            conn = None
+
+            # Generar datos VERI*FACTU para el ticket de forma síncrona (pero con conexión BD ya liberada)
             if VERIFACTU_HABILITADO:
-                logger.info(f"[VERIFACTU] Generando datos VERI*FACTU para ticket {id_ticket}...")
+                logger.info(f"[VERIFACTU] Iniciando proceso síncrono para ticket {id_ticket}")
                 try:
-                    # Obtener código de empresa de la ruta de la BD (para tickets no hay sesión)
-                    # conn es la conexión actual, extraer empresa_codigo de su ruta
+                    import os
+                    # Configurar entorno por si acaso db_utils lo necesita (aunque ya no es hilo)
+                    os.environ['EMPRESA_DB_PATH'] = db_path_val
+                    
+                    # Extraer código empresa
                     import re
-                    db_path = conn.execute('PRAGMA database_list').fetchone()[2]
-                    # Ruta típica: /var/www/html/db/caca/caca.db
-                    match = re.search(r'/db/([^/]+)/\1\.db', db_path)
-                    if match:
-                        empresa_codigo = match.group(1)
-                    else:
-                        # Fallback: extraer del nombre de archivo
-                        import os
-                        db_name = os.path.basename(db_path)
-                        empresa_codigo = db_name.replace('.db', '')
+                    empresa_code = 'unknown'
+                    if db_path_val:
+                        match = re.search(r'/db/([^/]+)/\1\.db', db_path_val)
+                        if match:
+                            empresa_code = match.group(1)
+                        else:
+                            db_name = os.path.basename(db_path_val)
+                            empresa_code = db_name.replace('.db', '')
                     
-                    logger.info(f"[VERIFACTU] Usando empresa_codigo={empresa_codigo} (extraído de BD: {db_path})")
+                    logger.info(f"[VERIFACTU] Generando para ticket {id_ticket}, empresa={empresa_code}")
                     
-                    resultado = generar_datos_verifactu_para_ticket(id_ticket, empresa_codigo=empresa_codigo)
-                    if resultado:
-                        logger.info(f"[VERIFACTU] Datos generados correctamente para ticket {id_ticket}")
+                    # Ejecutar generación y envío (esto puede tardar unos segundos)
+                    vf_resultado = generar_datos_verifactu_para_ticket(id_ticket, empresa_codigo=empresa_code)
+                    
+                    if vf_resultado:
+                        logger.info(f"[VERIFACTU] Proceso completado correctamente para ticket {id_ticket}")
                     else:
-                        logger.warning(f"[VERIFACTU] No se generaron datos para ticket {id_ticket}")
-                except Exception as vf_exc:
-                    logger.error(f"[VERIFACTU] Error generando datos VERI*FACTU para ticket {id_ticket}: {vf_exc}", exc_info=True)
+                        logger.warning(f"[VERIFACTU] El proceso no devolvió datos para ticket {id_ticket}")
+                        
+                except Exception as e:
+                    logger.error(f"[VERIFACTU] Error en proceso: {e}", exc_info=True)
+                    # No fallamos la petición HTTP, pero logueamos el error.
+                    # El ticket ya está guardado. El usuario verá estado 'Pendiente' o error en listado.
+                finally:
+                    if 'EMPRESA_DB_PATH' in os.environ:
+                        del os.environ['EMPRESA_DB_PATH']
             else:
                 logger.info("[VERIFACTU] VERIFACTU_HABILITADO=False, omitiendo generación")
 
@@ -442,8 +463,8 @@ def obtener_ticket_con_detalles(id_ticket):
         ticket_dict['importe_cobrado'] = format_currency_es_two(ticket_dict.get('importe_cobrado'))
 
         # Obtener datos VERI*FACTU (QR, CSV, estado y errores) si existen
-        # Para tickets, el ID se guarda en factura_id (registro unificado con facturas)
-        cursor.execute('SELECT codigo_qr, csv, estado_envio, errores FROM registro_facturacion WHERE factura_id = ?', (id_ticket,))
+        # Para tickets, el ID se guarda en ticket_id
+        cursor.execute('SELECT codigo_qr, csv, estado_envio, errores FROM registro_facturacion WHERE ticket_id = ?', (id_ticket,))
         reg = cursor.fetchone()
         codigo_qr = reg['codigo_qr'] if reg else None
         csv = reg['csv'] if reg else None
@@ -711,39 +732,43 @@ def media_gasto_por_ticket():
         if 'conn' in locals():
             conn.close()
 
-def actualizar_ticket():
+def actualizar_ticket(id_ticket=None, data=None):
     """Actualiza un ticket existente con lógica unificada de cálculo"""
     conn = None
     try:
-        # Parseo robusto de JSON: leer primero el cuerpo crudo y parsear manualmente
-        data = {}
-        try:
-            ct = request.headers.get('Content-Type')
-            cl = request.headers.get('Content-Length')
-        except Exception:
-            ct = None
-            cl = None
-        try:
-            raw = request.get_data(cache=True, as_text=True) or ''
-        except Exception:
-            raw = ''
-        try:
-            preview = raw[:200] if isinstance(raw, str) else str(raw)[:200]
-            logger.debug(f"[/api/tickets/actualizar] CT={ct} CL={cl} len_raw={len(raw) if isinstance(raw,str) else 'NA'} raw_preview={preview}")
-        except Exception:
-            pass
-        if raw and raw.strip():
+        if data is None:
+            # Parseo robusto de JSON: leer primero el cuerpo crudo y parsear manualmente
+            data = {}
             try:
-                data = json.loads(raw)
+                ct = request.headers.get('Content-Type')
+                cl = request.headers.get('Content-Length')
             except Exception:
-                data = {}
-        if not data:
-            # Fallback a get_json por si el servidor ya decodificó el body
-            data = request.get_json(force=True, silent=True) or {}
+                ct = None
+                cl = None
+            try:
+                raw = request.get_data(cache=True, as_text=True) or ''
+            except Exception:
+                raw = ''
+            try:
+                preview = raw[:200] if isinstance(raw, str) else str(raw)[:200]
+                logger.debug(f"[/api/tickets/actualizar] CT={ct} CL={cl} len_raw={len(raw) if isinstance(raw,str) else 'NA'} raw_preview={preview}")
+            except Exception:
+                pass
+            if raw and raw.strip():
+                try:
+                    data = json.loads(raw)
+                except Exception:
+                    data = {}
+            if not data:
+                # Fallback a get_json por si el servidor ya decodificó el body
+                data = request.get_json(force=True, silent=True) or {}
+        
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400
 
-        id_ticket = data.get('id')
+        if not id_ticket:
+            id_ticket = data.get('id')
+        
         if not id_ticket:
             return jsonify({'error': 'El campo id es requerido'}), 400
 
