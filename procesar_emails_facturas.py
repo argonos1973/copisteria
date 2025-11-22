@@ -446,7 +446,7 @@ def procesar_facturas_email():
             mail.close()
             mail.logout()
             logger.info("✓ Conexión cerrada")
-        except:
+        except Exception:
             pass
 
 

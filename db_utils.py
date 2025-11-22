@@ -32,8 +32,8 @@ def get_db_connection():
                 db_path = DB_NAME
             else:
                 logger.warning("[MULTIEMPRESA] No hay contexto de petición disponible")
-        except ImportError:
-            logger.warning("[MULTIEMPRESA] Flask no disponible, usando BD por defecto")
+        except ImportError as e:
+            logger.warning(f"[MULTIEMPRESA] Flask no disponible, usando BD por defecto: {e}")
         
         if not db_path:
             db_path = DB_NAME
@@ -142,7 +142,7 @@ def transformar_fecha_ddmmyyyy_a_iso(fecha_str):
         if len(partes) == 3:
             dia, mes, año = partes
             return f"{año}-{mes.zfill(2)}-{dia.zfill(2)}"
-    except:
+    except Exception:
         pass
     return None
 

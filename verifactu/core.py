@@ -664,7 +664,7 @@ def verificar_estado_registro_aeat(factura_id):
         if registro['respuesta_aeat']:
             try:
                 datos_estado['respuesta'] = json.loads(registro['respuesta_aeat'])
-            except:
+            except json.JSONDecodeError:
                 datos_estado['respuesta'] = registro['respuesta_aeat']
         
         return {

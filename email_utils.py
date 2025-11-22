@@ -281,7 +281,7 @@ El equipo de Aleph70
         if server:
             try:
                 server.quit()
-            except:
+            except ImportError:
                 pass
         return False, f"Error al enviar el correo: {str(e)}"
 
@@ -425,6 +425,6 @@ def enviar_email_recuperacion_password(destinatario, nombre_usuario, token, base
         if server:
             try:
                 server.quit()
-            except:
+            except ImportError:
                 pass
         return False, f"Error al enviar el correo: {str(e)}"

@@ -147,13 +147,13 @@ def importar_desde_excel(ruta_excel: str):
                     try:
                         fecha_dt = datetime.strptime(fecha_txt, fmt)
                         return fecha_dt.strftime("%d/%m/%Y")
-                    except:
+                    except (KeyError, IndexError, AttributeError):
                         continue
                 return fecha_txt  # Si no se puede parsear, devolver original
             else:
                 # Si es datetime/timestamp
                 return fecha.strftime("%d/%m/%Y")
-        except:
+        except (KeyError, IndexError, AttributeError):
             return str(fecha)
     
     df['fecha_operacion'] = df['fecha_operacion'].apply(normalizar_fecha_a_dd_mm_yyyy)

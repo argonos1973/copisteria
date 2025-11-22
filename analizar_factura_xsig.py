@@ -73,11 +73,11 @@ def analizar_xsig(ruta_xsig_file):
             f.write(xml_content_bytes)
         
         logger.info(f"\n1. XML original extraído de {os.path.basename(ruta_xsig_file)} y guardado en {ruta_xml_extraido}:")
-        logger.info(f"xml_content_bytes.decode('UTF-8')) # Imprimir directamente desde bytes decodificados
+        logger.info(xml_content_bytes.decode('UTF-8')) # Imprimir directamente desde bytes decodificados
 
         # Parsear el XML extraído para análisis
         # Es importante parsear desde el string de bytes para que lxml maneje correctamente el encoding
-        facturae_tree_parsed = etree.fromstring(xml_content_bytes parser=parser")
+        facturae_tree_parsed = etree.fromstring(xml_content_bytes, parser=parser)
         
         # El namespace del elemento Facturae extraído
         # El namespace principal es el del elemento raíz 'Facturae'

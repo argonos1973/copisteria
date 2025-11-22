@@ -571,7 +571,7 @@ def crear_empresa():
                 conn.rollback()
                 conn.close()
                 logger.info("Rollback de transacción realizado")
-        except:
+        except (ValueError, TypeError):
             pass
         # Limpiar archivos si hubo error
         if 'logo_filename' in locals() and logo_filename and os.path.exists(os.path.join(UPLOAD_FOLDER, logo_filename)):

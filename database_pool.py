@@ -59,7 +59,7 @@ class PooledConnection:
         try:
             self.connection.execute('SELECT 1').fetchone()
             return True
-        except:
+        except Exception:
             return False
 
 class DatabasePool:

@@ -48,7 +48,7 @@ def create_link_token():
         # Obtener redirect_uri del request (opcional)
         try:
             data = request.get_json(silent=True) or {}
-        except:
+        except Exception:
             data = {}
         redirect_uri = data.get('redirect_uri')
         
@@ -230,7 +230,7 @@ def get_accounts():
             try:
                 live_accounts = plaid_client.get_accounts(item['access_token'])
                 balance_map = {acc['account_id']: acc['balance'] for acc in live_accounts}
-            except:
+            except (KeyError, IndexError, AttributeError):
                 balance_map = {}
             
             for account in accounts:

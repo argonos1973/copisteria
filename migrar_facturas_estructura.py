@@ -43,7 +43,7 @@ def determinar_trimestre(fecha_str):
             trimestre = 'Q4'
         
         return año, trimestre
-    except:
+    except (KeyError, IndexError, AttributeError):
         # Si no se puede parsear, usar fecha actual
         hoy = datetime.now()
         mes = hoy.month
