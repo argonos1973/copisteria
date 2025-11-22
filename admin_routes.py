@@ -14,6 +14,7 @@ from flask import Blueprint, jsonify, request, session
 from auth_middleware import login_required, require_admin, hash_password
 from multiempresa_config import DB_USUARIOS_PATH
 from logger_config import get_logger
+from database_pool import get_database_pool
 
 logger = get_logger(__name__)
 
@@ -86,31 +87,30 @@ def asignar_permisos_segun_rol(usuario_id, empresa_id, rol, cursor):
 def listar_usuarios():
     """Lista solo usuarios de la empresa del admin"""
     try:
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        empresa_id_admin = session.get('empresa_id')
-        
-        # Admin de empresa: solo usuarios de su empresa
-        cursor.execute('''
-            SELECT 
-                u.id, u.username, u.nombre_completo, u.email, u.telefono,
-                u.activo, u.fecha_alta, u.ultimo_acceso, u.avatar,
-                u.rol,
-                ue.es_admin_empresa,
-                GROUP_CONCAT(DISTINCT e.nombre) as empresas,
-                GROUP_CONCAT(DISTINCT e.codigo) as empresas_codigos
-            FROM usuarios u
-            INNER JOIN usuario_empresa ue ON u.id = ue.usuario_id
-            INNER JOIN empresas e ON ue.empresa_id = e.id
-            WHERE ue.empresa_id = ?
-            GROUP BY u.id
-            ORDER BY u.username
-        ''', (empresa_id_admin,))
-        
-        usuarios = [dict(row) for row in cursor.fetchall()]
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            empresa_id_admin = session.get('empresa_id')
+            
+            # Admin de empresa: solo usuarios de su empresa
+            cursor.execute('''
+                SELECT 
+                    u.id, u.username, u.nombre_completo, u.email, u.telefono,
+                    u.activo, u.fecha_alta, u.ultimo_acceso, u.avatar,
+                    u.rol,
+                    ue.es_admin_empresa,
+                    GROUP_CONCAT(DISTINCT e.nombre) as empresas,
+                    GROUP_CONCAT(DISTINCT e.codigo) as empresas_codigos
+                FROM usuarios u
+                INNER JOIN usuario_empresa ue ON u.id = ue.usuario_id
+                INNER JOIN empresas e ON ue.empresa_id = e.id
+                WHERE ue.empresa_id = ?
+                GROUP BY u.id
+                ORDER BY u.username
+            ''', (empresa_id_admin,))
+            
+            usuarios = [dict(row) for row in cursor.fetchall()]
         
         return jsonify(usuarios), 200
         
@@ -152,32 +152,31 @@ def crear_usuario():
         
         password_hash = hash_password(password)
         
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        # es_superadmin siempre 0 (ya no hay superadmins)
-        cursor.execute('''
-            INSERT INTO usuarios (username, password_hash, nombre_completo, email, telefono, rol, es_superadmin, activo)
-            VALUES (?, ?, ?, ?, ?, ?, 0, 1)
-        ''', (username, password_hash, nombre_completo, email, telefono, rol))
-        
-        usuario_id = cursor.lastrowid
-        
-        # Asignar a empresa solo si se especifica y hay empresa
-        if asignar_empresa and empresa_id_creador:
-            cursor.execute('''
-                INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
-                VALUES (?, ?, 'usuario', 0)
-            ''', (usuario_id, empresa_id_creador))
-            logger.info(f"Usuario {username} asignado automáticamente a empresa ID {empresa_id_creador}")
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
             
-            # Asignar permisos automáticamente según el rol
-            asignar_permisos_segun_rol(usuario_id, empresa_id_creador, rol, cursor)
-        else:
-            logger.info(f"Usuario {username} creado sin empresa asignada")
-        
-        conn.commit()
-        conn.close()
+            # es_superadmin siempre 0 (ya no hay superadmins)
+            cursor.execute('''
+                INSERT INTO usuarios (username, password_hash, nombre_completo, email, telefono, rol, es_superadmin, activo)
+                VALUES (?, ?, ?, ?, ?, ?, 0, 1)
+            ''', (username, password_hash, nombre_completo, email, telefono, rol))
+            
+            usuario_id = cursor.lastrowid
+            
+            # Asignar a empresa solo si se especifica y hay empresa
+            if asignar_empresa and empresa_id_creador:
+                cursor.execute('''
+                    INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
+                    VALUES (?, ?, 'usuario', 0)
+                ''', (usuario_id, empresa_id_creador))
+                logger.info(f"Usuario {username} asignado automáticamente a empresa ID {empresa_id_creador}")
+                
+                # Asignar permisos automáticamente según el rol
+                asignar_permisos_segun_rol(usuario_id, empresa_id_creador, rol, cursor)
+            else:
+                logger.info(f"Usuario {username} creado sin empresa asignada")
+            
+            conn.commit()
         
         logger.info(f"Usuario creado: {username} (ID: {usuario_id})")
         
@@ -197,77 +196,74 @@ def actualizar_usuario(usuario_id):
     try:
         data = request.json
         
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        # Verificar que el usuario pertenece a la empresa del admin
-        empresa_id_editor = session.get('empresa_id')
-        
-        cursor.execute('''
-            SELECT COUNT(*) FROM usuario_empresa 
-            WHERE usuario_id = ? AND empresa_id = ?
-        ''', (usuario_id, empresa_id_editor))
-        
-        if cursor.fetchone()[0] == 0:
-            conn.close()
-            return jsonify({'error': 'No tienes permisos para modificar este usuario'}), 403
-        
-        # Construir query dinámicamente
-        campos = []
-        valores = []
-        
-        if 'nombre_completo' in data:
-            campos.append('nombre_completo = ?')
-            valores.append(data['nombre_completo'])
-        
-        if 'email' in data:
-            campos.append('email = ?')
-            valores.append(data['email'])
-        
-        if 'telefono' in data:
-            campos.append('telefono = ?')
-            valores.append(data['telefono'])
-        
-        if 'rol' in data:
-            rol = data['rol'].strip()
-            # Validar rol
-            if rol in ['admin', 'editor', 'consultor']:
-                campos.append('rol = ?')
-                valores.append(rol)
-        
-        if 'activo' in data:
-            campos.append('activo = ?')
-            valores.append(data['activo'])
-        
-        if 'password' in data and data['password']:
-            campos.append('password_hash = ?')
-            valores.append(hash_password(data['password']))
-        
-        if not campos:
-            conn.close()
-            return jsonify({'error': 'No hay campos para actualizar'}), 400
-        
-        valores.append(usuario_id)
-        
-        query = f"UPDATE usuarios SET {', '.join(campos)} WHERE id = ?"
-        cursor.execute(query, valores)
-        
-        # Si se actualizó el rol, actualizar permisos automáticamente
-        if 'rol' in data:
-            rol_actualizado = data['rol'].strip()
-            if rol_actualizado in ['admin', 'editor', 'consultor']:
-                # Obtener empresa del usuario
-                cursor.execute('''
-                    SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ?
-                ''', (usuario_id,))
-                empresa_row = cursor.fetchone()
-                if empresa_row:
-                    empresa_id_usuario = empresa_row[0]
-                    asignar_permisos_segun_rol(usuario_id, empresa_id_usuario, rol_actualizado, cursor)
-                    logger.info(f"Permisos actualizados para usuario {usuario_id} con rol {rol_actualizado}")
-        
-        conn.commit()
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Verificar que el usuario pertenece a la empresa del admin
+            empresa_id_editor = session.get('empresa_id')
+            
+            cursor.execute('''
+                SELECT COUNT(*) FROM usuario_empresa 
+                WHERE usuario_id = ? AND empresa_id = ?
+            ''', (usuario_id, empresa_id_editor))
+            
+            if cursor.fetchone()[0] == 0:
+                return jsonify({'error': 'No tienes permisos para modificar este usuario'}), 403
+            
+            # Construir query dinámicamente
+            campos = []
+            valores = []
+            
+            if 'nombre_completo' in data:
+                campos.append('nombre_completo = ?')
+                valores.append(data['nombre_completo'])
+            
+            if 'email' in data:
+                campos.append('email = ?')
+                valores.append(data['email'])
+            
+            if 'telefono' in data:
+                campos.append('telefono = ?')
+                valores.append(data['telefono'])
+            
+            if 'rol' in data:
+                rol = data['rol'].strip()
+                # Validar rol
+                if rol in ['admin', 'editor', 'consultor']:
+                    campos.append('rol = ?')
+                    valores.append(rol)
+            
+            if 'activo' in data:
+                campos.append('activo = ?')
+                valores.append(data['activo'])
+            
+            if 'password' in data and data['password']:
+                campos.append('password_hash = ?')
+                valores.append(hash_password(data['password']))
+            
+            if not campos:
+                return jsonify({'error': 'No hay campos para actualizar'}), 400
+            
+            valores.append(usuario_id)
+            
+            query = f"UPDATE usuarios SET {', '.join(campos)} WHERE id = ?"
+            cursor.execute(query, valores)
+            
+            # Si se actualizó el rol, actualizar permisos automáticamente
+            if 'rol' in data:
+                rol_actualizado = data['rol'].strip()
+                if rol_actualizado in ['admin', 'editor', 'consultor']:
+                    # Obtener empresa del usuario
+                    cursor.execute('''
+                        SELECT empresa_id FROM usuario_empresa WHERE usuario_id = ?
+                    ''', (usuario_id,))
+                    empresa_row = cursor.fetchone()
+                    if empresa_row:
+                        empresa_id_usuario = empresa_row[0]
+                        asignar_permisos_segun_rol(usuario_id, empresa_id_usuario, rol_actualizado, cursor)
+                        logger.info(f"Permisos actualizados para usuario {usuario_id} con rol {rol_actualizado}")
+            
+            conn.commit()
         
         logger.info(f"Usuario actualizado: ID {usuario_id}")
         
@@ -287,29 +283,26 @@ def eliminar_usuario(usuario_id):
         if usuario_id == session.get('user_id'):
             return jsonify({'error': 'No puedes eliminar tu propio usuario'}), 400
         
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        # Verificar que el usuario pertenece a la empresa del admin
-        empresa_id_eliminador = session.get('empresa_id')
-        
-        cursor.execute('''
-            SELECT COUNT(*) FROM usuario_empresa 
-            WHERE usuario_id = ? AND empresa_id = ?
-        ''', (usuario_id, empresa_id_eliminador))
-        
-        if cursor.fetchone()[0] == 0:
-            conn.close()
-            return jsonify({'error': 'No tienes permisos para eliminar este usuario'}), 403
-        
-        cursor.execute('DELETE FROM usuarios WHERE id = ?', (usuario_id,))
-        
-        if cursor.rowcount == 0:
-            conn.close()
-            return jsonify({'error': 'Usuario no encontrado'}), 404
-        
-        conn.commit()
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Verificar que el usuario pertenece a la empresa del admin
+            empresa_id_eliminador = session.get('empresa_id')
+            
+            cursor.execute('''
+                SELECT COUNT(*) FROM usuario_empresa 
+                WHERE usuario_id = ? AND empresa_id = ?
+            ''', (usuario_id, empresa_id_eliminador))
+            
+            if cursor.fetchone()[0] == 0:
+                return jsonify({'error': 'No tienes permisos para eliminar este usuario'}), 403
+            
+            cursor.execute('DELETE FROM usuarios WHERE id = ?', (usuario_id,))
+            
+            if cursor.rowcount == 0:
+                return jsonify({'error': 'Usuario no encontrado'}), 404
+            
+            conn.commit()
         
         logger.info(f"Usuario eliminado: ID {usuario_id}")
         
@@ -329,22 +322,21 @@ def eliminar_usuario(usuario_id):
 def listar_empresas():
     """Lista todas las empresas"""
     try:
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT 
-                e.*,
-                COUNT(DISTINCT ue.usuario_id) as total_usuarios
-            FROM empresas e
-            LEFT JOIN usuario_empresa ue ON e.id = ue.empresa_id
-            GROUP BY e.id
-            ORDER BY e.nombre
-        ''')
-        
-        empresas = [dict(row) for row in cursor.fetchall()]
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT 
+                    e.*,
+                    COUNT(DISTINCT ue.usuario_id) as total_usuarios
+                FROM empresas e
+                LEFT JOIN usuario_empresa ue ON e.id = ue.empresa_id
+                GROUP BY e.id
+                ORDER BY e.nombre
+            ''')
+            
+            empresas = [dict(row) for row in cursor.fetchall()]
         
         return jsonify(empresas), 200
         
@@ -362,14 +354,13 @@ def listar_empresas():
 def listar_modulos():
     """Lista todos los módulos"""
     try:
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute('SELECT * FROM modulos ORDER BY orden, nombre')
-        
-        modulos = [dict(row) for row in cursor.fetchall()]
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT * FROM modulos ORDER BY orden, nombre')
+            
+            modulos = [dict(row) for row in cursor.fetchall()]
         
         return jsonify(modulos), 200
         
@@ -387,21 +378,20 @@ def listar_modulos():
 def obtener_empresas_usuario(usuario_id):
     """Obtiene las empresas asignadas a un usuario"""
     try:
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT 
-                e.id, e.codigo, e.nombre,
-                ue.rol, ue.es_admin_empresa
-            FROM usuario_empresa ue
-            JOIN empresas e ON ue.empresa_id = e.id
-            WHERE ue.usuario_id = ?
-        ''', (usuario_id,))
-        
-        empresas = [dict(row) for row in cursor.fetchall()]
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT 
+                    e.id, e.codigo, e.nombre,
+                    ue.rol, ue.es_admin_empresa
+                FROM usuario_empresa ue
+                JOIN empresas e ON ue.empresa_id = e.id
+                WHERE ue.usuario_id = ?
+            ''', (usuario_id,))
+            
+            empresas = [dict(row) for row in cursor.fetchall()]
         
         return jsonify(empresas), 200
         
@@ -423,16 +413,15 @@ def asignar_empresa_usuario(usuario_id):
         if not empresa_id:
             return jsonify({'error': 'empresa_id es requerido'}), 400
         
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
-            VALUES (?, ?, ?, ?)
-        ''', (usuario_id, empresa_id, rol, es_admin_empresa))
-        
-        conn.commit()
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
+                VALUES (?, ?, ?, ?)
+            ''', (usuario_id, empresa_id, rol, es_admin_empresa))
+            
+            conn.commit()
         
         logger.info(f"Empresa {empresa_id} asignada a usuario {usuario_id}")
         
@@ -450,13 +439,12 @@ def asignar_empresa_usuario(usuario_id):
 def desasignar_empresa_usuario(usuario_id, empresa_id):
     """Desasigna una empresa de un usuario"""
     try:
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute('DELETE FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?', (usuario_id, empresa_id))
-        
-        conn.commit()
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('DELETE FROM usuario_empresa WHERE usuario_id = ? AND empresa_id = ?', (usuario_id, empresa_id))
+            
+            conn.commit()
         
         logger.info(f"Empresa {empresa_id} desasignada del usuario {usuario_id}")
         
@@ -474,30 +462,29 @@ def obtener_permisos_usuario(usuario_id):
     try:
         empresa_id = request.args.get('empresa_id')
         
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        if empresa_id:
-            cursor.execute('''
-                SELECT p.*, m.nombre as modulo_nombre
-                FROM permisos_usuario_modulo p
-                JOIN modulos m ON p.modulo_codigo = m.codigo
-                WHERE p.usuario_id = ? AND p.empresa_id = ?
-                ORDER BY m.orden, m.nombre
-            ''', (usuario_id, empresa_id))
-        else:
-            cursor.execute('''
-                SELECT p.*, m.nombre as modulo_nombre, e.nombre as empresa_nombre
-                FROM permisos_usuario_modulo p
-                JOIN modulos m ON p.modulo_codigo = m.codigo
-                JOIN empresas e ON p.empresa_id = e.id
-                WHERE p.usuario_id = ?
-                ORDER BY e.nombre, m.orden, m.nombre
-            ''', (usuario_id,))
-        
-        permisos = [dict(row) for row in cursor.fetchall()]
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            if empresa_id:
+                cursor.execute('''
+                    SELECT p.*, m.nombre as modulo_nombre
+                    FROM permisos_usuario_modulo p
+                    JOIN modulos m ON p.modulo_codigo = m.codigo
+                    WHERE p.usuario_id = ? AND p.empresa_id = ?
+                    ORDER BY m.orden, m.nombre
+                ''', (usuario_id, empresa_id))
+            else:
+                cursor.execute('''
+                    SELECT p.*, m.nombre as modulo_nombre, e.nombre as empresa_nombre
+                    FROM permisos_usuario_modulo p
+                    JOIN modulos m ON p.modulo_codigo = m.codigo
+                    JOIN empresas e ON p.empresa_id = e.id
+                    WHERE p.usuario_id = ?
+                    ORDER BY e.nombre, m.orden, m.nombre
+                ''', (usuario_id,))
+            
+            permisos = [dict(row) for row in cursor.fetchall()]
         
         return jsonify(permisos), 200
         
@@ -525,17 +512,16 @@ def actualizar_permisos_usuario(usuario_id):
         if not empresa_id or not modulo_codigo:
             return jsonify({'error': 'empresa_id y modulo_codigo son requeridos'}), 400
         
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT OR REPLACE INTO permisos_usuario_modulo 
-            (usuario_id, empresa_id, modulo_codigo, puede_ver, puede_crear, puede_editar, puede_eliminar, puede_anular, puede_exportar)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (usuario_id, empresa_id, modulo_codigo, puede_ver, puede_crear, puede_editar, puede_eliminar, puede_anular, puede_exportar))
-        
-        conn.commit()
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT OR REPLACE INTO permisos_usuario_modulo 
+                (usuario_id, empresa_id, modulo_codigo, puede_ver, puede_crear, puede_editar, puede_eliminar, puede_anular, puede_exportar)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (usuario_id, empresa_id, modulo_codigo, puede_ver, puede_crear, puede_editar, puede_eliminar, puede_anular, puede_exportar))
+            
+            conn.commit()
         
         logger.info(f"Permisos actualizados: usuario {usuario_id}, empresa {empresa_id}, módulo {modulo_codigo}")
         
@@ -555,26 +541,24 @@ def actualizar_permisos_usuario(usuario_id):
 def obtener_estadisticas():
     """Obtiene estadísticas del sistema"""
     try:
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        # Total usuarios
-        cursor.execute('SELECT COUNT(*) FROM usuarios WHERE activo = 1')
-        total_usuarios = cursor.fetchone()[0]
-        
-        # Total empresas
-        cursor.execute('SELECT COUNT(*) FROM empresas WHERE activa = 1')
-        total_empresas = cursor.fetchone()[0]
-        
-        # Total módulos
-        cursor.execute('SELECT COUNT(*) FROM modulos WHERE activo = 1')
-        total_modulos = cursor.fetchone()[0]
-        
-        # Total permisos configurados
-        cursor.execute('SELECT COUNT(*) FROM permisos_usuario_modulo')
-        total_permisos = cursor.fetchone()[0]
-        
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Total usuarios
+            cursor.execute('SELECT COUNT(*) FROM usuarios WHERE activo = 1')
+            total_usuarios = cursor.fetchone()[0]
+            
+            # Total empresas
+            cursor.execute('SELECT COUNT(*) FROM empresas WHERE activa = 1')
+            total_empresas = cursor.fetchone()[0]
+            
+            # Total módulos
+            cursor.execute('SELECT COUNT(*) FROM modulos WHERE activo = 1')
+            total_modulos = cursor.fetchone()[0]
+            
+            # Total permisos configurados
+            cursor.execute('SELECT COUNT(*) FROM permisos_usuario_modulo')
+            total_permisos = cursor.fetchone()[0]
         
         return jsonify({
             'total_usuarios': total_usuarios,

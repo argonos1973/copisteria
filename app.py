@@ -32,6 +32,7 @@ from avatares_api import avatares_bp
 from dashboard_routes import dashboard_bp
 from gastos import gastos_bp
 from estadisticas_gastos_routes import estadisticas_gastos_bp
+from conciliacion import conciliacion_bp
 
 # Nuevos blueprints refactorizados
 from routes.productos_routes import productos_bp
@@ -39,6 +40,8 @@ from routes.contactos_routes import contactos_bp
 from routes.facturas_routes import facturas_bp
 from routes.tickets_routes import tickets_bp
 from routes.system_routes import system_bp
+from routes.presupuestos_routes import presupuestos_bp
+from routes.proformas_routes import proformas_bp
 
 # Middlewares
 from auth_middleware import login_required, require_admin, require_permission
@@ -46,7 +49,7 @@ from auth_middleware import login_required, require_admin, require_permission
 logger = get_logger('aleph70.app')
 
 # Versión de la aplicación
-APP_VERSION = '1.3.0-refactored'
+APP_VERSION = '1.3.1-legacy-support'
 
 # =====================================
 # CONFIGURACIÓN DE LA APLICACIÓN
@@ -174,6 +177,7 @@ def register_blueprints(app):
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(gastos_bp)
     app.register_blueprint(estadisticas_gastos_bp)
+    app.register_blueprint(conciliacion_bp)
     
     # Nuevos blueprints refactorizados
     app.register_blueprint(system_bp)          # Rutas de sistema (/config.json, /api/version, etc.)
@@ -181,6 +185,8 @@ def register_blueprints(app):
     app.register_blueprint(contactos_bp)       # Rutas de contactos
     app.register_blueprint(facturas_bp)        # Rutas de facturas
     app.register_blueprint(tickets_bp)         # Rutas de tickets
+    app.register_blueprint(presupuestos_bp)    # Rutas de presupuestos
+    app.register_blueprint(proformas_bp)       # Rutas de proformas
     
     logger.info("✅ Todos los blueprints registrados correctamente")
 

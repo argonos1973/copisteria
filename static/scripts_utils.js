@@ -307,13 +307,18 @@ export function truncarDecimales(numero, decimales) {
   return Math.floor(numero * factor) / factor;
 }
 
-export function formatearImporte(importe) {
+export function formatearImporte(importe, usarGuionSiNulo = false) {
  
-  if (typeof importe !== 'number' || isNaN(importe)) {
-   
-    return "0,00 €";
+  if (importe === null || importe === undefined || (typeof importe !== 'number' && isNaN(importe))) {
+    if (usarGuionSiNulo) return '-';
+    if (typeof importe !== 'number' || isNaN(importe)) return "0,00 €";
   }
-  return importe.toLocaleString('es-ES', {
+  
+  // Asegurar que es número si llegó texto parseable (aunque la validación anterior ya filtra)
+  const numero = Number(importe);
+  if (isNaN(numero)) return usarGuionSiNulo ? '-' : "0,00 €";
+
+  return numero.toLocaleString('es-ES', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
     useGrouping: true

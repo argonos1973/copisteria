@@ -102,7 +102,11 @@ function crearCardProveedor(proveedor) {
     
     card.innerHTML = `
         <div class="card-header">
-            <div class="card-title">${proveedor.nombre}</div>
+            <div class="card-title">
+                <a href="#" onclick="editarProveedor(${proveedor.id}); return false;" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
+                    ${proveedor.nombre}
+                </a>
+            </div>
         </div>
         <div class="card-body">
             <div class="card-info">
@@ -125,9 +129,6 @@ function crearCardProveedor(proveedor) {
             ` : ''}
         </div>
         <div class="card-actions">
-            <button class="btn btn-sm btn-primary" onclick="editarProveedor(${proveedor.id})">
-                <i class="fas fa-edit"></i> Editar
-            </button>
             <button class="btn btn-sm btn-danger" onclick="eliminarProveedor(${proveedor.id}, '${proveedor.nombre}')">
                 <i class="fas fa-trash"></i> Eliminar
             </button>

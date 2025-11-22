@@ -104,7 +104,8 @@
     },
     "tab": {
       "active-bg": "{palette.ink100}",
-      "active-text": "{semantic.text}"
+      "active-text": "{semantic.text}",
+      "border": "{palette.ink700}"
     },
     "disabled": {
       "bg": "{palette.ink100}",

@@ -1037,42 +1037,7 @@ async function activarEmpresa(empresaId) {
 
 // ==================== NOTIFICACIONES ====================
 
-function mostrarNotificacion(mensaje, tipo = 'info') {
-    // Buscar contenedor de notificaciones o crearlo
-    let container = document.getElementById('notificaciones-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notificaciones-container';
-        container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
-        document.body.appendChild(container);
-    }
-    
-    // Crear notificación
-    const notif = document.createElement('div');
-    notif.className = `notificacion notif-${tipo}`;
-    notif.style.cssText = `
-        background: ${tipo === 'success' ? '#d4edda' : tipo === 'error' ? '#f8d7da' : '#d1ecf1'};
-        color: ${tipo === 'success' ? '#155724' : tipo === 'error' ? '#721c24' : '#0c5460'};
-        border: 1px solid ${tipo === 'success' ? '#c3e6cb' : tipo === 'error' ? '#f5c6cb' : '#bee5eb'};
-        padding: 15px 20px;
-        border-radius: 5px;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        animation: slideIn 0.3s ease-out;
-    `;
-    
-    notif.innerHTML = `
-        <strong>${tipo === 'success' ? '✓' : tipo === 'error' ? '✗' : 'ℹ'}</strong> ${mensaje}
-    `;
-    
-    container.appendChild(notif);
-    
-    // Auto eliminar después de 5 segundos
-    setTimeout(() => {
-        notif.style.animation = 'slideOut 0.3s ease-out';
-        setTimeout(() => notif.remove(), 300);
-    }, 5000);
-}
+// mostrarNotificacion eliminada - se usa la global de notificaciones.js
 
 // Agregar animaciones CSS si no existen
 if (!document.getElementById('notif-styles')) {

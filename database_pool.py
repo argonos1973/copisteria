@@ -45,10 +45,29 @@ class PooledConnection:
         self.last_used = datetime.now()
         self.in_use = False
     
+    def close(self):
+        """Devuelve la conexión al pool en lugar de cerrarla"""
+        self.pool._return_connection(self)
+
+    def cursor(self):
+        return self.connection.cursor()
+
+    def execute(self, *args, **kwargs):
+        return self.connection.execute(*args, **kwargs)
+
+    def commit(self):
+        return self.connection.commit()
+        
+    def rollback(self):
+        return self.connection.rollback()
+        
+    def __getattr__(self, name):
+        return getattr(self.connection, name)
+
     def __enter__(self):
         self.in_use = True
         self.last_used = datetime.now()
-        return self.connection
+        return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.in_use = False
@@ -258,7 +277,7 @@ class DatabasePool:
         pooled_conn = None
         try:
             pooled_conn = self.get_connection()
-            yield pooled_conn.connection
+            yield pooled_conn
         finally:
             if pooled_conn:
                 self._return_connection(pooled_conn)

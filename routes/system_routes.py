@@ -150,73 +150,67 @@ def exportar():
         logger.info("Consultando tickets...")
         tickets_data = []
         try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            
-            query_tickets = '''
-                SELECT id, fecha, total, observaciones, timestamp
-                FROM tickets 
-                WHERE fecha BETWEEN ? AND ?
-                ORDER BY fecha, timestamp
-            '''
-            
-            cursor.execute(query_tickets, (fecha_inicio, fecha_fin))
-            tickets_raw = cursor.fetchall()
-            
-            for ticket in tickets_raw:
-                tickets_data.append({
-                    'tipo': 'TICKET',
-                    'id': ticket[0],
-                    'fecha': format_date(ticket[1]) if ticket[1] else '',
-                    'total': float(ticket[2]) if ticket[2] else 0.0,
-                    'observaciones': ticket[3] or '',
-                    'timestamp': ticket[4]
-                })
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                query_tickets = '''
+                    SELECT id, fecha, total, observaciones, timestamp
+                    FROM tickets 
+                    WHERE fecha BETWEEN ? AND ?
+                    ORDER BY fecha, timestamp
+                '''
+                
+                cursor.execute(query_tickets, (fecha_inicio, fecha_fin))
+                tickets_raw = cursor.fetchall()
+                
+                for ticket in tickets_raw:
+                    tickets_data.append({
+                        'tipo': 'TICKET',
+                        'id': ticket[0],
+                        'fecha': format_date(ticket[1]) if ticket[1] else '',
+                        'total': float(ticket[2]) if ticket[2] else 0.0,
+                        'observaciones': ticket[3] or '',
+                        'timestamp': ticket[4]
+                    })
                 
         except Exception as e:
             logger.error(f"Error consultando tickets: {e}")
             tickets_data = []
-        finally:
-            if 'conn' in locals():
-                conn.close()
         
         # ================ 2) CONSULTA FACTURAS =====================
         logger.info("Consultando facturas...")
         facturas_data = []
         try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            
-            query_facturas = '''
-                SELECT f.id, f.fecha, f.total, f.observaciones, f.timestamp, 
-                       f.numerofactura, c.razonsocial as cliente
-                FROM factura f
-                LEFT JOIN contactos c ON f.idcontacto = c.idContacto
-                WHERE f.fecha BETWEEN ? AND ?
-                ORDER BY f.fecha, f.timestamp
-            '''
-            
-            cursor.execute(query_facturas, (fecha_inicio, fecha_fin))
-            facturas_raw = cursor.fetchall()
-            
-            for factura_row in facturas_raw:
-                facturas_data.append({
-                    'tipo': 'FACTURA',
-                    'id': factura_row[0],
-                    'fecha': format_date(factura_row[1]) if factura_row[1] else '',
-                    'total': float(factura_row[2]) if factura_row[2] else 0.0,
-                    'observaciones': factura_row[3] or '',
-                    'timestamp': factura_row[4],
-                    'numero_factura': factura_row[5] or '',
-                    'cliente': factura_row[6] or ''
-                })
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                query_facturas = '''
+                    SELECT f.id, f.fecha, f.total, f.observaciones, f.timestamp, 
+                           f.numerofactura, c.razonsocial as cliente
+                    FROM factura f
+                    LEFT JOIN contactos c ON f.idcontacto = c.idContacto
+                    WHERE f.fecha BETWEEN ? AND ?
+                    ORDER BY f.fecha, f.timestamp
+                '''
+                
+                cursor.execute(query_facturas, (fecha_inicio, fecha_fin))
+                facturas_raw = cursor.fetchall()
+                
+                for factura_row in facturas_raw:
+                    facturas_data.append({
+                        'tipo': 'FACTURA',
+                        'id': factura_row[0],
+                        'fecha': format_date(factura_row[1]) if factura_row[1] else '',
+                        'total': float(factura_row[2]) if factura_row[2] else 0.0,
+                        'observaciones': factura_row[3] or '',
+                        'timestamp': factura_row[4],
+                        'numero_factura': factura_row[5] or '',
+                        'cliente': factura_row[6] or ''
+                    })
                 
         except Exception as e:
             logger.error(f"Error consultando facturas: {e}")
             facturas_data = []
-        finally:
-            if 'conn' in locals():
-                conn.close()
         
         # ================ 3) UNIFICAR DATOS =====================
         todos_los_datos = tickets_data + facturas_data
@@ -303,12 +297,11 @@ def health_check():
     """Endpoint de health check"""
     try:
         # Verificar conexión a base de datos
-        conn = get_db_connection()
-        if conn:
-            conn.close()
-            db_status = 'ok'
-        else:
-            db_status = 'error'
+        with get_db_connection() as conn:
+            if conn:
+                db_status = 'ok'
+            else:
+                db_status = 'error'
         
         return jsonify({
             'status': 'ok',

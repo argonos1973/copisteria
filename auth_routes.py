@@ -23,6 +23,7 @@ from auth_middleware import (
 )
 import sqlite3
 from multiempresa_config import DB_USUARIOS_PATH
+from database_pool import get_database_pool
 from email_utils import enviar_email_recuperacion_password
 
 # Configuración de avatares
@@ -151,15 +152,14 @@ def obtener_sesion():
         email = None
         telefono = None
         if user_id:
-            conn = sqlite3.connect(DB_USUARIOS_PATH)
-            cursor = conn.cursor()
-            cursor.execute('SELECT avatar, email, telefono FROM usuarios WHERE id = ?', (user_id,))
-            result = cursor.fetchone()
-            if result:
-                avatar = result[0] if result[0] else None
-                email = result[1] if result[1] else None
-                telefono = result[2] if result[2] else None
-            conn.close()
+            with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute('SELECT avatar, email, telefono FROM usuarios WHERE id = ?', (user_id,))
+                result = cursor.fetchone()
+                if result:
+                    avatar = result[0] if result[0] else None
+                    email = result[1] if result[1] else None
+                    telefono = result[2] if result[2] else None
         
         return jsonify({
             'usuario': session.get('nombre_completo'),
@@ -210,65 +210,67 @@ def obtener_menu():
             }]
             return jsonify(menu_limitado), 200
         
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        if es_admin_empresa:
-            # Admin de empresa ve todos los módulos de su empresa
-            cursor.execute('''
-                SELECT codigo, nombre, ruta, icono, orden
-                FROM modulos
-                WHERE activo = 1
-                ORDER BY orden
-            ''')
-        else:
-            # Usuario normal según permisos
-            # Obtener TODOS los módulos con Ver=1 primero
-            sql = '''
-                SELECT 
-                    m.codigo,
-                    m.nombre,
-                    m.ruta,
-                    m.icono,
-                    m.orden,
-                    p.puede_ver,
-                    p.puede_crear,
-                    p.puede_editar,
-                    p.puede_eliminar,
-                    p.puede_anular,
-                    p.puede_exportar
-                FROM modulos m
-                JOIN permisos_usuario_modulo p ON m.codigo = p.modulo_codigo
-                WHERE p.usuario_id = ? 
-                AND p.empresa_id = ?
-                AND p.puede_ver = 1
-                AND m.activo = 1
-                ORDER BY m.orden
-            '''
-            logger.info(f"[MENU] Ejecutando query con user_id={user_id}, empresa_id={empresa_id}")
-            cursor.execute(sql, (user_id, empresa_id))
-        
-        rows = cursor.fetchall()
-        logger.info(f"[MENU] Encontrados {len(rows)} módulos")
-        
-        # Obtener todos los permisos del usuario para filtrar submenús
+        rows = []
         permisos_usuario = {}
-        if not es_admin_empresa:
-            cursor.execute('''
-                SELECT modulo_codigo, puede_ver, puede_crear, puede_editar, 
-                       puede_eliminar, puede_anular, puede_exportar
-                FROM permisos_usuario_modulo
-                WHERE usuario_id = ? AND empresa_id = ?
-            ''', (user_id, empresa_id))
-            for perm_row in cursor.fetchall():
-                permisos_usuario[perm_row[0]] = {
-                    'puede_ver': perm_row[1],
-                    'puede_crear': perm_row[2],
-                    'puede_editar': perm_row[3],
-                    'puede_eliminar': perm_row[4],
-                    'puede_anular': perm_row[5],
-                    'puede_exportar': perm_row[6]
-                }
+        
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            if es_admin_empresa:
+                # Admin de empresa ve todos los módulos de su empresa
+                cursor.execute('''
+                    SELECT codigo, nombre, ruta, icono, orden
+                    FROM modulos
+                    WHERE activo = 1
+                    ORDER BY orden
+                ''')
+            else:
+                # Usuario normal según permisos
+                # Obtener TODOS los módulos con Ver=1 primero
+                sql = '''
+                    SELECT 
+                        m.codigo,
+                        m.nombre,
+                        m.ruta,
+                        m.icono,
+                        m.orden,
+                        p.puede_ver,
+                        p.puede_crear,
+                        p.puede_editar,
+                        p.puede_eliminar,
+                        p.puede_anular,
+                        p.puede_exportar
+                    FROM modulos m
+                    JOIN permisos_usuario_modulo p ON m.codigo = p.modulo_codigo
+                    WHERE p.usuario_id = ? 
+                    AND p.empresa_id = ?
+                    AND p.puede_ver = 1
+                    AND m.activo = 1
+                    ORDER BY m.orden
+                '''
+                logger.info(f"[MENU] Ejecutando query con user_id={user_id}, empresa_id={empresa_id}")
+                cursor.execute(sql, (user_id, empresa_id))
+            
+            rows = cursor.fetchall()
+            logger.info(f"[MENU] Encontrados {len(rows)} módulos")
+            
+            # Obtener todos los permisos del usuario para filtrar submenús
+            if not es_admin_empresa:
+                cursor.execute('''
+                    SELECT modulo_codigo, puede_ver, puede_crear, puede_editar, 
+                           puede_eliminar, puede_anular, puede_exportar
+                    FROM permisos_usuario_modulo
+                    WHERE usuario_id = ? AND empresa_id = ?
+                ''', (user_id, empresa_id))
+                for perm_row in cursor.fetchall():
+                    permisos_usuario[perm_row[0]] = {
+                        'puede_ver': perm_row[1],
+                        'puede_crear': perm_row[2],
+                        'puede_editar': perm_row[3],
+                        'puede_eliminar': perm_row[4],
+                        'puede_anular': perm_row[5],
+                        'puede_exportar': perm_row[6]
+                    }
         
         # Definir submódulos fuera del loop
         submenu_map = {
@@ -580,28 +582,27 @@ def obtener_branding_preview(empresa_codigo):
     Retorna configuración visual de una empresa por su código (sin autenticación, solo para preview en login)
     """
     try:
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT 
-                logo_header, logo_factura,
-                color_primario, color_secundario, color_success, color_warning, 
-                color_danger, color_info, color_button, color_button_hover,
-                color_button_text, color_app_bg,
-                color_header_bg, color_header_text, color_grid_header, color_grid_hover,
-                color_input_bg, color_input_text, color_input_border,
-                color_submenu_bg, color_submenu_text, color_submenu_hover,
-                color_icon, color_grid_bg, color_grid_text,
-                color_select_bg, color_select_text, color_select_border,
-                color_disabled_bg, color_disabled_text,
-                nombre
-            FROM empresas
-            WHERE codigo = ?
-        ''', (empresa_codigo,))
-        
-        empresa = cursor.fetchone()
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT 
+                    logo_header, logo_factura,
+                    color_primario, color_secundario, color_success, color_warning, 
+                    color_danger, color_info, color_button, color_button_hover,
+                    color_button_text, color_app_bg,
+                    color_header_bg, color_header_text, color_grid_header, color_grid_hover,
+                    color_input_bg, color_input_text, color_input_border,
+                    color_submenu_bg, color_submenu_text, color_submenu_hover,
+                    color_icon, color_grid_bg, color_grid_text,
+                    color_select_bg, color_select_text, color_select_border,
+                    color_disabled_bg, color_disabled_text,
+                    nombre
+                FROM empresas
+                WHERE codigo = ?
+            ''', (empresa_codigo,))
+            
+            empresa = cursor.fetchone()
         
         if not empresa:
             return jsonify({'error': 'Empresa no encontrada'}), 404
@@ -657,21 +658,20 @@ def obtener_branding():
         empresa_id = session.get('empresa_id')
         user_id = session.get('user_id')
         
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        # Obtener datos de empresa (logos, datos) y plantilla del usuario
-        cursor.execute('''
-            SELECT e.logo_header, e.logo_factura, ue.plantilla, e.plantilla_personalizada,
-                   e.nombre, e.cif, e.direccion, e.telefono, e.email, e.web
-            FROM empresas e
-            JOIN usuario_empresa ue ON ue.empresa_id = e.id
-            WHERE e.id = ? AND ue.usuario_id = ?
-        ''', (empresa_id, user_id))
-        
-        empresa = cursor.fetchone()
-        conn.close()
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Obtener datos de empresa (logos, datos) y plantilla del usuario
+            cursor.execute('''
+                SELECT e.logo_header, e.logo_factura, ue.plantilla, e.plantilla_personalizada,
+                       e.nombre, e.cif, e.direccion, e.telefono, e.email, e.web
+                FROM empresas e
+                JOIN usuario_empresa ue ON ue.empresa_id = e.id
+                WHERE e.id = ? AND ue.usuario_id = ?
+            ''', (empresa_id, user_id))
+            
+            empresa = cursor.fetchone()
         
         if not empresa:
             return jsonify({'error': 'Empresa no encontrada'}), 404
@@ -744,24 +744,27 @@ def cambiar_password():
         
         user_id = session.get('user_id')
         
-        # Verificar password actual
-        conn = sqlite3.connect(DB_USUARIOS_PATH)
-        cursor = conn.cursor()
-        
-        cursor.execute('SELECT password_hash FROM usuarios WHERE id = ?', (user_id,))
-        actual_hash = cursor.fetchone()[0]
-        
         from auth_middleware import verificar_password, hash_password
         
-        if not verificar_password(password_actual, actual_hash):
-            conn.close()
-            return jsonify({'error': 'Contraseña actual incorrecta'}), 401
-        
-        # Actualizar password
-        nuevo_hash = hash_password(password_nueva)
-        cursor.execute('UPDATE usuarios SET password_hash = ? WHERE id = ?', (nuevo_hash, user_id))
-        conn.commit()
-        conn.close()
+        # Verificar password actual
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('SELECT password_hash FROM usuarios WHERE id = ?', (user_id,))
+            result = cursor.fetchone()
+            
+            if not result:
+                return jsonify({'error': 'Usuario no encontrado'}), 404
+                
+            actual_hash = result[0]
+            
+            if not verificar_password(password_actual, actual_hash):
+                return jsonify({'error': 'Contraseña actual incorrecta'}), 401
+            
+            # Actualizar password
+            nuevo_hash = hash_password(password_nueva)
+            cursor.execute('UPDATE usuarios SET password_hash = ? WHERE id = ?', (nuevo_hash, user_id))
+            conn.commit()
         
         registrar_auditoria('cambio_password', descripcion='Usuario cambió su contraseña')
         

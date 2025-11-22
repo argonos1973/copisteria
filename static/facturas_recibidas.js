@@ -4,6 +4,7 @@
  */
 
 import { mostrarNotificacion } from './notificaciones.js';
+import { formatearImporte } from './scripts_utils.js';
 
 // Variables globales
 let paginaActual = 1;
@@ -824,14 +825,6 @@ function formatearFechaHora(fechaHora) {
     } catch (e) {
         return fechaHora;
     }
-}
-
-function formatearImporte(importe) {
-    if (importe === null || importe === undefined) return '0,00€';
-    return new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'EUR'
-    }).format(importe);
 }
 
 function obtenerTituloEstado(factura) {

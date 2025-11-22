@@ -99,8 +99,9 @@
       "border": "{semantic.primary}"
     },
     "tab": {
-      "active-bg": "{semantic.primary}",
-      "active-text": "{palette.white}"
+      "active-bg": "{palette.gray600}",
+      "active-text": "{palette.white}",
+      "border": "{palette.gray600}"
     },
     "disabled": {
       "bg": "{palette.gray100}",

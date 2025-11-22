@@ -150,107 +150,110 @@ def ingresos_gastos_totales():
         mes = request.args.get('mes', None)
         anio_anterior = anio_actual - 1
 
-        # MULTIEMPRESA: Usar get_db_connection() directamente
         conn = get_db_connection()
-        cur = conn.cursor()
-
-        def totales(anio:int):
-            cur.execute(
-                """
-                SELECT 
-                    SUM(CASE WHEN importe_eur > 0 THEN importe_eur ELSE 0 END) AS ingresos,
-                    SUM(CASE WHEN importe_eur < 0 THEN importe_eur ELSE 0 END) AS gastos
-                FROM gastos
-                WHERE substr(fecha_operacion, 7, 4) = ?
-                """,
-                (str(anio),)
-            )
-            row = cur.fetchone() or {'ingresos':0,'gastos':0}
-            return float(row['ingresos'] or 0), float(row['gastos'] or 0)
-
-        ingresos_act, gastos_act = totales(anio_actual)
-        ingresos_prev, gastos_prev = totales(anio_anterior)
-        
-        # Obtener directamente el valor máximo de ts y formatearlo
         try:
-            # Consulta para obtener el ts máximo directamente
-            cur.execute(
-                """
-                SELECT MAX(ts) AS ultima_fecha
-                FROM gastos
-                """
-            )
-            row = cur.fetchone()
-            ultima_fecha = row['ultima_fecha'] if row and row['ultima_fecha'] else None
+            cur = conn.cursor()
+
+            def totales(anio:int):
+                cur.execute(
+                    """
+                    SELECT 
+                        SUM(CASE WHEN importe_eur > 0 THEN importe_eur ELSE 0 END) AS ingresos,
+                        SUM(CASE WHEN importe_eur < 0 THEN importe_eur ELSE 0 END) AS gastos
+                    FROM gastos
+                    WHERE substr(fecha_operacion, 7, 4) = ?
+                    """,
+                    (str(anio),)
+                )
+                row = cur.fetchone() or {'ingresos':0,'gastos':0}
+                return float(row['ingresos'] or 0), float(row['gastos'] or 0)
+
+            ingresos_act, gastos_act = totales(anio_actual)
+            ingresos_prev, gastos_prev = totales(anio_anterior)
             
-            # Como fallback, también obtenemos la fecha_operacion
-            cur.execute(
-                """
-                SELECT MAX(fecha_operacion) as ultima_actualizacion
-                FROM gastos
-                WHERE substr(fecha_operacion, 7, 4) = ?
-                """,
-                (str(anio_actual),)
-            )
-            row_fecha = cur.fetchone()
-            ultima_actualizacion = row_fecha['ultima_actualizacion'] if row_fecha and row_fecha['ultima_actualizacion'] else None
-        except Exception as e:
-            logger.error(f"Error al consultar la base de datos: {e}", exc_info=True)
-            ultima_fecha = None
-            ultima_actualizacion = None
-        
-        # Crear versión con fecha y hora completa en formato dd/mm/aaaa hh:mm:ss
-        ultima_actualizacion_completa = None
-        if ultima_fecha:
-            fecha_dt = None
-            # Intentar ISO primero (incluyendo fracciones y 'T')
+            # Obtener directamente el valor máximo de ts y formatearlo
             try:
-                s = str(ultima_fecha).replace('Z', '')
-                fecha_dt = datetime.fromisoformat(s)
-            except Exception:
-                # Intentar con 'T' reemplazada por espacio
+                # Consulta para obtener el ts máximo directamente
+                cur.execute(
+                    """
+                    SELECT MAX(ts) AS ultima_fecha
+                    FROM gastos
+                    """
+                )
+                row = cur.fetchone()
+                ultima_fecha = row['ultima_fecha'] if row and row['ultima_fecha'] else None
+                
+                # Como fallback, también obtenemos la fecha_operacion
+                cur.execute(
+                    """
+                    SELECT MAX(fecha_operacion) as ultima_actualizacion
+                    FROM gastos
+                    WHERE substr(fecha_operacion, 7, 4) = ?
+                    """,
+                    (str(anio_actual),)
+                )
+                row_fecha = cur.fetchone()
+                ultima_actualizacion = row_fecha['ultima_actualizacion'] if row_fecha and row_fecha['ultima_actualizacion'] else None
+            except Exception as e:
+                logger.error(f"Error al consultar la base de datos: {e}", exc_info=True)
+                ultima_fecha = None
+                ultima_actualizacion = None
+            
+            # Crear versión con fecha y hora completa en formato dd/mm/aaaa hh:mm:ss
+            ultima_actualizacion_completa = None
+            if ultima_fecha:
+                fecha_dt = None
+                # Intentar ISO primero (incluyendo fracciones y 'T')
                 try:
-                    s2 = str(ultima_fecha).replace('T', ' ')
-                    fecha_dt = datetime.fromisoformat(s2)
+                    s = str(ultima_fecha).replace('Z', '')
+                    fecha_dt = datetime.fromisoformat(s)
                 except Exception:
-                    # Intentar formato clásico sin fracciones
+                    # Intentar con 'T' reemplazada por espacio
                     try:
-                        fecha_dt = datetime.strptime(str(ultima_fecha), '%Y-%m-%d %H:%M:%S')
+                        s2 = str(ultima_fecha).replace('T', ' ')
+                        fecha_dt = datetime.fromisoformat(s2)
                     except Exception:
-                        fecha_dt = None
-            if fecha_dt:
-                ultima_actualizacion_completa = fecha_dt.strftime('%d/%m/%Y %H:%M:%S')
-            else:
-                # Fallback: usar fecha_operacion si está disponible
+                        # Intentar formato clásico sin fracciones
+                        try:
+                            fecha_dt = datetime.strptime(str(ultima_fecha), '%Y-%m-%d %H:%M:%S')
+                        except Exception:
+                            fecha_dt = None
+                if fecha_dt:
+                    ultima_actualizacion_completa = fecha_dt.strftime('%d/%m/%Y %H:%M:%S')
+                else:
+                    # Fallback: usar fecha_operacion si está disponible
+                    ultima_actualizacion_completa = ultima_actualizacion
+            elif ultima_actualizacion:
+                # Fallback: Si no hay ts pero sí fecha_operacion
                 ultima_actualizacion_completa = ultima_actualizacion
-        elif ultima_actualizacion:
-            # Fallback: Si no hay ts pero sí fecha_operacion
-            ultima_actualizacion_completa = ultima_actualizacion
 
-        def pct(actual:float, prev:float):
-            if prev == 0:
-                return 100.0 if actual != 0 else 0.0
-            return ((actual - prev) / prev) * 100
+            def pct(actual:float, prev:float):
+                if prev == 0:
+                    return 100.0 if actual != 0 else 0.0
+                return ((actual - prev) / prev) * 100
 
-        pct_ingresos = pct(ingresos_act, ingresos_prev)
-        pct_gastos   = pct(abs(gastos_act), abs(gastos_prev))
+            pct_ingresos = pct(ingresos_act, ingresos_prev)
+            pct_gastos   = pct(abs(gastos_act), abs(gastos_prev))
 
-        return jsonify({
-            'año_actual': anio_actual,
-            'año_anterior': anio_anterior,
-            'ultima_actualizacion': ultima_actualizacion,
-            'ultima_actualizacion_completa': ultima_actualizacion_completa,
-            'ingresos': {
-                'total_actual': ingresos_act,
-                'total_anterior': ingresos_prev,
-                'porcentaje_diferencia': pct_ingresos
-            },
-            'gastos': {
-                'total_actual': gastos_act,
-                'total_anterior': gastos_prev,
-                'porcentaje_diferencia': pct_gastos
-            }
-        })
+            return jsonify({
+                'año_actual': anio_actual,
+                'año_anterior': anio_anterior,
+                'ultima_actualizacion': ultima_actualizacion,
+                'ultima_actualizacion_completa': ultima_actualizacion_completa,
+                'ingresos': {
+                    'total_actual': ingresos_act,
+                    'total_anterior': ingresos_prev,
+                    'porcentaje_diferencia': pct_ingresos
+                },
+                'gastos': {
+                    'total_actual': gastos_act,
+                    'total_anterior': gastos_prev,
+                    'porcentaje_diferencia': pct_gastos
+                }
+            })
+        finally:
+            if conn:
+                conn.close()
     except Exception as e:
         logger.error(f"ERROR EN /ingresos_gastos_totales: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500

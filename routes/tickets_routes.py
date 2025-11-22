@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 from auth_middleware import login_required
 import tickets
 from logger_config import get_logger
+from db_utils import obtener_numerador
 
 logger = get_logger('aleph70.tickets_routes')
 
@@ -161,3 +162,39 @@ def obtener_estadisticas_tickets():
     except Exception as e:
         logger.error(f"Error obteniendo estadísticas tickets: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@tickets_bp.route('/api/tickets/obtener_numerador/<serie>', methods=['GET'])
+@login_required
+def obtener_siguiente_numero(serie):
+    """Obtiene el siguiente número para la serie indicada"""
+    try:
+        # obtener_numerador devuelve el último número usado
+        numerador, _ = obtener_numerador(serie)
+        
+        # Si no existe registro, asumimos que el último fue 0, así que el siguiente es 1
+        ultimo = numerador if numerador is not None else 0
+        siguiente = ultimo + 1
+        
+        return jsonify({
+            'numerador': siguiente,
+            'serie': serie,
+            'success': True
+        })
+    except Exception as e:
+        logger.error(f"Error obteniendo numerador {serie}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@tickets_bp.route('/api/tickets/guardar', methods=['POST'])
+@login_required
+def guardar_ticket_legacy():
+    """Endpoint de compatibilidad para guardar tickets"""
+    return tickets.guardar_ticket()
+
+
+@tickets_bp.route('/api/tickets/actualizar', methods=['POST', 'PUT'])
+@login_required
+def actualizar_ticket_legacy():
+    """Endpoint de compatibilidad para actualizar tickets"""
+    return tickets.actualizar_ticket()

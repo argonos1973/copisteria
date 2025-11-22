@@ -18,19 +18,19 @@ def obtener_productos():
         list: Lista de diccionarios con los datos de los productos.
     """
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT *, 
-                   calculo_automatico, franja_inicial, numero_franjas, 
-                   ancho_franja, descuento_inicial, incremento_franja, no_generar_franjas
-            FROM productos 
-            ORDER BY nombre ASC
-        ''')
-        productos = cursor.fetchall()
-        
-        return [dict(producto) for producto in productos]
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT *, 
+                       calculo_automatico, franja_inicial, numero_franjas, 
+                       ancho_franja, descuento_inicial, incremento_franja, no_generar_franjas
+                FROM productos 
+                ORDER BY nombre ASC
+            ''')
+            productos = cursor.fetchall()
+            
+            return [dict(producto) for producto in productos]
         
     except sqlite3.Error as e:
         logger.error(f"Error de base de datos al obtener productos: {str(e)}", exc_info=True)
@@ -38,9 +38,6 @@ def obtener_productos():
     except Exception as e:
         logger.error(f"Error inesperado al obtener productos: {str(e)}", exc_info=True)
         raise Exception("Error inesperado al obtener los productos")
-    finally:
-        if 'conn' in locals():
-            conn.close()
 
 
 def aplicar_franjas_a_todos(ancho: int = 10, max_unidades: int = 500, descuento_max: float = 60.0):

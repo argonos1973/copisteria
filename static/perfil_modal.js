@@ -241,18 +241,55 @@ async function cargarPlantillasModal() {
         const plantillas = plantillasData.plantillas;
         
         const grid = document.getElementById('plantillas-grid');
+        
+        // Función helper para resolver colores
+        const resolveColor = (val, theme) => {
+            console.log('Resolviendo color:', val, theme); // Añadir log de consola
+            if (!val) return null;
+            if (val.startsWith('#') || val.startsWith('rgb') || val.startsWith('hsl')) return val;
+            const m = val.match(/\{([^}]+)\}/);
+            if (m) {
+                const path = m[1].split('.');
+                let curr = theme;
+                for (const k of path) curr = curr?.[k];
+                return resolveColor(curr, theme);
+            }
+            return val;
+        };
+
         grid.innerHTML = plantillas.map(p => {
             const isActive = p.id === plantillaActual;
-            const colores = p.colores || {};
             
-            // Si está activa, usar el gradiente azul, si no, usar los colores del tema
-            const estilosCard = isActive ? 
-                `background: linear-gradient(135deg, var(--primary, #3498db) 0%, var(--primary-dark, #2980b9) 100%); border-color: var(--primary, #3498db);` :
-                `background: ${colores.background || '#fff'}; border-color: ${colores.border || '#ddd'};`;
+            // Extraer colores reales usando la estructura semántica
+            let bg, text, border, primary;
             
-            const estilosTexto = isActive ?
-                `color: white !important;` :
-                `color: ${colores.text || '#333'};`;
+            if (p.semantic && p.palette) {
+                // Estructura nueva
+                bg = resolveColor(p.semantic['bg-elevated'] || p.semantic.bg, p) || '#ffffff';
+                text = resolveColor(p.semantic.text, p) || '#333333';
+                border = resolveColor(p.semantic.border, p) || '#dddddd';
+                primary = resolveColor(p.semantic.primary, p) || '#007bff';
+            } else {
+                // Fallback estructura antigua o colores directos
+                const colores = p.colores || {};
+                bg = colores.background || '#ffffff';
+                text = colores.text || '#333333';
+                border = colores.border || '#dddddd';
+                primary = colores.primary || '#007bff';
+            }
+            
+            // Estilos de la tarjeta: SIEMPRE usar los colores de la plantilla
+            // El estado active se indicará por clase CSS (borde/sombra) no cambiando el inline style del fondo
+            // Añadimos border-top con el color primario para distinguir temas claros
+            const estilosCard = `background: ${bg}; border: 1px solid ${border}; border-top: 5px solid ${primary}; color: ${text};`;
+            
+            // Si está activa, sobreescribimos el border-color (excepto el top) mediante clase CSS, 
+            // pero aquí definimos la base.
+            
+            // Puntos de previsualización
+            const dot1 = primary;
+            const dot2 = bg;
+            const dot3 = text;
             
             return `
                 <div class="plantilla-card-perfil ${isActive ? 'active' : ''}" 
@@ -260,13 +297,13 @@ async function cargarPlantillasModal() {
                      style="${estilosCard}"
                      onclick="cambiarPlantillaUsuario('${p.id}', this)">
                     <div class="plantilla-preview-colors">
-                        <span class="preview-dot" style="background: ${colores.primary || '#3498db'}"></span>
-                        <span class="preview-dot" style="background: ${colores.background || '#fff'}"></span>
-                        <span class="preview-dot" style="background: ${colores.text || '#000'}"></span>
+                        <span class="preview-dot" style="background: ${dot1}"></span>
+                        <span class="preview-dot" style="background: ${dot2}; border: 1px solid ${border}"></span>
+                        <span class="preview-dot" style="background: ${dot3}"></span>
                     </div>
-                    <div class="plantilla-icon" style="${estilosTexto}">${p.icono}</div>
-                    <div class="plantilla-nombre" style="${estilosTexto}">${p.nombre}</div>
-                    <div class="plantilla-check"><i class="fas fa-check-circle"></i></div>
+                    <div class="plantilla-icon" style="color: ${primary}">${p.icono}</div>
+                    <div class="plantilla-nombre" style="color: ${text}">${p.nombre}</div>
+                    <div class="plantilla-check" style="color: ${primary}"><i class="fas fa-check-circle"></i></div>
                 </div>
             `;
         }).join('');

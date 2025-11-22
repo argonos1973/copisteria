@@ -9,6 +9,7 @@ import sqlite3
 import logging
 from datetime import datetime
 import os
+from db_utils import get_db_connection
 
 logger = logging.getLogger(__name__)
 
@@ -18,19 +19,6 @@ plaid_bp = Blueprint('plaid', __name__, url_prefix='/api/plaid')
 # Inicializar cliente de Plaid
 plaid_client = PlaidClient(environment='sandbox')
 
-def get_db_path():
-    """Obtener la ruta de la base de datos según el contexto"""
-    # Intentar obtener de g (contexto de Flask)
-    if hasattr(g, 'db_path') and g.db_path:
-        return g.db_path
-    
-    # Intentar obtener empresa_codigo de la sesión
-    empresa_codigo = session.get('empresa_codigo')
-    if empresa_codigo:
-        return f'/var/www/html/db/{empresa_codigo}/{empresa_codigo}.db'
-    
-    # Fallback a usuarios_sistema.db
-    return '/var/www/html/db/usuarios_sistema.db'
 
 @plaid_bp.route('/create-link-token', methods=['POST'])
 @login_required
@@ -108,74 +96,75 @@ def exchange_token():
         logger.info(f"[PLAID] {len(accounts)} cuentas obtenidas")
         
         # Guardar en base de datos
-        db_path = get_db_path()
-        logger.info(f"[PLAID] Usando base de datos: {db_path}")
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
+        logger.info("[PLAID] Guardando en base de datos...")
         
-        # Crear tabla si no existe
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS plaid_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                empresa_id INTEGER NOT NULL,
-                item_id TEXT NOT NULL UNIQUE,
-                access_token TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                last_sync TIMESTAMP,
-                sync_cursor TEXT,
-                active INTEGER DEFAULT 1
-            )
-        ''')
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS plaid_accounts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                item_id TEXT NOT NULL,
-                account_id TEXT NOT NULL UNIQUE,
-                name TEXT,
-                official_name TEXT,
-                type TEXT,
-                subtype TEXT,
-                mask TEXT,
-                currency TEXT DEFAULT 'EUR',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        
-        # Insertar item
-        cursor.execute('''
-            INSERT OR REPLACE INTO plaid_items 
-            (user_id, empresa_id, item_id, access_token, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (user_id, empresa_id, item_id, access_token, datetime.now()))
-        
-        # Insertar cuentas
-        for account in accounts:
-            # Convertir tipos de Plaid a strings para SQLite
-            account_type = str(account['type']) if account.get('type') else None
-            account_subtype = str(account['subtype']) if account.get('subtype') else None
-            currency = str(account['balance']['currency']) if account.get('balance', {}).get('currency') else 'EUR'
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Crear tabla si no existe
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS plaid_items (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    empresa_id INTEGER NOT NULL,
+                    item_id TEXT NOT NULL UNIQUE,
+                    access_token TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_sync TIMESTAMP,
+                    sync_cursor TEXT,
+                    active INTEGER DEFAULT 1
+                )
+            ''')
             
             cursor.execute('''
-                INSERT OR REPLACE INTO plaid_accounts
-                (item_id, account_id, name, official_name, type, subtype, mask, currency)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                item_id,
-                account['account_id'],
-                account['name'],
-                account.get('official_name'),
-                account_type,
-                account_subtype,
-                account.get('mask'),
-                currency
-            ))
+                CREATE TABLE IF NOT EXISTS plaid_accounts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    item_id TEXT NOT NULL,
+                    account_id TEXT NOT NULL UNIQUE,
+                    name TEXT,
+                    official_name TEXT,
+                    type TEXT,
+                    subtype TEXT,
+                    mask TEXT,
+                    currency TEXT DEFAULT 'EUR',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Insertar item
+            cursor.execute('''
+                INSERT OR REPLACE INTO plaid_items 
+                (user_id, empresa_id, item_id, access_token, created_at)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, empresa_id, item_id, access_token, datetime.now()))
+            
+            # Insertar cuentas
+            for account in accounts:
+                # Convertir tipos de Plaid a strings para SQLite
+                account_type = str(account['type']) if account.get('type') else None
+                account_subtype = str(account['subtype']) if account.get('subtype') else None
+                currency = str(account['balance']['currency']) if account.get('balance', {}).get('currency') else 'EUR'
+                
+                cursor.execute('''
+                    INSERT OR REPLACE INTO plaid_accounts
+                    (item_id, account_id, name, official_name, type, subtype, mask, currency)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    item_id,
+                    account['account_id'],
+                    account['name'],
+                    account.get('official_name'),
+                    account_type,
+                    account_subtype,
+                    account.get('mask'),
+                    currency
+                ))
+            
+            # Commit es automático al salir del context manager si no hay excepción,
+            # pero podemos forzarlo si queremos logging explícito antes
+            # conn.commit() <-- El context manager lo hace si todo va bien
         
-        logger.info("[PLAID] Haciendo commit a la base de datos")
-        conn.commit()
-        conn.close()
-        logger.info("[PLAID] Conexión a BD cerrada")
+        logger.info("[PLAID] Conexión a BD cerrada y commit realizado")
         
         logger.info(f"[PLAID] ✅ Conexión bancaria guardada exitosamente: {len(accounts)} cuentas")
         
@@ -201,55 +190,52 @@ def get_accounts():
         user_id = session.get('user_id')
         empresa_id = session.get('empresa_id')
         
-        conn = sqlite3.connect(get_db_path())
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        # Obtener items activos
-        cursor.execute('''
-            SELECT item_id, access_token
-            FROM plaid_items
-            WHERE user_id = ? AND empresa_id = ? AND active = 1
-        ''', (user_id, empresa_id))
-        
-        items = cursor.fetchall()
-        
-        all_accounts = []
-        
-        for item in items:
-            # Obtener cuentas de la BD
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Obtener items activos
             cursor.execute('''
-                SELECT account_id, name, official_name, type, subtype, mask, currency
-                FROM plaid_accounts
-                WHERE item_id = ?
-            ''', (item['item_id'],))
+                SELECT item_id, access_token
+                FROM plaid_items
+                WHERE user_id = ? AND empresa_id = ? AND active = 1
+            ''', (user_id, empresa_id))
             
-            accounts = cursor.fetchall()
+            items = cursor.fetchall()
             
-            # Obtener balance actualizado de Plaid
-            try:
-                live_accounts = plaid_client.get_accounts(item['access_token'])
-                balance_map = {acc['account_id']: acc['balance'] for acc in live_accounts}
-            except (KeyError, IndexError, AttributeError):
-                balance_map = {}
+            all_accounts = []
             
-            for account in accounts:
-                all_accounts.append({
-                    'account_id': account['account_id'],
-                    'name': account['name'],
-                    'official_name': account['official_name'],
-                    'type': account['type'],
-                    'subtype': account['subtype'],
-                    'mask': account['mask'],
-                    'currency': account['currency'],
-                    'balance': balance_map.get(account['account_id'], {
-                        'current': 0,
-                        'available': 0,
-                        'currency': account['currency']
+            for item in items:
+                # Obtener cuentas de la BD
+                cursor.execute('''
+                    SELECT account_id, name, official_name, type, subtype, mask, currency
+                    FROM plaid_accounts
+                    WHERE item_id = ?
+                ''', (item['item_id'],))
+                
+                accounts = cursor.fetchall()
+                
+                # Obtener balance actualizado de Plaid
+                try:
+                    live_accounts = plaid_client.get_accounts(item['access_token'])
+                    balance_map = {acc['account_id']: acc['balance'] for acc in live_accounts}
+                except (KeyError, IndexError, AttributeError):
+                    balance_map = {}
+                
+                for account in accounts:
+                    all_accounts.append({
+                        'account_id': account['account_id'],
+                        'name': account['name'],
+                        'official_name': account['official_name'],
+                        'type': account['type'],
+                        'subtype': account['subtype'],
+                        'mask': account['mask'],
+                        'currency': account['currency'],
+                        'balance': balance_map.get(account['account_id'], {
+                            'current': 0,
+                            'available': 0,
+                            'currency': account['currency']
+                        })
                     })
-                })
-        
-        conn.close()
         
         return jsonify(all_accounts), 200
         
@@ -294,30 +280,28 @@ def get_transactions():
             logger.error(f"[PLAID] Error convirtiendo fechas: {e}")
             return jsonify({'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}), 400
         
-        conn = sqlite3.connect(get_db_path())
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        # Obtener access token del item
-        if account_id:
-            logger.info(f"[PLAID] Buscando access_token para account_id={account_id}")
-            cursor.execute('''
-                SELECT i.access_token, a.item_id
-                FROM plaid_accounts a
-                JOIN plaid_items i ON a.item_id = i.item_id
-                WHERE a.account_id = ? AND i.user_id = ? AND i.empresa_id = ? AND i.active = 1
-            ''', (account_id, user_id, empresa_id))
-        else:
-            logger.info("[PLAID] Buscando access_token para todas las cuentas")
-            cursor.execute('''
-                SELECT access_token, item_id
-                FROM plaid_items
-                WHERE user_id = ? AND empresa_id = ? AND active = 1
-                LIMIT 1
-            ''', (user_id, empresa_id))
-        
-        item = cursor.fetchone()
-        conn.close()
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Obtener access token del item
+            if account_id:
+                logger.info(f"[PLAID] Buscando access_token para account_id={account_id}")
+                cursor.execute('''
+                    SELECT i.access_token, a.item_id
+                    FROM plaid_accounts a
+                    JOIN plaid_items i ON a.item_id = i.item_id
+                    WHERE a.account_id = ? AND i.user_id = ? AND i.empresa_id = ? AND i.active = 1
+                ''', (account_id, user_id, empresa_id))
+            else:
+                logger.info("[PLAID] Buscando access_token para todas las cuentas")
+                cursor.execute('''
+                    SELECT access_token, item_id
+                    FROM plaid_items
+                    WHERE user_id = ? AND empresa_id = ? AND active = 1
+                    LIMIT 1
+                ''', (user_id, empresa_id))
+            
+            item = cursor.fetchone()
         
         if not item:
             logger.warning("[PLAID] No hay cuentas bancarias conectadas")
@@ -354,51 +338,47 @@ def sync_transactions():
         user_id = session.get('user_id')
         empresa_id = session.get('empresa_id')
         
-        conn = sqlite3.connect(get_db_path())
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        # Obtener todos los items activos
-        cursor.execute('''
-            SELECT item_id, access_token, sync_cursor
-            FROM plaid_items
-            WHERE user_id = ? AND empresa_id = ? AND active = 1
-        ''', (user_id, empresa_id))
-        
-        items = cursor.fetchall()
-        
-        total_added = 0
-        total_modified = 0
-        total_removed = 0
-        
-        for item in items:
-            try:
-                # Sincronizar transacciones
-                result = plaid_client.sync_transactions(
-                    access_token=item['access_token'],
-                    cursor=item['sync_cursor']
-                )
-                
-                total_added += len(result['added'])
-                total_modified += len(result['modified'])
-                total_removed += len(result['removed'])
-                
-                # Actualizar cursor
-                cursor.execute('''
-                    UPDATE plaid_items
-                    SET sync_cursor = ?, last_sync = ?
-                    WHERE item_id = ?
-                ''', (result['cursor'], datetime.now(), item['item_id']))
-                
-                # TODO: Guardar transacciones en tu base de datos
-                # Aquí deberías insertar las transacciones en tu tabla de movimientos bancarios
-                
-            except Exception as e:
-                logger.error(f"[PLAID] Error sincronizando item {item['item_id']}: {e}")
-                continue
-        
-        conn.commit()
-        conn.close()
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Obtener todos los items activos
+            cursor.execute('''
+                SELECT item_id, access_token, sync_cursor
+                FROM plaid_items
+                WHERE user_id = ? AND empresa_id = ? AND active = 1
+            ''', (user_id, empresa_id))
+            
+            items = cursor.fetchall()
+            
+            total_added = 0
+            total_modified = 0
+            total_removed = 0
+            
+            for item in items:
+                try:
+                    # Sincronizar transacciones
+                    result = plaid_client.sync_transactions(
+                        access_token=item['access_token'],
+                        cursor=item['sync_cursor']
+                    )
+                    
+                    total_added += len(result['added'])
+                    total_modified += len(result['modified'])
+                    total_removed += len(result['removed'])
+                    
+                    # Actualizar cursor
+                    cursor.execute('''
+                        UPDATE plaid_items
+                        SET sync_cursor = ?, last_sync = ?
+                        WHERE item_id = ?
+                    ''', (result['cursor'], datetime.now(), item['item_id']))
+                    
+                    # TODO: Guardar transacciones en tu base de datos
+                    # Aquí deberías insertar las transacciones en tu tabla de movimientos bancarios
+                    
+                except Exception as e:
+                    logger.error(f"[PLAID] Error sincronizando item {item['item_id']}: {e}")
+                    continue
         
         return jsonify({
             'success': True,
@@ -421,22 +401,18 @@ def disconnect_bank(item_id):
         user_id = session.get('user_id')
         empresa_id = session.get('empresa_id')
         
-        conn = sqlite3.connect(get_db_path())
-        cursor = conn.cursor()
-        
-        # Verificar que el item pertenece al usuario
-        cursor.execute('''
-            UPDATE plaid_items
-            SET active = 0
-            WHERE item_id = ? AND user_id = ? AND empresa_id = ?
-        ''', (item_id, user_id, empresa_id))
-        
-        if cursor.rowcount == 0:
-            conn.close()
-            return jsonify({'error': 'Item no encontrado'}), 404
-        
-        conn.commit()
-        conn.close()
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Verificar que el item pertenece al usuario
+            cursor.execute('''
+                UPDATE plaid_items
+                SET active = 0
+                WHERE item_id = ? AND user_id = ? AND empresa_id = ?
+            ''', (item_id, user_id, empresa_id))
+            
+            if cursor.rowcount == 0:
+                return jsonify({'error': 'Item no encontrado'}), 404
         
         logger.info(f"[PLAID] Cuenta bancaria desconectada: {item_id}")
         

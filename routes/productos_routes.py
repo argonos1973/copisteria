@@ -14,6 +14,17 @@ logger = get_logger('aleph70.productos_routes')
 # Blueprint para las rutas de productos
 productos_bp = Blueprint('productos', __name__)
 
+@productos_bp.route('/api/productos', methods=['GET'])
+@login_required
+def obtener_todos_productos():
+    """Obtiene todos los productos"""
+    try:
+        lista_productos = productos.obtener_productos()
+        return jsonify(lista_productos)
+    except Exception as e:
+        logger.error(f"Error obteniendo productos: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @productos_bp.route('/api/productos/aplicar_franjas', methods=['POST'])
 def api_aplicar_franjas_todos():
     try:
@@ -49,45 +60,42 @@ def api_aplicar_franjas_todos():
 @productos_bp.route('/api/debug/schema_productos', methods=['GET'])
 def debug_schema_productos():
     try:
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({'error': 'No se pudo conectar a la base de datos'}), 500
-        
-        cursor = conn.cursor()
-        
-        # Obtener esquema de la tabla productos
-        cursor.execute("PRAGMA table_info(productos)")
-        schema = cursor.fetchall()
-        
-        # Formatear resultado
-        columnas = []
-        for col in schema:
-            columnas.append({
-                'cid': col[0],
-                'name': col[1],
-                'type': col[2],
-                'notnull': col[3],
-                'default_value': col[4],
-                'pk': col[5]
+        with get_db_connection() as conn:
+            if not conn:
+                return jsonify({'error': 'No se pudo conectar a la base de datos'}), 500
+            
+            cursor = conn.cursor()
+            
+            # Obtener esquema de la tabla productos
+            cursor.execute("PRAGMA table_info(productos)")
+            schema = cursor.fetchall()
+            
+            # Formatear resultado
+            columnas = []
+            for col in schema:
+                columnas.append({
+                    'cid': col[0],
+                    'name': col[1],
+                    'type': col[2],
+                    'notnull': col[3],
+                    'default_value': col[4],
+                    'pk': col[5]
+                })
+            
+            # Obtener algunos registros de ejemplo
+            cursor.execute("SELECT * FROM productos LIMIT 5")
+            ejemplos = cursor.fetchall()
+            
+            return jsonify({
+                'success': True,
+                'schema': columnas,
+                'ejemplos': ejemplos,
+                'total_columnas': len(columnas)
             })
-        
-        # Obtener algunos registros de ejemplo
-        cursor.execute("SELECT * FROM productos LIMIT 5")
-        ejemplos = cursor.fetchall()
-        
-        return jsonify({
-            'success': True,
-            'schema': columnas,
-            'ejemplos': ejemplos,
-            'total_columnas': len(columnas)
-        })
         
     except Exception as e:
         logger.error(f"Error obteniendo schema productos: {e}")
         return jsonify({'error': str(e)}), 500
-    finally:
-        if 'conn' in locals():
-            conn.close()
 
 
 @productos_bp.route('/api/productos/<int:producto_id>/franjas_descuento', methods=['GET'])
@@ -174,4 +182,33 @@ def api_generar_franjas_automaticas(producto_id):
         
     except Exception as e:
         logger.error(f"Error generando franjas automáticas: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@productos_bp.route('/api/productos/guardar', methods=['POST'])
+@login_required
+def guardar_producto_legacy():
+    """Endpoint de compatibilidad para guardar/actualizar productos"""
+    try:
+        data = request.get_json()
+        if data and data.get('id'):
+            return jsonify(productos.actualizar_producto(data['id'], data))
+        else:
+            return jsonify(productos.crear_producto(data))
+    except Exception as e:
+        logger.error(f"Error en guardar_producto_legacy: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@productos_bp.route('/api/productos/actualizar', methods=['POST', 'PUT'])
+@login_required
+def actualizar_producto_legacy():
+    """Endpoint de compatibilidad para actualizar productos"""
+    try:
+        data = request.get_json()
+        if not data or not data.get('id'):
+            return jsonify({'error': 'ID de producto requerido'}), 400
+        return jsonify(productos.actualizar_producto(data['id'], data))
+    except Exception as e:
+        logger.error(f"Error en actualizar_producto_legacy: {e}")
         return jsonify({'error': str(e)}), 500

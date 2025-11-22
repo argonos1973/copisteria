@@ -157,6 +157,10 @@
 
     <!-- Cargar plantillas dinámicamente -->
     <script src="/static/plantillas.js?v=1762757322"></script>
+    <script type="module">
+        import { mostrarNotificacion } from '/static/notificaciones.js';
+        window.mostrarNotificacion = mostrarNotificacion;
+    </script>
     <script src="/static/admin.js?v=1763555508"></script>
     
     <!-- Estilos adicionales para plantillas -->

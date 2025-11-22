@@ -55,9 +55,6 @@ def listar_contactos():
 @contactos_bp.route('/contactos/buscar', methods=['GET'])
 def filtrar_contactos():
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
         # Parámetros de filtrado
         razon_social = request.args.get('razonSocial', '').strip()
         nif = request.args.get('nif', '').strip()
@@ -93,32 +90,31 @@ def filtrar_contactos():
             
         query_final += ' ORDER BY razonsocial LIMIT 100'
         
-        cursor.execute(query_final, parametros)
-        resultados = cursor.fetchall()
-        
-        # Formatear resultados
-        contactos_lista = []
-        for row in resultados:
-            contactos_lista.append({
-                'idContacto': row[0],
-                'razonsocial': row[1],
-                'nif': row[2],
-                'direccion': row[3],
-                'cp': row[4],
-                'poblacion': row[5],
-                'provincia': row[6],
-                'telefono': row[7],
-                'email': row[8]
-            })
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query_final, parametros)
+            resultados = cursor.fetchall()
+            
+            # Formatear resultados
+            contactos_lista = []
+            for row in resultados:
+                contactos_lista.append({
+                    'idContacto': row[0],
+                    'razonsocial': row[1],
+                    'nif': row[2],
+                    'direccion': row[3],
+                    'cp': row[4],
+                    'poblacion': row[5],
+                    'provincia': row[6],
+                    'telefono': row[7],
+                    'email': row[8]
+                })
         
         return jsonify(contactos_lista)
         
     except Exception as e:
         logger.error(f"Error filtrando contactos: {e}")
         return jsonify({'error': str(e)}), 500
-    finally:
-        if 'conn' in locals():
-            conn.close()
 
 
 @contactos_bp.route('/api/contactos/search', methods=['GET'])
@@ -132,9 +128,6 @@ def search_contactos():
         return jsonify([])
     
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
         # Validar campo de ordenamiento
         campos_validos = ['razonsocial', 'nif', 'poblacion', 'idContacto']
         if sort not in campos_validos:
@@ -153,31 +146,30 @@ def search_contactos():
             LIMIT 50
         '''
         
-        cursor.execute(sql_query, (f'%{query}%',))
-        resultados = cursor.fetchall()
-        
-        contactos_lista = []
-        for row in resultados:
-            contactos_lista.append({
-                'idContacto': row[0],
-                'razonsocial': row[1],
-                'nif': row[2],
-                'direccion': row[3],
-                'cp': row[4],
-                'poblacion': row[5],
-                'provincia': row[6],
-                'telefono': row[7],
-                'email': row[8]
-            })
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(sql_query, (f'%{query}%',))
+            resultados = cursor.fetchall()
+            
+            contactos_lista = []
+            for row in resultados:
+                contactos_lista.append({
+                    'idContacto': row[0],
+                    'razonsocial': row[1],
+                    'nif': row[2],
+                    'direccion': row[3],
+                    'cp': row[4],
+                    'poblacion': row[5],
+                    'provincia': row[6],
+                    'telefono': row[7],
+                    'email': row[8]
+                })
         
         return jsonify(contactos_lista)
         
     except Exception as e:
         logger.error(f"Error buscando contactos: {e}")
         return jsonify({'error': str(e)}), 500
-    finally:
-        if 'conn' in locals():
-            conn.close()
 
 
 @contactos_bp.route('/api/contactos/searchCarrer', methods=['GET'])
@@ -312,4 +304,33 @@ def procesar_ocr_contacto():
         
     except Exception as e:
         logger.error(f"Error procesando OCR contacto: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contactos_bp.route('/api/contactos/guardar', methods=['POST'])
+@login_required
+def guardar_contacto_legacy():
+    """Endpoint de compatibilidad para guardar/actualizar contactos"""
+    try:
+        data = request.get_json()
+        if data and data.get('idContacto'):
+            return jsonify(contactos.actualizar_contacto(data['idContacto'], data))
+        else:
+            return jsonify(contactos.crear_contacto(data))
+    except Exception as e:
+        logger.error(f"Error en guardar_contacto_legacy: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@contactos_bp.route('/api/contactos/actualizar', methods=['POST', 'PUT'])
+@login_required
+def actualizar_contacto_legacy():
+    """Endpoint de compatibilidad para actualizar contactos"""
+    try:
+        data = request.get_json()
+        if not data or not data.get('idContacto'):
+            return jsonify({'error': 'ID de contacto requerido'}), 400
+        return jsonify(contactos.actualizar_contacto(data['idContacto'], data))
+    except Exception as e:
+        logger.error(f"Error en actualizar_contacto_legacy: {e}")
         return jsonify({'error': str(e)}), 500

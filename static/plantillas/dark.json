@@ -115,7 +115,7 @@
       "border": "{semantic.primary}"
     },
     "tab": {
-      "active-bg": "{palette.base700}",
+      "active-bg": "{palette.base600}",
       "active-text": "{semantic.primary}",
       "inactive-text": "{semantic.text-muted}",
       "border": "{semantic.primary}"

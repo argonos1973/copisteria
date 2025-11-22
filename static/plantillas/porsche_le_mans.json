@@ -105,7 +105,8 @@
     },
     "tab": {
       "active-bg": "{palette.gulfOrange}",
-      "active-text": "{palette.white}"
+      "active-text": "{palette.white}",
+      "border": "{palette.gulfOrange}"
     },
     "disabled": {
       "bg": "{palette.gray100}",

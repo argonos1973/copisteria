@@ -317,7 +317,11 @@
         }
         
         .tab-btn.active {
-            border-bottom: 3px solid transparent;
+            color: var(--tab-active-text, var(--color-primario, #3498db)) !important;
+            border-bottom: 3px solid var(--tab-border, var(--color-primario, #3498db)) !important;
+            background: var(--tab-active-bg, rgba(52, 152, 219, 0.1)) !important;
+            font-weight: bold !important;
+            border-radius: 6px 6px 0 0;
         }
         
         .tab-content {
@@ -539,9 +543,13 @@
         }
         
         .avatar-tab-btn:hover {
+            background: rgba(0,0,0,0.05);
         }
         
         .avatar-tab-btn.active {
+            color: var(--color-primario, #3498db);
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid var(--color-primario, #3498db);
         }
         
         .avatares-grid {
@@ -568,6 +576,8 @@
         }
         
         .subir-avatar-area:hover {
+            background-color: rgba(0,0,0,0.03);
+            transform: translateY(-2px);
         }
         
         .subir-avatar-area i {
@@ -590,7 +600,7 @@
     <!-- JavaScript de la modal -->
     <script src="/static/menu_loader.js?v=1763502969"></script>
     <script src="/static/app_init.js?v=1762757322"></script>
-    <script src="/static/perfil_modal.js"></script>
+    <script src="/static/perfil_modal.js?v=ForceUpdate2"></script>
     <script src="/static/modal_theme.js"></script>
     
     <!-- Modal Selector de Avatares -->

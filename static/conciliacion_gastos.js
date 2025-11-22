@@ -1,6 +1,7 @@
 // conciliacion_gastos.js
 import { IP_SERVER, PORT, API_URL as API_URL_BASE } from './constantes.js?v=1762757322';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
+import { formatearImporte } from './scripts_utils.js';
 
 const API_URL = `${API_URL_BASE}/api`;
 
@@ -1353,17 +1354,6 @@ function formatearFecha(fecha) {
     return d.toLocaleDateString('es-ES');
 }
 
-function formatearImporte(importe) {
-    if (importe === null || importe === undefined) return '-';
-    // Convertir -0 a 0
-    if (importe === 0 || Object.is(importe, -0)) {
-        importe = 0;
-    }
-    return new Intl.NumberFormat('es-ES', {
-        style: 'currency',
-        currency: 'EUR'
-    }).format(importe);
-}
 
 // ============================================================================
 // LIQUIDACIONES TPV

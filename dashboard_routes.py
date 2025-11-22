@@ -16,70 +16,69 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @dashboard_bp.route('/estadisticas_gastos', methods=['GET'])
 def estadisticas_gastos():
     try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-
-        # Parámetros de período seleccionados (año y mes que el usuario ha elegido)
-        ahora = datetime.now()
-        anio_param = request.args.get('anio')
-        mes_param = request.args.get('mes')
-        año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
-        mes = int(mes_param) if mes_param and mes_param.isdigit() else ahora.month
-        cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur > 0 AND substr(COALESCE(fecha_operacion_iso, substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)), 1, 4) = ?", (str(año),))
-        total_ingresos = cur.fetchone()[0] or 0
-        cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur < 0 AND substr(COALESCE(fecha_operacion_iso, substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)), 1, 4) = ?", (str(año),))
-        total_gastos = cur.fetchone()[0] or 0
-        balance = total_ingresos + total_gastos  # Balance total anual (correcto porque gastos es negativo)
-
-        # Balance del mes actual
-       
-
-        cur.execute("SELECT MAX(fecha_operacion) FROM gastos")
-        ultima_fecha = cur.fetchone()[0]
-        # Calcular ingresos y gastos del mes actual
-        ahora = datetime.now()
-        anio_param = request.args.get('anio')
-        mes_param = request.args.get('mes')
-        año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
-        mes = int(mes_param) if mes_param and mes_param.isdigit() else ahora.month
-        cur.execute("""
-            SELECT COALESCE(SUM(importe_eur),0) FROM gastos 
-            WHERE importe_eur > 0 AND substr(fecha_operacion, 4, 2) = ? AND substr(fecha_operacion, 7, 4) = ?
-        """, (str(mes).zfill(2), str(año)))
-        ingresos_mes_actual = cur.fetchone()[0] or 0
-        cur.execute("""
-            SELECT COALESCE(SUM(importe_eur),0) FROM gastos 
-            WHERE importe_eur < 0 AND substr(fecha_operacion, 4, 2) = ? AND substr(fecha_operacion, 7, 4) = ?
-        """, (str(mes).zfill(2), str(año)))
-        gastos_mes_actual = cur.fetchone()[0] or 0
-
-        balance_mes = gastos_mes_actual + ingresos_mes_actual
-
-        # Obtener el saldo y ts del último registro del mes actual
-        # Buscar la última fecha_operacion del mes actual
-        cur.execute("""
-            SELECT fecha_operacion FROM gastos
-            WHERE substr(fecha_operacion, 4, 2) = ? AND substr(fecha_operacion, 7, 4) = ?
-            AND saldo IS NOT NULL
-            ORDER BY fecha_operacion DESC LIMIT 1
-        """, (str(mes).zfill(2), str(año)))
-        row_fecha = cur.fetchone()
-        ultima_fecha_operacion = row_fecha[0] if row_fecha else None
-
-        saldo_mes_actual = None
-        ts_ultima_actualizacion = None
-        if ultima_fecha_operacion:
-            # Buscar el ÚLTIMO registro de esa fecha (por TS descendente, rowid descendente)
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+    
+            # Parámetros de período seleccionados (año y mes que el usuario ha elegido)
+            ahora = datetime.now()
+            anio_param = request.args.get('anio')
+            mes_param = request.args.get('mes')
+            año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
+            mes = int(mes_param) if mes_param and mes_param.isdigit() else ahora.month
+            cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur > 0 AND substr(COALESCE(fecha_operacion_iso, substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)), 1, 4) = ?", (str(año),))
+            total_ingresos = cur.fetchone()[0] or 0
+            cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur < 0 AND substr(COALESCE(fecha_operacion_iso, substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)), 1, 4) = ?", (str(año),))
+            total_gastos = cur.fetchone()[0] or 0
+            balance = total_ingresos + total_gastos  # Balance total anual (correcto porque gastos es negativo)
+    
+            # Balance del mes actual
+           
+    
+            cur.execute("SELECT MAX(fecha_operacion) FROM gastos")
+            ultima_fecha = cur.fetchone()[0]
+            # Calcular ingresos y gastos del mes actual
+            ahora = datetime.now()
+            anio_param = request.args.get('anio')
+            mes_param = request.args.get('mes')
+            año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
+            mes = int(mes_param) if mes_param and mes_param.isdigit() else ahora.month
             cur.execute("""
-                SELECT saldo, TS FROM gastos
-                WHERE fecha_operacion = ? AND saldo IS NOT NULL
-                ORDER BY TS DESC, rowid DESC LIMIT 1
-            """, (ultima_fecha_operacion,))
-            row_saldo = cur.fetchone()
-            saldo_mes_actual = row_saldo[0] if row_saldo else None
-            ts_ultima_actualizacion = row_saldo[1] if row_saldo else None
-
-        conn.close()
+                SELECT COALESCE(SUM(importe_eur),0) FROM gastos 
+                WHERE importe_eur > 0 AND substr(fecha_operacion, 4, 2) = ? AND substr(fecha_operacion, 7, 4) = ?
+            """, (str(mes).zfill(2), str(año)))
+            ingresos_mes_actual = cur.fetchone()[0] or 0
+            cur.execute("""
+                SELECT COALESCE(SUM(importe_eur),0) FROM gastos 
+                WHERE importe_eur < 0 AND substr(fecha_operacion, 4, 2) = ? AND substr(fecha_operacion, 7, 4) = ?
+            """, (str(mes).zfill(2), str(año)))
+            gastos_mes_actual = cur.fetchone()[0] or 0
+    
+            balance_mes = gastos_mes_actual + ingresos_mes_actual
+    
+            # Obtener el saldo y ts del último registro del mes actual
+            # Buscar la última fecha_operacion del mes actual
+            cur.execute("""
+                SELECT fecha_operacion FROM gastos
+                WHERE substr(fecha_operacion, 4, 2) = ? AND substr(fecha_operacion, 7, 4) = ?
+                AND saldo IS NOT NULL
+                ORDER BY fecha_operacion DESC LIMIT 1
+            """, (str(mes).zfill(2), str(año)))
+            row_fecha = cur.fetchone()
+            ultima_fecha_operacion = row_fecha[0] if row_fecha else None
+    
+            saldo_mes_actual = None
+            ts_ultima_actualizacion = None
+            if ultima_fecha_operacion:
+                # Buscar el ÚLTIMO registro de esa fecha (por TS descendente, rowid descendente)
+                cur.execute("""
+                    SELECT saldo, TS FROM gastos
+                    WHERE fecha_operacion = ? AND saldo IS NOT NULL
+                    ORDER BY TS DESC, rowid DESC LIMIT 1
+                """, (ultima_fecha_operacion,))
+                row_saldo = cur.fetchone()
+                saldo_mes_actual = row_saldo[0] if row_saldo else None
+                ts_ultima_actualizacion = row_saldo[1] if row_saldo else None
+    
         return jsonify({
             'total_ingresos': redondear_importe(total_ingresos),
             'total_gastos': redondear_importe(total_gastos),
@@ -174,18 +173,15 @@ def get_proformas_data_mes(year, month):
 
 
 def fetch_data(query, params=()):
-    conn = get_db_connection()
-    cursor = conn.cursor()
     try:
-        cursor.execute(query, params)
-        result = cursor.fetchone()
-        return dict(result) if result else {'num_documentos': 0, 'media': 0, 'total': 0}
-    except sqlite3.Error as e:
-        logger.error(f"Error en la consulta SQL: {str(e)}", exc_info=True)
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            result = cursor.fetchone()
+            return dict(result) if result else {'num_documentos': 0, 'media': 0, 'total': 0}
+    except Exception as e:
+        logger.error(f"Error en fetch_data: {str(e)}", exc_info=True)
         return {'num_documentos': 0, 'media': 0, 'total': 0}
-    finally:
-        cursor.close()
-        conn.close()
 
 
 @dashboard_bp.route('/ventas/total_mes', methods=['GET'])
@@ -196,25 +192,26 @@ def ventas_total_mes():
     ahora = datetime.now()
     año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    def obtener_totales(tabla):
-        cursor.execute(
-            f"""
-            SELECT strftime('%m', fecha) as mes, COALESCE(SUM(total),0) as total
-            FROM {tabla}
-            WHERE estado = 'C' AND strftime('%Y', fecha) = ?
-            GROUP BY mes
-            """,
-            (str(año),)
-        )
-        datos = {row['mes']: float(row['total'] or 0) for row in cursor.fetchall()}
-        # Asegurar 12 meses presentes con 0
-        return {str(m).zfill(2): datos.get(str(m).zfill(2), 0.0) for m in range(1,13)}
+        def obtener_totales(tabla):
+            cursor.execute(
+                f"""
+                SELECT strftime('%m', fecha) as mes, COALESCE(SUM(total),0) as total
+                FROM {tabla}
+                WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+                GROUP BY mes
+                """,
+                (str(año),)
+            )
+            datos = {row['mes']: float(row['total'] or 0) for row in cursor.fetchall()}
+            # Asegurar 12 meses presentes con 0
+            return {str(m).zfill(2): datos.get(str(m).zfill(2), 0.0) for m in range(1,13)}
 
-    tickets = obtener_totales('tickets')
-    facturas = obtener_totales('factura')
+        tickets = obtener_totales('tickets')
+        facturas = obtener_totales('factura')
+    
     globales = {mes: redondear_importe(tickets[mes] + facturas[mes]) for mes in tickets}
 
     total_tickets = redondear_importe(sum(tickets.values()))
@@ -242,28 +239,27 @@ def ventas_cantidad_mes():
     ahora = datetime.now()
     año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
 
-    def obtener_cantidades(tabla):
-        cursor.execute(
-            f"""
-            SELECT strftime('%m', fecha) as mes, COUNT(*) as cantidad
-            FROM {tabla}
-            WHERE estado = 'C' AND strftime('%Y', fecha) = ?
-            GROUP BY mes
-            """,
-            (str(año),)
-        )
-        datos = {row['mes']: int(row['cantidad'] or 0) for row in cursor.fetchall()}
-        # Asegurar 12 meses presentes con 0
-        return {str(m).zfill(2): datos.get(str(m).zfill(2), 0) for m in range(1,13)}
+        def obtener_cantidades(tabla):
+            cursor.execute(
+                f"""
+                SELECT strftime('%m', fecha) as mes, COUNT(*) as cantidad
+                FROM {tabla}
+                WHERE estado = 'C' AND strftime('%Y', fecha) = ?
+                GROUP BY mes
+                """,
+                (str(año),)
+            )
+            datos = {row['mes']: int(row['cantidad'] or 0) for row in cursor.fetchall()}
+            # Asegurar 12 meses presentes con 0
+            return {str(m).zfill(2): datos.get(str(m).zfill(2), 0) for m in range(1,13)}
 
-    tickets = obtener_cantidades('tickets')
-    facturas = obtener_cantidades('factura')
+        tickets = obtener_cantidades('tickets')
+        facturas = obtener_cantidades('factura')
+    
     globales = {mes: tickets[mes] + facturas[mes] for mes in tickets}
-
-    conn.close()
 
     return jsonify({
         'anio': año,
@@ -575,9 +571,6 @@ def media_ventas_por_documento():
 @dashboard_bp.route('/api/clientes/top_ventas', methods=['GET'])
 def top_clientes_ventas():
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
         anio_param = request.args.get('anio')
         ahora = datetime.now()
         # Año seleccionado (o el actual si no se pasa ninguno)
@@ -585,78 +578,81 @@ def top_clientes_ventas():
         # Año comparativo: mismo periodo del año anterior
         año_anterior = año_actual - 1
 
-        # Consulta para clientes
-        cursor.execute('''
-            SELECT 
-                c.idContacto as cliente_id,
-                c.razonsocial as cliente_nombre,
-                COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN f.total ELSE 0 END), 0) as total_actual,
-                COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN f.total ELSE 0 END), 0) as total_anterior
-            FROM contactos c
-            INNER JOIN factura f ON c.idContacto = f.idContacto AND f.estado = 'C'
-            GROUP BY c.idContacto, c.razonsocial
-            HAVING total_actual > 0
-            ORDER BY total_actual DESC
-            LIMIT 10
-        ''', (str(año_actual), str(año_anterior)))
-        
-        clientes = []
-        for row in cursor.fetchall():
-            total_actual = float(row['total_actual'])
-            total_anterior = float(row['total_anterior'])
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
             
-            porcentaje = 0
-            if total_anterior > 0:
-                porcentaje = ((total_actual - total_anterior) / total_anterior) * 100
-            elif total_actual > 0:
-                porcentaje = 100
+            # Consulta para clientes
+            cursor.execute('''
+                SELECT 
+                    c.idContacto as cliente_id,
+                    c.razonsocial as cliente_nombre,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN f.total ELSE 0 END), 0) as total_actual,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN f.total ELSE 0 END), 0) as total_anterior
+                FROM contactos c
+                INNER JOIN factura f ON c.idContacto = f.idContacto AND f.estado = 'C'
+                GROUP BY c.idContacto, c.razonsocial
+                HAVING total_actual > 0
+                ORDER BY total_actual DESC
+                LIMIT 10
+            ''', (str(año_actual), str(año_anterior)))
             
-            clientes.append({
-                'id': row['cliente_id'],
-                'nombre': row['cliente_nombre'],
-                'total_actual': redondear_importe(total_actual),
-                'total_anterior': redondear_importe(total_anterior),
-                'porcentaje_diferencia': redondear_importe(porcentaje)
-            })
+            clientes = []
+            for row in cursor.fetchall():
+                total_actual = float(row['total_actual'])
+                total_anterior = float(row['total_anterior'])
+                
+                porcentaje = 0
+                if total_anterior > 0:
+                    porcentaje = ((total_actual - total_anterior) / total_anterior) * 100
+                elif total_actual > 0:
+                    porcentaje = 100
+                
+                clientes.append({
+                    'id': row['cliente_id'],
+                    'nombre': row['cliente_nombre'],
+                    'total_actual': redondear_importe(total_actual),
+                    'total_anterior': redondear_importe(total_anterior),
+                    'porcentaje_diferencia': redondear_importe(porcentaje)
+                })
 
-        # Consulta para productos
-        cursor.execute('''
-            SELECT 
-                p.id as producto_id,
-                p.nombre as producto_nombre,
-                COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_actual,
-                COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_actual,
-                COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_anterior,
-                COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_anterior
-            FROM productos p
-            LEFT JOIN detalle_factura df ON p.id = df.productoId
-            LEFT JOIN factura f ON df.id_factura = f.id AND f.estado = 'C'
-            GROUP BY p.id, p.nombre
-            HAVING total_actual > 0
-            ORDER BY total_actual DESC
-            LIMIT 10
-        ''', (str(año_actual), str(año_actual), str(año_anterior), str(año_anterior)))
-        
-        productos = []
-        for row in cursor.fetchall():
-            total_actual = float(row['total_actual'])
-            total_anterior = float(row['total_anterior'])
+            # Consulta para productos
+            cursor.execute('''
+                SELECT 
+                    p.id as producto_id,
+                    p.nombre as producto_nombre,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_actual,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_actual,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_anterior,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_anterior
+                FROM productos p
+                LEFT JOIN detalle_factura df ON p.id = df.productoId
+                LEFT JOIN factura f ON df.id_factura = f.id AND f.estado = 'C'
+                GROUP BY p.id, p.nombre
+                HAVING total_actual > 0
+                ORDER BY total_actual DESC
+                LIMIT 10
+            ''', (str(año_actual), str(año_actual), str(año_anterior), str(año_anterior)))
             
-            porcentaje = 0
-            if total_anterior > 0:
-                porcentaje = ((total_actual - total_anterior) / total_anterior) * 100
-            elif total_actual > 0:
-                porcentaje = 100
-            
-            productos.append({
-                'id': row['producto_id'],
-                'nombre': row['producto_nombre'],
-                'cantidad_actual': row['cantidad_actual'],
-                'total_actual': redondear_importe(total_actual),
-                'cantidad_anterior': row['cantidad_anterior'],
-                'total_anterior': redondear_importe(total_anterior),
-                'porcentaje_diferencia': redondear_importe(porcentaje)
-            })
+            productos = []
+            for row in cursor.fetchall():
+                total_actual = float(row['total_actual'])
+                total_anterior = float(row['total_anterior'])
+                
+                porcentaje = 0
+                if total_anterior > 0:
+                    porcentaje = ((total_actual - total_anterior) / total_anterior) * 100
+                elif total_actual > 0:
+                    porcentaje = 100
+                
+                productos.append({
+                    'id': row['producto_id'],
+                    'nombre': row['producto_nombre'],
+                    'cantidad_actual': row['cantidad_actual'],
+                    'total_actual': redondear_importe(total_actual),
+                    'cantidad_anterior': row['cantidad_anterior'],
+                    'total_anterior': redondear_importe(total_anterior),
+                    'porcentaje_diferencia': redondear_importe(porcentaje)
+                })
 
         return jsonify({
             'año_actual': año_actual,
@@ -669,9 +665,6 @@ def top_clientes_ventas():
         return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        cursor.close()
-        conn.close()
 
 # ----------------------- VENTAS MENSUALES POR CLIENTE ----------------------- #
 @dashboard_bp.route('/clientes/ventas_mes', methods=['GET'])
@@ -687,35 +680,29 @@ def ventas_cliente_mes():
         ahora = datetime.now()
         año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            '''
-            SELECT strftime('%m', fecha) as mes,
-                   COALESCE(SUM(total), 0) as total
-            FROM factura
-            WHERE estado = 'C'
-              AND idContacto = ?
-              AND strftime('%Y', fecha) = ?
-            GROUP BY mes
-            ''',
-            (cliente_id, str(año))
-        )
-        filas = cursor.fetchall()
-        datos = {row['mes']: float(row['total'] or 0) for row in filas}
-        # Asegurar los 12 meses
-        datos_completos = {str(m).zfill(2): redondear_importe(datos.get(str(m).zfill(2), 0.0)) for m in range(1, 13)}
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT strftime('%m', fecha) as mes,
+                       COALESCE(SUM(total), 0) as total
+                FROM factura
+                WHERE estado = 'C'
+                  AND idContacto = ?
+                  AND strftime('%Y', fecha) = ?
+                GROUP BY mes
+                ''',
+                (cliente_id, str(año))
+            )
+            filas = cursor.fetchall()
+            datos = {row['mes']: float(row['total'] or 0) for row in filas}
+            # Asegurar los 12 meses
+            datos_completos = {str(m).zfill(2): redondear_importe(datos.get(str(m).zfill(2), 0.0)) for m in range(1, 13)}
         return jsonify(datos_completos)
     except sqlite3.Error as e:
         return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        try:
-            cursor.close()
-            conn.close()
-        except Exception:
-            pass
 
 # ----------------------- VENTAS MENSUALES POR PRODUCTO ----------------------- #
 @dashboard_bp.route('/productos/ventas_mes', methods=['GET'])
@@ -731,53 +718,47 @@ def ventas_producto_mes():
         ahora = datetime.now()
         año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
 
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            '''
-            SELECT mes,
-                   SUM(cantidad) AS cantidad,
-                   SUM(euros)    AS euros
-            FROM (
-                SELECT strftime('%m', f.fecha) AS mes,
-                       SUM(df.cantidad) AS cantidad,
-                       SUM(df.total)    AS euros
-                FROM detalle_factura df
-                JOIN factura f ON f.id = df.id_factura AND f.estado = 'C'
-                WHERE df.productoId = ?
-                  AND strftime('%Y', f.fecha) = ?
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                SELECT mes,
+                       SUM(cantidad) AS cantidad,
+                       SUM(euros)    AS euros
+                FROM (
+                    SELECT strftime('%m', f.fecha) AS mes,
+                           SUM(df.cantidad) AS cantidad,
+                           SUM(df.total)    AS euros
+                    FROM detalle_factura df
+                    JOIN factura f ON f.id = df.id_factura AND f.estado = 'C'
+                    WHERE df.productoId = ?
+                      AND strftime('%Y', f.fecha) = ?
+                    GROUP BY mes
+                    UNION ALL
+                    SELECT strftime('%m', t.fecha) AS mes,
+                           SUM(dt.cantidad) AS cantidad,
+                           SUM(dt.total)    AS euros
+                    FROM detalle_tickets dt
+                    JOIN tickets t ON t.id = dt.id_ticket AND t.estado = 'C'
+                    WHERE dt.productoId = ?
+                      AND strftime('%Y', t.fecha) = ?
+                    GROUP BY mes
+                )
                 GROUP BY mes
-                UNION ALL
-                SELECT strftime('%m', t.fecha) AS mes,
-                       SUM(dt.cantidad) AS cantidad,
-                       SUM(dt.total)    AS euros
-                FROM detalle_tickets dt
-                JOIN tickets t ON t.id = dt.id_ticket AND t.estado = 'C'
-                WHERE dt.productoId = ?
-                  AND strftime('%Y', t.fecha) = ?
-                GROUP BY mes
+                ''',
+                (producto_id, str(año), producto_id, str(año))
             )
-            GROUP BY mes
-            ''',
-            (producto_id, str(año), producto_id, str(año))
-        )
-        filas = cursor.fetchall()
-        cantidades = {row['mes']: float(row['cantidad'] or 0) for row in filas}
-        euros      = {row['mes']: float(row['euros'] or 0) for row in filas}
+            filas = cursor.fetchall()
+            cantidades = {row['mes']: float(row['cantidad'] or 0) for row in filas}
+            euros      = {row['mes']: float(row['euros'] or 0) for row in filas}
 
-        datos_cant = {str(m).zfill(2): cantidades.get(str(m).zfill(2), 0.0) for m in range(1, 13)}
-        datos_eur  = {str(m).zfill(2): redondear_importe(euros.get(str(m).zfill(2), 0.0)) for m in range(1, 13)}
+            datos_cant = {str(m).zfill(2): cantidades.get(str(m).zfill(2), 0.0) for m in range(1, 13)}
+            datos_eur  = {str(m).zfill(2): redondear_importe(euros.get(str(m).zfill(2), 0.0)) for m in range(1, 13)}
         return jsonify({'cantidad': datos_cant, 'euros': datos_eur})
     except sqlite3.Error as e:
         return jsonify({'error': f"Error en la consulta SQL: {str(e)}"}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-    finally:
-        try:
-            cursor.close()
-            conn.close()
-        except Exception:
-            pass
 
 # ----------------------- TOP GASTOS ----------------------- #
 @dashboard_bp.route('/gastos/top_gastos', methods=['GET'])

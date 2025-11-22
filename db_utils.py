@@ -39,16 +39,16 @@ def get_db_connection():
             db_path = DB_NAME
             logger.info(f"Usando BD por defecto: {db_path}")
         
-        # Temporalmente deshabilitado el pool mientras se soluciona
-        # pool = get_database_pool(db_path)
-        # return pool.get_connection().connection
+        # Pool activado
+        pool = get_database_pool(db_path)
+        return pool.get_connection()
         
-        # Conexión directa como antes
-        conn = sqlite3.connect(db_path, timeout=30)
-        conn.row_factory = sqlite3.Row
-        conn.execute('PRAGMA encoding="UTF-8"')
-        conn.execute("PRAGMA journal_mode=WAL;")
-        return conn
+        # Conexión directa como antes (LEGACY)
+        # conn = sqlite3.connect(db_path, timeout=30)
+        # conn.row_factory = sqlite3.Row
+        # conn.execute('PRAGMA encoding="UTF-8"')
+        # conn.execute("PRAGMA journal_mode=WAL;")
+        # return conn
         
     except Exception as e:
         logger.error(f"Error al conectar a la base de datos: {str(e)}", exc_info=True)

@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 from auth_middleware import login_required
 import factura
 from logger_config import get_logger
+from db_utils import get_db_connection, obtener_numerador
 
 logger = get_logger('aleph70.facturas_routes')
 
@@ -231,4 +232,75 @@ def obtener_estadisticas_facturas():
         
     except Exception as e:
         logger.error(f"Error obteniendo estadísticas facturas: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@facturas_bp.route('/api/facturas/<int:factura_id>/aeat', methods=['GET'])
+@login_required
+def obtener_info_aeat_factura(factura_id):
+    """Obtiene información AEAT de una factura"""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Intentar obtener campos AEAT. Si no existen en la tabla, fallará la query y se capturará la excepción.
+            cursor.execute('''
+                SELECT estado_envio, csv, id_envio_aeat, fecha_envio, codigo_qr 
+                FROM factura WHERE id = ?
+            ''', (factura_id,))
+            row = cursor.fetchone()
+            
+            if row:
+                return jsonify({
+                    'estado_envio': row['estado_envio'],
+                    'csv': row['csv'],
+                    'id_envio_aeat': row['id_envio_aeat'],
+                    'fecha_envio': row['fecha_envio'],
+                    'codigo_qr': row['codigo_qr']
+                })
+            return jsonify({'error': 'Factura no encontrada'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error obteniendo info AEAT factura {factura_id}: {e}")
+        # Eliminado fallback: propagar el error 500 si falla la consulta
+        return jsonify({'error': str(e)}), 500
+
+
+@facturas_bp.route('/api/facturas/guardar', methods=['POST'])
+@login_required
+def guardar_factura_legacy():
+    """Endpoint de compatibilidad para guardar/actualizar facturas"""
+    data = request.get_json()
+    if data and data.get('id'):
+        # Si el frontend envía un ID, asumimos que es una actualización
+        return factura.actualizar_factura(data['id'], data)
+    else:
+        # Si no hay ID, es una nueva factura
+        return factura.crear_factura()
+
+
+@facturas_bp.route('/api/facturas/actualizar', methods=['POST', 'PUT'])
+@login_required
+def actualizar_factura_legacy():
+    """Endpoint de compatibilidad para actualizar facturas"""
+    data = request.get_json()
+    if not data or not data.get('id'):
+        return jsonify({'error': 'ID de factura requerido para actualizar'}), 400
+    return factura.actualizar_factura(data['id'], data)
+
+
+@facturas_bp.route('/api/facturas/obtener_numerador/<serie>', methods=['GET'])
+@login_required
+def obtener_numerador_factura(serie):
+    """Obtiene el siguiente número de factura para la serie dada"""
+    try:
+        if serie == 'F':
+            # obtener_numerador devuelve el último número usado
+            num, _ = obtener_numerador('F')
+            # Siguiente número
+            siguiente = (num or 0) + 1
+            return jsonify({'numerador': siguiente, 'serie': 'F', 'success': True})
+        else:
+            return jsonify({'error': 'Serie desconocida'}), 400
+    except Exception as e:
+        logger.error(f"Error obteniendo numerador factura serie {serie}: {e}")
         return jsonify({'error': str(e)}), 500
