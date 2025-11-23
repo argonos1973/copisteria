@@ -2474,102 +2474,101 @@ def actualizar_factura(id, data):
             'mensaje': 'Factura actualizada exitosamente',
             'id': id
         }
-        # Continuamos para integrar con VERI*FACTU si procede
         
-        try:
-            logger.info("[VERIFACTU] Actualizando datos VERI*FACTU para factura_id:", id)
-            
-            # Verificar si VERI*FACTU está disponible (desactivado en actualización para evitar duplicados)
-            if VERIFACTU_DISPONIBLE:
-                try:
-                    # Llamar a la función que implementa el flujo completo:
-                    # 1. Validar XML
-                    # 2. Calcular hash
-                    # 3. Generar XML para AEAT
-                    # 4. Enviar a AEAT (simulado) 
-                    # 5. Solo generar QR si hay validación exitosa
-                    datos_verifactu = verifactu.generar_datos_verifactu_para_factura(id)
-                    
-                    if datos_verifactu:
-                        # Verificar si la factura fue validada por AEAT
-                        validado_aeat = datos_verifactu.get('validado_aeat', False)
-                        tiene_qr = 'qr_data' in datos_verifactu and datos_verifactu['qr_data'] is not None
+        # Determinar si debemos enviar a Veri*Factu
+        # Criterio: Estado 'C' (Cobrada) O es rectificativa
+        num_doc = str(data.get('numero', ''))
+        es_rectificativa = (estado == 'RE') or (data.get('tipo') == 'R') or num_doc.upper().endswith('-R')
+        debe_enviar_verifactu = (estado == 'C') or es_rectificativa
+        
+        logger.debug(f"[VERIFACTU] Evaluación envío: estado={estado}, es_rectificativa={es_rectificativa} -> debe_enviar={debe_enviar_verifactu}")
+
+        if debe_enviar_verifactu:
+            try:
+                logger.info("[VERIFACTU] Actualizando datos VERI*FACTU para factura_id:", id)
+                
+                # Verificar si VERI*FACTU está disponible
+                if VERIFACTU_DISPONIBLE:
+                    try:
+                        # Llamar a la función que implementa el flujo completo:
+                        datos_verifactu = verifactu.generar_datos_verifactu_para_factura(id)
                         
-                        if validado_aeat and tiene_qr:
-                            hash_value = datos_verifactu.get('hash', 'NO_HASH')
-                            logger.info(f"[VERIFACTU]Factura validada por AEAT. Hash={hash_value[:10]}..., ID={datos_verifactu.get('id_verificacion', 'N/A')}")
-                            respuesta['datos_adicionales'] = {
-                                'hash': hash_value,
-                                'verifactu': True,
-                                'validado_aeat': True,
-                                'id_verificacion': datos_verifactu.get('id_verificacion', ''),
-                                'qr_disponible': True,
-                                'mensaje': datos_verifactu.get('mensaje', 'Factura validada correctamente')
-                            }
-                        elif validado_aeat and not tiene_qr:
-                            hash_value = datos_verifactu.get('hash', 'NO_HASH')
-                            logger.info(f"[VERIFACTU]Factura validada por AEAT pero sin QR generado. Hash={hash_value[:10]}...")
-                            respuesta['datos_adicionales'] = {
-                                'hash': hash_value,
-                                'verifactu': True,
-                                'validado_aeat': True,
-                                'qr_disponible': False,
-                                'mensaje': "Factura validada pero sin QR generado"
-                            }
+                        if datos_verifactu:
+                            # Verificar si la factura fue validada por AEAT
+                            validado_aeat = datos_verifactu.get('validado_aeat', False)
+                            tiene_qr = 'qr_data' in datos_verifactu and datos_verifactu['qr_data'] is not None
+                            
+                            if validado_aeat and tiene_qr:
+                                hash_value = datos_verifactu.get('hash', 'NO_HASH')
+                                logger.info(f"[VERIFACTU]Factura validada por AEAT. Hash={hash_value[:10]}..., ID={datos_verifactu.get('id_verificacion', 'N/A')}")
+                                respuesta['datos_adicionales'] = {
+                                    'hash': hash_value,
+                                    'verifactu': True,
+                                    'validado_aeat': True,
+                                    'id_verificacion': datos_verifactu.get('id_verificacion', ''),
+                                    'qr_disponible': True,
+                                    'mensaje': datos_verifactu.get('mensaje', 'Factura validada correctamente')
+                                }
+                            elif validado_aeat and not tiene_qr:
+                                hash_value = datos_verifactu.get('hash', 'NO_HASH')
+                                logger.info(f"[VERIFACTU]Factura validada por AEAT pero sin QR generado. Hash={hash_value[:10]}...")
+                                respuesta['datos_adicionales'] = {
+                                    'hash': hash_value,
+                                    'verifactu': True,
+                                    'validado_aeat': True,
+                                    'qr_disponible': False,
+                                    'mensaje': "Factura validada pero sin QR generado"
+                                }
+                            else:
+                                hash_value = datos_verifactu.get('hash', 'NO_HASH')
+                                logger.info(f"[VERIFACTU]Factura NO validada por AEAT. Hash={hash_value[:10]}...")
+                                respuesta['datos_adicionales'] = {
+                                    'hash': hash_value,
+                                    'verifactu': True,
+                                    'validado_aeat': False,
+                                    'qr_disponible': False,
+                                    'mensaje': datos_verifactu.get('mensaje', 'Factura no validada por AEAT')
+                                }
                         else:
-                            hash_value = datos_verifactu.get('hash', 'NO_HASH')
-                            logger.info(f"[VERIFACTU]Factura NO validada por AEAT. Hash={hash_value[:10]}...")
+                            logger.info("[VERIFACTU] No se pudieron actualizar los datos VERI*FACTU")
                             respuesta['datos_adicionales'] = {
-                                'hash': hash_value,
-                                'verifactu': True,
+                                'verifactu': False,
+                                'mensaje': "Fallo al regenerar datos VERI*FACTU",
                                 'validado_aeat': False,
-                                'qr_disponible': False,
-                                'mensaje': datos_verifactu.get('mensaje', 'Factura no validada por AEAT')
+                                'qr_disponible': False
                             }
-                    else:
-                        logger.info("[VERIFACTU] No se pudieron actualizar los datos VERI*FACTU")
+                    except Exception as e:
+                        logger.warning(f"[!] Error al regenerar datos VERI*FACTU: {str(e)}")
+                        import traceback
+                        logger.error("Traceback:", exc_info=True)
                         respuesta['datos_adicionales'] = {
                             'verifactu': False,
-                            'mensaje': "Fallo al regenerar datos VERI*FACTU",
+                            'mensaje': f"Error VERI*FACTU: {str(e)}",
                             'validado_aeat': False,
                             'qr_disponible': False
                         }
-                except Exception as e:
-                    logger.warning(f"[!] Error al regenerar datos VERI*FACTU: {str(e)}")
-                    import traceback
-                    logger.error("Traceback:", exc_info=True)
+                else:
+                    logger.warning("[!] Módulo VERI*FACTU no disponible - Omitiendo actualización de datos")
                     respuesta['datos_adicionales'] = {
                         'verifactu': False,
-                        'mensaje': f"Error VERI*FACTU: {str(e)}",
+                        'mensaje': "Módulo VERI*FACTU no disponible",
                         'validado_aeat': False,
                         'qr_disponible': False
                     }
-            else:
-                logger.warning("[!] Módulo VERI*FACTU no disponible - Omitiendo actualización de datos")
+            except Exception as e:
+                logger.info(f"[VERIFACTU][ERROR] Error al actualizar datos VERI*FACTU: {e}")
+                import traceback
+                logger.error("Traceback:", exc_info=True)
                 respuesta['datos_adicionales'] = {
                     'verifactu': False,
-                    'mensaje': "Módulo VERI*FACTU no disponible",
+                    'mensaje': f"Error en integración VERI*FACTU: {str(e)}",
                     'validado_aeat': False,
                     'qr_disponible': False
                 }
-        except Exception as e:
-            logger.info(f"[VERIFACTU][ERROR] Error al actualizar datos VERI*FACTU: {e}")
-            import traceback
-            logger.error("Traceback:", exc_info=True)
-            respuesta['datos_adicionales'] = {
-                'verifactu': False,
-                'mensaje': f"Error en integración VERI*FACTU: {str(e)}",
-                'validado_aeat': False,
-                'qr_disponible': False
-            }
+        else:
+            logger.info(f"[VERIFACTU] Omitido envío AEAT (Estado={estado}, Rectificativa={es_rectificativa})")
             
         return jsonify(respuesta)
-        
-        # Respuesta sin mencionar VERI*FACTU si hubo problemas
-        return jsonify({
-            'mensaje': 'Factura actualizada exitosamente',
-            'id': id
-        })
 
     except Exception as e:
         if conn:

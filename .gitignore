@@ -49,11 +49,14 @@ db/*.sqbpro
 exports/
 
 # Facturas electrónicas (firma digital)
-factura_e/*/*.xsig
+factura_e/**/*.xsig
+*.xsig
 
-# Scripts de prueba
+# Scripts de prueba y debug
 test_manual.sh
 test_*.sh
+debug_routes.py
+debug_*.py
 
 # Temporales de QR
 static/tmp_qr/

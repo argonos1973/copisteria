@@ -168,10 +168,10 @@ def register_blueprints(app):
     """Registra todos los blueprints de la aplicación"""
     
     # Blueprints existentes del sistema multiempresa
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(empresas_bp)
-    app.register_blueprint(admin_bp)
-    app.register_blueprint(plantillas_bp)
+    app.register_blueprint(auth_bp)  # Sistema de autenticación
+    app.register_blueprint(empresas_bp)  # Gestión de empresas
+    app.register_blueprint(admin_bp)  # Sistema de administración
+    app.register_blueprint(plantillas_bp)  # Plantillas personalizadas
     app.register_blueprint(usuario_bp)
     app.register_blueprint(avatares_bp)
     app.register_blueprint(dashboard_bp)
@@ -229,6 +229,44 @@ app = application
 # ROUTES ADICIONALES TEMPORALES
 # =====================================
 # Estas rutas se mantendrán temporalmente hasta completar la migración completa
+
+from flask import jsonify
+
+@app.route('/api/productos/<int:producto_id>', methods=['GET'])
+@login_required
+def obtener_producto_directo_app(producto_id):
+    try:
+        from productos import obtener_producto
+        prod = obtener_producto(producto_id)
+        if prod:
+            return jsonify(prod)
+        return jsonify({'error': 'Producto no encontrado'}), 404
+    except Exception as e:
+        logger.error(f"Error en ruta directa producto {producto_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/productos/<int:producto_id>', methods=['PUT'])
+@login_required
+def actualizar_producto_directo_app(producto_id):
+    try:
+        from productos import actualizar_producto
+        data = request.get_json()
+        data['id'] = producto_id
+        return jsonify(actualizar_producto(producto_id, data))
+    except Exception as e:
+        logger.error(f"Error actualizando producto {producto_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/productos', methods=['POST'])
+@login_required
+def crear_producto_directo_app():
+    try:
+        from productos import crear_producto
+        data = request.get_json()
+        return jsonify(crear_producto(data))
+    except Exception as e:
+        logger.error(f"Error creando producto: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # Aquí se pueden añadir rutas que aún no han sido migradas a blueprints
 # TODO: Migrar todas las rutas restantes del app.py original

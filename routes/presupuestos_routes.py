@@ -70,6 +70,11 @@ def convertir_a_factura(id):
 def convertir_a_ticket(id):
     return presupuesto.convertir_presupuesto_a_ticket(id)
 
+@presupuestos_bp.route('/api/presupuestos/<int:id>/imprimir', methods=['GET'])
+@login_required
+def imprimir_presupuesto(id):
+    return presupuesto.generar_pdf_presupuesto(id)
+
 # Endpoints de compatibilidad (Legacy)
 @presupuestos_bp.route('/api/presupuestos/guardar', methods=['POST'])
 @login_required

@@ -13,6 +13,12 @@ proformas_bp = Blueprint('proformas', __name__)
 def consultar_proformas():
     return proforma.consultar_proformas()
 
+@proformas_bp.route('/api/proformas/consulta', methods=['GET'])
+@login_required
+def consultar_proformas_alias():
+    """Alias para consulta de proformas (frontend legacy)"""
+    return proforma.consultar_proformas()
+
 @proformas_bp.route('/api/proformas/<int:id>', methods=['GET'])
 @login_required
 def obtener_proforma(id):
@@ -69,6 +75,12 @@ def actualizar_proforma_endpoint():
 def convertir_a_factura(id):
     return proforma.convertir_proforma_a_factura(id)
 
+@proformas_bp.route('/api/proformas/<int:id>/convertir', methods=['POST'])
+@login_required
+def convertir_a_factura_alias(id):
+    """Alias para convertir proforma a factura (compatibilidad frontend)"""
+    return proforma.convertir_proforma_a_factura(id)
+
 # Endpoints de compatibilidad (Legacy)
 @proformas_bp.route('/api/proformas/guardar', methods=['POST'])
 @login_required
@@ -106,6 +118,12 @@ def obtener_numerador_proforma():
     except Exception as e:
         logger.error(f"Error obteniendo numerador proforma: {e}")
         return jsonify({'error': str(e)}), 500
+
+@proformas_bp.route('/api/proforma/numero', methods=['GET'])
+@login_required
+def obtener_numero_proforma_legacy():
+    """Endpoint legacy para obtener numerador proforma"""
+    return obtener_numerador_proforma()
 
 @proformas_bp.route('/api/proforma/abierta/<int:idContacto>', methods=['GET'])
 @login_required

@@ -25,6 +25,31 @@ def obtener_todos_productos():
         logger.error(f"Error obteniendo productos: {e}")
         return jsonify({'error': str(e)}), 500
 
+@productos_bp.route('/api/productos/paginado', methods=['GET'])
+@login_required
+def obtener_productos_paginado_route():
+    """Obtiene productos paginados"""
+    try:
+        page = request.args.get('page', 1)
+        page_size = request.args.get('page_size', 20)
+        sort_by = request.args.get('sort', 'nombre')
+        order = request.args.get('order', 'ASC')
+        
+        # El frontend envía 'nombre' como término de búsqueda, lo mapeamos a search_term
+        search_term = request.args.get('search') or request.args.get('nombre')
+        
+        resultado = productos.obtener_productos_paginado(
+            page=page, 
+            page_size=page_size, 
+            sort_by=sort_by, 
+            order=order, 
+            search_term=search_term
+        )
+        return jsonify(resultado)
+    except Exception as e:
+        logger.error(f"Error en endpoint productos paginado: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @productos_bp.route('/api/productos/aplicar_franjas', methods=['POST'])
 def api_aplicar_franjas_todos():
     try:
@@ -95,6 +120,55 @@ def debug_schema_productos():
         
     except Exception as e:
         logger.error(f"Error obteniendo schema productos: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@productos_bp.route('/api/productos/<int:producto_id>', methods=['GET'])
+@login_required
+def obtener_producto_individual(producto_id):
+    try:
+        producto = productos.obtener_producto(producto_id)
+        if producto:
+            return jsonify(producto)
+        else:
+            return jsonify({'error': 'Producto no encontrado'}), 404
+    except Exception as e:
+        logger.error(f"Error obteniendo producto {producto_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@productos_bp.route('/api/productos/<int:producto_id>', methods=['DELETE'])
+@login_required
+def eliminar_producto_route(producto_id):
+    try:
+        resultado = productos.eliminar_producto(producto_id)
+        return jsonify(resultado)
+    except Exception as e:
+        logger.error(f"Error eliminando producto {producto_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@productos_bp.route('/api/productos/<int:producto_id>', methods=['PUT'])
+@login_required
+def actualizar_producto_rest(producto_id):
+    try:
+        data = request.get_json()
+        # Asegurar que el ID del payload coincide
+        data['id'] = producto_id
+        return jsonify(productos.actualizar_producto(producto_id, data))
+    except Exception as e:
+        logger.error(f"Error actualizando producto {producto_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@productos_bp.route('/api/productos', methods=['POST'])
+@login_required
+def crear_producto_rest():
+    try:
+        data = request.get_json()
+        return jsonify(productos.crear_producto(data))
+    except Exception as e:
+        logger.error(f"Error creando producto: {e}")
         return jsonify({'error': str(e)}), 500
 
 

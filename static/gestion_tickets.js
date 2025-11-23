@@ -980,17 +980,17 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
     // Construir la URL base y endpoint según si es crear o actualizar
     const baseUrl = `${API_URL}/api`;
     const url = idticket 
-      ? `${baseUrl}/tickets/actualizar`
-      : `${baseUrl}/tickets/guardar`;
+      ? `${baseUrl}/tickets/${idticket}`
+      : `${baseUrl}/tickets`;
 
     console.log('Enviando datos al servidor:', {
       url,
-      method: idticket ? 'PATCH' : 'POST',
+      method: idticket ? 'PUT' : 'POST',
       data: ticketData
     });
 
     const response = await fetch(url, {
-      method: idticket ? 'PATCH' : 'POST',
+      method: idticket ? 'PUT' : 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'

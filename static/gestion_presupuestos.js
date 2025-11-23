@@ -442,7 +442,7 @@ function inicializarEventDelegation() {
 
 async function cargarPresupuesto(id) {
   try {
-    const response = await fetch(`${API_URL}/api/presupuestos/consulta/${id}`);
+    const response = await fetch(`${API_URL}/api/presupuestos/${id}`);
     if (!response.ok) throw new Error(`Error al cargar el presupuesto: ${response.statusText}`);
     const data = await response.json();
     const importes = normalizarImportesBackend(data);
@@ -627,7 +627,7 @@ async function buscarPresupuestoAbierto(idContacto) {
     } else {
       // Nuevo
       try {
-        const numResponse = await fetch(`${API_URL}/api/presupuesto/numero`);
+        const numResponse = await fetch(`${API_URL}/api/presupuestos/obtener_numerador`);
         if (!numResponse.ok) throw new Error('Error al obtener el número de presupuesto');
         const numData = await numResponse.json();
         const fecha = new Date();
@@ -672,7 +672,7 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='B') {
 
     // Si no hay id, asegurar número fresco por si ha cambiado el numerador
     if (!idPresupuesto) {
-      const numResponse = await fetch(`${API_URL}/api/presupuesto/numero`);
+      const numResponse = await fetch(`${API_URL}/api/presupuestos/obtener_numerador`);
       if (!numResponse.ok) throw new Error('Error al obtener nuevo número de presupuesto');
       const numData = await numResponse.json();
       const fecha = new Date();
@@ -703,11 +703,11 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='B') {
     };
 
     const url = idPresupuesto 
-      ? `${API_URL}/api/presupuestos/actualizar`
-      : `${API_URL}/api/presupuesto`;
+      ? `${API_URL}/api/presupuestos/${idPresupuesto}`
+      : `${API_URL}/api/presupuestos`;
 
     const response = await fetch(url, {
-      method: idPresupuesto ? 'PATCH' : 'POST',
+      method: idPresupuesto ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(datos)
     });
@@ -999,7 +999,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await buscarPresupuestoAbierto(idContacto);
     } else {
       // Inicializar nuevo presupuesto
-      const response = await fetch(`${API_URL}/api/presupuesto/numero`);
+      const response = await fetch(`${API_URL}/api/presupuestos/obtener_numerador`);
       if (!response.ok) throw new Error('Error al obtener el número de presupuesto');
       const numData = await response.json();
       const fecha = new Date();

@@ -53,7 +53,7 @@ async function buscarPresupuestos() {
     // Añadir limit basado en el selector de página
     params.append('limit', pageSize);
 
-    const url = `${API_URL}/api/presupuestos/consulta?${params.toString()}`;
+    const url = `${API_URL}/api/presupuestos?${params.toString()}`;
     // Trazas de depuración (se pueden dejar; ayudan a diagnosticar filtros en producción)
     try { console.debug('[CONSULTA_PRESUPUESTOS] Parámetros', { startDate, endDate, status, presupuestoNumber, contacto, identificador, url }); } catch (_) {}
     const response = await fetch(url, { credentials: "include" });
@@ -173,7 +173,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Convertir el presupuesto ${item.numero} a factura?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/convertir_factura`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/convertir-factura`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
               if (!resp.ok) throw new Error('Error al convertir presupuesto a factura');
               const result = await resp.json();
               mostrarNotificacion(`Presupuesto ${item.numero} convertido a factura ${result.numero_factura}`, 'success');
@@ -201,7 +201,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Convertir el presupuesto ${item.numero} a ticket?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/convertir_ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/convertir-ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
               if (!resp.ok) throw new Error('Error al convertir presupuesto a ticket');
               const result = await resp.json();
               mostrarNotificacion(`Presupuesto ${item.numero} convertido a ticket ${result.numero_ticket}`, 'success');

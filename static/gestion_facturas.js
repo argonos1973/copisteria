@@ -21,7 +21,9 @@ import {
     validarContactoFace,
     inicializarDeteccionCambios,
     marcarCambiosSinGuardar,
-    resetearCambiosSinGuardar
+    resetearCambiosSinGuardar,
+    mostrarCargando,
+    ocultarCargando
 } from './scripts_utils.js';
 import { 
     calcularTotalesDocumento, 
@@ -139,6 +141,7 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
     }
 
     try {
+        mostrarCargando();
         // Recalcular todos los importes
         const importe_bruto = calcularTotalBruto();
         const importe_impuestos = calcularTotalImpuestos();
@@ -297,6 +300,8 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
             window.__rechazarGuardadoMenu = null;
             window.__resolveGuardadoMenu = null;
         }
+    } finally {
+        ocultarCargando();
     }
 }
 

@@ -86,6 +86,13 @@ def actualizar_ticket(ticket_id):
         return jsonify({'error': str(e)}), 500
 
 
+@tickets_bp.route('/api/tickets/anular/<int:ticket_id>', methods=['POST'])
+@login_required
+def anular_ticket(ticket_id):
+    """Anula un ticket y crea uno rectificativo"""
+    return tickets.anular_ticket(ticket_id)
+
+
 @tickets_bp.route('/api/tickets/<int:ticket_id>', methods=['DELETE'])
 @login_required
 def eliminar_ticket(ticket_id):

@@ -619,14 +619,7 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
             conn.rollback()
             return jsonify({'error': 'Presupuesto no encontrado'}), 404
 
-        numerador, _ = obtener_numerador('T', conn)
-        if numerador is None:
-            conn.rollback()
-            return jsonify({'error': 'Error al obtener el numerador de tickets'}), 500
-        numero_core = formatear_numero_documento('T', conn)
-        anno = datetime.now().year % 100
-        numero_ticket = f"T{anno:02}{numero_core}"
-
+        # Calcular importes antes de generar el número
         cursor.execute('SELECT * FROM detalle_presupuesto WHERE id_presupuesto = ?', (id_presupuesto,))
         detalles_pres = cursor.fetchall()
 
@@ -652,26 +645,42 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
             importe_impuestos = redondear_importe(0)
             total_ticket = redondear_importe(0)
 
-        cursor.execute(
-            '''
-            INSERT INTO tickets (
-                fecha, numero, importe_bruto, importe_impuestos, importe_cobrado, total,
-                timestamp, estado, formaPago, tipo
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                datetime.now().strftime('%Y-%m-%d'),
-                numero_ticket,
-                importe_bruto,
-                importe_impuestos,
-                0.0,
-                total_ticket,
-                datetime.now().isoformat(),
-                'P',
-                pres['formaPago'],
-                pres['tipo']
+        # Obtener siguiente número de ticket de forma atómica
+        # Primero actualizamos el numerador para reservar el número y evitar colisiones (Fix v2)
+        numerador_nuevo, _ = actualizar_numerador('T', conn, commit=False)
+        if numerador_nuevo is None:
+             conn.rollback()
+             return jsonify({'error': 'Error al actualizar el numerador de tickets'}), 500
+
+        anno = datetime.now().year % 100
+        numero_ticket = f"T{anno:02}{str(numerador_nuevo).zfill(4)}"
+
+        try:
+            cursor.execute(
+                '''
+                INSERT INTO tickets (
+                    fecha, numero, importe_bruto, importe_impuestos, importe_cobrado, total,
+                    timestamp, estado, formaPago, tipo
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    datetime.now().strftime('%Y-%m-%d'),
+                    numero_ticket,
+                    importe_bruto,
+                    importe_impuestos,
+                    0.0,
+                    total_ticket,
+                    datetime.now().isoformat(),
+                    'P',
+                    pres['formaPago'],
+                    pres['tipo']
+                )
             )
-        )
-        ticket_id = cursor.lastrowid
+            ticket_id = cursor.lastrowid
+            
+        except sqlite3.IntegrityError as e:
+            conn.rollback()
+            logger.error(f"Error de integridad al insertar ticket {numero_ticket}: {e}")
+            return jsonify({'error': f'Error al generar ticket (duplicado): {e}'}), 500
 
         for d in detalles_dict:
             cantidad = float(d['cantidad'])
@@ -701,11 +710,6 @@ def convertir_presupuesto_a_ticket(id_presupuesto):
             )
 
         cursor.execute('UPDATE presupuesto SET estado = ? WHERE id = ?', ('AP', id_presupuesto))
-
-        numerador_actual, _ = actualizar_numerador('T', conn, commit=False)
-        if numerador_actual is None:
-            conn.rollback()
-            return jsonify({'error': 'Error al actualizar el numerador de tickets'}), 500
 
         conn.commit()
 

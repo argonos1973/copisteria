@@ -732,6 +732,149 @@ def media_gasto_por_ticket():
         if 'conn' in locals():
             conn.close()
 
+def anular_ticket(id_ticket):
+    """Anula un ticket y crea uno rectificativo"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        conn.execute('BEGIN IMMEDIATE')
+        cursor = conn.cursor()
+        
+        # 1. Obtener ticket original
+        cursor.execute("SELECT * FROM tickets WHERE id = ?", (id_ticket,))
+        original = cursor.fetchone()
+        
+        if not original:
+            conn.rollback()
+            return jsonify({'error': 'Ticket no encontrado'}), 404
+            
+        # Convertir a dict
+        orig_dict = dict(original)
+        
+        if orig_dict.get('estado') == 'A':
+             conn.rollback()
+             return jsonify({'error': 'El ticket ya está anulado'}), 400
+             
+        # 2. Marcar original como Anulado
+        cursor.execute("UPDATE tickets SET estado = 'A' WHERE id = ?", (id_ticket,))
+        
+        # 3. Crear ticket rectificativo
+        # Número rectificativo: {numero_original}-R (sufijo, consistente con sistema legacy)
+        numero_rect = f"{orig_dict['numero']}-R"
+        
+        # Insertar cabecera rectificativa
+        cursor.execute('''
+            INSERT INTO tickets (
+                fecha, numero, importe_bruto, importe_impuestos, importe_cobrado, total, 
+                timestamp, estado, formaPago, id_ticket_rectificado, tipo
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            datetime.now().strftime('%Y-%m-%d'),
+            numero_rect,
+            -float(orig_dict['importe_bruto'] or 0),
+            -float(orig_dict['importe_impuestos'] or 0),
+            0, # Cobrado 0
+            -float(orig_dict['total'] or 0),
+            datetime.now().isoformat(),
+            'RF', # Estado Rectificativo (RF según legacy, o RE)
+            orig_dict['formaPago'],
+            id_ticket,
+            'R'
+        ))
+        id_rect = cursor.lastrowid
+        
+        # 4. Copiar detalles en negativo
+        cursor.execute("SELECT * FROM detalle_tickets WHERE id_ticket = ?", (id_ticket,))
+        detalles = cursor.fetchall()
+        
+        for det in detalles:
+            d = dict(det)
+            # Cantidad negativa para revertir stock y totales
+            cantidad_orig = float(d['cantidad'] or 0)
+            total_orig = float(d['total'] or 0)
+            
+            cursor.execute('''
+                INSERT INTO detalle_tickets (
+                    id_ticket, concepto, descripcion, cantidad, precio, impuestos, total, productoId
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                id_rect,
+                d['concepto'],
+                d['descripcion'],
+                -cantidad_orig,
+                d['precio'], 
+                d['impuestos'],
+                -total_orig,
+                d['productoId']
+            ))
+            
+        conn.commit()
+        
+        # 5. VERI*FACTU (opcional)
+        resultado_envio = None
+        if VERIFACTU_HABILITADO:
+            try:
+                import re
+                import os
+                # Obtener path de DB para extraer codigo de empresa
+                db_path_val = None
+                try:
+                    db_path_val = conn.execute('PRAGMA database_list').fetchone()[2]
+                except Exception:
+                    pass
+                
+                # Cerrar conexión antes de llamar a verifactu (que abre su propia conexión)
+                if conn:
+                    conn.close()
+                    conn = None
+                
+                empresa_code = 'unknown'
+                if db_path_val:
+                    match = re.search(r'/db/([^/]+)/\1\.db', db_path_val)
+                    if match:
+                        empresa_code = match.group(1)
+                    else:
+                        db_name = os.path.basename(db_path_val)
+                        empresa_code = db_name.replace('.db', '')
+                
+                resultado_envio = generar_datos_verifactu_para_ticket(id_rect, empresa_codigo=empresa_code)
+            except Exception as e:
+                logger.error(f"Error VeriFactu al anular ticket: {e}")
+                import traceback
+                traceback.print_exc()
+
+        return jsonify({
+            'success': True, 
+            'mensaje': 'Ticket anulado correctamente', 
+            'id_rectificativo': id_rect,
+            'envio_aeat': resultado_envio
+        })
+        
+    except Exception as e:
+        if conn: conn.rollback()
+        logger.error(f"Error anulando ticket {id_ticket}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+def obtener_ticket(ticket_id):
+    """Obtiene un ticket por su ID (raw dict) para uso interno"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM tickets WHERE id = ?', (ticket_id,))
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+        return None
+    except Exception as e:
+        logger.error(f"Error en obtener_ticket: {e}")
+        raise
+    finally:
+        if conn:
+            conn.close()
+
 def actualizar_ticket(id_ticket=None, data=None):
     """Actualiza un ticket existente con lógica unificada de cálculo"""
     conn = None

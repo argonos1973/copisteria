@@ -179,7 +179,7 @@ def search_carrer():
         return jsonify([])
     
     try:
-        return jsonify(contactos.buscar_direcciones(query))
+        return jsonify(contactos.obtener_sugerencias_carrer(query))
     except Exception as e:
         logger.error(f"Error buscando direcciones: {e}")
         return jsonify({'error': str(e)}), 500
@@ -235,7 +235,7 @@ def crear():
         if not data.get('razonsocial'):
             return jsonify({'error': 'La razón social es requerida'}), 400
             
-        resultado = contactos.create_contacto(data)
+        resultado = contactos.crear_contacto(data)
         if resultado['success']:
             return jsonify(resultado)
         else:
@@ -257,7 +257,7 @@ def actualizar(idContacto):
         if not data.get('razonsocial'):
             return jsonify({'error': 'La razón social es requerida'}), 400
             
-        resultado = contactos.update_contacto(idContacto, data)
+        resultado = contactos.actualizar_contacto(idContacto, data)
         if resultado['success']:
             return jsonify(resultado)
         else:

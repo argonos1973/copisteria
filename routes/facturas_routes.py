@@ -345,7 +345,7 @@ def guardar_factura_legacy():
         return factura.crear_factura(data)
 
 
-@facturas_bp.route('/api/facturas/actualizar', methods=['POST', 'PUT'])
+@facturas_bp.route('/api/facturas/actualizar', methods=['POST', 'PUT', 'PATCH'])
 @login_required
 def actualizar_factura_legacy():
     """Endpoint de compatibilidad para actualizar facturas"""

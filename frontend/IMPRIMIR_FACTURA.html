@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Factura</title>
-    <script src="/static/auto_branding.js?v=1762757322"></script>
+    <script src="/static/auto_branding.js?v=1763897790"></script>
     <style>
         /* Reglas específicas para impresión */
         @media print {
+            #loading-overlay {
+                display: none !important;
+            }
             #qr-verifactu {
                 display: block !important;
                 visibility: visible !important;
@@ -158,6 +161,23 @@
     color:#000 !important;
     font-weight:700;
 }
+
+/* Estilos para overlay de carga (oculto por defecto) */
+#loading-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+#loading-overlay.show {
+    display: flex;
+}
 </style>
 </head>
 <body>
@@ -240,6 +260,6 @@
         </div>
     </div>
 
-    <script type="module" src="/static/imprimir-factura.js?v=1763553318"></script>
+    <script type="module" src="/static/imprimir-factura.js?v=1763897790"></script>
 </body>
 </html>

@@ -1087,3 +1087,81 @@ def eliminar_producto(id_producto):
     finally:
         if 'conn' in locals():
             conn.close()
+
+
+def obtener_productos_paginado(page=1, page_size=20, sort_by='nombre', order='ASC', search_term=None):
+    """
+    Obtiene productos paginados con filtrado opcional
+    """
+    try:
+        try:
+            page = int(page)
+            if page < 1: page = 1
+        except: page = 1
+        
+        try:
+            page_size = int(page_size)
+            if page_size < 1: page_size = 20
+        except: page_size = 20
+
+        offset = (page - 1) * page_size
+        
+        # Validar ordenación
+        valid_sorts = ['id', 'nombre', 'subtotal', 'impuestos']
+        if sort_by not in valid_sorts:
+            sort_by = 'nombre'
+            
+        if str(order).upper() not in ['ASC', 'DESC']:
+            order = 'ASC'
+            
+        # Construir consulta
+        where_clause = " WHERE 1=1"
+        params = []
+        
+        if search_term:
+            # Dividir términos por espacios para búsqueda flexible (todas las palabras deben estar presentes)
+            terms = search_term.split()
+            for term in terms:
+                where_clause += " AND nombre LIKE ?"
+                t = f"%{term}%"
+                params.append(t)
+            
+        # Consulta principal
+        query = f"""
+            SELECT *, 
+                   calculo_automatico, franja_inicial, numero_franjas, 
+                   ancho_franja, descuento_inicial, incremento_franja, no_generar_franjas
+            FROM productos 
+            {where_clause}
+            ORDER BY {sort_by} {order}
+            LIMIT ? OFFSET ?
+        """
+        
+        # Consulta de conteo
+        count_query = f"SELECT COUNT(*) FROM productos {where_clause}"
+        
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Obtener total
+            cursor.execute(count_query, params)
+            total_items = cursor.fetchone()[0]
+            
+            # Obtener items
+            query_params = params + [page_size, offset]
+            cursor.execute(query, query_params)
+            productos = cursor.fetchall()
+            
+            lista_productos = [dict(producto) for producto in productos]
+            
+            return {
+                'items': lista_productos,
+                'total': total_items,
+                'page': page,
+                'page_size': page_size,
+                'total_pages': (total_items + page_size - 1) // page_size if page_size > 0 else 1
+            }
+            
+    except Exception as e:
+        logger.error(f"Error obteniendo productos paginados: {e}")
+        raise
