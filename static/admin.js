@@ -375,7 +375,15 @@ function mostrarUsuarios(lista) {
 
     lista.forEach(usuario => {
         const estado = usuario.activo ? '<span class="badge badge-success">Activo</span>' : '<span class="badge badge-danger">Inactivo</span>';
-        const rol = usuario.es_superadmin ? '<span class="badge badge-info">Superadmin</span>' : '<span class="badge">Usuario</span>';
+        
+        let rolBadge = '<span class="badge">Usuario</span>';
+        if (usuario.rol === 'admin') {
+            rolBadge = '<span class="badge badge-info">Administrador</span>';
+        } else if (usuario.rol === 'editor') {
+            rolBadge = '<span class="badge badge-warning">Editor</span>';
+        } else if (usuario.rol === 'consultor') {
+            rolBadge = '<span class="badge badge-secondary">Consultor</span>';
+        }
         
         // Avatar con fallback a default
         const avatarUrl = usuario.avatar || '/static/avatars/default.svg';
@@ -388,7 +396,7 @@ function mostrarUsuarios(lista) {
                 <td>${usuario.email || '-'}</td>
                 <td>${usuario.empresas || 'Sin asignar'}</td>
                 <td>${estado}</td>
-                <td>${rol}</td>
+                <td>${rolBadge}</td>
                 <td onclick="event.stopPropagation()">
                     <button class="btn btn-danger btn-small" onclick="eliminarUsuario(${usuario.id}, '${usuario.username}')">
                         <i class="fas fa-trash"></i>
@@ -419,9 +427,9 @@ function mostrarModalNuevoUsuario() {
     document.getElementById('usuario-password').required = true;
     document.getElementById('usuario-password').placeholder = '••••••••';
     document.getElementById('usuario-avatar-preview').src = '/static/avatars/default.svg';
-    // Por defecto: activo=1, superadmin=0
+    // Por defecto: activo=1, rol=editor
     document.getElementById('usuario-activo').value = '1';
-    document.getElementById('usuario-superadmin').value = '0';
+    document.getElementById('usuario-rol').value = 'editor';
     document.getElementById('modalUsuario').style.display = 'block';
 }
 
@@ -440,7 +448,7 @@ async function guardarUsuario(event) {
         nombre_completo: document.getElementById('usuario-nombre').value,
         email: document.getElementById('usuario-email').value,
         telefono: document.getElementById('usuario-telefono').value,
-        es_superadmin: parseInt(document.getElementById('usuario-superadmin').value) || 0,
+        rol: document.getElementById('usuario-rol').value,
         activo: parseInt(document.getElementById('usuario-activo').value) || 1
     };
 
@@ -494,7 +502,7 @@ async function editarUsuario(id) {
     const avatarPath = usuario.avatar || usuario.foto || '/static/avatars/default.svg';
     document.getElementById('usuario-avatar-preview').src = avatarPath;
     
-    document.getElementById('usuario-superadmin').value = usuario.es_superadmin === 1 ? '1' : '0';
+    document.getElementById('usuario-rol').value = usuario.rol || 'consultor';
     document.getElementById('usuario-activo').value = usuario.activo === 1 ? '1' : '0';
     
     document.getElementById('modalUsuario').style.display = 'block';

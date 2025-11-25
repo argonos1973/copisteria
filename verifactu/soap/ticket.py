@@ -21,8 +21,9 @@ from ..hash.sha256 import \
 from .client import \
     parsear_respuesta_aeat  # ya está definido dentro de client.py
 from .client import crear_envelope_soap, procesar_serie_numero
+from logger_config import get_verifactu_logger
 
-logger = logging.getLogger("verifactu")
+logger = get_verifactu_logger()
 
 
 # REMOVIDO: _locate_db() - Ahora usamos get_db_connection() directamente
@@ -179,7 +180,7 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
         return {"success": False, "message": "Respuesta nula o inválida de AEAT"}
 
     if response.status_code != 200:
-        logger.error("Respuesta HTTP %s de AEAT", response.status_code)
+        logger.error("Respuesta HTTP %s de AEAT. Body: %s", response.status_code, response.text)
         return {
             "success": False,
             "status_code": response.status_code,
@@ -250,14 +251,42 @@ def enviar_registro_aeat_ticket(ticket_id: int) -> dict:
             logger.warning("No se pudo guardar CSV AEAT en BBDD para ticket %s: %s", ticket_id, exc)
     estado_ws = datos_resp.get("estado_envio")
 
+    if not (
+        (estado_ws in ("Correcto", "ParcialmenteCorrecto")) or
+        any(l.get("resultado") == "AceptadoConErrores" for l in datos_resp.get("lineas", []))
+    ):
+        logger.warning("AEAT devolvió estado NO exitoso: %s. Errores: %s. Body: %s", 
+                       estado_ws, datos_resp.get("errores"), response.text)
+
+    success = (
+        (estado_ws in ("Correcto", "ParcialmenteCorrecto")) or
+        any(l.get("resultado") == "AceptadoConErrores" for l in datos_resp.get("lineas", []))
+    )
+
+    errores = datos_resp.get("errores")
+    mensaje_error = None
+    
+    if not success:
+        if errores:
+            mensaje_error = " | ".join([f"{e.get('codigo', '?')}: {e.get('descripcion', '?')}" for e in errores])
+        else:
+            # Intentar extraer mensaje de error SOAP genérico si no hay errores estructurados
+            if "faultstring" in response.text:
+                import re
+                match = re.search(r'<faultstring>(.*?)</faultstring>', response.text)
+                if match:
+                    mensaje_error = f"SOAP Fault: {match.group(1)}"
+            
+            if not mensaje_error:
+                mensaje_error = f"Error AEAT no estructurado (Estado: {estado_ws}). Ver logs."
+
     return {
-        "success": (
-            (estado_ws in ("Correcto", "ParcialmenteCorrecto")) or
-            any(l.get("resultado") == "AceptadoConErrores" for l in datos_resp.get("lineas", []))
-        ),
+        "success": success,
         "csv": csv,
         "huella": huella_generada,
         "estado_envio": estado_ws,
         "response": response.text,
         "id_verificacion": datos_resp.get("id_verificacion") or "AEAT",
+        "errores": errores,
+        "mensaje": mensaje_error
     }

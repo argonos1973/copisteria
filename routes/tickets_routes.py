@@ -49,12 +49,22 @@ def crear_ticket():
     """Crea un nuevo ticket"""
     try:
         data = request.get_json()
+        logger.info(f"DEBUG TICKETS: Payload recibido: {data}")
+        
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400
         
         # Validar datos requeridos
-        if not data.get('lineas') or len(data.get('lineas', [])) == 0:
+        detalles = data.get('detalles') or data.get('lineas') or []
+        logger.info(f"DEBUG TICKETS: Detalles extraídos: {detalles}, Tipo: {type(detalles)}")
+        
+        if not detalles or len(detalles) == 0:
+            logger.error(f"DEBUG TICKETS: Validación fallida. Detalles vacíos.")
             return jsonify({'error': 'El ticket debe tener al menos una línea'}), 400
+        
+        # Asegurar que 'detalles' está presente en data para tickets.guardar_ticket
+        if 'detalles' not in data and 'lineas' in data:
+            data['detalles'] = data['lineas']
         
         # Crear ticket (usando guardar_ticket que es la función correcta)
         return tickets.guardar_ticket(data)

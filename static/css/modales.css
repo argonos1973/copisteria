@@ -401,3 +401,22 @@
         justify-content: center;
     }
 }
+
+/* Fixes para Modal AEAT */
+#modalAEAT .modal-content {
+    max-width: 450px !important;
+    width: 90%;
+}
+
+.aeat-qr-image {
+    max-width: 150px !important;
+    width: 100%;
+    height: auto;
+}
+
+.aeat-qr-container {
+    display: inline-block;
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+}

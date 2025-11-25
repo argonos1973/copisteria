@@ -119,6 +119,7 @@ def obtener_proveedores(empresa_id, activos_solo=True):
         list: Lista de proveedores
     """
     conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
     query = """
@@ -150,6 +151,7 @@ def obtener_proveedores(empresa_id, activos_solo=True):
 def obtener_proveedor_por_id(proveedor_id, empresa_id):
     """Obtiene un proveedor por su ID"""
     conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -195,6 +197,7 @@ def obtener_proveedor_por_nif(nif, empresa_id):
         return None
     
     conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
     # Normalizar el NIF de búsqueda
@@ -234,6 +237,7 @@ def obtener_proveedor_por_nombre(nombre, empresa_id):
         return None
     
     conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
     # Buscar por nombre exacto (case-insensitive)
@@ -535,6 +539,7 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
         dict: Facturas y resúmenes
     """
     conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
     filtros = filtros or {}
@@ -859,6 +864,7 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
 def factura_ya_procesada(pdf_hash, empresa_id):
     """Verifica si una factura ya fue procesada por su hash"""
     conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
     cursor.execute("""

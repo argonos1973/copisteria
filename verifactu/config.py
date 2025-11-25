@@ -5,10 +5,14 @@ Configuración del sistema VERI*FACTU para la integración con AEAT
 """
 
 import logging
-
-# Configurar logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger('verifactu')
+# Importar configuración centralizada
+try:
+    from logger_config import get_verifactu_logger
+    logger = get_verifactu_logger()
+except ImportError:
+    # Fallback si no se puede importar
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger('verifactu')
 
 # Configuración para la conexión con AEAT VERI*FACTU
 AEAT_CONFIG = {

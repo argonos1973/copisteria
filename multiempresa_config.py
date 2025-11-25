@@ -22,7 +22,7 @@ DB_USUARIOS_PATH = os.path.join(BASE_DIR, 'db', 'usuarios_sistema.db')
 
 # Configuración de sesiones
 SESSION_CONFIG = {
-    'SECRET_KEY': 'TU_CLAVE_SECRETA_AQUI_CAMBIAR_EN_PRODUCCION',  # CAMBIAR!!!
+    'SECRET_KEY': 'e296f3311294d608621f62570ebb03ffc6036e9d4eb21854f7c878994236516e',  # Clave segura generada
     'PERMANENT_SESSION_LIFETIME': 3600 * 8,  # 8 horas
     'SESSION_COOKIE_NAME': 'aleph70_session',
     'SESSION_COOKIE_HTTPONLY': True,

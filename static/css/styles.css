@@ -3707,44 +3707,45 @@ table input[type="number"] {
 
 /* Modal AEAT específico */
 .aeat-modal-content {
-  max-width: 600px;
+  max-width: 450px !important;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
 }
 
 .aeat-info-container {
-  padding: 20px;
+  padding: 15px;
 }
 
 .aeat-info-header {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   border-bottom: 2px solid var(--primary, #3498db);
-  padding-bottom: 15px;
+  padding-bottom: 10px;
 }
 
 .aeat-info-header h3 {
   margin: 0 0 5px 0;
   color: var(--text, #333);
-  font-size: 1.4em;
+  font-size: 1.2em;
 }
 
 .aeat-razón-social {
   margin: 0;
   color: var(--text-muted, #666);
   font-style: italic;
+  font-size: 0.9em;
 }
 
 .aeat-info-body {
-  margin-bottom: 25px;
+  margin-bottom: 15px;
 }
 
 .aeat-field-group {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
-  padding: 10px;
+  margin-bottom: 10px;
+  padding: 8px;
   background: var(--bg-elevated, #f8f9fa);
   border-radius: 8px;
   border-left: 4px solid var(--primary, #3498db);
@@ -3752,8 +3753,9 @@ table input[type="number"] {
 
 .aeat-field-group label {
   font-weight: 600;
-  min-width: 150px;
+  min-width: 140px;
   color: var(--text, #333);
+  font-size: 0.9em;
 }
 
 .aeat-field-group label i {
@@ -3762,10 +3764,10 @@ table input[type="number"] {
 }
 
 .aeat-estado-badge {
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 20px;
   font-weight: 600;
-  font-size: 0.9em;
+  font-size: 0.85em;
 }
 
 .aeat-estado-enviado {
@@ -3789,21 +3791,23 @@ table input[type="number"] {
 .aeat-csv-code {
   font-family: 'Courier New', monospace;
   background: var(--bg, #fff);
-  padding: 5px 8px;
+  padding: 4px 6px;
   border-radius: 4px;
   border: 1px solid var(--border, #ddd);
   margin-right: 10px;
   flex: 1;
+  font-size: 0.9em;
 }
 
 .btn-copy-csv {
   background: var(--primary, #3498db);
   color: white;
   border: none;
-  padding: 5px 10px;
+  padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s ease;
+  font-size: 0.9em;
 }
 
 .btn-copy-csv:hover {
@@ -3812,15 +3816,16 @@ table input[type="number"] {
 
 .aeat-qr-section {
   text-align: center;
-  padding: 20px;
+  padding: 15px;
   background: var(--bg-elevated, #f8f9fa);
   border-radius: 12px;
-  margin-top: 20px;
+  margin-top: 15px;
 }
 
 .aeat-qr-section h4 {
-  margin: 0 0 15px 0;
+  margin: 0 0 10px 0;
   color: var(--text, #333);
+  font-size: 1.1em;
 }
 
 .aeat-qr-container {
@@ -3829,29 +3834,30 @@ table input[type="number"] {
   background: white;
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .aeat-qr-image {
-  width: 40px;
-  height: 40px;
+  width: 100%;
+  max-width: 150px !important;
+  height: auto;
   display: block;
 }
 
 .aeat-qr-help {
   margin: 0;
   color: var(--text-muted, #666);
-  font-size: 0.9em;
+  font-size: 0.85em;
 }
 
 .aeat-no-qr {
-  padding: 40px;
+  padding: 20px;
   color: var(--text-muted, #666);
 }
 
 .aeat-no-qr i {
   display: block;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .aeat-no-qr p {

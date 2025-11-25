@@ -306,18 +306,30 @@ async function rellenarFactura(datos, emisor) {
             } else if (datos.estado_envio === 'ERROR' && datos.errores_aeat) {
                 // Error de AEAT - mostrar mensaje de error
                 console.error('[VERIFACTU] Error de AEAT:', datos.errores_aeat);
+                
+                let codigoError = 'ERROR';
+                let mensajeCorto = 'Error de AEAT';
+
+                // Intentar parsear error estructurado
                 const errorMatch = datos.errores_aeat.match(/Codigo\[(\d+)\]\.([^:]+)/);
-                const codigoError = errorMatch ? errorMatch[1] : 'N/A';
-                const mensajeCorto = errorMatch ? errorMatch[2].substring(0, 40) + '...' : 'Error de AEAT';
+                if (errorMatch) {
+                    codigoError = errorMatch[1];
+                    mensajeCorto = errorMatch[2].substring(0, 40) + '...';
+                } else {
+                    // Error no estructurado: mostrar los primeros caracteres
+                    mensajeCorto = datos.errores_aeat.substring(0, 60) + (datos.errores_aeat.length > 60 ? '...' : '');
+                    // Si es muy corto, mostrar todo
+                    if (datos.errores_aeat.length < 20) mensajeCorto = datos.errores_aeat;
+                }
                 
                 // Crear div con mensaje de error
                 const errorDiv = document.createElement('div');
-                errorDiv.style.cssText = 'width:140px;height:140px;border:2px solid #dc3545;display:flex;justify-content:center;align-items:center;text-align:center;padding:10px;font-size:10px;background:#fff5f5;';
+                errorDiv.style.cssText = 'width:140px;height:140px;border:2px solid #dc3545;display:flex;justify-content:center;align-items:center;text-align:center;padding:10px;font-size:10px;background:#fff5f5;overflow:hidden;';
                 errorDiv.innerHTML = `
-                    <div>
+                    <div style="width:100%">
                         <div style="color:#dc3545;font-weight:bold;margin-bottom:5px;">❌ ERROR AEAT</div>
-                        <div style="font-size:9px;color:#666;">Código: ${codigoError}</div>
-                        <div style="font-size:8px;color:#888;margin-top:5px;" title="${datos.errores_aeat}">${mensajeCorto}</div>
+                        <div style="font-size:9px;color:#666;margin-bottom:5px;">${codigoError}</div>
+                        <div style="font-size:9px;color:#333;line-height:1.2;word-break:break-word;" title="${datos.errores_aeat.replace(/"/g, '&quot;')}">${mensajeCorto}</div>
                     </div>
                 `;
                 imgQR.replaceWith(errorDiv);
