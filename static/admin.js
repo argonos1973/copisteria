@@ -398,8 +398,8 @@ function mostrarUsuarios(lista) {
                 <td>${estado}</td>
                 <td>${rolBadge}</td>
                 <td onclick="event.stopPropagation()">
-                    <button class="btn btn-danger btn-small" onclick="eliminarUsuario(${usuario.id}, '${usuario.username}')">
-                        <i class="fas fa-trash"></i>
+                    <button class="btn btn-danger btn-small" onclick="eliminarUsuario(${usuario.id}, '${usuario.username}')" title="Eliminar">
+                        ✕
                     </button>
                 </td>
             </tr>

@@ -648,7 +648,7 @@ function mostrarModalEditar(factura) {
     document.getElementById('editar-total').value = factura.total;
     document.getElementById('editar-concepto').value = factura.concepto || '';
     document.getElementById('editar-notas').value = factura.notas || '';
-    document.getElementById('editar-revisado').checked = factura.revisado === 1;
+    // Checkbox eliminado: document.getElementById('editar-revisado').checked = factura.revisado === 1;
     
     // Event listeners para cálculo automático
     const baseInput = document.getElementById('editar-base');
@@ -765,7 +765,7 @@ window.guardarEdicion = async function() {
         total: parseFloat(document.getElementById('editar-total').value),
         concepto: document.getElementById('editar-concepto').value,
         notas: document.getElementById('editar-notas').value,
-        revisado: document.getElementById('editar-revisado').checked ? 1 : 0
+        revisado: 1 // Al editar manualmente, marcamos como revisado por defecto
     };
     
     try {

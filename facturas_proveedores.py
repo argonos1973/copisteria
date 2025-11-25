@@ -268,13 +268,46 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
     cursor = conn.cursor()
     
     try:
-        # Transformar datos a mayúsculas
+        # Transformar datos a mayúsculas y normalizar NIF
         nombre = datos.get('nombre', '').upper().strip()
-        nif = datos.get('nif', '').upper().strip()
+        nif = datos.get('nif', '')
+        if nif:
+            nif = normalizar_nif(nif)  # Guardar siempre normalizado
+            
         direccion = datos.get('direccion', '').upper().strip() if datos.get('direccion') else ''
         poblacion = datos.get('poblacion', '').upper().strip() if datos.get('poblacion') else ''
         provincia = datos.get('provincia', '').upper().strip() if datos.get('provincia') else ''
         
+        # Validar nombre obligatorio
+        if not nombre:
+            raise Exception("El nombre del proveedor es obligatorio")
+
+        # Verificar duplicado por nombre (evitar duplicados visuales)
+        proveedor_existente_nombre = obtener_proveedor_por_nombre(nombre, empresa_id)
+        if proveedor_existente_nombre:
+            logger.warning(f"Intento de crear proveedor duplicado por nombre: {nombre}")
+            # Si estamos en modo automático (usuario='sistema_auto'), devolvemos el existente
+            if usuario == 'sistema_auto':
+                return proveedor_existente_nombre['id']
+            # Si es manual, lanzamos error
+            raise Exception(f"Ya existe un proveedor con el nombre '{nombre}'")
+            
+        # Verificar duplicado por NIF (si se proporciona)
+        if nif:
+            proveedor_existente_nif = obtener_proveedor_por_nif(nif, empresa_id)
+            if proveedor_existente_nif:
+                 # Si coincide nombre y NIF, es claramente el mismo
+                if proveedor_existente_nif['nombre'].upper() == nombre:
+                    if usuario == 'sistema_auto':
+                        return proveedor_existente_nif['id']
+                    raise Exception(f"Ya existe este proveedor con NIF {nif}")
+                else:
+                    # Mismo NIF pero nombre diferente? (Raro pero posible si cambió de nombre)
+                    logger.warning(f"Proveedor con mismo NIF {nif} pero distinto nombre: {proveedor_existente_nif['nombre']} vs {nombre}")
+                    if usuario == 'sistema_auto':
+                        return proveedor_existente_nif['id']
+                    raise Exception(f"Ya existe un proveedor con el NIF {nif} ({proveedor_existente_nif['nombre']})")
+
         # Si el NIF está vacío, permitirlo (para proveedores sin NIF o cuando coincide con empresa)
         if not nif:
             logger.info(f"Creando proveedor sin NIF: {nombre}")
@@ -367,7 +400,9 @@ def actualizar_proveedor(proveedor_id, empresa_id, datos, usuario='sistema'):
         
         if 'nif' in datos:
             campos.append('nif = ?')
-            valores.append(datos['nif'].upper().strip())
+            # Normalizar NIF al actualizar también
+            nif_norm = normalizar_nif(datos['nif'])
+            valores.append(nif_norm)
         
         if 'email' in datos:
             campos.append('email = ?')
@@ -878,24 +913,202 @@ def factura_ya_procesada(pdf_hash, empresa_id):
     return existe
 
 
-def registrar_historial(factura_id, accion, usuario, datos_anteriores=None, datos_nuevos=None):
-    """Registra un cambio en el historial de la factura"""
+
+def obtener_factura_por_id(factura_id, empresa_id):
+    """Obtiene una factura por su ID"""
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    # Obtener datos principales
+    cursor.execute("""
+        SELECT 
+            f.*,
+            p.nombre as proveedor_nombre,
+            p.nif as proveedor_nif,
+            p.direccion as proveedor_direccion,
+            p.telefono as proveedor_telefono,
+            CASE 
+                WHEN f.estado = 'pagada' THEN '🟢'
+                WHEN f.fecha_vencimiento < date('now') AND f.estado != 'pagada' THEN '🔴'
+                WHEN f.revisado = 0 THEN '⚠️'
+                ELSE '🟡'
+            END as icono_estado
+        FROM facturas_proveedores f
+        INNER JOIN proveedores p ON f.proveedor_id = p.id
+        WHERE f.id = ? AND f.empresa_id = ?
+    """, (factura_id, empresa_id))
+    
+    factura = cursor.fetchone()
+    
+    if not factura:
+        conn.close()
+        return None
+    
+    factura_dict = dict(factura)
+    
+    # Obtener líneas
+    cursor.execute("""
+        SELECT * FROM lineas_factura_proveedor
+        WHERE factura_id = ?
+    """, (factura_id,))
+    factura_dict['lineas'] = [dict(row) for row in cursor.fetchall()]
+    
+    # Obtener historial
+    cursor.execute("""
+        SELECT * FROM historial_facturas_proveedores
+        WHERE factura_id = ?
+        ORDER BY fecha DESC
+    """, (factura_id,))
+    factura_dict['historial'] = [dict(row) for row in cursor.fetchall()]
+    
+    conn.close()
+    
+    return factura_dict
+
+
+def actualizar_factura_proveedor(factura_id, empresa_id, datos, usuario='sistema'):
+    """Actualiza una factura existente"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    cursor.execute("""
-        INSERT INTO historial_facturas_proveedores (
-            factura_id, usuario, accion, datos_anteriores, datos_nuevos
-        ) VALUES (?, ?, ?, ?, ?)
-    """, (
-        factura_id,
-        usuario,
-        accion,
-        json.dumps(datos_anteriores) if datos_anteriores else None,
-        json.dumps(datos_nuevos) if datos_nuevos else None
-    ))
+    try:
+        # Verificar existencia y obtener datos anteriores
+        cursor.execute("SELECT * FROM facturas_proveedores WHERE id = ? AND empresa_id = ?", 
+                      (factura_id, empresa_id))
+        factura_anterior = cursor.fetchone()
+        
+        if not factura_anterior:
+            raise Exception("Factura no encontrada")
+            
+        # Campos permitidos para actualizar
+        campos_permitidos = [
+            'numero_factura', 'fecha_emision', 'fecha_vencimiento',
+            'base_imponible', 'iva_porcentaje', 'iva_importe', 'total',
+            'concepto', 'notas', 'revisado', 'estado'
+        ]
+        
+        campos_update = []
+        valores = []
+        
+        for campo in campos_permitidos:
+            if campo in datos:
+                campos_update.append(f"{campo} = ?")
+                valores.append(datos[campo])
+        
+        if not campos_update:
+            return True
+            
+        # Recalcular trimestre y año si cambia la fecha
+        if 'fecha_emision' in datos:
+            fecha_obj = datetime.strptime(datos['fecha_emision'], '%Y-%m-%d')
+            mes = fecha_obj.month
+            año = fecha_obj.year
+            trimestre = f"Q{(mes - 1) // 3 + 1}"
+            
+            campos_update.append("trimestre = ?")
+            valores.append(trimestre)
+            campos_update.append("año = ?")
+            valores.append(año)
+        
+        valores.append(factura_id)
+        
+        query = f"UPDATE facturas_proveedores SET {', '.join(campos_update)} WHERE id = ?"
+        cursor.execute(query, valores)
+        
+        conn.commit()
+        
+        # Registrar en historial
+        registrar_historial(factura_id, 'actualizacion', usuario, 
+                           datos_anteriores=dict(factura_anterior), 
+                           datos_nuevos=datos)
+        
+        return True
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error actualizando factura {factura_id}: {e}")
+        raise
+    finally:
+        conn.close()
+
+
+def eliminar_factura(factura_id, empresa_id, usuario='sistema'):
+    """Elimina una factura y sus archivos asociados"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-    conn.commit()
-    conn.close()
+    try:
+        # Obtener datos para borrar archivo
+        cursor.execute("SELECT ruta_archivo FROM facturas_proveedores WHERE id = ? AND empresa_id = ?", 
+                      (factura_id, empresa_id))
+        factura = cursor.fetchone()
+        
+        if not factura:
+            raise Exception("Factura no encontrada")
+            
+        # Eliminar de BD (cascade eliminará líneas e historial si está configurado, sino hacerlo manual)
+        cursor.execute("DELETE FROM facturas_proveedores WHERE id = ?", (factura_id,))
+        conn.commit()
+        
+        # Eliminar archivo físico si existe
+        ruta_archivo = factura['ruta_archivo']
+        if ruta_archivo and os.path.exists(ruta_archivo):
+            try:
+                os.remove(ruta_archivo)
+                logger.info(f"Archivo eliminado: {ruta_archivo}")
+            except Exception as e:
+                logger.error(f"Error eliminando archivo {ruta_archivo}: {e}")
+        
+        logger.info(f"✓ Factura eliminada: ID {factura_id} por {usuario}")
+        return True
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error eliminando factura {factura_id}: {e}")
+        raise
+    finally:
+        conn.close()
+
+
+def registrar_pago_factura(factura_id, empresa_id, datos_pago, usuario='sistema'):
+    """Registra el pago de una factura"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
     
-    logger.info(f"✓ Historial registrado: Factura {factura_id} - {accion} por {usuario}")
+    try:
+        cursor.execute("SELECT * FROM facturas_proveedores WHERE id = ? AND empresa_id = ?", 
+                      (factura_id, empresa_id))
+        factura = cursor.fetchone()
+        
+        if not factura:
+            raise Exception("Factura no encontrada")
+            
+        cursor.execute("""
+            UPDATE facturas_proveedores 
+            SET estado = 'pagada', 
+                fecha_pago = ?, 
+                metodo_pago = ?,
+                referencia_pago = ?
+            WHERE id = ?
+        """, (
+            datos_pago.get('fecha_pago'),
+            datos_pago.get('metodo_pago'),
+            datos_pago.get('referencia_pago'),
+            factura_id
+        ))
+        
+        conn.commit()
+        
+        registrar_historial(factura_id, 'pago_registrado', usuario, 
+                           datos_nuevos=datos_pago)
+        
+        return True
+        
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Error registrando pago factura {factura_id}: {e}")
+        raise
+    finally:
+        conn.close()
+

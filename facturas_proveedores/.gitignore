@@ -1,9 +1,2 @@
-# Ignorar todos los PDFs de facturas
-*.pdf
-*.PDF
-
-# Ignorar directorios de empresas
-*/
-
-# Pero mantener este archivo
+*
 !.gitignore

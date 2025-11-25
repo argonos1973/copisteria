@@ -6,6 +6,8 @@ Procesa imágenes de facturas PDF/JPG/PNG usando GPT-4 Vision API
 import base64
 import os
 import json
+import io
+from PIL import Image
 from logger_config import get_logger
 
 logger = get_logger(__name__)
@@ -25,13 +27,22 @@ except ImportError:
     OPENAI_API_KEY = None
     logger.warning("OpenAI no disponible - OCR de facturas deshabilitado")
 
+# Intentar importar pdf2image para conversión de PDFs
+try:
+    from pdf2image import convert_from_bytes
+    PDF2IMAGE_DISPONIBLE = True
+except ImportError:
+    PDF2IMAGE_DISPONIBLE = False
+    logger.warning("pdf2image no disponible - No se podrán procesar archivos PDF")
+
 
 def extraer_datos_factura_gpt4(imagen_bytes):
     """
     Extrae datos de factura usando GPT-4 Vision API
+    Soporta imágenes (JPG, PNG) y PDFs (convirtiéndolos a imagen)
     
     Args:
-        imagen_bytes: Bytes de la imagen de la factura
+        imagen_bytes: Bytes de la imagen o PDF de la factura
         
     Returns:
         dict: Datos estructurados de la factura
@@ -40,6 +51,42 @@ def extraer_datos_factura_gpt4(imagen_bytes):
         raise ValueError("OpenAI API Key no configurada. Configure OPENAI_API_KEY en .env")
     
     try:
+        # Detectar si es PDF y convertir a imagen
+        if imagen_bytes.startswith(b'%PDF'):
+            if not PDF2IMAGE_DISPONIBLE:
+                raise ValueError("Se requiere instalar 'pdf2image' y 'poppler-utils' para procesar PDFs")
+            
+            logger.info("📄 Detectado archivo PDF, convirtiendo primera página a imagen...")
+            try:
+                # Convertir primera página a imagen
+                images = convert_from_bytes(imagen_bytes, first_page=1, last_page=1)
+                if not images:
+                    raise ValueError("El PDF no contiene páginas o no se pudo leer")
+                
+                image_obj = images[0]
+                
+            except Exception as e:
+                logger.error(f"Error convirtiendo PDF: {e}")
+                raise ValueError(f"Error procesando archivo PDF: {str(e)}")
+        else:
+            # Es una imagen, abrirla con PIL para optimizar
+            image_obj = Image.open(io.BytesIO(imagen_bytes))
+
+        # OPTIMIZACIÓN: Redimensionar si es muy grande (max 2000px) para evitar timeouts y reducir tokens
+        max_dimension = 2000
+        if max(image_obj.size) > max_dimension:
+            ratio = max_dimension / max(image_obj.size)
+            new_size = (int(image_obj.width * ratio), int(image_obj.height * ratio))
+            image_obj = image_obj.resize(new_size, Image.Resampling.LANCZOS)
+            logger.info(f"📉 Imagen redimensionada a {new_size}")
+
+        # Guardar en buffer como JPEG optimizado
+        img_buffer = io.BytesIO()
+        image_obj = image_obj.convert('RGB') # Asegurar RGB
+        image_obj.save(img_buffer, format='JPEG', quality=85, optimize=True)
+        imagen_bytes = img_buffer.getvalue()
+        logger.info(f"✅ Imagen lista para OCR (Tamaño: {len(imagen_bytes)/1024:.2f} KB)")
+
         # Convertir imagen a base64
         base64_image = base64.b64encode(imagen_bytes).decode('utf-8')
         

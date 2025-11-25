@@ -89,30 +89,56 @@ export function limpiarNotificaciones() {
 }
 
 // Función para mostrar diálogo de confirmación
-export function mostrarConfirmacion(mensaje) {
+export function mostrarConfirmacion(mensaje, opciones = {}) {
+    const {
+        textoConfirmar = 'Guardar',
+        textoCancelar = 'Cancelar',
+        tipo = 'primary', // 'primary', 'danger'
+        titulo = null
+    } = opciones;
+
     return new Promise((resolve) => {
         const overlay = document.createElement('div');
         overlay.className = 'confirmacion-overlay';
         
         const dialog = document.createElement('div');
         dialog.className = 'confirmacion-dialog';
+        if (tipo) dialog.classList.add(tipo);
+        
+        if (titulo) {
+            const tituloElement = document.createElement('h3');
+            tituloElement.className = 'confirmacion-titulo';
+            tituloElement.textContent = titulo;
+            tituloElement.style.marginBottom = '15px';
+            tituloElement.style.marginTop = '0';
+            tituloElement.style.color = 'var(--text, #333)';
+            dialog.appendChild(tituloElement);
+        }
         
         const mensajeElement = document.createElement('p');
         mensajeElement.textContent = mensaje;
+        mensajeElement.style.marginBottom = '20px';
         
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'confirmacion-buttons';
         
-        const guardarBtn = document.createElement('button');
-        guardarBtn.textContent = 'Guardar';
-        guardarBtn.className = 'btn-confirmar';
+        const confirmarBtn = document.createElement('button');
+        confirmarBtn.textContent = textoConfirmar;
+        // Aplicar clase según tipo
+        if (tipo === 'danger') {
+            confirmarBtn.className = 'btn btn-danger';
+            confirmarBtn.style.backgroundColor = 'var(--danger, #dc3545)';
+            confirmarBtn.style.color = 'white';
+        } else {
+            confirmarBtn.className = 'btn-confirmar';
+        }
         
         const cancelarBtn = document.createElement('button');
-        cancelarBtn.textContent = 'Cancelar';
+        cancelarBtn.textContent = textoCancelar;
         cancelarBtn.className = 'btn-cancelar';
         
-        buttonContainer.appendChild(guardarBtn);
         buttonContainer.appendChild(cancelarBtn);
+        buttonContainer.appendChild(confirmarBtn);
         
         dialog.appendChild(mensajeElement);
         dialog.appendChild(buttonContainer);
@@ -120,18 +146,30 @@ export function mostrarConfirmacion(mensaje) {
         
         document.body.appendChild(overlay);
         
+        // Animación de entrada
+        requestAnimationFrame(() => {
+            overlay.style.opacity = '1';
+            dialog.style.transform = 'translateY(0)';
+        });
+        
         const cleanup = () => {
-            document.body.removeChild(overlay);
+            overlay.style.opacity = '0';
+            dialog.style.transform = 'translateY(-20px)';
+            setTimeout(() => {
+                if (document.body.contains(overlay)) {
+                    document.body.removeChild(overlay);
+                }
+            }, 300);
         };
         
-        guardarBtn.onclick = () => {
+        confirmarBtn.onclick = () => {
             cleanup();
-            resolve(true);  // Guardar y navegar
+            resolve(true);
         };
         
         cancelarBtn.onclick = () => {
             cleanup();
-            resolve(null);  // Cancelar: NO navegar, quedarse en página
+            resolve(false);
         };
     });
 }

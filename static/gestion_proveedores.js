@@ -3,7 +3,7 @@
  * Gestión de proveedores
  */
 
-import { mostrarNotificacion } from './notificaciones.js';
+import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 
 // Variables globales
 let proveedores = [];
@@ -279,7 +279,17 @@ async function guardarProveedor() {
 // ============================================================================
 
 window.eliminarProveedor = async function(id, nombre) {
-    if (!confirm(`¿Estás seguro de que deseas eliminar el proveedor "${nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+    const confirmado = await mostrarConfirmacion(
+        `¿Estás seguro de que deseas eliminar el proveedor "${nombre}"?\n\nEsta acción no se puede deshacer.`,
+        {
+            textoConfirmar: 'Eliminar',
+            textoCancelar: 'Cancelar',
+            tipo: 'danger',
+            titulo: 'Eliminar Proveedor'
+        }
+    );
+
+    if (!confirmado) {
         return;
     }
     

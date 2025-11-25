@@ -118,10 +118,14 @@ def obtener_empresas(username):
     Endpoint: GET /api/auth/empresas/admin
     """
     try:
+        # Decodificar y limpiar username por si acaso
+        username = username.strip()
+        logger.info(f"Solicitando empresas para usuario: '{username}'")
+        
         empresas = obtener_empresas_usuario(username)
         return jsonify(empresas), 200
     except Exception as e:
-        logger.error(f"Error obteniendo empresas: {e}", exc_info=True)
+        logger.error(f"Error obteniendo empresas para '{username}': {e}", exc_info=True)
         return jsonify({'error': 'Error obteniendo empresas'}), 500
 
 @auth_bp.route('/verify-session', methods=['GET', 'POST'])

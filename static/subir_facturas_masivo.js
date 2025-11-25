@@ -303,10 +303,84 @@ async function procesarTodas() {
     document.getElementById('uploadZone').style.pointerEvents = 'auto';
     
     addLog('✅ Procesamiento completado', 'success');
-    mostrarNotificacion(
-        `Procesamiento completado: ${stats.completadas} exitosas, ${stats.errores} errores`,
-        stats.errores > 0 ? 'warning' : 'success'
-    );
+    
+    // Si hubo errores, mostrar resumen detallado
+    if (stats.errores > 0) {
+        mostrarModalErrores();
+    } else {
+        mostrarNotificacion(
+            `Procesamiento completado: ${stats.completadas} exitosas`,
+            'success'
+        );
+    }
+}
+
+function mostrarModalErrores() {
+    const archivosErroneos = archivosSeleccionados.filter(f => f.estado === 'error');
+    
+    // Crear lista de errores HTML
+    let listaErrores = '<ul style="text-align: left; max-height: 200px; overflow-y: auto; margin: 10px 0; padding-left: 20px;">';
+    archivosErroneos.forEach(f => {
+        listaErrores += `<li style="margin-bottom: 5px;"><strong>${f.archivo.name}:</strong> ${f.error || 'Error desconocido'}</li>`;
+    });
+    listaErrores += '</ul>';
+    
+    // Crear modal
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+    
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 600px;
+        width: 90%;
+        text-align: center;
+    `;
+    
+    dialog.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #dc3545;"></i>
+        </div>
+        <h3 style="margin-bottom: 15px; color: #333;">Procesamiento finalizado con errores</h3>
+        <p style="margin-bottom: 15px; color: #666;">
+            Se completaron ${stats.completadas} facturas correctamente, pero ocurrieron ${stats.errores} errores:
+        </p>
+        
+        <div style="background: #fff3f3; border: 1px solid #ffcdd2; border-radius: 6px; padding: 10px; margin-bottom: 20px;">
+            ${listaErrores}
+        </div>
+        
+        <button id="btnCerrarErrores" class="btn btn-primary" style="padding: 10px 30px;">
+            Cerrar
+        </button>
+    `;
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    document.getElementById('btnCerrarErrores').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+    });
+    
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+        }
+    });
 }
 
 async function procesarArchivo(item) {
@@ -339,11 +413,14 @@ async function procesarArchivo(item) {
         renderizarArchivos();
         actualizarIndicadorProcesamiento('Buscando/creando proveedor...');
         
-        const proveedorId = await buscarOCrearProveedorSilencioso(datosOCR.proveedor);
+        // Validar que existan datos de proveedor
+        const datosProveedor = datosOCR.proveedor || { nombre: 'Proveedor Desconocido' };
+        
+        const proveedorId = await buscarOCrearProveedorSilencioso(datosProveedor);
         item.progreso = 60;
         renderizarArchivos();
         
-        addLog(`  ✓ Proveedor: ${datosOCR.proveedor?.nombre} (ID: ${proveedorId})`, 'success');
+        addLog(`  ✓ Proveedor: ${datosProveedor.nombre} (ID: ${proveedorId})`, 'success');
         
         // 3. Guardar factura
         item.mensaje = 'Guardando factura...';
@@ -445,8 +522,10 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
         
         const data = await response.json();
         if (data.success) {
-            addLog(`  ✓ Proveedor creado sin NIF: ${data.proveedor.nombre} (ID: ${data.proveedor.id})`, 'success');
-            return data.proveedor.id;
+            // Backend retorna { success: true, id: ..., message: ... } pero a veces no data.proveedor
+            const proveedorId = data.id || data.proveedor?.id;
+            addLog(`  ✓ Proveedor creado sin NIF: ${nuevoProveedor.nombre} (ID: ${proveedorId})`, 'success');
+            return proveedorId;
         }
         
         throw new Error(data.error || 'Error creando proveedor sin NIF');
@@ -489,7 +568,9 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
     
     if (data.success) {
         // Proveedor creado o ya existente
-        const proveedor = data.proveedor;
+        // Si backend no devuelve objeto proveedor, lo construimos
+        const proveedor = data.proveedor || { ...nuevoProveedor, id: data.id };
+        
         proveedoresCache.set(nifLower, proveedor);
         
         if (data.ya_existia) {
