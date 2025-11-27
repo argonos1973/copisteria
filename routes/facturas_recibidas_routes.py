@@ -1,16 +1,20 @@
 import traceback
 import os
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, send_file
 from werkzeug.utils import secure_filename
 from facturas_proveedores import (
     obtener_proveedores, consultar_facturas_recibidas, crear_proveedor, 
     actualizar_proveedor, eliminar_proveedor, obtener_factura_por_id, 
     actualizar_factura_proveedor, eliminar_factura, registrar_pago_factura,
-    guardar_factura_bd, calcular_hash_pdf, factura_ya_procesada
+    guardar_factura_bd, calcular_hash_pdf, factura_ya_procesada,
+    obtener_o_crear_proveedor  # Importar la función inteligente
 )
 from factura_ocr import procesar_imagen_factura
 from auth_middleware import login_required
 from logger_config import get_logger
+from multiempresa_config import DB_USUARIOS_PATH
+from database_pool import get_database_pool
+import sqlite3
 
 logger = get_logger(__name__)
 
@@ -33,6 +37,26 @@ def procesar_ocr_factura():
         
         # Procesar con OCR
         datos = procesar_imagen_factura(imagen_bytes)
+        
+        # VALIDACIÓN: El NIF del proveedor no puede ser el de la propia empresa
+        empresa_id = session.get('empresa_id')
+        if empresa_id:
+            try:
+                with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT cif FROM empresas WHERE id = ?", (empresa_id,))
+                    res = cursor.fetchone()
+                    
+                    if res and res[0]:
+                        cif_empresa = res[0].upper().replace('-', '').replace(' ', '').strip()
+                        nif_proveedor = datos.get('proveedor', {}).get('nif', '').upper().replace('-', '').replace(' ', '').strip()
+                        
+                        if cif_empresa and nif_proveedor and cif_empresa == nif_proveedor:
+                            logger.warning(f"⚠️ OCR detectó el NIF de la propia empresa ({nif_proveedor}) como proveedor. Borrando dato incorrecto.")
+                            datos['proveedor']['nif'] = ''
+                            datos['proveedor']['advertencia'] = 'El NIF detectado coincidía con su empresa y ha sido eliminado.'
+            except Exception as e:
+                logger.error(f"Error validando NIF empresa vs proveedor: {e}")
         
         return jsonify({'success': True, 'datos': datos})
         
@@ -79,10 +103,26 @@ def subir_factura_endpoint():
             })
 
         # Guardar archivo en disco
-        # Estructura: facturas_proveedores/empresa_id/anio/filename
+        # Estándar multiempresa: facturas_proveedores/empresa_codigo/anio/filename
+        empresa_codigo = session.get('empresa_codigo')
+        if not empresa_codigo:
+            # Fallback: Obtener código desde DB si no está en sesión
+            try:
+                with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT codigo FROM empresas WHERE id = ?", (empresa_id,))
+                    res = cursor.fetchone()
+                    if res:
+                        empresa_codigo = res[0]
+            except Exception as e:
+                logger.error(f"Error obteniendo código empresa: {e}")
+        
+        # Si falla todo, usar ID como fallback temporal (no ideal pero evita crash)
+        carpeta_empresa = empresa_codigo if empresa_codigo else str(empresa_id)
+        
         from datetime import datetime
         anio = datetime.now().year
-        upload_folder = f"/var/www/html/facturas_proveedores/{empresa_id}/{anio}"
+        upload_folder = f"/var/www/html/facturas_proveedores/{carpeta_empresa}/{anio}"
         os.makedirs(upload_folder, exist_ok=True)
         
         filename = secure_filename(archivo.filename)
@@ -114,6 +154,17 @@ def subir_factura_endpoint():
         return jsonify({'success': True, 'id': factura_id, 'message': 'Factura guardada correctamente'})
         
     except Exception as e:
+        error_msg = str(e)
+        # Detectar error de duplicado por número de factura (lanzado por guardar_factura_bd)
+        if "Ya existe una factura con ese número" in error_msg or "duplicada" in error_msg.lower():
+            logger.warning(f"Intento de subir factura duplicada (número): {error_msg}")
+            return jsonify({
+                'success': False, 
+                'duplicada': True, 
+                'mensaje': 'Ya existe una factura con este número para este proveedor',
+                'info': 'Duplicada'
+            }), 200 # Retornar 200 para que el frontend lo procese como warning, no error 500
+            
         logger.error(f"Error al subir factura: {e}", exc_info=True)
         return jsonify({'error': str(e), 'success': False}), 500
 
@@ -146,8 +197,37 @@ def crear_nuevo_proveedor():
         if not datos:
             return jsonify({'error': 'No se enviaron datos'}), 400
             
-        proveedor_id = crear_proveedor(empresa_id, datos, usuario=usuario)
-        return jsonify({'success': True, 'id': proveedor_id, 'message': 'Proveedor creado correctamente'})
+        # Usar la función inteligente obtener_o_crear_proveedor para evitar duplicados
+        # Extraer datos clave
+        nif = datos.get('nif')
+        nombre = datos.get('nombre')
+        
+        # Mapear campos para datos_adicionales (para que coincidan con lo que espera la función)
+        # La función espera 'proveedor_telefono' o 'telefono', 'proveedor_direccion' o 'direccion'
+        datos_adicionales = datos.copy()
+        
+        # Si el request viene del OCR masivo, los campos ya son 'telefono', 'direccion', etc.
+        # Si viene de otra fuente, aseguramos compatibilidad
+        
+        proveedor_id = obtener_o_crear_proveedor(
+            nif, 
+            nombre, 
+            empresa_id, 
+            datos_adicionales=datos_adicionales,
+            email_origen=datos.get('email')
+        )
+        
+        # Verificar si se creó uno nuevo o se devolvió uno existente
+        # obtener_o_crear_proveedor devuelve solo el ID
+        
+        return jsonify({
+            'success': True, 
+            'id': proveedor_id, 
+            'message': 'Proveedor procesado correctamente',
+            # Intentamos devolver el objeto proveedor completo si es posible
+            'proveedor': {'id': proveedor_id, 'nombre': nombre, 'nif': nif} 
+        })
+        
     except Exception as e:
         tb = traceback.format_exc()
         logger.error(f"Error al crear proveedor: {str(e)}\n{tb}")
@@ -284,3 +364,25 @@ def registrar_pago_endpoint(factura_id):
         tb = traceback.format_exc()
         logger.error(f"Error al registrar pago factura {factura_id}: {str(e)}\n{tb}")
         return jsonify({'error': str(e), 'success': False}), 500
+
+
+@facturas_recibidas_bp.route('/facturas-proveedores/<int:factura_id>/pdf', methods=['GET'])
+@login_required
+def descargar_pdf_factura(factura_id):
+    try:
+        empresa_id = session.get('empresa_id')
+        if not empresa_id:
+            return jsonify({'error': 'No hay empresa seleccionada'}), 400
+            
+        factura = obtener_factura_por_id(factura_id, empresa_id)
+        if not factura or not factura.get('ruta_archivo'):
+            return jsonify({'error': 'Factura o archivo no encontrado'}), 404
+            
+        ruta_archivo = factura['ruta_archivo']
+        if not os.path.exists(ruta_archivo):
+             return jsonify({'error': 'El archivo físico no existe en el servidor'}), 404
+             
+        return send_file(ruta_archivo)
+    except Exception as e:
+        logger.error(f"Error sirviendo PDF factura {factura_id}: {e}")
+        return jsonify({'error': str(e)}), 500

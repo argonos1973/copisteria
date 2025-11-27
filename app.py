@@ -74,6 +74,9 @@ def create_app():
     # Configuración de sesiones
     application.config.update(SESSION_CONFIG)
     
+    # Configuración de límite de carga (20MB)
+    application.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024
+    
     # Inicializar base de datos de usuarios
     inicializar_bd_usuarios()
     

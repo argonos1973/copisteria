@@ -104,8 +104,8 @@ function manejarArchivos(files) {
             return false;
         }
         
-        if (tamañoMB > 10) {
-            mostrarNotificacion(`Archivo ${archivo.name}: tamaño máximo 10MB`, 'error');
+        if (tamañoMB > 20) {
+            mostrarNotificacion(`Archivo ${archivo.name}: tamaño máximo 20MB`, 'error');
             return false;
         }
         

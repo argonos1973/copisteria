@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 from datetime import datetime
+import sqlite3
 from db_utils import get_db_connection
 import re
 from logger_config import get_estadisticas_logger
@@ -27,10 +28,14 @@ def _inicializar_campo_puntual(conn):
             logger.info("Agregando campo 'puntual' a tabla gastos")
             cursor.execute("ALTER TABLE gastos ADD COLUMN puntual INTEGER DEFAULT 0")
 
+        if 'razon_social' not in columnas_nombres:
+            logger.info("Agregando campo 'razon_social' a tabla gastos")
+            cursor.execute("ALTER TABLE gastos ADD COLUMN razon_social TEXT")
+
         conn.commit()
-        logger.debug("Campo 'puntual' inicializado correctamente")
+        logger.debug("Campos 'puntual' y 'razon_social' verificados/inicializados")
     except Exception as e:
-        logger.error(f"Error al inicializar campo puntual: {e}", exc_info=True)
+        logger.error(f"Error al inicializar campos gastos: {e}", exc_info=True)
         conn.rollback()
 
 def _marcar_gastos_puntuales(conn, gastos_puntuales_ids):
@@ -381,7 +386,7 @@ def obtener_estadisticas_gastos():
             gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
             _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
     
-            # Gastos totales del año actual HASTA el mes seleccionado (inclusive) - EXCLUYENDO PUNTUALES
+            # Gastos totales del año actual HASTA el mes seleccionado (inclusive) - TOTAL REAL (INCLUYE PUNTUALES)
             mes_str = str(mes).zfill(2)
             cursor.execute('''
                 SELECT
@@ -391,14 +396,13 @@ def obtener_estadisticas_gastos():
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
                 AND importe_eur < 0
-                AND (puntual IS NULL OR puntual = 0)
             ''', (str(anio), mes))
     
             datos_anio = cursor.fetchone()
             total_gastos_anio = float(datos_anio['total_gastos_anio'] or 0)
             cantidad_gastos_anio = int(datos_anio['cantidad_gastos_anio'] or 0)
     
-            # Gastos del mes actual - EXCLUYENDO PUNTUALES
+            # Gastos del mes actual - TOTAL REAL (INCLUYE PUNTUALES)
             cursor.execute('''
                 SELECT
                     COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_mes,
@@ -407,14 +411,13 @@ def obtener_estadisticas_gastos():
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND substr(fecha_valor, 4, 2) = ?
                 AND importe_eur < 0
-                AND (puntual IS NULL OR puntual = 0)
             ''', (str(anio), mes_str))
     
             datos_mes = cursor.fetchone()
             total_gastos_mes = float(datos_mes['total_gastos_mes'] or 0)
             cantidad_gastos_mes = int(datos_mes['cantidad_gastos_mes'] or 0)
     
-            # Gastos del año anterior HASTA el mismo mes (para comparación justa) - EXCLUYENDO PUNTUALES
+            # Gastos del año anterior HASTA el mismo mes (para comparación justa) - TOTAL REAL
             anio_anterior = anio - 1
             cursor.execute('''
                 SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_anio_anterior
@@ -422,19 +425,17 @@ def obtener_estadisticas_gastos():
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
                 AND importe_eur < 0
-                AND (puntual IS NULL OR puntual = 0)
             ''', (str(anio_anterior), mes))
     
             total_gastos_anio_anterior = float(cursor.fetchone()['total_gastos_anio_anterior'] or 0)
     
-            # Gastos del mismo mes del año anterior - EXCLUYENDO PUNTUALES
+            # Gastos del mismo mes del año anterior - TOTAL REAL
             cursor.execute('''
                 SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_mes_anterior
                 FROM gastos
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND substr(fecha_valor, 4, 2) = ?
                 AND importe_eur < 0
-                AND (puntual IS NULL OR puntual = 0)
             ''', (str(anio_anterior), mes_str))
     
             total_gastos_mes_anterior = float(cursor.fetchone()['total_gastos_mes_anterior'] or 0)
@@ -475,66 +476,116 @@ def obtener_estadisticas_gastos():
 def obtener_top10_gastos():
     """
     Devuelve el top 10 de conceptos de gastos del año actual
-    Agrupados por concepto (primera palabra del concepto para simplificar)
+    Agrupados por CONCEPTO NORMALIZADO (usando _normalizar_concepto en Python)
     """
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            conn.row_factory = sqlite3.Row
             
             # Inicializar y marcar gastos puntuales
             _inicializar_campo_puntual(conn)
             gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio)
             _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
             
-            # Top 10 gastos por concepto (agrupando por primeras palabras)
-            case_categoria = _obtener_case_categoria_sql()
+            # 1. Obtener TODOS los gastos del año actual
+            # Incluir columna razon_social en la consulta (si existe en la tabla, SQLite no da error si seleccionamos NULL as razon_social si no existiera, 
+            # pero ya hemos garantizado que existe con _inicializar_campo_puntual)
+            
+            # Verificar si razon_social existe antes de hacer la query (por seguridad)
+            cursor.execute("PRAGMA table_info(gastos)")
+            cols = [c['name'] for c in cursor.fetchall()]
+            
+            col_razon = "razon_social" if "razon_social" in cols else "NULL as razon_social"
+
             cursor.execute(f'''
-                SELECT 
-                    {case_categoria} as concepto_resumido,
-                    COALESCE(SUM(ABS(importe_eur)), 0) as total_gasto,
-                    COUNT(*) as cantidad,
-                    SUM(CASE WHEN puntual = 1 THEN 1 ELSE 0 END) as cantidad_puntuales,
-                    COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales
+                SELECT concepto, ABS(importe_eur) as importe, puntual, {col_razon}
                 FROM gastos
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND importe_eur < 0
-                GROUP BY concepto_resumido
-                ORDER BY total_gasto DESC
-                LIMIT 10
             ''', (str(anio),))
             
-            top_gastos = []
-            for row in cursor.fetchall():
-                cantidad_puntuales = int(row['cantidad_puntuales'] or 0)
-                total_puntuales = float(row['total_puntuales'] or 0)
-                total_gasto = float(row['total_gasto'] or 0)
+            gastos_anio = cursor.fetchall()
+            
+            # 2. Agrupar por concepto normalizado en Python
+            agrupados = {}
+            
+            for gasto in gastos_anio:
+                concepto_raw = gasto['concepto']
+                importe = float(gasto['importe'] or 0)
+                es_puntual = int(gasto['puntual'] or 0) == 1
+                razon_social = gasto['razon_social']
                 
-                # Determinar si es principalmente puntual (más del 50% del total es puntual)
+                # Si tenemos razon_social (proveedor identificado), la usamos.
+                # Si no, normalizamos el concepto del banco.
+                if razon_social and razon_social.strip():
+                    concepto_norm = razon_social.strip()
+                else:
+                    concepto_norm = _normalizar_concepto(concepto_raw)
+                
+                if concepto_norm not in agrupados:
+                    agrupados[concepto_norm] = {
+                        'total': 0.0,
+                        'cantidad': 0,
+                        'cantidad_puntuales': 0,
+                        'total_puntuales': 0.0
+                    }
+                
+                agrupados[concepto_norm]['total'] += importe
+                agrupados[concepto_norm]['cantidad'] += 1
+                if es_puntual:
+                    agrupados[concepto_norm]['cantidad_puntuales'] += 1
+                    agrupados[concepto_norm]['total_puntuales'] += importe
+            
+            # 3. Convertir a lista y ordenar
+            lista_gastos = []
+            for concepto, datos in agrupados.items():
+                total_gasto = datos['total']
+                total_puntuales = datos['total_puntuales']
+                
+                # Determinar si es mayormente puntual
                 es_mayormente_puntual = (total_puntuales / total_gasto > 0.5) if total_gasto > 0 else False
                 
-                top_gastos.append({
-                    'concepto': row['concepto_resumido'],
+                lista_gastos.append({
+                    'concepto': concepto,
                     'total': round(total_gasto, 2),
-                    'cantidad': int(row['cantidad'] or 0),
+                    'cantidad': datos['cantidad'],
                     'es_puntual': es_mayormente_puntual,
                     'total_puntuales': round(total_puntuales, 2),
-                    'cantidad_puntuales': cantidad_puntuales
+                    'cantidad_puntuales': datos['cantidad_puntuales']
                 })
             
-            # Obtener totales del año anterior para comparación
+            # Ordenar descendentemente por total
+            lista_gastos.sort(key=lambda x: x['total'], reverse=True)
+            
+            # Quedarse con el Top 10
+            top_gastos = lista_gastos[:10]
+            
+            # 4. Obtener datos del año anterior para comparación
             anio_anterior = anio - 1
-            for gasto in top_gastos:
-                cursor.execute(f'''
-                    SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_anterior
-                    FROM gastos
-                    WHERE substr(fecha_valor, 7, 4) = ?
-                    AND importe_eur < 0
-                    AND ({case_categoria}) = ?
-                ''', (str(anio_anterior), gasto['concepto']))
+            cursor.execute('''
+                SELECT concepto, ABS(importe_eur) as importe
+                FROM gastos
+                WHERE substr(fecha_valor, 7, 4) = ?
+                AND importe_eur < 0
+            ''', (str(anio_anterior),))
+            
+            gastos_anterior = cursor.fetchall()
+            
+            # Agrupar año anterior
+            agrupados_anterior = {}
+            for gasto in gastos_anterior:
+                concepto_norm = _normalizar_concepto(gasto['concepto'])
+                importe = float(gasto['importe'] or 0)
+                agrupados_anterior[concepto_norm] = agrupados_anterior.get(concepto_norm, 0.0) + importe
                 
-                total_anterior = float(cursor.fetchone()['total_anterior'] or 0)
+            # 5. Calcular diferencias
+            for gasto in top_gastos:
+                concepto = gasto['concepto']
+                total_anterior = agrupados_anterior.get(concepto, 0.0)
+                
                 diferencia = gasto['total'] - total_anterior
                 pct_diferencia = (diferencia / total_anterior * 100) if total_anterior > 0 else 0
                 
@@ -554,98 +605,112 @@ def obtener_top10_gastos():
 @estadisticas_gastos_bp.route('/api/gastos/detalles', methods=['GET'])
 def obtener_detalles_gasto():
     """
-    Devuelve los detalles de todos los gastos de un concepto específico
+    Devuelve los detalles de todos los gastos de un concepto específico (normalizado o razon social)
     """
     try:
-        concepto = request.args.get('concepto', '')
+        concepto_buscado = request.args.get('concepto', '')
         anio = request.args.get('anio', datetime.now().year, type=int)
         
-        if not concepto:
+        if not concepto_buscado:
             return jsonify({'error': 'Se requiere el parámetro concepto'}), 400
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            conn.row_factory = sqlite3.Row
             
-            # Construir el WHERE según el concepto
-            where_clause = _obtener_case_categoria_sql()
+            # Verificar si razon_social existe
+            cursor.execute("PRAGMA table_info(gastos)")
+            cols = [c['name'] for c in cursor.fetchall()]
+            col_razon = "razon_social" if "razon_social" in cols else "NULL as razon_social"
             
-            # Obtener todos los gastos y normalizarlos
+            # Obtener TODOS los gastos del año para filtrar en memoria (igual que en top10)
             cursor.execute(f'''
                 SELECT 
                     concepto as concepto_original,
                     ABS(importe_eur) as importe,
-                    fecha_valor
+                    fecha_valor,
+                    {col_razon}
                 FROM gastos
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND importe_eur < 0
-                AND ({where_clause}) = ?
                 ORDER BY fecha_valor DESC
-            ''', (str(anio), concepto))
+            ''', (str(anio),))
             
-            # Agrupar manualmente por concepto normalizado
-            agrupados = {}
+            gastos_filtrados = []
+            importes = []
+            
             for row in cursor.fetchall():
-                concepto_norm = _normalizar_concepto(row['concepto_original'])
+                concepto_raw = row['concepto_original']
+                importe = float(row['importe'] or 0)
+                fecha = row['fecha_valor']
+                razon_social = row['razon_social']
                 
-                if concepto_norm not in agrupados:
-                    agrupados[concepto_norm] = {
-                        'conceptos_originales': set(),
-                        'importes': [],
-                        'fechas': []
-                    }
+                # Lógica de normalización idéntica a top10
+                if razon_social and razon_social.strip():
+                    concepto_norm = razon_social.strip()
+                else:
+                    concepto_norm = _normalizar_concepto(concepto_raw)
                 
-                agrupados[concepto_norm]['conceptos_originales'].add(row['concepto_original'])
-                agrupados[concepto_norm]['importes'].append(float(row['importe']))
-                agrupados[concepto_norm]['fechas'].append(row['fecha_valor'])
+                # Si coincide con el concepto buscado
+                if concepto_norm == concepto_buscado:
+                    gastos_filtrados.append({
+                        'concepto': concepto_norm, # Concepto agrupado
+                        'concepto_real': concepto_raw, # Concepto original del banco
+                        'fecha': fecha,
+                        'importe': round(importe, 2),
+                        'es_razon_social': bool(razon_social and razon_social.strip())
+                    })
+                    importes.append(importe)
             
-            # Convertir a lista ordenada por total
-            gastos_agrupados = []
-            for concepto_norm, datos in agrupados.items():
-                total = sum(datos['importes'])
-                cantidad = len(datos['importes'])
-                promedio = total / cantidad if cantidad > 0 else 0
-                
-                gastos_agrupados.append({
-                    'concepto': concepto_norm,
-                    'cantidad': cantidad,
-                    'total': round(total, 2),
-                    'promedio': round(promedio, 2),
-                    'primera_fecha': min(datos['fechas']),
-                    'ultima_fecha': max(datos['fechas']),
-                    'conceptos_originales': list(datos['conceptos_originales'])[:3]  # Primeros 3 ejemplos
+            if not gastos_filtrados:
+                 return jsonify({
+                    'concepto': concepto_buscado,
+                    'anio': anio,
+                    'estadisticas': {
+                        'cantidad': 0, 'total': 0, 'promedio': 0, 'minimo': 0, 'maximo': 0
+                    },
+                    'gastos_agrupados': [] # Para compatibilidad con frontend, mandamos lista vacía o adaptada
                 })
+
+            # Calcular estadísticas
+            cantidad = len(importes)
+            total = sum(importes)
+            promedio = total / cantidad if cantidad > 0 else 0
+            minimo = min(importes) if importes else 0
+            maximo = max(importes) if importes else 0
             
-            # Ordenar por total descendente
-            gastos_agrupados.sort(key=lambda x: x['total'], reverse=True)
-            
-            # Calcular estadísticas del concepto
-            cursor.execute(f'''
-                SELECT 
-                    COUNT(*) as cantidad,
-                    COALESCE(SUM(ABS(importe_eur)), 0) as total,
-                    COALESCE(AVG(ABS(importe_eur)), 0) as promedio,
-                    COALESCE(MIN(ABS(importe_eur)), 0) as minimo,
-                    COALESCE(MAX(ABS(importe_eur)), 0) as maximo
-                FROM gastos
-                WHERE substr(fecha_valor, 7, 4) = ?
-                AND importe_eur < 0
-                AND ({where_clause}) = ?
-            ''', (str(anio), concepto))
-            
-            stats = cursor.fetchone()
             estadisticas = {
-                'cantidad': int(stats['cantidad']),
-                'total': round(float(stats['total']), 2),
-                'promedio': round(float(stats['promedio']), 2),
-                'minimo': round(float(stats['minimo']), 2),
-                'maximo': round(float(stats['maximo']), 2)
+                'cantidad': cantidad,
+                'total': round(total, 2),
+                'promedio': round(promedio, 2),
+                'minimo': round(minimo, 2),
+                'maximo': round(maximo, 2)
             }
-        
+            
+            # Agrupar para la vista de "gastos_agrupados" que espera el frontend
+            # El usuario ha pedido VER EL DETALLE COMPLETO (sin agrupar por concepto original)
+            # Así que devolvemos cada transacción individualmente
+            
+            gastos_view = []
+            for g in gastos_filtrados:
+                gastos_view.append({
+                    'concepto': g['concepto_real'], # Concepto original del banco/factura
+                    'cantidad': 1,
+                    'total': g['importe'],
+                    'promedio': g['importe'],
+                    'primera_fecha': g['fecha'],
+                    'ultima_fecha': g['fecha'], # Al ser individual, inicio y fin es la misma fecha
+                    'conceptos_originales': [g['concepto_real']]
+                })
+                
+            # Ordenar por fecha descendente (lo más reciente primero) para ver el detalle cronológico
+            gastos_view.sort(key=lambda x: x['primera_fecha'], reverse=True)
+
         return jsonify({
-            'concepto': concepto,
+            'concepto': concepto_buscado,
             'anio': anio,
             'estadisticas': estadisticas,
-            'gastos_agrupados': gastos_agrupados
+            'gastos_agrupados': gastos_view
         })
         
     except Exception as e:
@@ -655,7 +720,7 @@ def obtener_detalles_gasto():
 @estadisticas_gastos_bp.route('/api/gastos/por-categoria-mes', methods=['GET'])
 def obtener_gastos_por_categoria_mes():
     """
-    Devuelve gastos del mes actual agrupados por categoría para gráfico de pastel
+    Devuelve gastos del mes actual agrupados por CONCEPTO NORMALIZADO para gráfico de pastel
     EXCLUYENDO gastos puntuales (>1000€ no recurrentes)
     """
     try:
@@ -664,43 +729,85 @@ def obtener_gastos_por_categoria_mes():
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            conn.row_factory = sqlite3.Row
             
             # Identificar y marcar gastos puntuales
+            _inicializar_campo_puntual(conn)
             gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
             _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
             
-            # Obtener gastos del mes actual por categoría EXCLUYENDO puntuales
-            case_categoria = _obtener_case_categoria_sql().replace('ELSE substr(concepto, 1, 30)', 'ELSE \'Otros\'')
+            # Verificar columna razon_social
+            cursor.execute("PRAGMA table_info(gastos)")
+            cols = [c['name'] for c in cursor.fetchall()]
+            col_razon = "razon_social" if "razon_social" in cols else "NULL as razon_social"
+
+            # Obtener TODOS los gastos del mes
             cursor.execute(f'''
                 SELECT 
-                    {case_categoria} as categoria,
-                    COALESCE(SUM(ABS(importe_eur)), 0) as total,
-                    COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales
+                    concepto, ABS(importe_eur) as importe, puntual, {col_razon}
                 FROM gastos
                 WHERE substr(fecha_valor, 4, 2) = ?
                 AND substr(fecha_valor, 7, 4) = ?
                 AND importe_eur < 0
-                GROUP BY categoria
-                ORDER BY total DESC
             ''', (str(mes).zfill(2), str(anio)))
             
-            categorias = []
+            agrupados = {}
+            total_general = 0.0
+            
             for row in cursor.fetchall():
-                total_bruto = float(row['total'] or 0)
-                total_puntuales = float(row['total_puntuales'] or 0)
-                total_sin_puntuales = total_bruto - total_puntuales
+                importe = float(row['importe'] or 0)
+                es_puntual = int(row['puntual'] or 0) == 1
                 
-                categorias.append({
-                    'categoria': row['categoria'],
-                    'total': round(total_sin_puntuales, 2),  # Mostrar sin puntuales
-                    'total_bruto': round(total_bruto, 2),
-                    'total_puntuales': round(total_puntuales, 2)
+                # Excluir puntuales automáticos del gráfico mensual (según lógica anterior)
+                # if es_puntual:
+                #    continue
+
+                razon_social = row['razon_social']
+                concepto_raw = row['concepto']
+
+                if razon_social and razon_social.strip():
+                    concepto_norm = razon_social.strip()
+                else:
+                    concepto_norm = _normalizar_concepto(concepto_raw)
+                
+                if concepto_norm not in agrupados:
+                    agrupados[concepto_norm] = 0.0
+                
+                agrupados[concepto_norm] += importe
+                total_general += importe
+            
+            # Convertir a lista
+            lista_categorias = [{'categoria': k, 'total': v} for k, v in agrupados.items()]
+            
+            # Ordenar por total descendente
+            lista_categorias.sort(key=lambda x: x['total'], reverse=True)
+            
+            # Agrupar en "Otros" si hay muchos (Top 9 + Otros)
+            if len(lista_categorias) > 9:
+                top_9 = lista_categorias[:9]
+                otros = lista_categorias[9:]
+                total_otros = sum(c['total'] for c in otros)
+                
+                final_categorias = top_9
+                if total_otros > 0:
+                    final_categorias.append({'categoria': 'Otros', 'total': round(total_otros, 2)})
+            else:
+                final_categorias = lista_categorias
+            
+            # Formatear salida
+            resultado = []
+            for c in final_categorias:
+                resultado.append({
+                    'categoria': c['categoria'],
+                    'total': round(c['total'], 2),
+                    'total_bruto': round(c['total'], 2), # Compatibilidad
+                    'total_puntuales': 0 # Ya excluidos
                 })
         
         return jsonify({
             'anio': anio,
             'mes': mes,
-            'categorias': categorias
+            'categorias': resultado
         })
         
     except Exception as e:
@@ -710,37 +817,77 @@ def obtener_gastos_por_categoria_mes():
 @estadisticas_gastos_bp.route('/api/gastos/por-categoria-anio', methods=['GET'])
 def obtener_gastos_por_categoria_anio():
     """
-    Devuelve gastos del año completo agrupados por categoría para gráfico de pastel
+    Devuelve gastos del año completo agrupados por CONCEPTO NORMALIZADO para gráfico de pastel
     """
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            conn.row_factory = sqlite3.Row
             
-            # Obtener gastos del año completo por categoría
-            case_categoria = _obtener_case_categoria_sql().replace('ELSE substr(concepto, 1, 30)', 'ELSE \'Otros\'')
+            # Verificar columna razon_social
+            _inicializar_campo_puntual(conn) # Asegurar columnas
+            
+            cursor.execute("PRAGMA table_info(gastos)")
+            cols = [c['name'] for c in cursor.fetchall()]
+            col_razon = "razon_social" if "razon_social" in cols else "NULL as razon_social"
+
+            # Obtener gastos del año completo
             cursor.execute(f'''
                 SELECT 
-                    {case_categoria} as categoria,
-                    COALESCE(SUM(ABS(importe_eur)), 0) as total
+                    concepto, ABS(importe_eur) as importe, {col_razon}
                 FROM gastos
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND importe_eur < 0
-                GROUP BY categoria
-                ORDER BY total DESC
             ''', (str(anio),))
             
-            categorias = []
+            agrupados = {}
+            
             for row in cursor.fetchall():
-                categorias.append({
-                    'categoria': row['categoria'],
-                    'total': round(float(row['total'] or 0), 2)
+                importe = float(row['importe'] or 0)
+                razon_social = row['razon_social']
+                concepto_raw = row['concepto']
+
+                if razon_social and razon_social.strip():
+                    concepto_norm = razon_social.strip()
+                else:
+                    concepto_norm = _normalizar_concepto(concepto_raw)
+                
+                if concepto_norm not in agrupados:
+                    agrupados[concepto_norm] = 0.0
+                
+                agrupados[concepto_norm] += importe
+            
+            # Convertir a lista
+            lista_categorias = [{'categoria': k, 'total': v} for k, v in agrupados.items()]
+            
+            # Ordenar por total descendente
+            lista_categorias.sort(key=lambda x: x['total'], reverse=True)
+            
+            # Agrupar en "Otros" (Top 9 + Otros)
+            if len(lista_categorias) > 9:
+                top_9 = lista_categorias[:9]
+                otros = lista_categorias[9:]
+                total_otros = sum(c['total'] for c in otros)
+                
+                final_categorias = top_9
+                if total_otros > 0:
+                    final_categorias.append({'categoria': 'Otros', 'total': round(total_otros, 2)})
+            else:
+                final_categorias = lista_categorias
+
+            # Formatear
+            resultado = []
+            for c in final_categorias:
+                resultado.append({
+                    'categoria': c['categoria'],
+                    'total': round(c['total'], 2)
                 })
         
         return jsonify({
             'anio': anio,
-            'categorias': categorias
+            'categorias': resultado
         })
         
     except Exception as e:
@@ -751,6 +898,7 @@ def obtener_gastos_por_categoria_anio():
 def obtener_detalles_categoria():
     """
     Devuelve los detalles de gastos de una categoría específica para un mes/año
+    Adaptado para soportar la nueva agrupación dinámica (Top 9 + Otros)
     """
     try:
         categoria = request.args.get('categoria', type=str)
@@ -762,24 +910,27 @@ def obtener_detalles_categoria():
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            conn.row_factory = sqlite3.Row
             
             # Inicializar y marcar gastos puntuales
             _inicializar_campo_puntual(conn)
             gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
             _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
             
-            # Construir el CASE para filtrar por categoría
-            case_categoria = _obtener_case_categoria_sql().replace('ELSE substr(concepto, 1, 30)', 'ELSE \'Otros\'')
+            # Verificar columna razon_social
+            cursor.execute("PRAGMA table_info(gastos)")
+            cols = [c['name'] for c in cursor.fetchall()]
+            col_razon = "razon_social" if "razon_social" in cols else "NULL as razon_social"
             
+            # 1. Obtener TODOS los gastos (del año o del mes según corresponda)
             query = f'''
                 SELECT 
-                    id, fecha_valor, concepto, ABS(importe_eur) as importe, puntual
+                    id, fecha_valor, concepto, ABS(importe_eur) as importe, puntual, {col_razon}
                 FROM gastos
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND importe_eur < 0
-                AND ({case_categoria}) = ?
             '''
-            params = [str(anio), categoria]
+            params = [str(anio)]
             
             if mes:
                 query += ' AND substr(fecha_valor, 4, 2) = ?'
@@ -788,70 +939,104 @@ def obtener_detalles_categoria():
             query += ' ORDER BY fecha_valor DESC'
             
             cursor.execute(query, params)
+            todos_los_gastos = cursor.fetchall()
             
-            gastos_agrupados = {}
-            for row in cursor.fetchall():
-                # Agrupar por concepto normalizado para estadísticas
-                concepto_norm = _normalizar_concepto(row['concepto'])
+            # 2. Procesar y Agrupar para identificar el TOP 9
+            agrupados_totales = {}
+            gastos_procesados = []
+            
+            logger.info(f"Detalles Categoria debug: Buscando '{categoria}' en año {anio}")
+            
+            for row in todos_los_gastos:
+                importe = float(row['importe'] or 0)
+                razon_social = row['razon_social']
+                concepto_raw = row['concepto']
+                fecha = row['fecha_valor']
                 
-                if concepto_norm not in gastos_agrupados:
-                    gastos_agrupados[concepto_norm] = {
-                        'concepto': concepto_norm,
-                        'importe': 0.0,
-                        'importe_sin_puntuales': 0.0,
-                        'cantidad': 0,
-                        'es_puntual': False,
-                        'cantidad_puntuales': 0
-                    }
-                
-                gastos_agrupados[concepto_norm]['importe'] += float(row['importe'] or 0)
-                gastos_agrupados[concepto_norm]['cantidad'] += 1
-                
-                # Sumar solo si NO es puntual (ni automático ni manual)
-                if row['puntual'] not in (1, 2):
-                    gastos_agrupados[concepto_norm]['importe_sin_puntuales'] += float(row['importe'] or 0)
+                if razon_social and razon_social.strip():
+                    concepto_norm = razon_social.strip()
                 else:
-                    gastos_agrupados[concepto_norm]['cantidad_puntuales'] += 1
-        
-        # Determinar si cada concepto es mayormente puntual y filtrar los que son 100% puntuales
-        gastos_filtrados = []
-        for concepto_norm, datos in gastos_agrupados.items():
-            if datos['cantidad_puntuales'] > 0 and datos['cantidad_puntuales'] >= datos['cantidad'] * 0.5:
-                datos['es_puntual'] = True
+                    concepto_norm = _normalizar_concepto(concepto_raw)
+                
+                if concepto_norm not in agrupados_totales:
+                    agrupados_totales[concepto_norm] = 0.0
+                agrupados_totales[concepto_norm] += importe
+                
+                gastos_procesados.append({
+                    'concepto_norm': concepto_norm,
+                    'concepto_real': concepto_raw,
+                    'fecha': fecha,
+                    'importe': importe
+                })
             
-            # Excluir conceptos que son 100% puntuales (todas sus transacciones son puntuales)
-            if datos['cantidad_puntuales'] < datos['cantidad']:
-                gastos_filtrados.append(datos)
-        
-        # Convertir a lista y ordenar
-        gastos = sorted(gastos_filtrados, key=lambda x: x['importe'], reverse=True)[:100]
-        
-        # Redondear importes
-        for g in gastos:
-            g['importe'] = round(g['importe'], 2)
-            g['importe_sin_puntuales'] = round(g.get('importe_sin_puntuales', g['importe']), 2)
-        
-        # Estadísticas
-        total = sum(g['importe'] for g in gastos)
-        total_sin_puntuales = sum(g['importe_sin_puntuales'] for g in gastos)
-        cantidad = sum(g['cantidad'] for g in gastos)
-        cantidad_sin_puntuales = sum(g['cantidad'] - g.get('cantidad_puntuales', 0) for g in gastos)
-        promedio = total / cantidad if cantidad > 0 else 0
-        promedio_sin_puntuales = total_sin_puntuales / cantidad_sin_puntuales if cantidad_sin_puntuales > 0 else 0
-        
+            # Identificar Top 9 Conceptos
+            lista_conceptos = [{'concepto': k, 'total': v} for k, v in agrupados_totales.items()]
+            lista_conceptos.sort(key=lambda x: x['total'], reverse=True)
+            top_9_conceptos = set(c['concepto'] for c in lista_conceptos[:9])
+            
+            # 3. Filtrar según la categoría solicitada
+            gastos_filtrados = []
+            
+            if categoria == 'Otros':
+                # Devolver todo lo que NO esté en el Top 9
+                gastos_filtrados = [g for g in gastos_procesados if g['concepto_norm'] not in top_9_conceptos]
+                logger.info(f"Categoria Otros: {len(gastos_filtrados)} gastos encontrados")
+            else:
+                # Devolver exactamente lo que coincida con la categoría (concepto)
+                gastos_filtrados = [g for g in gastos_procesados if g['concepto_norm'] == categoria]
+                logger.info(f"Categoria '{categoria}': {len(gastos_filtrados)} gastos encontrados")
+                if len(gastos_filtrados) == 0:
+                     # Debug si no encuentra nada
+                     ejemplos = [g['concepto_norm'] for g in gastos_procesados[:5]]
+                     logger.info(f"Ejemplos de conceptos normalizados en BD: {ejemplos}")
+                     # Buscar si existe algo parecido
+                     parecidos = [g['concepto_norm'] for g in gastos_procesados if categoria.lower() in g['concepto_norm'].lower()]
+                     if parecidos:
+                         logger.info(f"Posibles coincidencias parciales: {list(set(parecidos))[:5]}")
+                
+            # 4. Formatear respuesta para el frontend (formato lista de transacciones)
+            gastos_view = []
+            for g in gastos_filtrados:
+                gastos_view.append({
+                    'concepto': g['concepto_real'], # Mostrar concepto original
+                    'cantidad': 1,
+                    'importe': round(g['importe'], 2), # Frontend espera 'importe'
+                    'total': round(g['importe'], 2),   # Mantener 'total' por compatibilidad
+                    'promedio': round(g['importe'], 2),
+                    'fecha': g['fecha'],               # Frontend espera 'fecha'
+                    'primera_fecha': g['fecha'],
+                    'ultima_fecha': g['fecha'],
+                    'conceptos_originales': [g['concepto_real']],
+                    'es_puntual': False
+                })
+            
+            # Ordenar cronológicamente descendente
+            gastos_view.sort(key=lambda x: x['fecha'], reverse=True)
+
+            # Calcular estadísticas del conjunto filtrado
+            total = sum(g['importe'] for g in gastos_view)
+            cantidad = len(gastos_view)
+            promedio = total / cantidad if cantidad > 0 else 0
+            minimo = min((g['importe'] for g in gastos_view), default=0)
+            maximo = max((g['importe'] for g in gastos_view), default=0)
+            
+            estadisticas = {
+                'total': round(total, 2),
+                'total_sin_puntuales': round(total, 2), # Simplificado aquí
+                'cantidad': cantidad,
+                'cantidad_sin_puntuales': cantidad,
+                'promedio': round(promedio, 2),
+                'promedio_sin_puntuales': round(promedio, 2),
+                'minimo': round(minimo, 2),
+                'maximo': round(maximo, 2)
+            }
+
         return jsonify({
             'categoria': categoria,
             'anio': anio,
             'mes': mes,
-            'estadisticas': {
-                'total': round(total, 2),
-                'total_sin_puntuales': round(total_sin_puntuales, 2),
-                'cantidad': cantidad,
-                'cantidad_sin_puntuales': cantidad_sin_puntuales,
-                'promedio': round(promedio, 2),
-                'promedio_sin_puntuales': round(promedio_sin_puntuales, 2)
-            },
-            'gastos': gastos
+            'estadisticas': estadisticas,
+            'gastos': gastos_view # El frontend espera 'gastos' en este endpoint
         })
         
     except Exception as e:

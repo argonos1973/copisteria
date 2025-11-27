@@ -178,73 +178,90 @@
 
 <!-- Modal: Editar Factura -->
 <div id="modalEditar" class="modal">
-    <div class="modal-content modal-compact-width modal-bordered">
+    <div class="modal-content modal-extra-wide modal-bordered" style="max-width: 95%; width: 1200px;">
         <div class="modal-header">
             <h2><i class="fas fa-pencil-alt"></i> Editar Factura</h2>
             <span class="close" onclick="cerrarModal('modalEditar')">&times;</span>
         </div>
         
-        <div class="modal-body">
-            <form id="formEditar">
-                <input type="hidden" id="editar-factura-id">
-                
-                <!-- Fila 1: Número y Fechas -->
-                <div class="form-row form-centered">
-                    <div class="form-group form-col-xl input-centered">
-                        <label for="editar-numero">Número de Factura</label>
-                        <input type="text" id="editar-numero" class="form-control" required>
+        <div class="modal-body" style="display: flex; gap: 20px; align-items: flex-start;">
+            <!-- Columna Izquierda: Formulario -->
+            <div class="edit-form-column" style="flex: 3; min-width: 600px;">
+                <form id="formEditar">
+                    <input type="hidden" id="editar-factura-id">
+                    
+                    <!-- Fila 1: Número y Fechas -->
+                    <div class="form-row form-centered">
+                        <div class="form-group form-col-xl input-centered">
+                            <label for="editar-numero">Número de Factura</label>
+                            <input type="text" id="editar-numero" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group form-col-medium input-centered">
+                            <label for="editar-fecha-emision">Fecha Emisión</label>
+                            <input type="date" id="editar-fecha-emision" class="form-control" required>
+                        </div>
+                        
+                        <div class="form-group form-col-medium input-centered">
+                            <label for="editar-fecha-vencimiento">Vencimiento</label>
+                            <input type="date" id="editar-fecha-vencimiento" class="form-control">
+                        </div>
                     </div>
                     
-                    <div class="form-group form-col-medium input-centered">
-                        <label for="editar-fecha-emision">Fecha Emisión</label>
-                        <input type="date" id="editar-fecha-emision" class="form-control" required>
+                    <!-- Fila 2: Importes (Con fondo diferenciado y borde) -->
+                    <div class="form-row" style="background: var(--bg-elevated, rgba(0,0,0,0.05)); padding: 15px; border-radius: 6px; border: 1px solid var(--border, #ccc); display: flex; flex-wrap: nowrap; gap: 10px; justify-content: space-between; align-items: flex-end;">
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label for="editar-base" style="display: block;">Base Imp.</label>
+                            <input type="number" id="editar-base" class="form-control" 
+                                   step="0.01" min="0" required style="text-align: right;">
+                        </div>
+                        
+                        <div class="form-group" style="flex: 0 0 70px;">
+                            <label for="editar-iva-porcentaje" style="display: block;">IVA %</label>
+                            <input type="number" id="editar-iva-porcentaje" class="form-control" 
+                                   min="0" max="100" step="1" style="text-align: right;">
+                        </div>
+                        
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label for="editar-iva-importe" style="display: block;">Imp. IVA</label>
+                            <input type="number" id="editar-iva-importe" class="form-control" 
+                                   step="0.01" min="0" readonly style="text-align: right;">
+                        </div>
+                        
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label for="editar-total" style="display: block; font-weight: bold;">Total</label>
+                            <input type="number" id="editar-total" class="form-control" 
+                                   step="0.01" min="0" readonly style="font-weight: bold; text-align: right; font-size: 1.1em;">
+                        </div>
                     </div>
                     
-                    <div class="form-group form-col-medium input-centered">
-                        <label for="editar-fecha-vencimiento">Vencimiento</label>
-                        <input type="date" id="editar-fecha-vencimiento" class="form-control">
+                    <!-- Fila 3: Concepto -->
+                    <div class="form-group container-centered-limited">
+                        <label for="editar-concepto">Concepto</label>
+                        <input type="text" id="editar-concepto" class="form-control">
+                    </div>
+                    
+                    <!-- Fila 4: Notas -->
+                    <div class="form-group container-centered-limited">
+                        <label for="editar-notas">Notas</label>
+                        <textarea id="editar-notas" class="form-control" rows="2" style="resize: vertical;"></textarea>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Columna Derecha: Previsualización PDF -->
+            <div class="edit-preview-column" style="flex: 2; border: 1px solid #ddd; border-radius: 4px; background: #f5f5f5; height: 500px; display: flex; flex-direction: column;">
+                <div style="background: #eee; padding: 5px 10px; border-bottom: 1px solid #ddd; font-size: 12px; font-weight: bold; color: #666;">
+                    <i class="fas fa-eye"></i> Previsualización del Documento
+                </div>
+                <div style="flex: 1; position: relative; overflow: hidden;">
+                    <iframe id="editar-preview-frame" style="width: 100%; height: 100%; border: none;" src=""></iframe>
+                    <div id="editar-preview-placeholder" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #f9f9f9; color: #999; flex-direction: column;">
+                        <i class="fas fa-file-pdf" style="font-size: 48px; margin-bottom: 10px; opacity: 0.5;"></i>
+                        <p>Vista previa no disponible</p>
                     </div>
                 </div>
-                
-                <!-- Fila 2: Importes (Con fondo diferenciado y borde) -->
-                <div class="form-row-nowrap form-right-aligned" style="background: var(--bg-elevated, rgba(0,0,0,0.05)); padding: 15px; border-radius: 6px; border: 1px solid var(--border, #ccc);">
-                    <div class="form-group form-col-large input-right input-large input-bold">
-                        <label for="editar-base">Base Imponible</label>
-                        <input type="number" id="editar-base" class="form-control" 
-                               step="0.01" min="0" required>
-                    </div>
-                    
-                    <div class="form-group form-col-small input-right input-large">
-                        <label for="editar-iva-porcentaje">IVA %</label>
-                        <input type="number" id="editar-iva-porcentaje" class="form-control" 
-                               min="0" max="100" step="1">
-                    </div>
-                    
-                    <div class="form-group form-col-medium input-right input-large input-opacity-70">
-                        <label for="editar-iva-importe">Importe IVA</label>
-                        <input type="number" id="editar-iva-importe" class="form-control" 
-                               step="0.01" min="0" readonly>
-                    </div>
-                    
-                    <div class="form-group form-col-medium input-right input-large input-bold">
-                        <label for="editar-total">Total</label>
-                        <input type="number" id="editar-total" class="form-control" 
-                               step="0.01" min="0" readonly>
-                    </div>
-                </div>
-                
-                <!-- Fila 3: Concepto -->
-                <div class="form-group container-centered-limited">
-                    <label for="editar-concepto">Concepto</label>
-                    <input type="text" id="editar-concepto" class="form-control">
-                </div>
-                
-                <!-- Fila 4: Notas -->
-                <div class="form-group container-centered-limited">
-                    <label for="editar-notas">Notas</label>
-                    <textarea id="editar-notas" class="form-control" rows="2" style="resize: vertical;"></textarea>
-                </div>
-            </form>
+            </div>
         </div>
         
         <div class="modal-footer">

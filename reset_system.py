@@ -14,7 +14,8 @@ tables_to_clear = [
     'lineas_factura_proveedor',
     'historial_facturas_proveedores',
     'facturas_proveedores',
-    'proveedores'
+    'proveedores',
+    'gastos'
 ]
 
 print("=== LIMPIANDO BASES DE DATOS ===")

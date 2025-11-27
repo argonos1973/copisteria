@@ -9,6 +9,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import hashlib
 import json
+import unicodedata
+import re
+import uuid
+from difflib import SequenceMatcher  # Para fuzzy matching
 from logger_config import get_logger
 from db_utils import get_db_connection
 
@@ -229,9 +233,30 @@ def obtener_proveedor_por_nif(nif, empresa_id):
     return dict(proveedor) if proveedor else None
 
 
+def normalizar_nombre(nombre):
+    """
+    Normaliza un nombre eliminando acentos, caracteres especiales y espacios extra
+    """
+    if not nombre:
+        return ""
+    
+    # Convertir a minúsculas y unicode normalizado
+    s = nombre.lower().strip()
+    s = unicodedata.normalize('NFKD', s).encode('ASCII', 'ignore').decode('utf-8')
+    
+    # Eliminar caracteres especiales excepto números y letras
+    s = re.sub(r'[^a-z0-9\s]', '', s)
+    
+    # Eliminar espacios múltiples
+    s = re.sub(r'\s+', ' ', s)
+    
+    return s.strip()
+
+
 def obtener_proveedor_por_nombre(nombre, empresa_id):
     """
-    Obtiene un proveedor por su nombre (búsqueda exacta, case-insensitive)
+    Obtiene un proveedor por su nombre (búsqueda robusta normalizada)
+    Ignora sufijos legales (S.L., S.A.) para la comparación
     """
     if not nombre:
         return None
@@ -240,13 +265,56 @@ def obtener_proveedor_por_nombre(nombre, empresa_id):
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    # Buscar por nombre exacto (case-insensitive)
+    # Función local para limpiar nombre legal
+    def limpiar_nombre_legal(txt):
+        if not txt: return ""
+        # Eliminar sufijos comunes de empresas y caracteres no alfanuméricos
+        sufijos = [' S.L.', ' SL', ' S.L', ' S.A.', ' SA', ' S.A', ' S.L.U.', ' SLU', ' S.A.U.', ' SAU', 
+                  ' S.C.', ' SC', ' C.B.', ' CB', ' S.R.L.', ' SRL', ' LTDA', ' INC', ' CORP']
+        txt_clean = txt.upper()
+        for suf in sufijos:
+            if txt_clean.endswith(suf):
+                txt_clean = txt_clean[:-len(suf)]
+        # Eliminar puntuación y espacios extra
+        txt_clean = re.sub(r'[^A-Z0-9\s]', '', txt_clean)
+        return ' '.join(txt_clean.split())
+
+    nombre_buscado_clean = limpiar_nombre_legal(nombre)
+    
+    # 1. Búsqueda exacta primero (rápida)
     cursor.execute("""
         SELECT * FROM proveedores
         WHERE LOWER(TRIM(nombre)) = LOWER(TRIM(?)) AND empresa_id = ?
     """, (nombre, empresa_id))
-    
     proveedor = cursor.fetchone()
+    
+    # 2. Si no encuentra, búsqueda normalizada agresiva (sin S.L., S.A., etc)
+    if not proveedor and len(nombre_buscado_clean) > 3:
+        cursor.execute("SELECT * FROM proveedores WHERE empresa_id = ?", (empresa_id,))
+        todos = cursor.fetchall()
+        
+        for p in todos:
+            nombre_db_clean = limpiar_nombre_legal(p['nombre'])
+            
+            # Coincidencia exacta del nombre limpio
+            if nombre_db_clean == nombre_buscado_clean:
+                proveedor = p
+                logger.info(f"✓ Proveedor encontrado por nombre limpio: {p['nombre']} (Clean: {nombre_db_clean}) == {nombre} (Clean: {nombre_buscado_clean})")
+                break
+                
+            # Coincidencia de inicio ("VODAFONE ESPAÑA" empieza por "VODAFONE")
+            # Solo si la palabra clave es significativa (>3 chars)
+            if len(nombre_buscado_clean) > 3 and len(nombre_db_clean) > 3:
+                # Si uno contiene al otro completamente
+                if nombre_buscado_clean in nombre_db_clean or nombre_db_clean in nombre_buscado_clean:
+                     # Verificar que sea coincidencia de palabras completas
+                     words_buscado = set(nombre_buscado_clean.split())
+                     words_db = set(nombre_db_clean.split())
+                     if words_buscado.issubset(words_db) or words_db.issubset(words_buscado):
+                        proveedor = p
+                        logger.info(f"✓ Proveedor encontrado por inclusión de nombre limpio: {p['nombre']} ~= {nombre}")
+                        break
+    
     conn.close()
     
     return dict(proveedor) if proveedor else None
@@ -269,14 +337,38 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
     
     try:
         # Transformar datos a mayúsculas y normalizar NIF
-        nombre = datos.get('nombre', '').upper().strip()
-        nif = datos.get('nif', '')
+        # CORRECCIÓN: Usar (get() or '') para evitar error None.strip()
+        nombre = (datos.get('nombre') or '').upper().strip()
+        nif = datos.get('nif', '').upper().strip()
+        
+        # REGLA: Si no hay NIF y el nombre es vacío o muy corto, asignar a GASTOS VARIOS
+        # Pero si hay un nombre válido (ej: "Unión Papelera"), PERMITIR crearlo con NIF generado
+        nombre_generico = "GASTOS VARIOS"
+        if not nif and (not nombre or len(nombre) < 2):
+             if nombre != nombre_generico:
+                logger.info(f"Nombre vacío o muy corto sin NIF -> Asignando a '{nombre_generico}'")
+                # Buscar si ya existe el genérico
+                prov_gen = obtener_proveedor_por_nombre(nombre_generico, empresa_id)
+                if prov_gen:
+                    return prov_gen['id']
+                nombre = nombre_generico
+                nif = "00000000X"
+                # Limpiamos datos
+                if 'email' in datos: datos['email'] = ''
+                if 'telefono' in datos: datos['telefono'] = ''
+        
         if nif:
             nif = normalizar_nif(nif)  # Guardar siempre normalizado
             
-        direccion = datos.get('direccion', '').upper().strip() if datos.get('direccion') else ''
-        poblacion = datos.get('poblacion', '').upper().strip() if datos.get('poblacion') else ''
-        provincia = datos.get('provincia', '').upper().strip() if datos.get('provincia') else ''
+        direccion = (datos.get('direccion') or '').upper().strip()
+        poblacion = (datos.get('poblacion') or '').upper().strip()
+        provincia = (datos.get('provincia') or '').upper().strip()
+        pais = (datos.get('pais') or '').upper().strip()
+        
+        # Email y teléfono NO se pasan a mayúsculas (email case sensitive a veces, telf son números)
+        email = (datos.get('email') or '').strip()
+        email_facturacion = (datos.get('email_facturacion') or '').strip()
+        telefono = (datos.get('telefono') or '').strip()
         
         # Validar nombre obligatorio
         if not nombre:
@@ -286,11 +378,8 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
         proveedor_existente_nombre = obtener_proveedor_por_nombre(nombre, empresa_id)
         if proveedor_existente_nombre:
             logger.warning(f"Intento de crear proveedor duplicado por nombre: {nombre}")
-            # Si estamos en modo automático (usuario='sistema_auto'), devolvemos el existente
-            if usuario == 'sistema_auto':
-                return proveedor_existente_nombre['id']
-            # Si es manual, lanzamos error
-            raise Exception(f"Ya existe un proveedor con el nombre '{nombre}'")
+            # Devolver siempre el existente
+            return proveedor_existente_nombre['id']
             
         # Verificar duplicado por NIF (si se proporciona)
         if nif:
@@ -298,19 +387,16 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
             if proveedor_existente_nif:
                  # Si coincide nombre y NIF, es claramente el mismo
                 if proveedor_existente_nif['nombre'].upper() == nombre:
-                    if usuario == 'sistema_auto':
-                        return proveedor_existente_nif['id']
-                    raise Exception(f"Ya existe este proveedor con NIF {nif}")
+                    return proveedor_existente_nif['id']
                 else:
                     # Mismo NIF pero nombre diferente? (Raro pero posible si cambió de nombre)
                     logger.warning(f"Proveedor con mismo NIF {nif} pero distinto nombre: {proveedor_existente_nif['nombre']} vs {nombre}")
-                    if usuario == 'sistema_auto':
-                        return proveedor_existente_nif['id']
-                    raise Exception(f"Ya existe un proveedor con el NIF {nif} ({proveedor_existente_nif['nombre']})")
+                    return proveedor_existente_nif['id']
 
-        # Si el NIF está vacío, permitirlo (para proveedores sin NIF o cuando coincide con empresa)
+        # Si el NIF está vacío, generar uno interno único para evitar duplicados de clave única (UNIQUE constraint)
         if not nif:
-            logger.info(f"Creando proveedor sin NIF: {nombre}")
+            nif = f"SIN-NIF-{uuid.uuid4().hex[:8].upper()}"
+            logger.info(f"Asignando NIF interno al proveedor sin NIF: {nombre} -> {nif}")
         
         cursor.execute("""
             INSERT INTO proveedores (
@@ -358,8 +444,17 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
                 logger.info(f"✓ Proveedor existente encontrado: {proveedor_existente['nombre']} (ID: {proveedor_existente['id']})")
                 return proveedor_existente['id']
             else:
+                # Fallback de emergencia: Buscar manualmente por NIF ignorando espacios/guiones si el método standard falló
+                # O buscar por nombre si el NIF era generado/falso
+                
+                # Intentar buscar por nombre
+                prov_nombre = obtener_proveedor_por_nombre(nombre, empresa_id)
+                if prov_nombre:
+                     logger.warning(f"✓ Proveedor recuperado por nombre tras error de integridad NIF: {prov_nombre['nombre']} (ID: {prov_nombre['id']})")
+                     return prov_nombre['id']
+                
                 logger.error(f"Error: Proveedor con NIF {nif} existe pero no se pudo recuperar")
-                raise Exception(f"Error de consistencia: proveedor existe pero no se pudo recuperar")
+                raise Exception(f"Error de consistencia: proveedor existe (NIF: {nif}) pero no se pudo recuperar")
         else:
             logger.error(f"Error de integridad creando proveedor: {e}")
             raise Exception(f"Error de integridad en la base de datos: {str(e)}")
@@ -410,11 +505,23 @@ def actualizar_proveedor(proveedor_id, empresa_id, datos, usuario='sistema'):
         
         if 'telefono' in datos:
             campos.append('telefono = ?')
-            valores.append(datos['telefono'])
+            valores.append(datos['telefono'].strip() if datos['telefono'] else '')
         
         if 'direccion' in datos:
             campos.append('direccion = ?')
-            valores.append(datos['direccion'].upper().strip() if datos['direccion'] else '')
+            valores.append((datos['direccion'] or '').upper().strip())
+            
+        if 'poblacion' in datos:
+            campos.append('poblacion = ?')
+            valores.append((datos['poblacion'] or '').upper().strip())
+            
+        if 'provincia' in datos:
+            campos.append('provincia = ?')
+            valores.append((datos['provincia'] or '').upper().strip())
+            
+        if 'pais' in datos:
+            campos.append('pais = ?')
+            valores.append((datos['pais'] or '').upper().strip())
         
         if 'notas' in datos:
             campos.append('notas = ?')
@@ -493,26 +600,203 @@ def eliminar_proveedor(proveedor_id, empresa_id, usuario='sistema'):
         conn.close()
 
 
+def buscar_proveedor_similar(empresa_id, nombre, nif, telefono=None, direccion=None):
+    """
+    Busca un proveedor similar usando fuzzy matching, teléfono y dirección
+    para tolerar errores de OCR y detectar duplicados reales
+    """
+    if not nombre and not nif and not telefono:
+        return None
+        
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    # Obtener todos los proveedores
+    cursor.execute("SELECT id, nombre, nif, telefono, direccion FROM proveedores WHERE empresa_id = ?", (empresa_id,))
+    proveedores = cursor.fetchall()
+    conn.close()
+    
+    nombre_norm = nombre.upper().strip() if nombre else ""
+    nif_norm = nif.upper().strip() if nif else ""
+    
+    # Normalizar teléfono de búsqueda (solo dígitos)
+    tel_norm = re.sub(r'\D', '', telefono) if telefono else ""
+    
+    mejor_match = None
+    mejor_score = 0
+    
+    for p in proveedores:
+        p_nombre = (p['nombre'] or "").upper().strip()
+        p_nif = (p['nif'] or "").upper().strip()
+        p_tel = re.sub(r'\D', '', p['telefono'] or "")
+        p_dir = (p['direccion'] or "").upper().strip()
+        
+        # Ignorar el genérico para comparaciones difusas
+        if "GASTOS VARIOS" in p_nombre:
+            continue
+
+        score_nombre = 0
+        score_nif = 0
+        match_encontrado = False
+        motivo = ""
+
+        # 1. COINCIDENCIA POR TELÉFONO (Muy fuerte)
+        # Si tienen el mismo teléfono (y es válido > 8 dígitos), son el mismo casi seguro
+        if tel_norm and p_tel and len(tel_norm) > 8 and len(p_tel) > 8:
+            if tel_norm == p_tel or tel_norm in p_tel or p_tel in tel_norm:
+                match_encontrado = True
+                motivo = f"Teléfono coincidente ({p['telefono']})"
+                # Prioridad máxima
+                return (dict(p), motivo)
+
+        # 2. COINCIDENCIA POR DIRECCIÓN (Fuerte)
+        # Si la dirección es muy parecida y el nombre tiene algo de sentido
+        if direccion and p_dir and len(direccion) > 10:
+            # Tokenizar direcciones
+            dir_tokens = set(direccion.upper().replace(',', '').split())
+            p_dir_tokens = set(p_dir.replace(',', '').split())
+            # Intersección de palabras clave
+            common = dir_tokens.intersection(p_dir_tokens)
+            if len(common) > 3: # Al menos 3 palabras coinciden (calle, numero, ciudad)
+                 match_encontrado = True
+                 motivo = "Dirección coincidente"
+        
+        # Similitud de Nombre
+        if nombre_norm and p_nombre:
+            score_nombre = SequenceMatcher(None, nombre_norm, p_nombre).ratio()
+            
+        # Similitud de NIF
+        if nif_norm and p_nif:
+            score_nif = SequenceMatcher(None, nif_norm, p_nif).ratio()
+            
+        # 3. Nombre MUY similar (> 80%)
+        if score_nombre > 0.80:
+            match_encontrado = True
+            motivo = f"Nombre similar ({score_nombre:.2%})"
+            
+        # 4. NIF MUY similar (> 85%) Y Nombre razonable (> 40%)
+        elif score_nif > 0.85 and score_nombre > 0.40:
+            match_encontrado = True
+            motivo = f"NIF similar ({score_nif:.2%})"
+
+        # 5. Coincidencia parcial (Substring)
+        elif (len(p_nombre) > 4 and p_nombre in nombre_norm) or (len(nombre_norm) > 4 and nombre_norm in p_nombre):
+            match_encontrado = True
+            motivo = "Nombre contenido (Parcial)"
+            
+        # 6. Coincidencia Inteligente de Palabras (ignorando S.L., S.A., etc.)
+        else:
+            # Función auxiliar para limpiar nombre legal
+            def limpiar_legal(txt):
+                # Eliminar sufijos comunes de empresas y caracteres no alfanuméricos
+                sufijos = [' S.L.', ' SL', ' S.L', ' S.A.', ' SA', ' S.A', ' S.L.U.', ' SLU', ' S.A.U.', ' SAU', 
+                          ' S.C.', ' SC', ' C.B.', ' CB', ' S.R.L.', ' SRL', ' LTDA', ' INC', ' CORP']
+                txt_clean = txt.upper()
+                for suf in sufijos:
+                    if txt_clean.endswith(suf):
+                        txt_clean = txt_clean[:-len(suf)]
+                # Eliminar puntuación
+                return ''.join(c for c in txt_clean if c.isalnum() or c.isspace()).strip()
+
+            n1_clean = limpiar_legal(nombre_norm)
+            p_clean = limpiar_legal(p_nombre)
+            
+            words1 = set(n1_clean.split())
+            words2 = set(p_clean.split())
+            
+            # LÓGICA DE UNIFICACIÓN AGRESIVA (Marca Comercial)
+            # Si la PRIMERA palabra es igual y tiene longitud > 3 (ej: VODAFONE), es la misma marca
+            first_word1 = n1_clean.split()[0] if n1_clean else ""
+            first_word2 = p_clean.split()[0] if p_clean else ""
+            
+            if len(first_word1) > 3 and first_word1 == first_word2:
+                 match_encontrado = True
+                 motivo = f"Misma Marca Comercial ({first_word1})"
+                 # Prioridad media-alta, unificamos bajo la marca
+            
+            # Si ambos tienen al menos 2 palabras significativas
+            elif len(words1) >= 2 and len(words2) >= 2:
+                common = words1.intersection(words2)
+                # Si comparten TODAS las palabras del nombre más corto
+                min_words = min(len(words1), len(words2))
+                if len(common) == min_words:
+                    match_encontrado = True
+                    motivo = f"Palabras clave idénticas ({' '.join(common)})"
+                # O si comparten más del 80% de palabras combinadas
+                elif len(common) / max(len(words1), len(words2)) > 0.8:
+                    match_encontrado = True
+                    motivo = "Alta coincidencia de palabras"
+
+        if match_encontrado:
+            score_total = score_nombre + score_nif + (2.0 if "Teléfono" in motivo else 0)
+            if score_total > mejor_score:
+                mejor_score = score_total
+                mejor_match = (dict(p), motivo)
+                
+    return mejor_match
+
+
 def obtener_o_crear_proveedor(nif, nombre, empresa_id, datos_adicionales=None, email_origen=None):
     """
     Busca un proveedor por NIF y nombre, si no existe lo crea automáticamente
-    Previene duplicados buscando por NIF normalizado y nombre similar
-    
-    Args:
-        nif: NIF del proveedor
-        nombre: Nombre del proveedor
-        empresa_id: ID de la empresa
-        datos_adicionales: Datos extra de la factura
-        email_origen: Email del que proviene
-    
-    Returns:
-        int: ID del proveedor
+    Previene duplicados buscando por NIF normalizado, nombre similar, TELÉFONO y FUZZY MATCHING
     """
+    # Extraer teléfono y dirección si vienen en datos adicionales
+    telefono = None
+    direccion = None
+    if datos_adicionales:
+        telefono = datos_adicionales.get('proveedor_telefono') or datos_adicionales.get('telefono')
+        direccion = datos_adicionales.get('proveedor_direccion') or datos_adicionales.get('direccion')
+
+    # Función auxiliar para actualizar datos faltantes
+    def actualizar_datos_faltantes(prov_id, prov_datos, datos_nuevos):
+        if not datos_nuevos:
+            return
+        
+        conn = None
+        try:
+            updates = []
+            params = []
+            campos_mapeo = {
+                'direccion': ['proveedor_direccion', 'direccion'],
+                'telefono': ['proveedor_telefono', 'telefono'],
+                'email': ['proveedor_email', 'email'],
+                'cp': ['proveedor_cp', 'cp'],
+                'poblacion': ['proveedor_poblacion', 'poblacion'],
+                'provincia': ['proveedor_provincia', 'provincia']
+            }
+
+            for campo_db, posibles_keys in campos_mapeo.items():
+                # Si el dato actual está vacío/nulo
+                valor_actual = prov_datos.get(campo_db)
+                if not valor_actual or (isinstance(valor_actual, str) and not valor_actual.strip()):
+                    # Buscar si tenemos el dato nuevo
+                    for key in posibles_keys:
+                        if datos_nuevos.get(key):
+                            updates.append(f"{campo_db} = ?")
+                            params.append(datos_nuevos[key])
+                            logger.info(f"📝 Completando {campo_db} del proveedor {prov_id}: {datos_nuevos[key]}")
+                            break
+            
+            if updates:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                query = f"UPDATE proveedores SET {', '.join(updates)} WHERE id = ?"
+                params.append(prov_id)
+                cursor.execute(query, params)
+                conn.commit()
+        except Exception as e:
+            logger.error(f"Error actualizando datos faltantes proveedor {prov_id}: {e}")
+        finally:
+            if conn: conn.close()
+
     # 1. Buscar por NIF (con normalización)
     if nif:
         proveedor = obtener_proveedor_por_nif(nif, empresa_id)
         if proveedor:
             logger.info(f"✓ Proveedor encontrado por NIF: {proveedor['nombre']} (ID: {proveedor['id']})")
+            actualizar_datos_faltantes(proveedor['id'], proveedor, datos_adicionales)
             return proveedor['id']
     
     # 2. Buscar por nombre exacto (si no se encontró por NIF)
@@ -528,10 +812,35 @@ def obtener_o_crear_proveedor(nif, nombre, empresa_id, datos_adicionales=None, e
                 cursor.execute("UPDATE proveedores SET nif = ? WHERE id = ?", (nif, proveedor['id']))
                 conn.commit()
                 conn.close()
+            
+            actualizar_datos_faltantes(proveedor['id'], proveedor, datos_adicionales)
             return proveedor['id']
+            
+    # 3. BUSQUEDA DIFUSA (Fuzzy Matching + Teléfono + Dirección)
+    # Intentar encontrar duplicados por errores de OCR
+    match_difuso = buscar_proveedor_similar(empresa_id, nombre, nif, telefono, direccion)
+    if match_difuso:
+        prov_similar, motivo = match_difuso
+        logger.info(f"🔍 Match encontrado ({motivo}): '{nombre}' ~= '{prov_similar['nombre']}'")
+        logger.info(f"   -> Reutilizando proveedor ID {prov_similar['id']} en lugar de crear duplicado")
+        actualizar_datos_faltantes(prov_similar['id'], prov_similar, datos_adicionales)
+        return prov_similar['id']
     
-    # 3. No existe, crear nuevo
+    # 4. No existe, crear nuevo
     logger.info(f"⚠️ Proveedor no encontrado, creando automáticamente: {nombre} ({nif})")
+    
+    # Lista negra de nombres genéricos que NO deben ser proveedores
+    nombres_invalidos = ['FACTURA', 'INVOICE', 'RECIBO', 'TICKET', 'PRESUPUESTO', 'ALBARAN', 'HOJA', 'COPIA', 'DUPLICADO']
+    
+    # REGLA: Si no hay NIF y el nombre es vacío o muy corto, asignar a GASTOS VARIOS
+    nombre_upper = nombre.upper().strip()
+    if not nif and (not nombre or len(nombre) < 2 or nombre_upper in nombres_invalidos):
+        logger.info(f"Proveedor '{nombre}' sin NIF y sin nombre válido -> Asignando a 'GASTOS VARIOS'")
+        nombre = "GASTOS VARIOS"
+        nif = "00000000X" # NIF dummy fijo para el genérico
+    else:
+        # Asegurar mayúsculas siempre
+        nombre = nombre_upper
     
     datos = {
         'nombre': nombre,
@@ -544,14 +853,28 @@ def obtener_o_crear_proveedor(nif, nombre, empresa_id, datos_adicionales=None, e
     
     # Agregar datos adicionales si existen
     if datos_adicionales:
-        if datos_adicionales.get('proveedor_direccion'):
-            datos['direccion'] = datos_adicionales['proveedor_direccion']
-        if datos_adicionales.get('proveedor_cp'):
-            datos['cp'] = datos_adicionales['proveedor_cp']
-        if datos_adicionales.get('proveedor_poblacion'):
-            datos['poblacion'] = datos_adicionales['proveedor_poblacion']
-        if datos_adicionales.get('proveedor_provincia'):
-            datos['provincia'] = datos_adicionales['proveedor_provincia']
+        # Mapeo de campos directo
+        campos_extra = {
+            'direccion': ['proveedor_direccion', 'direccion'],
+            'telefono': ['proveedor_telefono', 'telefono'],
+            'email': ['proveedor_email', 'email'],
+            'cp': ['proveedor_cp', 'cp'],
+            'poblacion': ['proveedor_poblacion', 'poblacion'],
+            'provincia': ['proveedor_provincia', 'provincia'],
+            'pais': ['proveedor_pais', 'pais']
+        }
+        
+        for campo_db, posibles_keys in campos_extra.items():
+            for key in posibles_keys:
+                if datos_adicionales.get(key):
+                    datos[campo_db] = datos_adicionales[key]
+                    break
+                    
+        # Email de facturación específico
+        if not datos.get('email_facturacion') and datos_adicionales.get('email'):
+            datos['email_facturacion'] = datos_adicionales.get('email')
+
+    logger.info(f"📝 Creando proveedor con datos extendidos: {datos}")
     
     proveedor_id = crear_proveedor(empresa_id, datos, usuario='sistema_auto')
     
@@ -788,6 +1111,111 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
     }
 
 
+def _registrar_gasto_desde_factura(cursor, factura_id, datos_factura, proveedor_id):
+    """
+    Registra un gasto automáticamente asociado a la factura
+    Maneja tanto la estructura simple como la compleja de la tabla gastos
+    """
+    try:
+        # 1. Verificar si existe tabla gastos
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='gastos'")
+        if not cursor.fetchone():
+            logger.warning("Tabla gastos no existe, omitiendo registro de gasto")
+            return
+
+        # 2. Detectar estructura de tabla gastos
+        cursor.execute("PRAGMA table_info(gastos)")
+        columnas_info = cursor.fetchall()
+        columnas = [col[1] for col in columnas_info]
+        es_compleja = 'fecha_operacion_iso' in columnas
+        
+        # Asegurar que existe razon_social
+        if 'razon_social' not in columnas:
+            logger.info("Añadiendo columna razon_social a gastos")
+            try:
+                cursor.execute("ALTER TABLE gastos ADD COLUMN razon_social TEXT")
+            except Exception as e:
+                logger.error(f"No se pudo añadir columna razon_social: {e}")
+
+        # 3. Preparar datos comunes
+        fecha = datos_factura.get('fecha_emision') or datetime.now().strftime('%Y-%m-%d')
+        concepto = datos_factura.get('concepto')
+        
+        # Obtener nombre proveedor
+        cursor.execute("SELECT nombre FROM proveedores WHERE id = ?", (proveedor_id,))
+        res = cursor.fetchone()
+        nombre_proveedor = res[0] if res else 'Desconocido'
+
+        if not concepto:
+            concepto = f"Factura {nombre_proveedor}"
+        
+        importe = float(datos_factura.get('total', 0))
+        # Gastos SIEMPRE en negativo
+        importe_neg = -abs(importe)
+
+        # 4. Insertar según estructura
+        if es_compleja:
+            # Estructura bancaria compleja (caca.db)
+            
+            # Verificar duplicados (misma fecha, concepto e importe)
+            cursor.execute("""
+                SELECT id FROM gastos 
+                WHERE fecha_operacion_iso = ? AND concepto = ? AND ABS(importe_eur - ?) < 0.01
+            """, (fecha, concepto, importe_neg))
+            
+            if cursor.fetchone():
+                logger.info(f"Gasto ya existe para factura {datos_factura.get('numero_factura')}, omitiendo")
+                return
+
+            # Calcular campos extra
+            try:
+                dt = datetime.strptime(fecha, '%Y-%m-%d')
+                ejercicio = dt.year
+                fecha_es = dt.strftime('%d/%m/%Y')
+            except:
+                ejercicio = datetime.now().year
+                fecha_es = fecha
+            
+            ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+            cursor.execute("""
+                INSERT INTO gastos (
+                    fecha_operacion, fecha_valor, concepto, importe_eur, saldo, 
+                    ejercicio, TS, puntual, fecha_operacion_iso, fecha_valor_iso,
+                    razon_social
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                fecha_es, fecha_es, concepto, importe_neg, 0,
+                ejercicio, ts, 0, fecha, fecha,
+                nombre_proveedor
+            ))
+            
+        else:
+            # Estructura simple (init_database.sql)
+            
+            # Verificar duplicados
+            cursor.execute("""
+                SELECT id FROM gastos 
+                WHERE fecha = ? AND concepto = ? AND ABS(importe - ?) < 0.01
+            """, (fecha, concepto, importe_neg))
+            
+            if cursor.fetchone():
+                return
+
+            cursor.execute("""
+                INSERT INTO gastos (fecha, concepto, importe, proveedor, categoria, pagado, razon_social)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                fecha, concepto, importe_neg, nombre_proveedor, 'Compras', 1, nombre_proveedor
+            ))
+            
+        logger.info(f"✓ Gasto registrado automáticamente para factura {datos_factura.get('numero_factura')}")
+
+    except Exception as e:
+        logger.error(f"Error registrando gasto automático: {e}")
+
+
 def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_hash, email_origen=None, usuario='sistema'):
     """
     Guarda una factura en la base de datos
@@ -808,15 +1236,16 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
     cursor = conn.cursor()
     
     try:
-        # Calcular trimestre y año
+        # Calcular fecha de emisión (si falta, usar HOY)
         fecha_emision = datos_factura.get('fecha_emision')
-        if fecha_emision:
-            fecha_obj = datetime.strptime(fecha_emision, '%Y-%m-%d')
-            mes = fecha_obj.month
-            año = fecha_obj.year
-            trimestre = f"Q{(mes - 1) // 3 + 1}"
-        else:
-            trimestre, año, _, _ = obtener_trimestre_actual()
+        if not fecha_emision:
+            fecha_emision = datetime.now().strftime('%Y-%m-%d')
+            
+        # Calcular trimestre y año
+        fecha_obj = datetime.strptime(fecha_emision, '%Y-%m-%d')
+        mes = fecha_obj.month
+        año = fecha_obj.year
+        trimestre = f"Q{(mes - 1) // 3 + 1}"
         
         # Calcular fecha de vencimiento si no viene
         fecha_vencimiento = datos_factura.get('fecha_vencimiento')
@@ -840,6 +1269,22 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
         # Marcar como pagada automáticamente con fecha de emisión como fecha de pago
         fecha_pago = fecha_emision if fecha_emision else datetime.now().strftime('%Y-%m-%d')
         
+        # Lógica inteligente para determinar número de factura si falta
+        numero_factura_final = datos_factura.get('numero_factura')
+        if not numero_factura_final:
+            fecha_str = (fecha_emision or datetime.now().strftime('%Y-%m-%d')).replace('-', '')
+            # CORRECCIÓN: Usar (get() or '') para evitar error None.strip()
+            concepto = (datos_factura.get('concepto') or '').strip()
+            
+            if concepto:
+                # Usar el concepto como base: Limpiar caracteres no alfanuméricos y mayúsculas
+                concepto_limpio = re.sub(r'[^a-zA-Z0-9]', '', concepto).upper()
+                # Acortar si es muy largo y combinar con fecha para unicidad
+                numero_factura_final = f"{concepto_limpio[:20]}-{fecha_str}"
+            else:
+                # Fallback total si no hay ni número ni concepto
+                numero_factura_final = f"SIN-NUM-{fecha_str}-{uuid.uuid4().hex[:6].upper()}"
+        
         cursor.execute("""
             INSERT INTO facturas_proveedores (
                 empresa_id, proveedor_id, numero_factura,
@@ -854,13 +1299,13 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
         """, (
             empresa_id,
             proveedor_id,
-            datos_factura.get('numero_factura'),
+            numero_factura_final,
             fecha_emision,
             fecha_vencimiento,
-            datos_factura.get('base_imponible'),
+            abs(float(datos_factura.get('base_imponible') or 0)), # Siempre positivo
             datos_factura.get('iva_porcentaje', 21),
-            iva_importe,
-            datos_factura.get('total'),
+            abs(float(iva_importe or 0)), # Siempre positivo
+            abs(float(datos_factura.get('total') or 0)), # Siempre positivo
             'pagada',  # Marcar como pagada automáticamente
             fecha_pago,  # Fecha de pago = fecha de emisión
             'transferencia',  # Método de pago por defecto
@@ -878,6 +1323,10 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
         ))
         
         factura_id = cursor.lastrowid
+        
+        # Registrar gasto automáticamente
+        _registrar_gasto_desde_factura(cursor, factura_id, datos_factura, proveedor_id)
+        
         conn.commit()
         
         logger.info(f"✓ Factura guardada: {datos_factura.get('numero_factura')} (ID: {factura_id})")

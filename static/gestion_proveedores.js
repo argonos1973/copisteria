@@ -1,6 +1,6 @@
 /**
  * gestion_proveedores.js
- * Gestión de proveedores
+ * Gestión de proveedores (Vista Grid + Modales)
  */
 
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
@@ -8,6 +8,7 @@ import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 // Variables globales
 let proveedores = [];
 let proveedorEditando = null;
+let proveedorSeleccionado = null; // Para el modal de detalle
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -21,11 +22,27 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function configurarEventListeners() {
-    // Botones
-    document.getElementById('btnNuevoProveedor').addEventListener('click', () => abrirModal());
-    document.getElementById('closeModal').addEventListener('click', cerrarModal);
-    document.getElementById('btnCancelarModal').addEventListener('click', cerrarModal);
+    // Botones Modal Edición
+    document.getElementById('btnNuevoProveedor').addEventListener('click', () => abrirModalEdicion());
+    document.getElementById('closeModal').addEventListener('click', cerrarModalEdicion);
+    document.getElementById('btnCancelarModal').addEventListener('click', cerrarModalEdicion);
     document.getElementById('btnGuardarProveedor').addEventListener('click', guardarProveedor);
+    
+    // Botones Modal Detalle
+    document.getElementById('closeDetalleModal').addEventListener('click', cerrarModalDetalle);
+    document.getElementById('btnCerrarDetalle').addEventListener('click', cerrarModalDetalle);
+    
+    document.getElementById('btnEditarDesdeDetalle').addEventListener('click', () => {
+        cerrarModalDetalle();
+        abrirModalEdicion(proveedorSeleccionado);
+    });
+
+    document.getElementById('btnEliminarDesdeDetalle').addEventListener('click', () => {
+        if (proveedorSeleccionado) {
+            eliminarProveedor(proveedorSeleccionado.id, proveedorSeleccionado.nombre);
+            cerrarModalDetalle();
+        }
+    });
     
     // Filtros
     document.getElementById('busquedaProveedor').addEventListener('input', filtrarProveedores);
@@ -33,8 +50,12 @@ function configurarEventListeners() {
     // Cerrar modal al hacer clic fuera
     window.addEventListener('click', (e) => {
         const modal = document.getElementById('modalProveedor');
+        const modalDetalle = document.getElementById('modalDetalleProveedor');
         if (e.target === modal) {
-            cerrarModal();
+            cerrarModalEdicion();
+        }
+        if (e.target === modalDetalle) {
+            cerrarModalDetalle();
         }
     });
 }
@@ -98,42 +119,42 @@ function renderizarProveedores() {
 
 function crearCardProveedor(proveedor) {
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = 'proveedor-card';
     
+    // Icono basado en si tiene email o no (como indicador de completitud)
+    const iconClass = proveedor.email ? 'fa-building' : 'fa-store-alt';
+    
+    // Calcular estado visual (simulado)
+    const estadoClass = 'status-activo';
+    const estadoTexto = 'Activo';
+
     card.innerHTML = `
-        <div class="card-header">
-            <div class="card-title">
-                <a href="#" onclick="editarProveedor(${proveedor.id}); return false;" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">
-                    ${proveedor.nombre}
-                </a>
+        <div class="proveedor-header">
+            <div class="proveedor-icon">
+                <i class="fas ${iconClass}"></i>
+            </div>
+            <div class="proveedor-status ${estadoClass}">
+                ${estadoTexto}
             </div>
         </div>
-        <div class="card-body">
-            <div class="card-info">
-                <i class="fas fa-id-card"></i> <strong>NIF:</strong> ${proveedor.nif}
-            </div>
-            ${proveedor.email ? `
-                <div class="card-info">
-                    <i class="fas fa-envelope"></i> ${proveedor.email}
-                </div>
-            ` : ''}
-            ${proveedor.telefono ? `
-                <div class="card-info">
-                    <i class="fas fa-phone"></i> ${proveedor.telefono}
-                </div>
-            ` : ''}
-            ${proveedor.direccion ? `
-                <div class="card-info">
-                    <i class="fas fa-map-marker-alt"></i> ${proveedor.direccion}
-                </div>
-            ` : ''}
-        </div>
-        <div class="card-actions">
-            <button class="btn btn-sm btn-danger" onclick="eliminarProveedor(${proveedor.id}, '${proveedor.nombre}')">
-                <i class="fas fa-trash"></i> Eliminar
-            </button>
+        
+        <div class="proveedor-name" title="${proveedor.nombre}">${proveedor.nombre}</div>
+        <div class="proveedor-nif">${proveedor.nif || 'Sin NIF'}</div>
+        
+        <div class="proveedor-info-grid">
+            <div class="info-label"><i class="fas fa-envelope"></i></div>
+            <div class="info-value" title="${proveedor.email || '-'}">${proveedor.email || '-'}</div>
+            
+            <div class="info-label"><i class="fas fa-phone"></i></div>
+            <div class="info-value">${proveedor.telefono || '-'}</div>
+            
+            <div class="info-label"><i class="fas fa-map-marker-alt"></i></div>
+            <div class="info-value" title="${proveedor.direccion || '-'}">${proveedor.poblacion || proveedor.provincia || '-'}</div>
         </div>
     `;
+    
+    // Evento Click para abrir detalle
+    card.addEventListener('click', () => abrirModalDetalle(proveedor));
     
     return card;
 }
@@ -149,7 +170,7 @@ function filtrarProveedores() {
         // Filtro de búsqueda
         return !busqueda || 
             proveedor.nombre.toLowerCase().includes(busqueda) ||
-            proveedor.nif.toLowerCase().includes(busqueda) ||
+            (proveedor.nif && proveedor.nif.toLowerCase().includes(busqueda)) ||
             (proveedor.email && proveedor.email.toLowerCase().includes(busqueda));
     });
     
@@ -174,26 +195,30 @@ function filtrarProveedores() {
 }
 
 // ============================================================================
-// MODAL
+// MODALES
 // ============================================================================
 
-function abrirModal(proveedor = null) {
+function abrirModalEdicion(proveedor = null) {
     proveedorEditando = proveedor;
     
     const modal = document.getElementById('modalProveedor');
     const title = document.getElementById('modalTitle');
     
     if (proveedor) {
-        title.textContent = 'Editar Proveedor';
+        title.innerHTML = '<i class="fas fa-edit"></i> Editar Proveedor';
         document.getElementById('proveedorId').value = proveedor.id;
         document.getElementById('nombre').value = proveedor.nombre;
         document.getElementById('nif').value = proveedor.nif;
         document.getElementById('email').value = proveedor.email || '';
+        document.getElementById('email_facturacion').value = proveedor.email_facturacion || '';
         document.getElementById('telefono').value = proveedor.telefono || '';
         document.getElementById('direccion').value = proveedor.direccion || '';
+        document.getElementById('cp').value = proveedor.cp || '';
+        document.getElementById('poblacion').value = proveedor.poblacion || '';
+        document.getElementById('provincia').value = proveedor.provincia || '';
         document.getElementById('notas').value = proveedor.notas || '';
     } else {
-        title.textContent = 'Nuevo Proveedor';
+        title.innerHTML = '<i class="fas fa-user-plus"></i> Nuevo Proveedor';
         document.getElementById('formProveedor').reset();
         document.getElementById('proveedorId').value = '';
     }
@@ -201,17 +226,98 @@ function abrirModal(proveedor = null) {
     modal.style.display = 'block';
 }
 
-function cerrarModal() {
+function cerrarModalEdicion() {
     document.getElementById('modalProveedor').style.display = 'none';
     proveedorEditando = null;
 }
 
-window.editarProveedor = function(id) {
-    const proveedor = proveedores.find(p => p.id === id);
-    if (proveedor) {
-        abrirModal(proveedor);
-    }
-};
+function abrirModalDetalle(proveedor) {
+    proveedorSeleccionado = proveedor;
+    const modal = document.getElementById('modalDetalleProveedor');
+    const contenido = document.getElementById('detalleProveedorContenido');
+    
+    const direccionCompleta = [
+        proveedor.direccion, 
+        proveedor.cp, 
+        proveedor.poblacion, 
+        proveedor.provincia
+    ].filter(Boolean).join(', ') || 'Sin dirección registrada';
+
+    contenido.innerHTML = `
+        <div class="modal-detail-header">
+            <div class="modal-detail-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <div class="modal-detail-title">
+                <h2>${proveedor.nombre}</h2>
+                <div style="color: var(--text-muted); font-family: monospace; font-size: 1.1em;">
+                    ${proveedor.nif || 'Sin NIF'}
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section-title">
+            <i class="fas fa-address-card"></i> Información de Contacto
+        </div>
+        
+        <div class="modal-detail-grid">
+            <div class="detail-item">
+                <label>Email General</label>
+                <div>${proveedor.email ? `<a href="mailto:${proveedor.email}">${proveedor.email}</a>` : '-'}</div>
+            </div>
+            <div class="detail-item">
+                <label>Email Facturación</label>
+                <div>${proveedor.email_facturacion ? `<a href="mailto:${proveedor.email_facturacion}">${proveedor.email_facturacion}</a>` : '-'}</div>
+            </div>
+            <div class="detail-item">
+                <label>Teléfono</label>
+                <div>${proveedor.telefono ? `<a href="tel:${proveedor.telefono}">${proveedor.telefono}</a>` : '-'}</div>
+            </div>
+        </div>
+
+        <div class="detail-section-title">
+            <i class="fas fa-map-marked-alt"></i> Dirección
+        </div>
+        
+        <div class="modal-detail-grid">
+            <div class="detail-item" style="grid-column: 1/-1;">
+                <label>Dirección Completa</label>
+                <div>${direccionCompleta}</div>
+            </div>
+        </div>
+
+        ${proveedor.notas ? `
+            <div class="detail-section-title">
+                <i class="fas fa-sticky-note"></i> Notas Internas
+            </div>
+            <div style="background: var(--bg-elevated); padding: 10px; border-radius: 6px; font-style: italic; color: var(--text-muted);">
+                ${proveedor.notas}
+            </div>
+        ` : ''}
+        
+        <div class="detail-section-title">
+            <i class="fas fa-info-circle"></i> Metadatos
+        </div>
+        
+        <div class="modal-detail-grid">
+            <div class="detail-item">
+                <label>Fecha Alta</label>
+                <div>${proveedor.fecha_alta ? new Date(proveedor.fecha_alta).toLocaleDateString() : '-'}</div>
+            </div>
+            <div class="detail-item">
+                <label>Origen</label>
+                <div>${proveedor.creado_automaticamente ? 'Automático (OCR)' : 'Manual'}</div>
+            </div>
+        </div>
+    `;
+    
+    modal.style.display = 'block';
+}
+
+function cerrarModalDetalle() {
+    document.getElementById('modalDetalleProveedor').style.display = 'none';
+    proveedorSeleccionado = null;
+}
 
 // ============================================================================
 // GUARDAR
@@ -235,8 +341,12 @@ async function guardarProveedor() {
         nombre,
         nif,
         email: document.getElementById('email').value.trim(),
+        email_facturacion: document.getElementById('email_facturacion').value.trim(),
         telefono: document.getElementById('telefono').value.trim(),
         direccion: document.getElementById('direccion').value.trim(),
+        cp: document.getElementById('cp').value.trim(),
+        poblacion: document.getElementById('poblacion').value.trim(),
+        provincia: document.getElementById('provincia').value.trim(),
         notas: document.getElementById('notas').value.trim()
     };
     
@@ -263,7 +373,7 @@ async function guardarProveedor() {
                 proveedorId ? 'Proveedor actualizado' : 'Proveedor creado',
                 'success'
             );
-            cerrarModal();
+            cerrarModalEdicion();
             cargarProveedores();
         } else {
             throw new Error(data.error || 'Error al guardar proveedor');
@@ -311,5 +421,3 @@ window.eliminarProveedor = async function(id, nombre) {
         mostrarNotificacion('Error: ' + error.message, 'error');
     }
 };
-
-// Versión actualizada - referencias a 'activo' eliminadas

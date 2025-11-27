@@ -110,8 +110,8 @@ function agregarArchivos(files) {
             return;
         }
         
-        if (tamañoMB > 10) {
-            addLog(`⚠️ ${archivo.name}: tamaño máximo 10MB`, 'warning');
+        if (tamañoMB > 20) {
+            addLog(`⚠️ ${archivo.name}: tamaño máximo 20MB`, 'warning');
             return;
         }
         
@@ -131,7 +131,7 @@ function agregarArchivos(files) {
         actualizarStats();
         renderizarArchivos();
         mostrarControles();
-        addLog(`📁 ${archivosArray.length} archivo(s) agregado(s)`, 'info');
+        // addLog(`📁 ${archivosArray.length} archivo(s) agregado(s)`, 'info');
         
         // Mostrar notificación de confirmación para iniciar proceso
         mostrarNotificacionConfirmacion();
@@ -159,20 +159,22 @@ async function mostrarNotificacionConfirmacion() {
     
     const dialog = document.createElement('div');
     dialog.style.cssText = `
-        background: white;
+        background: var(--bg-elevated, #fff);
         padding: 30px;
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         max-width: 500px;
         text-align: center;
+        color: var(--text, #333);
+        border: 1px solid var(--border-color, transparent);
     `;
     
     dialog.innerHTML = `
         <div style="margin-bottom: 20px;">
             <i class="fas fa-file-invoice" style="font-size: 48px; color: #667eea;"></i>
         </div>
-        <h3 style="margin-bottom: 15px; color: #333;">Procesar Facturas</h3>
-        <p style="margin-bottom: 25px; color: #666; font-size: 16px;">${mensaje}</p>
+        <h3 style="margin-bottom: 15px; color: var(--text, #333);">Procesar Facturas</h3>
+        <p style="margin-bottom: 25px; color: var(--text-muted, #666); font-size: 16px;">${mensaje}</p>
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button id="btnConfirmarProcesar" class="btn btn-primary" style="padding: 10px 30px;">
                 <i class="fas fa-play"></i> Procesar Ahora
@@ -265,12 +267,16 @@ function mostrarControles() {
 function actualizarStats() {
     stats.total = archivosSeleccionados.length;
     stats.procesando = archivosSeleccionados.filter(f => f.estado === 'procesando').length;
-    stats.completadas = archivosSeleccionados.filter(f => f.estado === 'completada').length;
+    // Contar completadas Y duplicadas como "completadas" para que cuadren los números
+    stats.completadas = archivosSeleccionados.filter(f => f.estado === 'completada' || f.estado === 'duplicada').length;
     stats.errores = archivosSeleccionados.filter(f => f.estado === 'error').length;
     
+    const duplicadas = archivosSeleccionados.filter(f => f.estado === 'duplicada').length;
+    const textoCompletadas = duplicadas > 0 ? `${stats.completadas} (${duplicadas} dupl.)` : stats.completadas;
+
     document.getElementById('statTotal').textContent = stats.total;
     document.getElementById('statProcesando').textContent = stats.procesando;
-    document.getElementById('statCompletadas').textContent = stats.completadas;
+    document.getElementById('statCompletadas').textContent = textoCompletadas;
     document.getElementById('statErrores').textContent = stats.errores;
 }
 
@@ -286,7 +292,7 @@ async function procesarTodas() {
     document.getElementById('uploadZone').style.opacity = '0.5';
     document.getElementById('uploadZone').style.pointerEvents = 'none';
     
-    addLog('🚀 Iniciando procesamiento masivo...', 'info');
+    // addLog('🚀 Iniciando procesamiento masivo...', 'info');
     
     // Procesar archivos secuencialmente
     for (const item of archivosSeleccionados) {
@@ -302,14 +308,17 @@ async function procesarTodas() {
     document.getElementById('uploadZone').style.opacity = '1';
     document.getElementById('uploadZone').style.pointerEvents = 'auto';
     
-    addLog('✅ Procesamiento completado', 'success');
+    // addLog('✅ Procesamiento completado', 'success');
     
     // Si hubo errores, mostrar resumen detallado
     if (stats.errores > 0) {
         mostrarModalErrores();
     } else {
+        const duplicadas = archivosSeleccionados.filter(f => f.estado === 'duplicada').length;
+        const guardadas = archivosSeleccionados.filter(f => f.estado === 'completada').length;
+        
         mostrarNotificacion(
-            `Procesamiento completado: ${stats.completadas} exitosas`,
+            `Procesamiento completado: ${guardadas} guardadas, ${duplicadas} duplicadas`,
             'success'
         );
     }
@@ -342,25 +351,27 @@ function mostrarModalErrores() {
     
     const dialog = document.createElement('div');
     dialog.style.cssText = `
-        background: white;
+        background: var(--bg-elevated, #fff);
         padding: 30px;
         border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         max-width: 600px;
         width: 90%;
         text-align: center;
+        color: var(--text, #333);
+        border: 1px solid var(--border-color, transparent);
     `;
     
     dialog.innerHTML = `
         <div style="margin-bottom: 20px;">
             <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #dc3545;"></i>
         </div>
-        <h3 style="margin-bottom: 15px; color: #333;">Procesamiento finalizado con errores</h3>
-        <p style="margin-bottom: 15px; color: #666;">
+        <h3 style="margin-bottom: 15px; color: var(--text, #333);">Procesamiento finalizado con errores</h3>
+        <p style="margin-bottom: 15px; color: var(--text-muted, #666);">
             Se completaron ${stats.completadas} facturas correctamente, pero ocurrieron ${stats.errores} errores:
         </p>
         
-        <div style="background: #fff3f3; border: 1px solid #ffcdd2; border-radius: 6px; padding: 10px; margin-bottom: 20px;">
+        <div style="background: rgba(220, 53, 69, 0.1); border: 1px solid var(--border-color, #ffcdd2); border-radius: 6px; padding: 10px; margin-bottom: 20px; color: var(--text, #333);">
             ${listaErrores}
         </div>
         
@@ -393,7 +404,7 @@ async function procesarArchivo(item) {
         renderizarArchivos();
         mostrarIndicadorProcesamiento(item.archivo.name, 'Escaneando con IA...');
         
-        addLog(`📄 Procesando: ${item.archivo.name}`, 'info');
+        // addLog(`📄 Procesando: ${item.archivo.name}`, 'info');
         
         // 1. Escanear con OCR
         const datosOCR = await escanearFactura(item.archivo);
@@ -406,7 +417,7 @@ async function procesarArchivo(item) {
         const total = datosOCR.factura?.total || '0.00';
         actualizarIndicadorConDatos(proveedor, total, 'Extrayendo datos del proveedor...');
         
-        addLog(`  ✓ OCR completado: ${proveedor}`, 'success');
+        // addLog(`  ✓ OCR completado: ${proveedor}`, 'success');
         
         // 2. Buscar o crear proveedor
         item.mensaje = 'Buscando proveedor...';
@@ -416,11 +427,21 @@ async function procesarArchivo(item) {
         // Validar que existan datos de proveedor
         const datosProveedor = datosOCR.proveedor || { nombre: 'Proveedor Desconocido' };
         
+        // REGLA: Si no hay NIF, usar el Concepto como nombre del proveedor (para recibos, autónomos, etc)
+        if (!datosProveedor.nif && datosOCR.factura?.concepto) {
+            datosProveedor.nombre = datosOCR.factura.concepto;
+        }
+
+        // REGLA: Todo en mayúsculas (nombre de proveedor)
+        if (datosProveedor.nombre) {
+            datosProveedor.nombre = datosProveedor.nombre.toUpperCase();
+        }
+        
         const proveedorId = await buscarOCrearProveedorSilencioso(datosProveedor);
         item.progreso = 60;
         renderizarArchivos();
         
-        addLog(`  ✓ Proveedor: ${datosProveedor.nombre} (ID: ${proveedorId})`, 'success');
+        // addLog(`  ✓ Proveedor: ${datosProveedor.nombre} (ID: ${proveedorId})`, 'success');
         
         // 3. Guardar factura
         item.mensaje = 'Guardando factura...';
@@ -438,7 +459,7 @@ async function procesarArchivo(item) {
         } else {
             item.estado = 'completada';
             item.mensaje = '✓ Completada';
-            addLog(`  ✅ Factura guardada: ${datosOCR.factura?.numero}`, 'success');
+            // addLog(`  ✅ Factura guardada: ${datosOCR.factura?.numero}`, 'success');
         }
         
     } catch (error) {
@@ -487,7 +508,7 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
     
     // Si no tiene NIF, crear con nombre solamente
     if (!datosProveedor.nif) {
-        addLog(`  ⚠️ Proveedor sin NIF: ${datosProveedor.nombre}`, 'warning');
+        // addLog(`  ⚠️ Proveedor sin NIF: ${datosProveedor.nombre}`, 'warning');
         // Buscar por nombre exacto
         const responseList = await fetch('/api/proveedores/listar?activos=false');
         const dataList = await responseList.json();
@@ -498,7 +519,7 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
             );
             
             if (proveedorExistente) {
-                addLog(`  ✓ Proveedor encontrado por nombre: ${proveedorExistente.nombre} (ID: ${proveedorExistente.id})`, 'success');
+                // addLog(`  ✓ Proveedor encontrado por nombre: ${proveedorExistente.nombre} (ID: ${proveedorExistente.id})`, 'success');
                 return proveedorExistente.id;
             }
         }
@@ -524,7 +545,7 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
         if (data.success) {
             // Backend retorna { success: true, id: ..., message: ... } pero a veces no data.proveedor
             const proveedorId = data.id || data.proveedor?.id;
-            addLog(`  ✓ Proveedor creado sin NIF: ${nuevoProveedor.nombre} (ID: ${proveedorId})`, 'success');
+            // addLog(`  ✓ Proveedor creado sin NIF: ${nuevoProveedor.nombre} (ID: ${proveedorId})`, 'success');
             return proveedorId;
         }
         
@@ -574,9 +595,9 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
         proveedoresCache.set(nifLower, proveedor);
         
         if (data.ya_existia) {
-            addLog(`  ✓ Proveedor existente: ${proveedor.nombre} (ID: ${proveedor.id})`, 'info');
+            // addLog(`  ✓ Proveedor existente: ${proveedor.nombre} (ID: ${proveedor.id})`, 'info');
         } else {
-            addLog(`  ✓ Proveedor creado: ${proveedor.nombre} (ID: ${proveedor.id})`, 'success');
+            // addLog(`  ✓ Proveedor creado: ${proveedor.nombre} (ID: ${proveedor.id})`, 'success');
         }
         
         return proveedor.id;
@@ -594,7 +615,7 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
         
         if (proveedorExistente) {
             proveedoresCache.set(nifLower, proveedorExistente);
-            addLog(`  ✓ Proveedor existente: ${proveedorExistente.nombre} (ID: ${proveedorExistente.id})`, 'info');
+            // addLog(`  ✓ Proveedor existente: ${proveedorExistente.nombre} (ID: ${proveedorExistente.id})`, 'info');
             return proveedorExistente.id;
         }
     }

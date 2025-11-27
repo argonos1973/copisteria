@@ -667,6 +667,28 @@ function mostrarModalEditar(factura) {
     baseInput.addEventListener('input', calcular);
     ivaSelect.addEventListener('change', calcular);
     
+    // Cargar previsualización en iframe
+    const previewFrame = document.getElementById('editar-preview-frame');
+    const previewPlaceholder = document.getElementById('editar-preview-placeholder');
+    
+    if (factura.id) {
+        // Usar el endpoint de descarga/visualización
+        const url = `/api/facturas-proveedores/${factura.id}/pdf`;
+        previewFrame.src = url;
+        previewFrame.style.display = 'block';
+        if (previewPlaceholder) previewPlaceholder.style.display = 'none';
+        
+        // Manejar error de carga en el iframe
+        previewFrame.onerror = function() {
+            previewFrame.style.display = 'none';
+            if (previewPlaceholder) previewPlaceholder.style.display = 'flex';
+        };
+    } else {
+        previewFrame.src = '';
+        previewFrame.style.display = 'none';
+        if (previewPlaceholder) previewPlaceholder.style.display = 'flex';
+    }
+    
     abrirModal('modalEditar');
 }
 

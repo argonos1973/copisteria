@@ -579,7 +579,8 @@ input::placeholder, textarea::placeholder {
     color: var(--modal-text) !important;
     border: var(--modal-border-width) solid var(--modal-border) !important;
     border-radius: var(--modal-border-radius) !important;
-    box-shadow: var(--modal-shadow) !important;
+    /* Sombra con borde blanco sutil para destacar en oscuro + sombra normal */
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15), var(--modal-shadow) !important;
 }
 
 .modal-overlay {
@@ -744,6 +745,179 @@ input::placeholder, textarea::placeholder {
 .modal-footer button:hover,
 .modal-footer .btn:hover {
     background: var(--modal-button-hover-bg, var(--button-hover-bg)) !important;
+}
+
+/* ==================== GRID DE PROVEEDORES ==================== */
+.proveedores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
+}
+
+.proveedor-card {
+    background: var(--bg-elevated, #ffffff) !important;
+    border: 1px solid var(--border, #e0e0e0);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+    box-shadow: 0 2px 4px var(--shadow, rgba(0,0,0,0.05));
+}
+
+.proveedor-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px var(--shadow-hover, rgba(0,0,0,0.1));
+    border-color: var(--primary, #3b82f6);
+}
+
+.proveedor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.proveedor-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--bg, #f8f9fa);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: var(--primary, #3b82f6) !important;
+    border: 1px solid var(--border, #e0e0e0);
+}
+
+.proveedor-status {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-activo {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success, #10b981);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-inactivo {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger, #ef4444);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.proveedor-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text, #333);
+    margin-bottom: 5px;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.proveedor-nif {
+    font-size: 0.9rem;
+    color: var(--text-muted, #666);
+    margin-bottom: 15px;
+    font-family: monospace;
+}
+
+.proveedor-info-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 12px;
+    font-size: 0.9rem;
+    margin-top: auto;
+}
+
+.info-label {
+    color: var(--text-muted, #999);
+    display: flex;
+    align-items: center;
+}
+
+.info-value {
+    color: var(--text, #333);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Modal Detalles Proveedor */
+.modal-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border, #eee);
+    margin-bottom: 20px;
+}
+
+.modal-detail-icon {
+    width: 80px;
+    height: 80px;
+    background: var(--bg, #f8f9fa);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    color: var(--primary, #3b82f6) !important;
+    border: 1px solid var(--border, #e0e0e0);
+}
+
+.modal-detail-title h2 {
+    margin: 0 0 5px 0;
+    color: var(--text, #333);
+}
+
+.modal-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-bottom: 25px;
+}
+
+.detail-item label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-muted, #666);
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.detail-item div {
+    font-size: 1rem;
+    color: var(--text, #333);
+    font-weight: 500;
+}
+
+.detail-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary, #3b82f6);
+    margin: 20px 0 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.detail-section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border, #eee);
 }
 
 /* ==================== CARDS ==================== */
