@@ -1,4 +1,4 @@
-/* Estilos específicos para Gestión de Proveedores */
+/* Estilos específicos para Gestión de Proveedores - TEMA DINÁMICO */
 
 .proveedores-page { padding-bottom: 0 !important; }
 
@@ -18,7 +18,6 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
-    /* Fondo transparente para ver el grid limpio */
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -32,22 +31,22 @@
     padding-right: 5px;
 }
 
-/* Estilos de tabla */
+/* Estilos de tabla - Usando variables del tema */
 table {
     width: 100%;
     border-collapse: collapse;
-    background: var(--bg-elevated, #fff);
+    background: var(--table-bg, var(--bg-elevated, #fff));
     border-radius: 8px;
     overflow: hidden;
 }
 
 th {
-    background: var(--bg-header, #f8f9fa);
+    background: var(--table-header-bg, var(--bg-header, #f8f9fa));
     padding: 12px 15px;
     text-align: left;
     font-weight: 600;
-    color: var(--text-secondary, #666);
-    border-bottom: 2px solid var(--border-color, #e0e0e0);
+    color: var(--table-header-text, var(--text-secondary, #666));
+    border-bottom: 2px solid var(--border-color, var(--border, #e0e0e0));
     position: sticky;
     top: 0;
     z-index: 10;
@@ -55,8 +54,8 @@ th {
 
 td {
     padding: 10px 15px;
-    border-bottom: 1px solid var(--border-color, #eee);
-    color: var(--text-primary, #333);
+    border-bottom: 1px solid var(--border-color, var(--border, #eee));
+    color: var(--table-text, var(--text-primary, #333));
     vertical-align: middle;
 }
 
@@ -67,7 +66,7 @@ tbody tr {
 }
 
 tbody tr:hover {
-    background-color: rgba(0, 123, 255, 0.05) !important;
+    background-color: var(--table-row-hover, rgba(0, 123, 255, 0.05)) !important;
 }
 
 /* Botones de acción compactos */
@@ -87,7 +86,7 @@ tbody tr:hover {
 }
 
 .btn-action.btn-danger {
-    background: var(--danger-color, #dc3545) !important;
+    background: var(--danger, #dc3545) !important;
     color: white !important;
 }
 
@@ -100,7 +99,7 @@ tbody tr:hover {
 
 /* Modal con fondo semi-transparente */
 #modalProveedor, #modalDetalleProveedor {
-    background: rgba(0, 0, 0, 0.5) !important;
+    background: var(--modal-overlay, rgba(0, 0, 0, 0.5)) !important;
     backdrop-filter: blur(2px);
 }
 
@@ -109,7 +108,7 @@ tbody tr:hover {
 .text-bold { font-weight: bold; }
 .text-mono { font-family: monospace; }
 .text-large { font-size: 1.5rem; }
-.text-muted { color: var(--text-muted); }
+.text-muted { color: var(--text-muted, #999); }
 .text-small { font-size: 0.85rem; }
 .mt-2 { margin-top: 0.5rem; }
 .mr-auto { margin-right: auto; }
@@ -123,7 +122,7 @@ tbody tr:hover {
 }
 
 .bg-elevated { 
-    background: var(--bg-elevated); 
+    background: var(--bg-elevated, #fff); 
     padding: 10px; 
     border-radius: 6px; 
 }
@@ -137,7 +136,7 @@ tbody tr:hover {
 .modal-detail-nif {
     font-family: monospace; 
     font-size: 1.1em; 
-    color: var(--text-muted);
+    color: var(--text-muted, #666);
 }
 
 /* Utilidades específicas añadidas */
