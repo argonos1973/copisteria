@@ -796,6 +796,26 @@ def obtener_o_crear_proveedor(nif, nombre, empresa_id, datos_adicionales=None, e
         proveedor = obtener_proveedor_por_nif(nif, empresa_id)
         if proveedor:
             logger.info(f"✓ Proveedor encontrado por NIF: {proveedor['nombre']} (ID: {proveedor['id']})")
+            
+            # AUTOCORRECCIÓN DE NOMBRE GENÉRICO
+            # Si el proveedor existente tiene un nombre "malo" (SIN NOMBRE, etc) y el nuevo es "bueno", actualizarlo.
+            nombre_existente = (proveedor['nombre'] or '').upper()
+            nuevo_nombre = (nombre or '').upper()
+            es_generico = 'SIN NOMBRE' in nombre_existente or 'NO IDENTIFICADO' in nombre_existente or 'GASTOS VARIOS' in nombre_existente or 'PROVEEDOR DESCONOCIDO' in nombre_existente or len(nombre_existente) < 3
+            es_valido = nuevo_nombre and len(nuevo_nombre) > 2 and 'SIN NOMBRE' not in nuevo_nombre and nuevo_nombre not in ['FACTURA', 'ALBARAN']
+            
+            if es_generico and es_valido:
+                logger.info(f"🔄 AUTO-CORRECCIÓN: Actualizando nombre genérico '{nombre_existente}' -> '{nuevo_nombre}'")
+                try:
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE proveedores SET nombre = ? WHERE id = ?", (nuevo_nombre, proveedor['id']))
+                    conn.commit()
+                    conn.close()
+                    proveedor['nombre'] = nuevo_nombre # Actualizar dict local
+                except Exception as e:
+                    logger.error(f"Error en auto-corrección de nombre: {e}")
+
             actualizar_datos_faltantes(proveedor['id'], proveedor, datos_adicionales)
             return proveedor['id']
     
@@ -1157,14 +1177,21 @@ def _registrar_gasto_desde_factura(cursor, factura_id, datos_factura, proveedor_
         if es_compleja:
             # Estructura bancaria compleja (caca.db)
             
-            # Verificar duplicados (misma fecha, concepto e importe)
+            # MEJORA: Verificar duplicados de forma más laxa (Importe + Fecha es suficiente indicio)
+            # A veces el concepto varía ("Recibo..." vs "Factura...") pero es el mismo cargo
+            # MODIFICACION: Usar rango de fechas para conciliación automática (+/- 4 días)
+            # IMPORTANTE: Ignorar razon_social porque el OCR a veces falla y coge el concepto en lugar del proveedor
             cursor.execute("""
-                SELECT id FROM gastos 
-                WHERE fecha_operacion_iso = ? AND concepto = ? AND ABS(importe_eur - ?) < 0.01
-            """, (fecha, concepto, importe_neg))
+                SELECT id, concepto, fecha_operacion_iso FROM gastos 
+                WHERE ABS(importe_eur - ?) < 0.01
+                AND fecha_operacion_iso >= date(?, '-4 days') 
+                AND fecha_operacion_iso <= date(?, '+4 days')
+            """, (importe_neg, fecha, fecha))
             
-            if cursor.fetchone():
-                logger.info(f"Gasto ya existe para factura {datos_factura.get('numero_factura')}, omitiendo")
+            duplicado = cursor.fetchone()
+            
+            if duplicado:
+                logger.info(f"Gasto ya existe (conciliación por fecha aprox {duplicado[2]} vs {fecha}) para factura {datos_factura.get('numero_factura')} (ID Gasto: {duplicado[0]}), omitiendo registro duplicado")
                 return
 
             # Calcular campos extra
@@ -1238,11 +1265,20 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
     try:
         # Calcular fecha de emisión (si falta, usar HOY)
         fecha_emision = datos_factura.get('fecha_emision')
-        if not fecha_emision:
+        
+        # Validación robusta: Si es None, vacío o 'NULL' (string), usar hoy
+        if not fecha_emision or str(fecha_emision).upper() == 'NULL' or str(fecha_emision).strip() == '':
             fecha_emision = datetime.now().strftime('%Y-%m-%d')
             
         # Calcular trimestre y año
-        fecha_obj = datetime.strptime(fecha_emision, '%Y-%m-%d')
+        try:
+            fecha_obj = datetime.strptime(fecha_emision, '%Y-%m-%d')
+        except ValueError:
+            # Si el formato es incorrecto, intentar arreglarlo o usar hoy
+            logger.warning(f"Fecha inválida '{fecha_emision}', usando fecha actual")
+            fecha_obj = datetime.now()
+            fecha_emision = fecha_obj.strftime('%Y-%m-%d')
+
         mes = fecha_obj.month
         año = fecha_obj.year
         trimestre = f"Q{(mes - 1) // 3 + 1}"

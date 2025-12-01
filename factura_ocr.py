@@ -8,7 +8,7 @@ import os
 import json
 import io
 import re
-from PIL import Image
+from PIL import Image, ImageEnhance
 from logger_config import get_logger
 
 logger = get_logger(__name__)
@@ -37,13 +37,14 @@ except ImportError:
     logger.warning("pdf2image no disponible - No se podrán procesar archivos PDF")
 
 
-def extraer_datos_factura_gpt4(imagen_bytes):
+def extraer_datos_factura_gpt4(imagen_bytes, nif_cliente=None):
     """
     Extrae datos de factura usando GPT-4 Vision API
     Soporta imágenes (JPG, PNG) y PDFs (convirtiéndolos a imagen)
     
     Args:
         imagen_bytes: Bytes de la imagen o PDF de la factura
+        nif_cliente: (Opcional) NIF de la empresa cliente para ignorarlo explícitamente
         
     Returns:
         dict: Datos estructurados de la factura
@@ -81,9 +82,9 @@ def extraer_datos_factura_gpt4(imagen_bytes):
             image_obj = image_obj.resize(new_size, Image.Resampling.LANCZOS)
             logger.info(f"📉 Imagen redimensionada a {new_size}")
 
-        # Guardar en buffer como JPEG optimizado
+        # Guardar en buffer como JPEG optimizado (IMAGEN A COLOR - mejor para logos)
         img_buffer = io.BytesIO()
-        image_obj = image_obj.convert('RGB') # Asegurar RGB
+        image_obj = image_obj.convert('RGB') 
         image_obj.save(img_buffer, format='JPEG', quality=85, optimize=True)
         imagen_bytes = img_buffer.getvalue()
         logger.info(f"✅ Imagen lista para OCR (Tamaño: {len(imagen_bytes)/1024:.2f} KB)")
@@ -94,68 +95,77 @@ def extraer_datos_factura_gpt4(imagen_bytes):
         # Inicializar cliente OpenAI
         client = OpenAI(api_key=OPENAI_API_KEY)
         
+        # Construir instrucción de ignorar cliente
+        instruccion_ignorar_cliente = ""
+        if nif_cliente:
+            instruccion_ignorar_cliente = f'   - **IGNORA EL NIF DEL CLIENTE**: "{nif_cliente}". NO lo confundas con el proveedor.'
+
         # Prompt para extraer datos estructurados de factura
-        prompt = """Analiza esta imagen de FACTURA, TICKET O RECIBO BANCARIO y extrae los datos.
+        prompt = f"""Analiza esta imagen de FACTURA.
 
-PASO 1 - IDENTIFICAR AL PROVEEDOR (MUY IMPORTANTE):
-El proveedor es la EMPRESA QUE EMITE la factura.
-- Busca el LOGOTIPO principal. Esa es la marca.
-- Busca la RAZÓN SOCIAL (S.L., S.A., etc) para confirmar.
-- Busca el CIF/NIF.
+TU MISIÓN CRÍTICA: Identificar el NOMBRE COMERCIAL del PROVEEDOR (quien emite la factura) y su NIF.
 
-PASO 2 - NORMALIZACIÓN DEL NOMBRE DEL PROVEEDOR (CRÍTICO):
-Para el campo "nombre", debes devolver la MARCA COMERCIAL o NOMBRE COMÚN, simplificado y en MAYÚSCULAS.
-- ELIMINA sufijos legales: S.L., S.A., S.L.U., S.A.U., C.B., S.C., etc.
-- ELIMINA apellidos geográficos o funcionales si son secundarios a la marca principal.
-- EJEMPLOS:
-  * "VODAFONE ESPAÑA S.A.U." -> "VODAFONE"
-  * "VODAFONE SERVICIOS S.L." -> "VODAFONE"
-  * "UNIÓN PAPELERA MERCHANTING S.L." -> "UNIÓN PAPELERA"
-  * "AMAZON EU SARL SUCURSAL EN ESPAÑA" -> "AMAZON"
-  * "REPSOL COMERCIAL DE PRODUCTOS PETROLIFEROS S.A." -> "REPSOL"
-- El objetivo es que facturas de distintas filiales de la misma empresa (mismo logo) tengan el MISMO "nombre".
+⚠️ **ADVERTENCIA DE CONFUSIÓN**: En la factura aparecen dos entidades:
+1. **EMISOR (Proveedor)**: Quien cobra. Su logo suele estar arriba.
+2. **RECEPTOR (Cliente)**: Quien paga. Suele ser "COPISTERÍA ALEPH", "ALEPH70" o "SAMUEL". **IGNORA SUS DATOS**.
 
-PASO 3 - Devuelve un JSON con esta estructura:
-{
-  "proveedor": {
-    "nombre": "MARCA COMERCIAL NORMALIZADA (ej: VODAFONE)",
-    "razon_social_completa": "Nombre legal completo tal cual aparece (ej: VODAFONE ESPAÑA S.A.U.)",
-    "nif": "CIF/NIF del proveedor (ej: B12345678)",
-    "direccion": "dirección completa del proveedor",
-    "telefono": "teléfono del proveedor",
-    "email": "email del proveedor"
-  },
-  "factura": {
-    "numero": "número de factura/ticket/documento",
+ESTRATEGIA DE BÚSQUEDA VISUAL (PRIORIDAD MÁXIMA):
+1. **LOGOTIPO GRANDE**: Mira la cabecera. Busca textos estilizados, artísticos o de colores.
+   - Si ves un logo rojo que dice "ARADA", el proveedor es "ARADA".
+   - Si ves "UP" grande, es "UNION PAPELERA".
+   - El nombre suele estar DENTRO del logo.
+
+2. **NIF DEL PROVEEDOR**:
+   - Busca el NIF cerca del nombre del proveedor o al pie de página.
+   - **CRÍTICO**: Si encuentras el NIF del cliente (B63542542 o similar), **IGNÓRALO**. Busca el OTRO NIF.
+{instruccion_ignorar_cliente}
+
+3. **DATOS FISCALES**:
+   - Busca el bloque "Datos del Emisor" o "De:".
+
+4. **DOMINIO WEB / EMAIL**:
+   - 'www.miempresa.com' -> 'MIEMPRESA'.
+
+VALIDACIÓN:
+- Si no ves un logo claro ni un nombre fiscal claro, devuelve "PROVEEDOR DESCONOCIDO".
+- NO uses palabras genéricas como "FACTURA", "ALBARAN".
+- Limpia el nombre (sin S.L., S.A.).
+
+EXTRAER DATOS EN JSON:
+- Nombre: EL TEXTO DEL LOGOTIPO O NOMBRE COMERCIAL (en mayúsculas).
+- NIF: El CIF/NIF del emisor.
+- Direccion: Dirección del emisor.
+- Telefono: Teléfono del emisor.
+- Email: Email del emisor.
+- Website: Web del emisor.
+
+ESTRUCTURA JSON REQUERIDA:
+{{
+  "proveedor": {{
+    "nombre": "TEXTO_DEL_LOGO",
+    "nif": "CIF_ENCONTRADO_O_NULL",
+    "direccion": "...",
+    "telefono": "...",
+    "email": "...",
+    "website": "..."
+  }},
+  "factura": {{
+    "numero": "...",
     "fecha_emision": "YYYY-MM-DD",
     "fecha_vencimiento": "YYYY-MM-DD",
     "base_imponible": 0.00,
     "iva": 0.00,
     "total": 0.00,
-    "concepto": "descripción breve del contenido"
-  },
-  "lineas_detalle": [
-    {
-      "codigo": "código del artículo",
-      "descripcion": "descripción del producto/servicio",
-      "importe": 0.00
-    }
-  ]
-}
-
-REGLAS:
-- El nombre del proveedor es OBLIGATORIO.
-- Usa "" (vacío) si un campo no aparece.
-- Ignora datos del cliente.
-- Fechas YYYY-MM-DD.
-- Importes decimales.
+    "concepto": "..."
+  }}
+}}
 """
 
         logger.info("📤 Enviando factura a GPT-4 Vision...")
         
         # Llamar a GPT-4 Vision API
         response = client.chat.completions.create(
-            model="gpt-4o",  # Modelo más reciente y eficiente
+            model="gpt-4o",
             messages=[
                 {
                     "role": "user",
@@ -168,15 +178,15 @@ REGLAS:
                             "type": "image_url",
                             "image_url": {
                                 "url": f"data:image/jpeg;base64,{base64_image}",
-                                "detail": "high"  # Alta resolución para mejor OCR
+                                "detail": "high"
                             }
                         }
                     ]
                 }
             ],
             max_tokens=4000,
-            temperature=0.1,  # Baja temperatura para respuestas más determinísticas
-            response_format={"type": "json_object"}  # Forzar respuesta JSON válida
+            temperature=0.1,
+            response_format={"type": "json_object"}
         )
         
         # Extraer respuesta
@@ -189,110 +199,108 @@ REGLAS:
         logger.info(f"📥 Respuesta de GPT-4 Vision: {respuesta_texto[:200]}...")
         
         # Parsear JSON
-        # Limpiar posibles markdown code blocks
-        
-        # 1. Intentar extraer JSON con regex (más robusto)
         json_match = re.search(r'\{.*\}', respuesta_texto, re.DOTALL)
         if json_match:
             respuesta_texto_limpia = json_match.group(0)
         else:
-            # 2. Fallback a limpieza manual
-            respuesta_texto_limpia = respuesta_texto
-            if respuesta_texto_limpia.startswith('```'):
-                parts = respuesta_texto_limpia.split('```')
-                if len(parts) > 1:
-                    respuesta_texto_limpia = parts[1]
-                    if respuesta_texto_limpia.startswith('json'):
-                        respuesta_texto_limpia = respuesta_texto_limpia[4:]
-            respuesta_texto_limpia = respuesta_texto_limpia.strip()
+            respuesta_texto_limpia = respuesta_texto.strip()
+            if respuesta_texto_limpia.startswith('```json'):
+                respuesta_texto_limpia = respuesta_texto_limpia[7:]
+            if respuesta_texto_limpia.endswith('```'):
+                respuesta_texto_limpia = respuesta_texto_limpia[:-3]
         
-        if not respuesta_texto_limpia:
-             logger.error(f"Respuesta de GPT-4 vacía o sin JSON. Raw: {respuesta_texto}")
-             raise ValueError("La respuesta de GPT-4 está vacía o no contiene JSON válido")
-
-        # Validación extra: debe empezar por { y terminar por }
-        if not respuesta_texto_limpia.startswith('{'):
-             logger.error(f"La respuesta no parece un JSON válido. Raw: {respuesta_texto_limpia}")
-             raise ValueError(f"GPT-4 devolvió texto plano en lugar de JSON: {respuesta_texto_limpia[:50]}...")
-
         datos = json.loads(respuesta_texto_limpia)
         
-        # Validar estructura
-        if 'proveedor' not in datos or 'factura' not in datos:
-            logger.error("Respuesta de GPT-4 no tiene la estructura esperada")
-            raise ValueError("Estructura de respuesta inválida")
-        
         # Limpiar y validar datos
-        # CORRECCIÓN: Usar (get() or '') para evitar que un valor null provoque error en .strip()
         prov_raw = datos.get('proveedor') or {}
         fact_raw = datos.get('factura') or {}
         
+        def clean_val(v):
+            if not v: return ""
+            s = str(v).strip()
+            # Eliminar "NULL", "NONE" del OCR
+            return "" if s.upper() in ['NULL', 'NONE', 'N/A', 'NO', 'NO CONSTA'] else s
+
         datos_limpios = {
             'proveedor': {
-                'nombre': (prov_raw.get('nombre') or '').strip().upper(),
-                'nif': (prov_raw.get('nif') or '').strip().upper(),
-                'direccion': (prov_raw.get('direccion') or '').strip(),
-                'telefono': (prov_raw.get('telefono') or '').strip(),
-                'email': (prov_raw.get('email') or '').strip(),
+                'nombre': clean_val(prov_raw.get('nombre')).upper(),
+                'nif': clean_val(prov_raw.get('nif')).upper(),
+                'direccion': clean_val(prov_raw.get('direccion')),
+                'telefono': clean_val(prov_raw.get('telefono')),
+                'email': clean_val(prov_raw.get('email')),
+                'website': clean_val(prov_raw.get('website')).lower(),
             },
             'factura': {
-                'numero': (fact_raw.get('numero') or '').strip(),
-                'fecha_emision': (fact_raw.get('fecha_emision') or '').strip(),
-                'fecha_vencimiento': (fact_raw.get('fecha_vencimiento') or '').strip(),
+                'numero': clean_val(fact_raw.get('numero')),
+                'fecha_emision': clean_val(fact_raw.get('fecha_emision')),
+                'fecha_vencimiento': clean_val(fact_raw.get('fecha_vencimiento')),
                 'base_imponible': str(fact_raw.get('base_imponible') or '').strip(),
                 'iva': str(fact_raw.get('iva') or '').strip(),
                 'total': str(fact_raw.get('total') or '').strip(),
-                'concepto': (fact_raw.get('concepto') or '').strip(),
+                'concepto': clean_val(fact_raw.get('concepto')),
             }
         }
         
         logger.info(f"✅ GPT-4 Vision extrajo datos de factura correctamente")
-        logger.info(f"   Proveedor: {datos_limpios['proveedor']['nombre']}")
-        logger.info(f"   Factura: {datos_limpios['factura']['numero']}")
-        logger.info(f"   Total: {datos_limpios['factura']['total']}")
         
-        # Validación estructural inteligente del nombre del proveedor
+        # Validación inteligente del nombre del proveedor
         nombre_prov = datos_limpios['proveedor']['nombre']
-        nif_prov = datos_limpios['proveedor']['nif']
+        logger.info(f"🔍 Validando nombre proveedor RAW: '{nombre_prov}'")
+        print(f"DEBUG: Validando nombre proveedor: '{nombre_prov}'")
         
-        # Si tiene NIF válido (empieza por letra y tiene 8-9 caracteres alfanuméricos), confiamos más
-        nif_valido = bool(nif_prov and len(nif_prov) >= 8 and nif_prov[0].isalpha())
-        
-        # Verificar si el nombre parece una DESCRIPCIÓN DE PRODUCTO en lugar de empresa
-        es_descripcion_producto = False
+        es_descripcion = False
+
         if nombre_prov:
             nombre_upper = nombre_prov.upper()
-            palabras = nombre_upper.split()
             
-            # Indicadores de que ES una empresa válida
-            indicadores_empresa = ['S.L.', 'SL', 'S.A.', 'SA', 'S.L.U.', 'SLU', 'C.B.', 'S.C.', 'LTDA', 'INC', 'CORP']
-            tiene_indicador_empresa = any(ind in nombre_upper for ind in indicadores_empresa)
+            # HARDFIX: Verificación manual explícita para depuración
+            if "PAPEL" in nombre_upper or "FOTOCOPIA" in nombre_upper:
+                logger.warning(f"🚨 DETECTADO 'PAPEL' O 'FOTOCOPIA' EN NOMBRE. FORZANDO RECHAZO.")
+                es_descripcion = True
             
-            # Si tiene indicador de empresa, es válido
-            if tiene_indicador_empresa:
-                logger.info(f"✅ Proveedor válido (tiene indicador empresa): '{nombre_prov}'")
-            elif nif_valido:
-                logger.info(f"✅ Proveedor válido (tiene NIF válido {nif_prov}): '{nombre_prov}'")
-            else:
-                # Sin indicador de empresa ni NIF válido, verificar estructura
-                # Las descripciones de producto suelen ser largas y tener conectores
-                conectores_descripcion = [' Y ', ' DE ', ' PARA ', ' CON ', ' EN ']
-                tiene_conectores = sum(1 for c in conectores_descripcion if c in nombre_upper) >= 2
-                
-                # Más de 4 palabras sin indicador de empresa es sospechoso
-                if len(palabras) > 4 and tiene_conectores:
-                    es_descripcion_producto = True
-                    logger.warning(f"⚠️ Nombre parece descripción de producto: '{nombre_prov}' (muchas palabras + conectores)")
-                elif len(palabras) > 6:
-                    es_descripcion_producto = True
-                    logger.warning(f"⚠️ Nombre demasiado largo para empresa: '{nombre_prov}'")
-        
-        # Si parece descripción de producto, limpiar para forzar asignación manual
-        if es_descripcion_producto:
-            logger.warning(f"🔄 Limpiando nombre de proveedor sospechoso, el usuario asignará manualmente")
+            # Lista de palabras prohibidas
+            palabras_prohibidas = [
+                'FACTURA', 'RECIBO', 'TICKET', 'CONCEPTO', 'DESCRIPCION', 'VENTA', 'SERVICIO', 
+                'CUOTA', 'MENSUAL', 'ALQUILER', 'PAGO', 'TOTAL', 'BASE', 'IMPONIBLE', 'CONSUMO', 'CONSUM', 
+                'PERIODO', 'FOTOCOPIA', 'COLOR', 'COPY', 'ARTICULO', 'PRODUCTO', 'UNIDAD', 'PAPEL', 'BLANCO',
+                'BIMESTRAL', 'TRIMESTRAL', 'ANUAL', 'SEMESTRAL', 'NULL', 'NONE'
+            ]
+            
+            # Verificar si contiene palabras prohibidas
+            matches = [p for p in palabras_prohibidas if p in nombre_upper]
+            if matches:
+                es_descripcion = True
+                logger.warning(f"⚠️ Nombre contiene palabras prohibidas ({matches}): '{nombre_prov}'")
+
+            # Verificar si empieza por fecha
+            if re.search(r'\d{2}/\d{2}/\d{4}', nombre_upper):
+                es_descripcion = True
+                logger.warning(f"⚠️ Nombre contiene fechas (parece periodo): '{nombre_prov}'")
+            
+            # Verificar longitud excesiva o MUY CORTA (ej: "A") - PERMITIR DE 2 LETRAS (ej: UP, HP)
+            if len(nombre_upper) < 2:
+                es_descripcion = True
+                logger.warning(f"⚠️ Nombre demasiado corto (posible error OCR): '{nombre_prov}' -> Forzando selección manual")
+
+            if len(nombre_upper.split()) > 4:
+                es_descripcion = True
+                logger.warning(f"⚠️ Nombre demasiado largo para empresa: '{nombre_prov}'")
+
+        if es_descripcion:
+            logger.warning(f"🔄 Limpiando nombre de proveedor sospechoso '{nombre_prov}'")
             datos_limpios['proveedor']['nombre'] = ''
+            
+            # Intentar usar website como fallback
+            website = datos_limpios['proveedor'].get('website')
+            if website:
+                # Extraer dominio: www.updirecto.es -> updirecto
+                dominio = website.replace('https://', '').replace('http://', '').replace('www.', '')
+                dominio = dominio.split('/')[0].split('.')[0]
+                if dominio and len(dominio) > 3:
+                    logger.info(f"🔄 Usando dominio web como nombre de proveedor fallback: '{dominio.upper()}'")
+                    datos_limpios['proveedor']['nombre'] = dominio.upper()
         else:
-            logger.info(f"✅ Proveedor final: '{datos_limpios['proveedor']['nombre']}'")
+            logger.info(f"✅ Proveedor final validado: '{datos_limpios['proveedor']['nombre']}'")
 
         return datos_limpios
         
@@ -305,12 +313,13 @@ REGLAS:
         raise
 
 
-def procesar_imagen_factura(imagen_bytes):
+def procesar_imagen_factura(imagen_bytes, nif_cliente=None):
     """
     Procesa una imagen de factura completa: OCR + parseo de datos
     
     Args:
         imagen_bytes: Bytes de la imagen
+        nif_cliente: (Opcional) NIF del cliente para ignorarlo
         
     Returns:
         dict: Datos de la factura extraídos
@@ -320,7 +329,7 @@ def procesar_imagen_factura(imagen_bytes):
             raise ValueError("OpenAI API Key no configurada. Configure OPENAI_API_KEY en .env para usar OCR de facturas")
         
         logger.info("🔍 Procesando factura con GPT-4 Vision...")
-        datos = extraer_datos_factura_gpt4(imagen_bytes)
+        datos = extraer_datos_factura_gpt4(imagen_bytes, nif_cliente)
         
         # Agregar marcador de método usado
         datos['_metodo_ocr'] = 'GPT-4 Vision'

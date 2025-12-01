@@ -828,86 +828,103 @@
 <!-- Modal Detalles Gasto -->
 <div id="modal-detalles-gasto" class="modal">
     <div class="modal-content" style="max-width: 900px;">
-        <span class="cerrar-modal" onclick="cerrarModalDetallesGasto()">&times;</span>
-        <h2 id="modal-concepto-titulo" style="margin-top: 0;">Detalles del Gasto</h2>
-        
-        <!-- Estadísticas resumen -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;  padding: 1rem; border-radius: 8px;">
-            <div>
-                <div style="font-size: 0.75rem; ">Total Anual</div>
-                <div id="modal-total" style="font-size: 1.3rem; font-weight: 600; ">0,00 €</div>
-            </div>
-            <div>
-                <div style="font-size: 0.75rem; ">Cantidad</div>
-                <div id="modal-cantidad" style="font-size: 1.3rem; font-weight: 600;">0</div>
-            </div>
-            <div>
-                <div style="font-size: 0.75rem; ">Promedio</div>
-                <div id="modal-promedio" style="font-size: 1.3rem; font-weight: 600; ">0,00 €</div>
-            </div>
-            <div>
-                <div style="font-size: 0.75rem; ">Mínimo</div>
-                <div id="modal-minimo" style="font-size: 1rem; font-weight: 500;">0,00 €</div>
-            </div>
-            <div>
-                <div style="font-size: 0.75rem; ">Máximo</div>
-                <div id="modal-maximo" style="font-size: 1rem; font-weight: 500;">0,00 €</div>
-            </div>
+        <div class="modal-header">
+            <h2 id="modal-concepto-titulo" style="margin: 0;">Detalles del Gasto</h2>
+            <span class="close" onclick="cerrarModalDetallesGasto()">&times;</span>
         </div>
         
-        <!-- Tabla de detalles -->
-        <div style="max-height: 400px; overflow-y: auto;">
-            <table class="stats-table" style="width: 100%;">
-                <thead style="position: sticky; top: 0;  z-index: 1;">
-                    <tr>
-                        <th style="text-align: left; width: 50%;">Concepto</th>
-                        <th style="text-align: center; width: 8%;">Cant.</th>
-                        <th style="text-align: right; width: 15%;">Total</th>
-                        <th style="text-align: right; width: 15%;">Promedio</th>
-                        <th style="text-align: center; width: 12%;">Periodo</th>
-                    </tr>
-                </thead>
-                <tbody id="modal-detalles-body">
-                    <tr><td colspan="5" style="text-align: center; padding: 2rem;">Cargando...</td></tr>
-                </tbody>
-            </table>
+        <div class="modal-body">
+            <!-- Estadísticas resumen -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; padding: 1rem; border-radius: 8px; background: var(--bg-elevated);">
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Total Anual</div>
+                    <div id="modal-total" style="font-size: 1.3rem; font-weight: 600;">0,00 €</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Cantidad</div>
+                    <div id="modal-cantidad" style="font-size: 1.3rem; font-weight: 600;">0</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Promedio</div>
+                    <div id="modal-promedio" style="font-size: 1.3rem; font-weight: 600;">0,00 €</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Mínimo</div>
+                    <div id="modal-minimo" style="font-size: 1rem; font-weight: 500;">0,00 €</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted);">Máximo</div>
+                    <div id="modal-maximo" style="font-size: 1rem; font-weight: 500;">0,00 €</div>
+                </div>
+            </div>
+            
+            <!-- Tabla de detalles -->
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table class="stats-table" style="width: 100%;">
+                    <thead style="position: sticky; top: 0; z-index: 1;">
+                        <tr>
+                            <th style="text-align: left; width: 50%;">Concepto</th>
+                            <th style="text-align: center; width: 8%;">Cant.</th>
+                            <th style="text-align: right; width: 15%;">Total</th>
+                            <th style="text-align: right; width: 15%;">Promedio</th>
+                            <th style="text-align: center; width: 12%;">Periodo</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-detalles-body">
+                        <tr><td colspan="5" style="text-align: center; padding: 2rem;">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
 <div id="modal-graficos" class="modal">
-    <div class="modal-content">
-        <span class="cerrar-modal" id="cerrar-modal" style="cursor: pointer; z-index: 9999;">&times;</span>
-        <div class="chart-controls" class="chart-controls">
-            <label for="tipo-datos" class="label-spacing">Mostrar:</label>
-            <select id="tipo-datos" class="form-select">
-                <option value="global">Total Global</option>
-                <option value="tickets">Tickets</option>
-                <option value="facturas">Facturas</option>
-                <option value="ingresos_gastos">Ingresos vs Gastos</option>
-            </select>
+    <div class="modal-content" style="max-width: 1000px;">
+        <div class="modal-header">
+            <h2 style="margin: 0;"><i class="fas fa-chart-bar"></i> Análisis Gráfico</h2>
+            <span class="close" id="cerrar-modal">&times;</span>
         </div>
-        <canvas id="chart-estadisticas"></canvas>
+        <div class="modal-body">
+            <div class="chart-controls" style="margin-bottom: 1rem;">
+                <label for="tipo-datos" class="label-spacing" style="font-weight: 600;">Mostrar:</label>
+                <select id="tipo-datos" class="form-select">
+                    <option value="global">Total Global</option>
+                    <option value="tickets">Tickets</option>
+                    <option value="facturas">Facturas</option>
+                    <option value="ingresos_gastos">Ingresos vs Gastos</option>
+                </select>
+            </div>
+            <div style="background: var(--bg-elevated); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+                <canvas id="chart-estadisticas" style="max-height: 450px;"></canvas>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Modal Gráficos Gastos -->
 <div id="modal-graficos-gastos" class="modal">
     <div class="modal-content" style="max-width: 1000px;">
-        <span class="cerrar-modal" id="cerrar-modal-gastos">&times;</span>
-        <h2 style="margin-top: 0; ">📊 Evolución de Gastos por Mes</h2>
-        <div class="chart-controls" class="chart-controls">
-            <label for="categoria-gastos" style="margin-right: 10px; font-weight: 600;">Categoría:</label>
-            <select id="categoria-gastos" class="form-select">
-                <option value="global">📈 Total Global</option>
-                <option value="Recibos">🧾 Recibos</option>
-                <option value="Liquidaciones TPV">💳 Liquidaciones TPV</option>
-                <option value="Transferencias">💸 Transferencias</option>
-                <option value="Bizum">📱 Bizum</option>
-                <option value="Compras Tarjeta">🛒 Compras Tarjeta</option>
-            </select>
+        <div class="modal-header">
+            <h2 style="margin-top: 0;"><i class="fas fa-chart-line"></i> Evolución de Gastos</h2>
+            <span class="close" id="cerrar-modal-gastos">&times;</span>
         </div>
-        <canvas id="chart-gastos-meses" style="max-height: 450px;"></canvas>
+        <div class="modal-body">
+            <div class="chart-controls" style="margin-bottom: 1rem;">
+                <label for="categoria-gastos" style="margin-right: 10px; font-weight: 600;">Categoría:</label>
+                <select id="categoria-gastos" class="form-select">
+                    <option value="global">📈 Total Global</option>
+                    <option value="Recibos">🧾 Recibos</option>
+                    <option value="Liquidaciones TPV">💳 Liquidaciones TPV</option>
+                    <option value="Transferencias">💸 Transferencias</option>
+                    <option value="Bizum">📱 Bizum</option>
+                    <option value="Compras Tarjeta">🛒 Compras Tarjeta</option>
+                </select>
+            </div>
+            <div style="background: var(--bg-elevated); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+                <canvas id="chart-gastos-meses" style="max-height: 450px;"></canvas>
+            </div>
+        </div>
     </div>
 </div>
 </div>

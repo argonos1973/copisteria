@@ -1,0 +1,160 @@
+/* Estilos específicos para Gestión de Proveedores */
+
+.proveedores-page { padding-bottom: 0 !important; }
+
+.proveedores-page .container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 96px);
+    min-height: 100vh;
+    box-sizing: border-box;
+    padding-bottom: 0 !important;
+}
+
+.proveedores-page .pagination { margin-bottom: 8px !important; }
+
+.table-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    /* Fondo transparente para ver el grid limpio */
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.table-responsive {
+    flex: 1;
+    max-height: none !important;
+    height: 100% !important;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Estilos de tabla */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-elevated, #fff);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+th {
+    background: var(--bg-header, #f8f9fa);
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary, #666);
+    border-bottom: 2px solid var(--border-color, #e0e0e0);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+td {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color, #eee);
+    color: var(--text-primary, #333);
+    vertical-align: middle;
+}
+
+/* Filas clicables */
+tbody tr {
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+
+tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05) !important;
+}
+
+/* Botones de acción compactos */
+.btn-action {
+    padding: 4px 8px;
+    font-size: 12px;
+    margin: 0 2px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-action:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+}
+
+.btn-action.btn-danger {
+    background: var(--danger-color, #dc3545) !important;
+    color: white !important;
+}
+
+.btn-action i {
+    color: inherit !important;
+}
+
+.form-inline { margin: 4px 0; }
+.pagination { margin-top: 6px; }
+
+/* Modal con fondo semi-transparente */
+#modalProveedor, #modalDetalleProveedor {
+    background: rgba(0, 0, 0, 0.5) !important;
+    backdrop-filter: blur(2px);
+}
+
+/* Clases de utilidad */
+.w-100 { width: 100%; }
+.text-bold { font-weight: bold; }
+.text-mono { font-family: monospace; }
+.text-large { font-size: 1.5rem; }
+.text-muted { color: var(--text-muted); }
+.text-small { font-size: 0.85rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mr-auto { margin-right: auto; }
+.ml-auto { margin-left: auto; }
+.gap-2 { gap: 0.5rem; }
+
+.grid-3-cols { 
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 10px; 
+}
+
+.bg-elevated { 
+    background: var(--bg-elevated); 
+    padding: 10px; 
+    border-radius: 6px; 
+}
+
+.font-italic { font-style: italic; }
+
+.modal-detail-title-wrapper {
+    width: 100%;
+}
+
+.modal-detail-nif {
+    font-family: monospace; 
+    font-size: 1.1em; 
+    color: var(--text-muted);
+}
+
+/* Utilidades específicas añadidas */
+.text-center-loading {
+    text-align: center; 
+    padding: 40px;
+}
+
+.text-center-action {
+    width: 80px; 
+    text-align: center;
+}
+
+.modal-content-medium {
+    max-width: 600px !important;
+}
+
+.modal-content-large {
+    max-width: 700px !important;
+}

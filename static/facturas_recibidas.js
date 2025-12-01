@@ -329,11 +329,13 @@ function renderizarTabla(facturas) {
             <td style="text-align: right;"><strong>${formatearImporte(factura.total)}</strong></td>
             <td style="text-align: center;">
                 ${factura.ruta_archivo ? `
-                    <button class="btn-action btn-success" onclick="event.stopPropagation(); descargarPDF(${factura.id})" title="Descargar PDF">
+                    <button class="btn-icon" onclick="event.stopPropagation(); descargarPDF(${factura.id})" title="Descargar PDF">
                         <i class="fas fa-file-pdf"></i>
                     </button>
                 ` : ''}
-                <button class="btn-action btn-danger" onclick="event.stopPropagation(); eliminarFactura(${factura.id})" title="Eliminar">✕</button>
+                <button class="btn-icon text-danger" onclick="event.stopPropagation(); eliminarFactura(${factura.id})" title="Eliminar">
+                    <i class="fas fa-times"></i>
+                </button>
             </td>
         `;
         
@@ -639,6 +641,25 @@ function mostrarModalPagar(factura) {
 
 function mostrarModalEditar(factura) {
     document.getElementById('editar-factura-id').value = factura.id;
+    
+    // Llenar y seleccionar proveedor
+    const selectProveedor = document.getElementById('editar-proveedor');
+    if (selectProveedor) {
+        selectProveedor.innerHTML = '<option value="">Seleccionar proveedor...</option>';
+        if (typeof proveedores !== 'undefined' && proveedores.length > 0) {
+            proveedores.forEach(prov => {
+                const option = document.createElement('option');
+                option.value = prov.id;
+                option.textContent = `${prov.nombre} (${prov.nif})`;
+                selectProveedor.appendChild(option);
+            });
+            // Seleccionar el proveedor actual
+            if (factura.proveedor_id) {
+                selectProveedor.value = factura.proveedor_id;
+            }
+        }
+    }
+
     document.getElementById('editar-numero').value = factura.numero_factura;
     document.getElementById('editar-fecha-emision').value = factura.fecha_emision;
     document.getElementById('editar-fecha-vencimiento').value = factura.fecha_vencimiento || '';
@@ -778,6 +799,7 @@ window.guardarEdicion = async function() {
     const facturaId = document.getElementById('editar-factura-id').value;
     
     const datos = {
+        proveedor_id: document.getElementById('editar-proveedor').value,
         numero_factura: document.getElementById('editar-numero').value,
         fecha_emision: document.getElementById('editar-fecha-emision').value,
         fecha_vencimiento: document.getElementById('editar-fecha-vencimiento').value,

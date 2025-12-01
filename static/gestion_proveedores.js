@@ -7,8 +7,13 @@ import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 
 // Variables globales
 let proveedores = [];
+let proveedoresFiltrados = []; // Para mantener el set filtrado
 let proveedorEditando = null;
 let proveedorSeleccionado = null; // Para el modal de detalle
+
+// Paginación
+let currentPage = 1;
+let itemsPerPage = 20;
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -30,11 +35,9 @@ function configurarEventListeners() {
     
     // Botones Modal Detalle
     document.getElementById('closeDetalleModal').addEventListener('click', cerrarModalDetalle);
-    document.getElementById('btnCerrarDetalle').addEventListener('click', cerrarModalDetalle);
     
     document.getElementById('btnEditarDesdeDetalle').addEventListener('click', () => {
-        cerrarModalDetalle();
-        abrirModalEdicion(proveedorSeleccionado);
+        activarEdicionEnDetalle(proveedorSeleccionado);
     });
 
     document.getElementById('btnEliminarDesdeDetalle').addEventListener('click', () => {
@@ -46,6 +49,15 @@ function configurarEventListeners() {
     
     // Filtros
     document.getElementById('busquedaProveedor').addEventListener('input', filtrarProveedores);
+    
+    // Paginación
+    document.getElementById('prevPage').addEventListener('click', () => cambiarPagina(-1));
+    document.getElementById('nextPage').addEventListener('click', () => cambiarPagina(1));
+    document.getElementById('perPage').addEventListener('change', (e) => {
+        itemsPerPage = parseInt(e.target.value);
+        currentPage = 1;
+        renderizarProveedores();
+    });
     
     // Cerrar modal al hacer clic fuera
     window.addEventListener('click', (e) => {
@@ -71,6 +83,7 @@ async function cargarProveedores() {
         
         if (data.success) {
             proveedores = data.proveedores;
+            proveedoresFiltrados = [...proveedores]; // Inicialmente todos
             renderizarProveedores();
             console.log(`[Proveedores] ${proveedores.length} proveedores cargados`);
         } else {
@@ -81,10 +94,12 @@ async function cargarProveedores() {
         mostrarNotificacion('Error al cargar proveedores: ' + error.message, 'error');
         
         document.getElementById('proveedoresList').innerHTML = `
-            <div style="text-align: center; padding: 40px; grid-column: 1/-1;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #dc3545;"></i>
-                <p>Error al cargar proveedores</p>
-            </div>
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px; color: #dc3545;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px;"></i>
+                    <p>Error al cargar proveedores</p>
+                </td>
+            </tr>
         `;
     }
 }
@@ -96,67 +111,86 @@ async function cargarProveedores() {
 function renderizarProveedores() {
     const container = document.getElementById('proveedoresList');
     
-    if (proveedores.length === 0) {
+    if (proveedoresFiltrados.length === 0) {
         container.innerHTML = `
-            <div style="text-align: center; padding: 40px; grid-column: 1/-1;">
-                <i class="fas fa-users" style="font-size: 48px; color: #ccc;"></i>
-                <p>No hay proveedores registrados</p>
-                <button class="btn btn-primary" onclick="document.getElementById('btnNuevoProveedor').click()">
-                    <i class="fas fa-plus"></i> Crear primer proveedor
-                </button>
-            </div>
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px;">
+                    <i class="fas fa-users" style="font-size: 48px; color: #ccc; display: block; margin-bottom: 10px;"></i>
+                    <p>No hay proveedores que mostrar</p>
+                    ${proveedores.length === 0 ? `<button class="btn btn-primary" onclick="document.getElementById('btnNuevoProveedor').click()">
+                        <i class="fas fa-plus"></i> Crear primer proveedor
+                    </button>` : ''}
+                </td>
+            </tr>
         `;
+        actualizarControlesPaginacion();
         return;
     }
     
+    // Calcular paginación
+    const totalItems = proveedoresFiltrados.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
+    // Ajustar página actual si se sale de rango
+    if (currentPage > totalPages) currentPage = totalPages;
+    if (currentPage < 1) currentPage = 1;
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+    const itemsPagina = proveedoresFiltrados.slice(startIndex, endIndex);
+    
     container.innerHTML = '';
     
-    proveedores.forEach(proveedor => {
-        const card = crearCardProveedor(proveedor);
-        container.appendChild(card);
+    itemsPagina.forEach(proveedor => {
+        const fila = crearFilaProveedor(proveedor);
+        container.appendChild(fila);
     });
+    
+    actualizarControlesPaginacion();
 }
 
-function crearCardProveedor(proveedor) {
-    const card = document.createElement('div');
-    card.className = 'proveedor-card';
+function cambiarPagina(delta) {
+    const totalPages = Math.ceil(proveedoresFiltrados.length / itemsPerPage);
+    const newPage = currentPage + delta;
     
-    // Icono basado en si tiene email o no (como indicador de completitud)
-    const iconClass = proveedor.email ? 'fa-building' : 'fa-store-alt';
-    
-    // Calcular estado visual (simulado)
-    const estadoClass = 'status-activo';
-    const estadoTexto = 'Activo';
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        renderizarProveedores();
+    }
+}
 
-    card.innerHTML = `
-        <div class="proveedor-header">
-            <div class="proveedor-icon">
-                <i class="fas ${iconClass}"></i>
-            </div>
-            <div class="proveedor-status ${estadoClass}">
-                ${estadoTexto}
-            </div>
-        </div>
-        
-        <div class="proveedor-name" title="${proveedor.nombre}">${proveedor.nombre}</div>
-        <div class="proveedor-nif">${proveedor.nif || 'Sin NIF'}</div>
-        
-        <div class="proveedor-info-grid">
-            <div class="info-label"><i class="fas fa-envelope"></i></div>
-            <div class="info-value" title="${proveedor.email || '-'}">${proveedor.email || '-'}</div>
-            
-            <div class="info-label"><i class="fas fa-phone"></i></div>
-            <div class="info-value">${proveedor.telefono || '-'}</div>
-            
-            <div class="info-label"><i class="fas fa-map-marker-alt"></i></div>
-            <div class="info-value" title="${proveedor.direccion || '-'}">${proveedor.poblacion || proveedor.provincia || '-'}</div>
-        </div>
+function actualizarControlesPaginacion() {
+    const totalItems = proveedoresFiltrados.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+    
+    document.getElementById('pageInfo').textContent = `Página ${currentPage} de ${totalPages} (${totalItems} total)`;
+    document.getElementById('prevPage').disabled = currentPage === 1;
+    document.getElementById('nextPage').disabled = currentPage === totalPages || totalPages === 0;
+}
+
+function crearFilaProveedor(proveedor) {
+    const tr = document.createElement('tr');
+    
+    tr.innerHTML = `
+        <td>
+            <div style="font-weight: 600;">${proveedor.nombre}</div>
+        </td>
+        <td class="text-mono">${proveedor.nif || '-'}</td>
+        <td>
+            ${proveedor.email ? `<a href="mailto:${proveedor.email}" onclick="event.stopPropagation()">${proveedor.email}</a>` : '-'}
+        </td>
+        <td>${proveedor.telefono || '-'}</td>
+        <td style="text-align: center;">
+            <button class="btn-icon" title="Eliminar" onclick="event.stopPropagation(); eliminarProveedor(${proveedor.id}, '${proveedor.nombre.replace(/'/g, "\\'")}')">
+                ✕
+            </button>
+        </td>
     `;
     
-    // Evento Click para abrir detalle
-    card.addEventListener('click', () => abrirModalDetalle(proveedor));
+    // Evento Click para abrir detalle (en toda la fila)
+    tr.addEventListener('click', () => abrirModalDetalle(proveedor));
     
-    return card;
+    return tr;
 }
 
 // ============================================================================
@@ -166,7 +200,7 @@ function crearCardProveedor(proveedor) {
 function filtrarProveedores() {
     const busqueda = document.getElementById('busquedaProveedor').value.toLowerCase();
     
-    const proveedoresFiltrados = proveedores.filter(proveedor => {
+    proveedoresFiltrados = proveedores.filter(proveedor => {
         // Filtro de búsqueda
         return !busqueda || 
             proveedor.nombre.toLowerCase().includes(busqueda) ||
@@ -174,24 +208,9 @@ function filtrarProveedores() {
             (proveedor.email && proveedor.email.toLowerCase().includes(busqueda));
     });
     
-    // Renderizar solo los filtrados
-    const container = document.getElementById('proveedoresList');
-    container.innerHTML = '';
-    
-    if (proveedoresFiltrados.length === 0) {
-        container.innerHTML = `
-            <div style="text-align: center; padding: 40px; grid-column: 1/-1;">
-                <i class="fas fa-search" style="font-size: 48px; color: #ccc;"></i>
-                <p>No se encontraron proveedores</p>
-            </div>
-        `;
-        return;
-    }
-    
-    proveedoresFiltrados.forEach(proveedor => {
-        const card = crearCardProveedor(proveedor);
-        container.appendChild(card);
-    });
+    // Resetear a primera página al filtrar
+    currentPage = 1;
+    renderizarProveedores();
 }
 
 // ============================================================================
@@ -248,9 +267,9 @@ function abrirModalDetalle(proveedor) {
             <div class="modal-detail-icon">
                 <i class="fas fa-building"></i>
             </div>
-            <div class="modal-detail-title">
+            <div class="modal-detail-title modal-detail-title-wrapper">
                 <h2>${proveedor.nombre}</h2>
-                <div style="color: var(--text-muted); font-family: monospace; font-size: 1.1em;">
+                <div class="modal-detail-nif">
                     ${proveedor.nif || 'Sin NIF'}
                 </div>
             </div>
@@ -290,7 +309,7 @@ function abrirModalDetalle(proveedor) {
             <div class="detail-section-title">
                 <i class="fas fa-sticky-note"></i> Notas Internas
             </div>
-            <div style="background: var(--bg-elevated); padding: 10px; border-radius: 6px; font-style: italic; color: var(--text-muted);">
+            <div class="bg-elevated text-muted font-italic">
                 ${proveedor.notas}
             </div>
         ` : ''}
@@ -312,6 +331,166 @@ function abrirModalDetalle(proveedor) {
     `;
     
     modal.style.display = 'block';
+    
+    // Asegurar estado inicial de botones
+    restaurarBotonesDetalle();
+}
+
+function activarEdicionEnDetalle(proveedor) {
+    const contenido = document.getElementById('detalleProveedorContenido');
+    const footer = document.querySelector('#modalDetalleProveedor .modal-footer');
+    
+    // Transformar vista a formulario
+    contenido.innerHTML = `
+        <div class="modal-detail-header">
+            <div class="modal-detail-icon">
+                <i class="fas fa-edit"></i>
+            </div>
+            <div class="modal-detail-title w-100">
+                <label class="text-small text-muted">Nombre / Razón Social</label>
+                <input type="text" id="edit_nombre" value="${proveedor.nombre}" class="form-control text-large text-bold w-100">
+                
+                <label class="text-small text-muted mt-2" style="display: block;">NIF / CIF</label>
+                <input type="text" id="edit_nif" value="${proveedor.nif}" class="form-control text-mono w-100" style="font-size: 1.1em;">
+            </div>
+        </div>
+
+        <div class="detail-section-title">
+            <i class="fas fa-address-card"></i> Información de Contacto
+        </div>
+        
+        <div class="modal-detail-grid">
+            <div class="detail-item">
+                <label>Email General</label>
+                <input type="email" id="edit_email" value="${proveedor.email || ''}" class="form-control" placeholder="ej: info@empresa.com">
+            </div>
+            <div class="detail-item">
+                <label>Email Facturación</label>
+                <input type="email" id="edit_email_facturacion" value="${proveedor.email_facturacion || ''}" class="form-control" placeholder="ej: facturas@empresa.com">
+            </div>
+            <div class="detail-item">
+                <label>Teléfono</label>
+                <input type="tel" id="edit_telefono" value="${proveedor.telefono || ''}" class="form-control">
+            </div>
+        </div>
+
+        <div class="detail-section-title">
+            <i class="fas fa-map-marked-alt"></i> Dirección
+        </div>
+        
+        <div class="modal-detail-grid grid-3-cols">
+            <div class="detail-item" style="grid-column: 1/-1;">
+                <label>Calle y Número</label>
+                <input type="text" id="edit_direccion" value="${proveedor.direccion || ''}" class="form-control">
+            </div>
+            <div class="detail-item">
+                <label>CP</label>
+                <input type="text" id="edit_cp" value="${proveedor.cp || ''}" class="form-control">
+            </div>
+            <div class="detail-item">
+                <label>Población</label>
+                <input type="text" id="edit_poblacion" value="${proveedor.poblacion || ''}" class="form-control">
+            </div>
+            <div class="detail-item">
+                <label>Provincia</label>
+                <input type="text" id="edit_provincia" value="${proveedor.provincia || ''}" class="form-control">
+            </div>
+        </div>
+
+        <div class="detail-section-title">
+            <i class="fas fa-sticky-note"></i> Notas Internas
+        </div>
+        <textarea id="edit_notas" class="form-control w-100" rows="3">${proveedor.notas || ''}</textarea>
+    `;
+    
+    // Cambiar botones del footer
+    footer.innerHTML = `
+        <button type="button" class="btn btn-secondary" onclick="cancelarEdicionDetalle()">
+            Cancelar
+        </button>
+        <button type="button" class="btn btn-success" onclick="guardarEdicionDetalle()">
+            Guardar
+        </button>
+    `;
+}
+
+window.cancelarEdicionDetalle = function() {
+    // Volver a renderizar la vista de lectura con el proveedor original
+    abrirModalDetalle(proveedorSeleccionado);
+};
+
+window.guardarEdicionDetalle = async function() {
+    const id = proveedorSeleccionado.id;
+    const nombre = document.getElementById('edit_nombre').value.trim();
+    const nif = document.getElementById('edit_nif').value.trim();
+    
+    if (!nombre || !nif) {
+        mostrarNotificacion('Nombre y NIF son obligatorios', 'error');
+        return;
+    }
+    
+    const datos = {
+        nombre,
+        nif,
+        email: document.getElementById('edit_email').value.trim(),
+        email_facturacion: document.getElementById('edit_email_facturacion').value.trim(),
+        telefono: document.getElementById('edit_telefono').value.trim(),
+        direccion: document.getElementById('edit_direccion').value.trim(),
+        cp: document.getElementById('edit_cp').value.trim(),
+        poblacion: document.getElementById('edit_poblacion').value.trim(),
+        provincia: document.getElementById('edit_provincia').value.trim(),
+        notas: document.getElementById('edit_notas').value.trim()
+    };
+    
+    try {
+        const response = await fetch(`/api/proveedores/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(datos)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            mostrarNotificacion('Proveedor actualizado correctamente', 'success');
+            
+            // Actualizar datos locales y recargar lista de fondo
+            const proveedorActualizado = { ...proveedorSeleccionado, ...datos };
+            proveedores = proveedores.map(p => p.id === id ? proveedorActualizado : p);
+            renderizarProveedores(); // Actualizar grid de fondo
+            
+            // Volver a vista lectura con datos nuevos
+            abrirModalDetalle(proveedorActualizado);
+        } else {
+            throw new Error(data.error || 'Error al guardar');
+        }
+    } catch (error) {
+        console.error('Error guardando:', error);
+        mostrarNotificacion('Error: ' + error.message, 'error');
+    }
+};
+
+function restaurarBotonesDetalle() {
+    const footer = document.querySelector('#modalDetalleProveedor .modal-footer');
+    footer.innerHTML = `
+        <button type="button" class="btn btn-danger" id="btnEliminarDesdeDetalle" style="margin-right: auto;" title="Eliminar">
+            <i class="fas fa-trash"></i>
+        </button>
+        <button type="button" class="btn btn-primary" id="btnEditarDesdeDetalle">
+            Editar
+        </button>
+    `;
+    
+    // Re-vincular eventos
+    document.getElementById('btnEditarDesdeDetalle').addEventListener('click', () => {
+        activarEdicionEnDetalle(proveedorSeleccionado);
+    });
+    document.getElementById('btnEliminarDesdeDetalle').addEventListener('click', () => {
+        if (proveedorSeleccionado) {
+            eliminarProveedor(proveedorSeleccionado.id, proveedorSeleccionado.nombre);
+            cerrarModalDetalle();
+        }
+    });
 }
 
 function cerrarModalDetalle() {

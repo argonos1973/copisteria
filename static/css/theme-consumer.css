@@ -192,9 +192,7 @@ button, .btn,
 input[type="button"],
 input[type="submit"],
 .btn-primary,
-.btn-secondary,
-#btnGuardar,
-#btnCancelar {
+#btnGuardar {
     background: var(--button-bg) !important;
     color: var(--button-text) !important;
     border: 1px solid var(--button-border) !important;
@@ -219,14 +217,59 @@ button:hover, .btn:hover,
 /* Botones secundarios específicos */
 .btn-secondary,
 #btnCancelar {
-    background: var(--button-secondary-bg) !important;
-    color: var(--button-secondary-text) !important;
-    border: 1px solid var(--button-secondary-border) !important;
+    background: var(--button-secondary-bg, #6c757d) !important;
+    color: var(--button-secondary-text, #ffffff) !important;
+    border: 1px solid var(--button-secondary-border, #6c757d) !important;
+    /* Asegurar propiedades base también aquí por si acaso */
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    min-height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .btn-secondary:hover,
 #btnCancelar:hover {
-    background: var(--button-secondary-hover-bg) !important;
+    background: var(--button-secondary-hover-bg, #5a6268) !important;
+    filter: brightness(0.9);
+}
+
+/* Botones Success (Verde) */
+.btn-success {
+    background: var(--success, #28a745) !important;
+    color: #fff !important;
+    border: 1px solid var(--success, #28a745) !important;
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    min-height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.btn-success:hover {
+    background: #218838 !important;
+    filter: brightness(0.9);
+}
+
+/* Botones Danger (Rojo) */
+.btn-danger {
+    background: var(--danger, #dc3545) !important;
+    color: #fff !important;
+    border: 1px solid var(--danger, #dc3545) !important;
+    padding: 6px 12px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    min-height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+.btn-danger:hover {
+    background: #c82333 !important;
+    filter: brightness(0.9);
 }
 
 /* Botones en tarjetas/cards */
@@ -927,7 +970,7 @@ input::placeholder, textarea::placeholder {
 }
 
 /* ==================== TABS ==================== */
-.tab {
+.tab, .tab-button {
     background: var(--bg-elevated) !important;
     color: var(--text) !important;
     border: 1px solid var(--border) !important;
@@ -938,14 +981,14 @@ input::placeholder, textarea::placeholder {
     transition: all 0.2s ease !important;
 }
 
-.tab.active, .tab-active {
+.tab.active, .tab-active, .tab-button.active {
     background: var(--tab-active-bg, var(--primary)) !important;
     color: var(--tab-active-text, var(--primary-text)) !important;
     border-color: var(--tab-active-bg, var(--primary)) !important;
     font-weight: 600 !important;
 }
 
-.tab:hover {
+.tab:hover, .tab-button:hover {
     background: var(--table-row-hover, var(--bg-elevated-hover)) !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 8px var(--shadow, rgba(0,0,0,0.1)) !important;
@@ -1022,7 +1065,6 @@ a:not(.btn) i {
 }
 
 /* Botones de paginación secundarios - TAMAÑO UNIFORME PARA TODAS LAS CONSULTAS */
-.btn-secondary,
 .btn-pagination,
 #prevPageFacturas,
 #nextPageFacturas,

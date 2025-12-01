@@ -32,11 +32,19 @@ function configurarEventListeners() {
     const fileInput = document.getElementById('fileInput');
     
     // Click en zona de carga
-    uploadZone.addEventListener('click', () => {
-        if (!procesando) {
-            fileInput.click();
-        }
-    });
+    if (uploadZone && fileInput) {
+        uploadZone.addEventListener('click', (e) => {
+            // Evitar recursión si el click viene del propio input (aunque esté fuera ahora)
+            if (e.target === fileInput) return;
+            
+            if (!procesando) {
+                console.log('[Masivo] Click en zona de carga -> abriendo selector');
+                fileInput.click();
+            }
+        });
+    } else {
+        console.error('[Masivo] No se encontraron elementos uploadZone o fileInput');
+    }
     
     // Selección de archivos
     fileInput.addEventListener('change', (e) => {
@@ -75,18 +83,20 @@ function configurarEventListeners() {
 
 async function cargarProveedores() {
     try {
-        const response = await fetch('/api/proveedores/listar');
+        // AÑADIR TIMESTAMP PARA EVITAR CACHÉ DE NAVEGADOR
+        const response = await fetch(`/api/proveedores/listar?t=${Date.now()}`);
         const data = await response.json();
         
         if (data.success) {
             // Crear cache de proveedores por NIF
+            proveedoresCache.clear(); // Limpiar antes de llenar
             data.proveedores.forEach(prov => {
                 if (prov.nif) {
                     proveedoresCache.set(prov.nif.toLowerCase(), prov);
                 }
             });
             
-            console.log(`[Masivo] ${proveedoresCache.size} proveedores en cache`);
+            console.log(`[Masivo] ${proveedoresCache.size} proveedores cargados en cache`);
         }
     } catch (error) {
         console.error('[Masivo] Error cargando proveedores:', error);
@@ -97,45 +107,111 @@ async function cargarProveedores() {
 // MANEJO DE ARCHIVOS
 // ============================================================================
 
-function agregarArchivos(files) {
+async function agregarArchivos(files) {
     const archivosArray = Array.from(files);
+    let nuevosArchivosCount = 0;
     
-    // Validar y agregar archivos
-    archivosArray.forEach(archivo => {
+    for (const archivo of archivosArray) {
         const extension = archivo.name.split('.').pop().toLowerCase();
-        const tamañoMB = archivo.size / (1024 * 1024);
         
-        if (!['pdf', 'jpg', 'jpeg', 'png'].includes(extension)) {
-            addLog(`⚠️ ${archivo.name}: formato no válido`, 'warning');
-            return;
+        // DETECCIÓN DE ZIP
+        if (extension === 'zip') {
+            try {
+                mostrarIndicadorProcesamiento(archivo.name, 'Descomprimiendo ZIP...');
+                addLog(`📦 Descomprimiendo: ${archivo.name}`, 'info');
+                
+                // Verificar si JSZip está cargado
+                if (typeof JSZip === 'undefined') {
+                    throw new Error('Librería JSZip no cargada. Recarga la página.');
+                }
+                
+                const zip = await JSZip.loadAsync(archivo);
+                const promises = [];
+                
+                // Iterar sobre archivos del ZIP
+                zip.forEach((relativePath, zipEntry) => {
+                    if (!zipEntry.dir) {
+                        const ext = zipEntry.name.split('.').pop().toLowerCase();
+                        
+                        // Filtrar solo extensiones válidas
+                        if (['pdf', 'jpg', 'jpeg', 'png'].includes(ext)) {
+                            // Ignorar basura de macOS y archivos ocultos
+                            if (!zipEntry.name.includes('__MACOSX') && !zipEntry.name.startsWith('.')) {
+                                
+                                // Aplanar nombre: carpeta/factura.pdf -> carpeta_factura.pdf
+                                // Esto evita problemas con directorios en el backend si no existen
+                                const flatName = zipEntry.name.replace(/\//g, '_');
+                                
+                                promises.push(
+                                    zipEntry.async('blob').then(blob => {
+                                        // Recrear objeto File
+                                        return new File([blob], flatName, { 
+                                            type: ext === 'pdf' ? 'application/pdf' : `image/${ext}` 
+                                        });
+                                    })
+                                );
+                            }
+                        }
+                    }
+                });
+                
+                const extractedFiles = await Promise.all(promises);
+                extractedFiles.forEach(f => {
+                    if (procesarArchivoIndividual(f)) nuevosArchivosCount++;
+                });
+                
+                addLog(`✅ ZIP extraído: ${extractedFiles.length} archivos válidos`, 'success');
+                
+            } catch (error) {
+                addLog(`❌ Error descomprimiendo ZIP: ${error.message}`, 'error');
+                console.error(error);
+                mostrarNotificacion('Error al leer el archivo ZIP', 'error');
+            } finally {
+                ocultarIndicadorProcesamiento();
+            }
+            continue; 
         }
-        
-        if (tamañoMB > 20) {
-            addLog(`⚠️ ${archivo.name}: tamaño máximo 20MB`, 'warning');
-            return;
-        }
-        
-        // Agregar archivo con estado inicial
-        archivosSeleccionados.push({
-            archivo: archivo,
-            id: Date.now() + Math.random(),
-            estado: 'pendiente', // pendiente, procesando, completada, error
-            progreso: 0,
-            mensaje: 'En cola',
-            datos: null,
-            error: null
-        });
-    });
+
+        // Archivo normal
+        if (procesarArchivoIndividual(archivo)) nuevosArchivosCount++;
+    }
     
-    if (archivosSeleccionados.length > 0) {
+    if (nuevosArchivosCount > 0) {
         actualizarStats();
         renderizarArchivos();
         mostrarControles();
-        // addLog(`📁 ${archivosArray.length} archivo(s) agregado(s)`, 'info');
         
         // Mostrar notificación de confirmación para iniciar proceso
         mostrarNotificacionConfirmacion();
     }
+}
+
+function procesarArchivoIndividual(archivo) {
+    const extension = archivo.name.split('.').pop().toLowerCase();
+    const tamañoMB = archivo.size / (1024 * 1024);
+    
+    if (!['pdf', 'jpg', 'jpeg', 'png'].includes(extension)) {
+        // addLog(`⚠️ ${archivo.name}: formato no válido`, 'warning');
+        return false;
+    }
+    
+    if (tamañoMB > 20) {
+        addLog(`⚠️ ${archivo.name}: tamaño máximo 20MB`, 'warning');
+        return false;
+    }
+    
+    // Agregar archivo con estado inicial
+    archivosSeleccionados.push({
+        archivo: archivo,
+        id: Date.now() + Math.random(),
+        estado: 'pendiente', // pendiente, procesando, completada, error
+        progreso: 0,
+        mensaje: 'En cola',
+        datos: null,
+        error: null
+    });
+    
+    return true;
 }
 
 async function mostrarNotificacionConfirmacion() {
@@ -412,24 +488,34 @@ async function procesarArchivo(item) {
         item.datos = datosOCR;
         renderizarArchivos();
         
-        // Actualizar indicador con proveedor y total
-        const proveedor = datosOCR.proveedor?.nombre || 'Sin nombre';
+        // Validar que existan datos de proveedor
+        // LIMPIEZA DEFENSIVA DE 'NULL' STRING
+        if (datosOCR.proveedor) {
+            ['nombre', 'nif', 'direccion', 'email'].forEach(campo => {
+                if (datosOCR.proveedor[campo] && (datosOCR.proveedor[campo] === 'NULL' || datosOCR.proveedor[campo] === 'null')) {
+                    datosOCR.proveedor[campo] = '';
+                }
+            });
+        }
+        const datosProveedor = datosOCR.proveedor || { nombre: 'Proveedor Desconocido' };
         const total = datosOCR.factura?.total || '0.00';
-        actualizarIndicadorConDatos(proveedor, total, 'Extrayendo datos del proveedor...');
+        actualizarIndicadorConDatos(datosProveedor.nombre, total, 'Extrayendo datos del proveedor...');
         
-        // addLog(`  ✓ OCR completado: ${proveedor}`, 'success');
+        // addLog(`  ✓ OCR completado: ${datosProveedor.nombre}`, 'success');
         
         // 2. Buscar o crear proveedor
         item.mensaje = 'Buscando proveedor...';
         renderizarArchivos();
         actualizarIndicadorProcesamiento('Buscando/creando proveedor...');
         
-        // Validar que existan datos de proveedor
-        const datosProveedor = datosOCR.proveedor || { nombre: 'Proveedor Desconocido' };
-        
-        // REGLA: Si no hay NIF, usar el Concepto como nombre del proveedor (para recibos, autónomos, etc)
-        if (!datosProveedor.nif && datosOCR.factura?.concepto) {
-            datosProveedor.nombre = datosOCR.factura.concepto;
+        // Datos del proveedor
+        if (datosOCR.proveedor) {
+            // LIMPIEZA DEFENSIVA DE 'NULL' STRING
+            ['nombre', 'nif', 'direccion', 'email'].forEach(campo => {
+                if (datosOCR.proveedor[campo] === 'NULL' || datosOCR.proveedor[campo] === 'null') {
+                    datosOCR.proveedor[campo] = '';
+                }
+            });
         }
 
         // REGLA: Todo en mayúsculas (nombre de proveedor)
@@ -480,24 +566,24 @@ async function procesarArchivo(item) {
 async function escanearFactura(archivo) {
     const formData = new FormData();
     formData.append('archivo', archivo);
-    
+
     const response = await fetch('/api/facturas-proveedores/ocr', {
         method: 'POST',
         body: formData
     });
-    
+
     // Verificar si la respuesta es HTML (sesión expirada)
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('text/html')) {
         throw new Error('Sesión expirada. Por favor, recarga la página y vuelve a iniciar sesión.');
     }
-    
+
     const data = await response.json();
-    
+
     if (!data.success) {
         throw new Error(data.error || 'Error en OCR');
     }
-    
+
     return data.datos;
 }
 
@@ -505,25 +591,26 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
     if (!datosProveedor) {
         throw new Error('Datos de proveedor no disponibles');
     }
-    
+
+    console.log('[Masivo] Buscando/Creando proveedor:', datosProveedor);
+
     // Si no tiene NIF, crear con nombre solamente
     if (!datosProveedor.nif) {
-        // addLog(`  ⚠️ Proveedor sin NIF: ${datosProveedor.nombre}`, 'warning');
+        // addLog(`  Proveedor sin NIF: ${datosProveedor.nombre}`, 'warning');
         // Buscar por nombre exacto
-        const responseList = await fetch('/api/proveedores/listar?activos=false');
+        const responseList = await fetch(`/api/proveedores/listar?activos=false&t=${Date.now()}`);
         const dataList = await responseList.json();
-        
+
         if (dataList.success) {
-            const proveedorExistente = dataList.proveedores.find(p => 
+            const proveedorExistente = dataList.proveedores.find(p =>
                 p.nombre && p.nombre.toLowerCase() === datosProveedor.nombre.toLowerCase()
             );
-            
+
             if (proveedorExistente) {
-                // addLog(`  ✓ Proveedor encontrado por nombre: ${proveedorExistente.nombre} (ID: ${proveedorExistente.id})`, 'success');
                 return proveedorExistente.id;
             }
         }
-        
+
         // Crear sin NIF
         const nuevoProveedor = {
             nombre: datosProveedor.nombre || 'Proveedor sin nombre',
@@ -534,31 +621,60 @@ async function buscarOCrearProveedorSilencioso(datosProveedor) {
             activo: true,
             requiere_revision: true
         };
-        
+
         const response = await fetch('/api/proveedores/crear', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(nuevoProveedor)
         });
-        
+
         const data = await response.json();
         if (data.success) {
-            // Backend retorna { success: true, id: ..., message: ... } pero a veces no data.proveedor
             const proveedorId = data.id || data.proveedor?.id;
-            // addLog(`  ✓ Proveedor creado sin NIF: ${nuevoProveedor.nombre} (ID: ${proveedorId})`, 'success');
             return proveedorId;
         }
-        
+
         throw new Error(data.error || 'Error creando proveedor sin NIF');
     }
-    
+
     const nifLower = datosProveedor.nif.toLowerCase();
-    
+
     // Buscar en cache
     if (proveedoresCache.has(nifLower)) {
-        return proveedoresCache.get(nifLower).id;
+        const cached = proveedoresCache.get(nifLower);
+
+        // MEJORA CRÍTICA: Si el proveedor en caché tiene nombre "SIN NOMBRE" o similar,
+        // y el nuevo nombre es bueno, ACTUALIZARLO.
+        const nombreActual = (cached.nombre || '').toUpperCase();
+        const nuevoNombre = (datosProveedor.nombre || '').toUpperCase();
+
+        const esGenerico = nombreActual.includes('SIN NOMBRE') ||
+            nombreActual.includes('NO IDENTIFICADO') ||
+            nombreActual.includes('PROVEEDOR DESCONOCIDO');
+
+        const esValido = nuevoNombre && nuevoNombre.length > 2 && !nuevoNombre.includes('SIN NOMBRE');
+
+        if (esGenerico && esValido) {
+            console.log(`[Masivo] Actualizando nombre de proveedor ID ${cached.id}: ${nombreActual} -> ${nuevoNombre}`);
+            addLog(`  Actualizando nombre proveedor: ${nuevoNombre}`, 'info');
+
+            try {
+                await fetch(`/api/proveedores/${cached.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre: nuevoNombre })
+                });
+                // Actualizar cache local
+                cached.nombre = nuevoNombre;
+                proveedoresCache.set(nifLower, cached);
+            } catch (e) {
+                console.error('[Masivo] Error actualizando nombre proveedor:', e);
+            }
+        }
+
+        return cached.id;
     }
-    
+
     // Intentar crear nuevo proveedor
     const nuevoProveedor = {
         nombre: datosProveedor.nombre || 'Sin nombre',

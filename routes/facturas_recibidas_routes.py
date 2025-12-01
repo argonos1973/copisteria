@@ -35,12 +35,25 @@ def procesar_ocr_factura():
         # Leer bytes del archivo
         imagen_bytes = archivo.read()
         
-        # Procesar con OCR
-        datos = procesar_imagen_factura(imagen_bytes)
-        
-        # VALIDACIÓN: El NIF del proveedor no puede ser el de la propia empresa
+        # Obtener NIF de la empresa activa para ignorarlo en el OCR
+        nif_cliente = None
         empresa_id = session.get('empresa_id')
         if empresa_id:
+            try:
+                with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT cif FROM empresas WHERE id = ?", (empresa_id,))
+                    res = cursor.fetchone()
+                    if res and res[0]:
+                        nif_cliente = res[0].upper().strip()
+            except Exception as e:
+                logger.error(f"Error obteniendo NIF empresa para OCR: {e}")
+
+        # Procesar con OCR
+        datos = procesar_imagen_factura(imagen_bytes, nif_cliente)
+        
+        # VALIDACIÓN: El NIF del proveedor no puede ser el de la propia empresa
+        if nif_cliente:
             try:
                 with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
                     cursor = conn.cursor()

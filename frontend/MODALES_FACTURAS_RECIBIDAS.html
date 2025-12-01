@@ -190,6 +190,16 @@
                 <form id="formEditar">
                     <input type="hidden" id="editar-factura-id">
                     
+                    <!-- Fila 0: Proveedor -->
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label for="editar-proveedor" style="display: block; font-weight: bold; margin-bottom: 5px;">Proveedor</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="editar-proveedor" class="form-control" style="flex: 1;" required>
+                                <option value="">Cargando proveedores...</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Fila 1: Número y Fechas -->
                     <div class="form-row form-centered">
                         <div class="form-group form-col-xl input-centered">
@@ -211,25 +221,25 @@
                     <!-- Fila 2: Importes (Con fondo diferenciado y borde) -->
                     <div class="form-row" style="background: var(--bg-elevated, rgba(0,0,0,0.05)); padding: 15px; border-radius: 6px; border: 1px solid var(--border, #ccc); display: flex; flex-wrap: nowrap; gap: 10px; justify-content: space-between; align-items: flex-end;">
                         <div class="form-group" style="flex: 1; min-width: 100px;">
-                            <label for="editar-base" style="display: block;">Base Imp.</label>
+                            <label for="editar-base" style="display: block; text-align: right;">Base Imp.</label>
                             <input type="number" id="editar-base" class="form-control" 
                                    step="0.01" min="0" required style="text-align: right;">
                         </div>
                         
                         <div class="form-group" style="flex: 0 0 70px;">
-                            <label for="editar-iva-porcentaje" style="display: block;">IVA %</label>
+                            <label for="editar-iva-porcentaje" style="display: block; text-align: right;">IVA %</label>
                             <input type="number" id="editar-iva-porcentaje" class="form-control" 
                                    min="0" max="100" step="1" style="text-align: right;">
                         </div>
                         
                         <div class="form-group" style="flex: 1; min-width: 100px;">
-                            <label for="editar-iva-importe" style="display: block;">Imp. IVA</label>
+                            <label for="editar-iva-importe" style="display: block; text-align: right;">Imp. IVA</label>
                             <input type="number" id="editar-iva-importe" class="form-control" 
                                    step="0.01" min="0" readonly style="text-align: right;">
                         </div>
                         
                         <div class="form-group" style="flex: 1; min-width: 100px;">
-                            <label for="editar-total" style="display: block; font-weight: bold;">Total</label>
+                            <label for="editar-total" style="display: block; font-weight: bold; text-align: right;">Total</label>
                             <input type="number" id="editar-total" class="form-control" 
                                    step="0.01" min="0" readonly style="font-weight: bold; text-align: right; font-size: 1.1em;">
                         </div>
@@ -265,8 +275,8 @@
         </div>
         
         <div class="modal-footer">
-            <button class="btn btn-modal-cancel" onclick="cerrarModal('modalEditar')">Cancelar</button>
-            <button class="btn btn-modal-save" onclick="guardarEdicion()">
+            <button class="btn btn-secondary" onclick="cerrarModal('modalEditar')">Cancelar</button>
+            <button class="btn btn-primary" onclick="guardarEdicion()">
                 Guardar
             </button>
         </div>

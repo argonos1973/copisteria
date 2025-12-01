@@ -7,6 +7,8 @@
     <title>Subir Facturas Masivo</title>
     <script src="/static/branding.js?v=1763897790"></script>
     <script src="/static/auto_branding.js?v=1763897790"></script>
+    <!-- Librería para descomprimir ZIP en cliente -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="../static/css/page_header.css">
     <link rel="stylesheet" href="/static/css/theme-consumer.css?v=1763897790">
@@ -334,8 +336,8 @@
                     <i class="fas fa-users"></i> Creará proveedores si no existen<br>
                     <i class="fas fa-save"></i> Guardará las facturas automáticamente
                 </p>
-                <input type="file" id="fileInput" class="file-input" accept=".pdf,.jpg,.jpeg,.png" multiple>
             </div>
+            <input type="file" id="fileInput" class="file-input" accept=".pdf,.jpg,.jpeg,.png" multiple>
 
             <!-- Estadísticas -->
             <div class="stats-container" id="statsContainer" style="display: none;">
@@ -392,6 +394,6 @@
 
     <div id="notificaciones"></div>
 
-    <script type="module" src="/static/subir_facturas_masivo.js?v=1763897790"></script>
+    <script type="module" src="/static/subir_facturas_masivo.js?v=1763897791"></script>
 </body>
 </html>

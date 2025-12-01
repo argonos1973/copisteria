@@ -96,17 +96,18 @@ export function calcularTotalLinea(precio, cantidad, iva) {
     const cantidadNum = typeof cantidad === 'number' ? cantidad : parsearImporte(cantidad);
     const ivaNum = typeof iva === 'number' ? iva : parsearImporte(iva);
     
-    // Subtotal SIN redondear (mantener precisión completa)
+    // Subtotal SIN redondear (precisión completa para cálculos intermedios)
     const subtotalRaw = precioNum * cantidadNum;
     
-    // CRÍTICO: Redondear IVA por línea a 2 decimales DESDE el subtotal sin redondear
-    const iva_importe = Number((subtotalRaw * (ivaNum / 100)).toFixed(2));
+    // IVA redondeado a 2 decimales
+    const iva_importe = redondearImporte(subtotalRaw * (ivaNum / 100));
     
-    // Total de línea = subtotal SIN redondear + IVA redondeado, luego redondear el total
-    const total = Number((subtotalRaw + iva_importe).toFixed(2));
+    // Subtotal redondeado a 2 decimales (Base Imponible de la línea)
+    const subtotal = redondearImporte(subtotalRaw);
     
-    // El subtotal para mostrar se redondea solo para visualización
-    const subtotal = Number(subtotalRaw.toFixed(2));
+    // Total de línea = Base redondeada + IVA redondeado
+    // Esto garantiza que Base + IVA = Total visualmente
+    const total = redondearImporte(subtotal + iva_importe);
     
     return {
         subtotal: subtotal,
@@ -123,7 +124,6 @@ export function calcularTotalLinea(precio, cantidad, iva) {
 export function calcularTotalesDocumento(detalles) {
     let subtotal_total = 0;
     let iva_total = 0;
-    let total_final = 0;
     
     detalles.forEach(detalle => {
         const linea = calcularTotalLinea(
@@ -134,14 +134,20 @@ export function calcularTotalesDocumento(detalles) {
         
         subtotal_total += linea.subtotal;
         iva_total += linea.iva_importe;
-        total_final += linea.total;
     });
     
-    // Redondear totales finales para evitar errores de precisión flotante
+    // Redondear acumuladores finales
+    subtotal_total = redondearImporte(subtotal_total);
+    iva_total = redondearImporte(iva_total);
+    
+    // Total final = Suma de bases + Suma de cuotas
+    // Esto garantiza que el total del documento cuadre con el desglose
+    const total_final = redondearImporte(subtotal_total + iva_total);
+    
     return {
-        subtotal_total: Number(subtotal_total.toFixed(2)),
-        iva_total: Number(iva_total.toFixed(2)),
-        total_final: Number(total_final.toFixed(2))
+        subtotal_total: subtotal_total,
+        iva_total: iva_total,
+        total_final: total_final
     };
 }
 
