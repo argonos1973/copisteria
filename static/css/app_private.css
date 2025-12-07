@@ -804,8 +804,8 @@ html body .modal-perfil-content .btn-guardar:active {
     right: 10px;
     z-index: 101;
     background: transparent;
-    color: var(--color-header-text, #fff); /* Texto del menú */
-    border: 1px solid rgba(255,255,255,0.1);
+    color: var(--color-texto, #555); /* Color adaptable, oscuro por defecto */
+    border: 1px solid var(--color-borde, rgba(0,0,0,0.1));
     width: 30px;
     height: 30px;
     border-radius: 4px;
@@ -814,11 +814,12 @@ html body .modal-perfil-content .btn-guardar:active {
     align-items: center;
     justify-content: center;
     transition: all 0.3s;
-    opacity: 0.6;
+    opacity: 0.8;
 }
 
 .sidebar-toggle-btn:hover {
-    background: rgba(255,255,255,0.1);
+    background: var(--color-hover, rgba(0,0,0,0.05));
+    color: var(--color-primario, #2c3e50);
     opacity: 1;
 }
 
@@ -844,8 +845,75 @@ html body .modal-perfil-content .btn-guardar:active {
 .layout-container.sidebar-hidden .sidebar-toggle-btn {
     right: 50%;
     transform: translateX(50%);
-    top: 10px;
+    top: 15px;
     border: none;
+}
+/* ... resto de estilos ... */
+
+/* Botón Toggle Móvil (Externo) - Estrictamente oculto en Desktop */
+.mobile-menu-toggle {
+    display: none !important;
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 95;
+    background: var(--color-primario, #2c3e50);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.mobile-menu-toggle:hover {
+    transform: scale(1.05);
+}
+
+/* Ajustes Responsive (Móvil) */
+@media (max-width: 768px) {
+    .menu {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        transform: translateX(-100%); /* Oculto por defecto */
+        width: 250px; /* Ancho completo en móvil */
+        margin-left: 0;
+        box-shadow: none;
+    }
+    
+    .menu.mobile-active {
+        transform: translateX(0);
+        box-shadow: 4px 0 15px rgba(0,0,0,0.3);
+    }
+    
+    /* Overlay para cerrar en móvil */
+    .menu.mobile-active::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 250px; /* Justo después del menú */
+        width: 100vw; /* Cubrir resto pantalla */
+        height: 100vh;
+        background: rgba(0,0,0,0.5);
+        z-index: -1;
+        cursor: pointer;
+    }
+    
+    .sidebar-toggle-btn {
+        /* En móvil visible para cerrar */
+        display: flex;
+    }
+    
+    /* Mostrar botón móvil solo en pantallas pequeñas */
+    .mobile-menu-toggle {
+        display: flex !important;
+    }
 }
 
 /* Ocultar elementos en modo minimizado */
