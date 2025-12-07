@@ -798,35 +798,45 @@ html body .modal-perfil-content .btn-guardar:active {
 }
 
 /* === Sidebar Toggle & Responsive === */
-.sidebar-toggle-btn {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-    z-index: 100; /* Encima del iframe */
-    background: var(--color-primario, #2c3e50);
-    color: white;
-    border: none;
-    width: 40px;
+.app-top-bar {
     height: 40px;
-    border-radius: 50%; /* Redondo */
+    background-color: var(--color-header-bg, #fff);
+    border-bottom: 1px solid var(--color-borde, rgba(0,0,0,0.1));
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    transition: background-color 0.3s;
+    flex-shrink: 0;
+}
+
+.sidebar-toggle-btn {
+    position: static;
+    z-index: 100;
+    background: transparent;
+    color: var(--color-header-text, #333);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
     cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    box-shadow: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s;
-    font-size: 18px;
-    opacity: 0.9;
+    transition: all 0.2s;
+    font-size: 16px;
+    opacity: 0.7;
 }
 
 .sidebar-toggle-btn:hover {
-    transform: scale(1.05);
+    background: rgba(128,128,128,0.1);
     opacity: 1;
+    transform: none;
 }
 
 .layout-container {
     position: relative;
-    overflow-x: hidden; /* Evitar scroll horizontal durante transición */
+    overflow-x: hidden;
     transition: all 0.3s ease;
 }
 

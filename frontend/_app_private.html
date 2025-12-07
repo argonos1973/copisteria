@@ -76,13 +76,15 @@
             </div>
         </nav>
         
-        <div class="content-container" style="flex-grow: 1; height: 100vh; overflow: hidden; position: relative;">
-            <!-- Botón Toggle Sidebar -->
-            <button id="sidebar-toggle" class="sidebar-toggle-btn" title="Ocultar/Mostrar Menú">
-                <i class="fas fa-bars"></i>
-            </button>
+        <div class="content-container" style="flex-grow: 1; height: 100vh; overflow: hidden; position: relative; display: flex; flex-direction: column;">
+            <!-- Barra superior para toggle y breadcrumbs -->
+            <div class="app-top-bar">
+                <button id="sidebar-toggle" class="sidebar-toggle-btn" title="Ocultar/Mostrar Menú">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
             
-            <div style="height: 100%;">
+            <div style="flex: 1; position: relative; overflow: hidden;">
                 <iframe id="content-frame" name="content-frame" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
         </div>
