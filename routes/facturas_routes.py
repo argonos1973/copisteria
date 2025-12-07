@@ -2,7 +2,9 @@
 Rutas relacionadas con facturas y facturación
 """
 
-from flask import Blueprint, jsonify, request
+import os
+import glob
+from flask import Blueprint, jsonify, request, send_file
 from auth_middleware import login_required
 import factura
 import anulacion
@@ -28,8 +30,13 @@ def facturas_paginado():
         # Filtros de consulta
         fecha_inicio = request.args.get('fecha_inicio', '')
         fecha_fin = request.args.get('fecha_fin', '')
-        numero_factura = request.args.get('numero_factura', '')
-        cliente = request.args.get('cliente', '')
+        
+        # Mapeo de parámetros para coincidir con lo que espera factura.py y lo que envía el frontend
+        # Frontend envía: numero, contacto, concepto
+        # factura.py espera: numero, contacto, concepto
+        numero = request.args.get('numero') or request.args.get('numero_factura', '')
+        contacto = request.args.get('contacto') or request.args.get('cliente', '')
+        concepto = request.args.get('concepto', '')
         estado = request.args.get('estado', '')
         
         # Parámetros de paginación
@@ -44,10 +51,12 @@ def facturas_paginado():
             filtros['fecha_inicio'] = fecha_inicio
         if fecha_fin:
             filtros['fecha_fin'] = fecha_fin
-        if numero_factura:
-            filtros['numero_factura'] = numero_factura
-        if cliente:
-            filtros['cliente'] = cliente
+        if numero:
+            filtros['numero'] = numero
+        if contacto:
+            filtros['contacto'] = contacto
+        if concepto:
+            filtros['concepto'] = concepto
         if estado:
             filtros['estado'] = estado
         
@@ -438,4 +447,37 @@ def obtener_factura_abierta_legacy(idContacto, idFactura):
             return jsonify({'error': 'Factura no encontrada'}), 404
     except Exception as e:
         logger.error(f"Error obteniendo factura abierta {idFactura}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@facturas_bp.route('/api/carta-reclamacion/<numero_factura>', methods=['GET'])
+def descargar_carta_reclamacion(numero_factura):
+    """Descarga la carta de reclamación de una factura"""
+    try:
+        # Directorio base
+        base_dir = '/var/www/html/cartas_reclamacion'
+        
+        # Buscar archivo que coincida con el patrón carta_reclamacion_{numero}_*.pdf
+        # Buscamos recursivamente por si acaso
+        pattern = f"carta_reclamacion_{numero_factura}_*.pdf"
+        
+        # Buscar en raíz primero
+        files = glob.glob(os.path.join(base_dir, pattern))
+        
+        # Si no, buscar recursivamente
+        if not files:
+             files = glob.glob(os.path.join(base_dir, '**', pattern), recursive=True)
+             
+        if not files:
+            logger.warning(f"No se encontró carta de reclamación para factura {numero_factura}")
+            return jsonify({'error': 'Carta no encontrada'}), 404
+            
+        # Ordenar por fecha (nombre del archivo contiene fecha YYYYMMDD) descendente
+        files.sort(reverse=True)
+        latest_file = files[0]
+        
+        return send_file(latest_file, as_attachment=False, mimetype='application/pdf')
+        
+    except Exception as e:
+        logger.error(f"Error sirviendo carta reclamación: {e}")
         return jsonify({'error': str(e)}), 500

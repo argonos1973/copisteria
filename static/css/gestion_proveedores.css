@@ -157,3 +157,63 @@ tbody tr:hover {
 .modal-content-large {
     max-width: 700px !important;
 }
+
+/* Estilos compactos para el detalle del proveedor */
+.modal-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color, #eee);
+}
+
+.modal-detail-icon {
+    width: 50px;
+    height: 50px;
+    background: var(--bg-header, #f8f9fa);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: var(--primary, #0d6efd);
+}
+
+.modal-detail-title h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-primary, #333);
+}
+
+.detail-section-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary, #666);
+    margin-top: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modal-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.detail-item label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted, #999);
+    margin-bottom: 2px;
+}
+
+.detail-item div {
+    font-size: 0.95rem;
+    font-weight: 500;
+}

@@ -5,28 +5,47 @@ async function verificarSesionYCargarMenu() {
     try {
         console.log('[MENU] Iniciando carga de menú según permisos...');
         
-        // Primero obtener datos de sesión
-        const sessionResponse = await fetch('/api/auth/session', { credentials: 'include' }, { credentials: 'include' });
-        if (!sessionResponse.ok) {
-            console.error('[MENU] Sesión no válida');
-            window.location.href = '/LOGIN.html';
-            return;
+        // 1. OBTENER DATOS DE SESIÓN (con caché)
+        let sessionData = null;
+        const cachedSession = sessionStorage.getItem('aleph70_session_data');
+        
+        if (cachedSession) {
+            sessionData = JSON.parse(cachedSession);
+            console.log('[MENU] ⚡ Usando sesión en caché');
+        } else {
+            const sessionResponse = await fetch('/api/auth/session', { credentials: 'include' });
+            if (!sessionResponse.ok) {
+                console.error('[MENU] Sesión no válida');
+                window.location.href = '/LOGIN.html';
+                return;
+            }
+            sessionData = await sessionResponse.json();
+            sessionStorage.setItem('aleph70_session_data', JSON.stringify(sessionData));
         }
         
-        const sessionData = await sessionResponse.json();
         console.log('[MENU] Datos de sesión:', sessionData);
         
         // Actualizar info de usuario
         actualizarInfoUsuario(sessionData);
         
-        // Luego cargar el menú
-        const menuResponse = await fetch('/api/auth/menu', { credentials: 'include' }, { credentials: 'include' });
+        // 2. CARGAR EL MENÚ (con caché)
+        let menuData = null;
+        const cachedMenu = sessionStorage.getItem('aleph70_menu_data');
         
-        if (!menuResponse.ok) {
-            throw new Error(`Error ${menuResponse.status}: ${menuResponse.statusText}`);
+        if (cachedMenu) {
+            menuData = JSON.parse(cachedMenu);
+            console.log('[MENU] ⚡ Usando menú en caché');
+        } else {
+            const menuResponse = await fetch('/api/auth/menu', { credentials: 'include' });
+            
+            if (!menuResponse.ok) {
+                throw new Error(`Error ${menuResponse.status}: ${menuResponse.statusText}`);
+            }
+            
+            menuData = await menuResponse.json();
+            sessionStorage.setItem('aleph70_menu_data', JSON.stringify(menuData));
         }
         
-        const menuData = await menuResponse.json();
         console.log('[MENU] Menú recibido según permisos del usuario:', menuData);
         
         if (!menuData || menuData.length === 0) {
@@ -61,15 +80,15 @@ async function verificarSesionYCargarMenu() {
             console.log('[MENU] ✅ Iframe src configurado a:', iframe.src);
             
             // Verificar que se cargó correctamente
-            iframe.addEventListener('load', () => {
+            iframe.onload = () => {
                 console.log('[MENU] ✅ Iframe cargado correctamente:', iframe.contentWindow.location.href);
-            });
+            };
             
-            iframe.addEventListener('error', (e) => {
+            iframe.onerror = (e) => {
                 console.error('[MENU] ❌ Error cargando iframe:', e);
                 console.error('[MENU] Intentando cargar página alternativa...');
                 iframe.src = '/bienvenida.html';
-            });
+            };
         } else {
             console.error('[MENU] ❌ Iframe content-frame no encontrado');
             // Reintentar después de un momento

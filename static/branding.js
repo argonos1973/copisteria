@@ -1,6 +1,20 @@
 // Gestión de branding y colores de la empresa
 // Extraído de _app_private.html para mejor mantenibilidad
 
+// Marca global para indicar que este contexto ya gestiona su branding
+window.hasBrandingJS = true;
+
+// Función auxiliar para comprobar si un iframe ya tiene gestión de branding
+function iframeTieneBranding(iframe) {
+    try {
+        // Verificar si la ventana del iframe tiene la marca hasBrandingJS
+        // Usamos acceso seguro try-catch por si es cross-origin
+        return iframe.contentWindow && iframe.contentWindow.hasBrandingJS === true;
+    } catch (e) {
+        return false;
+    }
+}
+
 // Función para calcular luminosidad y determinar color de texto
 function getTextColorForBackground(bgColor) {
     let r, g, b;
@@ -108,7 +122,14 @@ async function applyTheme(themeJson) {
         el.id = 'theme-style';
         document.head.appendChild(el);
     }
-    el.textContent = css;
+    
+    // OPTIMIZACION: Si el CSS es idéntico, no tocar el DOM para evitar parpadeo/recalc
+    if (el.textContent !== css) {
+        el.textContent = css;
+        console.log(`[BRANDING] 📊 Variables CSS generadas e inyectadas: ${varCount}`);
+    } else {
+        console.log('[BRANDING] ⚡ CSS idéntico (caché), no se actualiza el DOM');
+    }
     
     // 4) Activar
     document.documentElement.dataset.theme = themeJson.name;
@@ -125,21 +146,28 @@ async function applyTheme(themeJson) {
     
     // Aplicar también a los iframes si existen
     const iframes = document.querySelectorAll('iframe');
-    iframes.forEach(iframe => {
-        try {
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-            if (iframeDoc) {
-                Object.entries(vars).forEach(([key, value]) => {
-                    iframeDoc.documentElement.style.setProperty(toVar(key), value);
-                });
-                console.log('[BRANDING] ✓ Inyectando variables CSS en iframe...');
+    if (iframes.length > 0) {
+        iframes.forEach(iframe => {
+            try {
+                // OPTIMIZACION: Si el iframe tiene su propio branding.js, no interferir
+                if (iframeTieneBranding(iframe)) {
+                     console.log('[BRANDING] 🛑 Iframe gestiona su propio tema, omitiendo inyección desde padre.');
+                     return;
+                }
+
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                if (iframeDoc) {
+                    Object.entries(vars).forEach(([key, value]) => {
+                        iframeDoc.documentElement.style.setProperty(toVar(key), value);
+                    });
+                    console.log('[BRANDING] ✓ Inyectando variables CSS en iframe...');
+                }
+            } catch (e) {
+                console.log('[BRANDING] ⚠️ No se pudo acceder al iframe:', e.message);
             }
-        } catch (e) {
-            console.log('[BRANDING] ⚠️ No se pudo acceder al iframe:', e.message);
-        }
-    });
-    
-    console.log('[BRANDING] ✅ Variables CSS aplicadas al iframe');
+        });
+        console.log('[BRANDING] ✅ Variables CSS aplicadas a iframes hijos');
+    }
     
     // Forzar repaint de elementos que usan las variables
     requestAnimationFrame(() => {
@@ -186,6 +214,12 @@ function aplicarTemaAlIframe(css) {
     try {
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (iframeDoc) {
+            // OPTIMIZACION
+            if (iframeTieneBranding(iframe)) {
+                 console.log('[BRANDING] 🛑 Iframe gestiona su propio tema (style), omitiendo inyección.');
+                 return;
+            }
+
             console.log('[BRANDING] ✓ Inyectando variables CSS en iframe...');
             
             // Inyectar el mismo <style> con variables CSS dentro del iframe
@@ -223,18 +257,42 @@ async function aplicarColoresDirectos(plantillaData, plantillaNombre) {
 }
 
 // Cargar colores de la empresa
-async function cargarColoresEmpresa() {
+async function cargarColoresEmpresa(force = false) {
     try {
         console.log('[BRANDING] Cargando colores...');
-        const response = await fetch('/api/auth/branding', { credentials: 'include' }, { credentials: 'include' });
         
-        if (!response.ok) {
-            console.error('[BRANDING] ❌ No se pudo obtener branding');
-            return;
+        let branding = null;
+        
+        // 1. Intentar cargar de caché (sessionStorage)
+        if (!force) {
+            const cachedData = sessionStorage.getItem('aleph70_branding_data');
+            if (cachedData) {
+                branding = JSON.parse(cachedData);
+                console.log('[BRANDING] ⚡ Usando datos en caché (sessionStorage)');
+            }
         }
         
-        const branding = await response.json();
-        console.log('[BRANDING] Datos recibidos:', branding);
+        // 2. Si no hay caché, pedir al servidor
+        if (!branding) {
+            const response = await fetch('/api/auth/branding', { credentials: 'include' });
+            
+            if (!response.ok) {
+                console.error('[BRANDING] ❌ No se pudo obtener branding (posiblemente sin empresa)');
+                console.log('[BRANDING] ⚠️ Aplicando tema Minimal por defecto');
+                // Forzar tema Minimal si no hay empresa asignada
+                branding = { 
+                    plantilla: 'minimal',
+                    logo_header: 'default_header.png'
+                };
+            } else {
+                branding = await response.json();
+                // Guardar en caché solo si fue exitoso
+                sessionStorage.setItem('aleph70_branding_data', JSON.stringify(branding));
+                console.log('[BRANDING] 💾 Datos guardados en caché');
+            }
+        }
+        
+        console.log('[BRANDING] Datos procesados:', branding);
         
         // Actualizar logo inmediatamente antes de cargar plantilla
         const logoEmpresa = document.getElementById('logo-empresa');
@@ -265,17 +323,40 @@ async function cargarColoresEmpresa() {
         }
         
         console.log('[BRANDING] 📄 Cargando plantilla:', branding.plantilla);
-        const plantillaResponse = await fetch(`/static/plantillas/${branding.plantilla}.json`, {
-            cache: 'no-cache'
-        });
         
-        if (!plantillaResponse.ok) {
-            console.error('[BRANDING] ❌ No se pudo cargar JSON:', branding.plantilla);
-            return;
+        // OPTIMIZACION: Intentar cargar de caché local (localStorage) para evitar fetch
+        let themeJson = null;
+        const cachedThemeJson = localStorage.getItem('aleph70_theme');
+        // En versiones anteriores guardamos el nombre en aleph70_theme_name
+        // Pero themeJson tiene .name dentro también. Usamos el auxiliar por rapidez.
+        const cachedThemeName = localStorage.getItem('aleph70_theme_name');
+        
+        // Normalizar comparación (minúsculas y sin espacios)
+        const isSameTemplate = cachedThemeName && branding.plantilla && 
+            cachedThemeName.toLowerCase().trim() === branding.plantilla.toLowerCase().trim();
+
+        if (cachedThemeJson && isSameTemplate) {
+             try {
+                 themeJson = JSON.parse(cachedThemeJson);
+                 console.log('[BRANDING] ⚡ Usando plantilla de caché local (sin red):', branding.plantilla);
+             } catch (e) {
+                 console.warn('[BRANDING] Error leyendo caché de tema:', e);
+             }
         }
         
-        const themeJson = await plantillaResponse.json();
-        console.log('[BRANDING] ✅ JSON cargado:', themeJson.name);
+        if (!themeJson) {
+            const plantillaResponse = await fetch(`/static/plantillas/${branding.plantilla}.json`, {
+                cache: 'no-cache'
+            });
+            
+            if (!plantillaResponse.ok) {
+                console.error('[BRANDING] ❌ No se pudo cargar JSON:', branding.plantilla);
+                return;
+            }
+            
+            themeJson = await plantillaResponse.json();
+            console.log('[BRANDING] ✅ JSON cargado de red:', themeJson.name);
+        }
         
         // 3. Aplicar tema con sistema nuevo (design tokens)
         await applyTheme(themeJson);
@@ -337,6 +418,14 @@ async function cargarColoresEmpresa() {
         console.error("[BRANDING] Error cargando colores:", error);
     }
 }
+
+// Exportar función para limpiar caché (usar al guardar perfil/plantilla)
+window.limpiarCacheBranding = function() {
+    console.log('[BRANDING] Limpiando caché de sesión...');
+    sessionStorage.removeItem('aleph70_branding_data');
+    sessionStorage.removeItem('aleph70_menu_data'); // También limpiar menú por si acaso
+    sessionStorage.removeItem('aleph70_session_data');
+};
 
 // Variable global para guardar colores y reutilizarlos
 // Evitar re-declaración si el script se carga múltiples veces
@@ -1329,13 +1418,30 @@ window.getTextColorForBackground = getTextColorForBackground;
 window.aplicarEstilosAlIframe = aplicarEstilosAlIframe;
 
 // Cargar colores de empresa al cargar la página
-document.addEventListener('DOMContentLoaded', cargarColoresEmpresa);
+// Mantener listener para seguridad
+document.addEventListener('DOMContentLoaded', () => {
+    // Solo re-ejecutar si es necesario (idempotente)
+    cargarColoresEmpresa();
+});
+
+// OPTIMIZACION: Ejecutar inmediatamente si hay datos en caché para evitar parpadeo
+// Esto aplica los estilos CSS antes de que termine de cargar todo el DOM
+if (sessionStorage.getItem('aleph70_branding_data')) {
+    console.log('[BRANDING] ⚡ Iniciando carga inmediata por caché detectada');
+    cargarColoresEmpresa();
+}
 
 // Configurar listener para re-aplicar estilos cuando el iframe carga nueva página
 document.addEventListener('DOMContentLoaded', () => {
     const iframe = document.getElementById('content-frame');
     if (iframe) {
         iframe.addEventListener('load', () => {
+            // OPTIMIZACION
+            if (iframeTieneBranding(iframe)) {
+                 console.log('[BRANDING] 🛑 Iframe cargó y tiene branding.js, no se re-aplica tema desde padre.');
+                 return;
+            }
+
             console.log('[BRANDING] 📄 Iframe cargó nueva página, re-aplicando tema...');
             
             // Obtener tema guardado y re-aplicarlo al iframe

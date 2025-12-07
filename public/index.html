@@ -71,26 +71,13 @@
                     </p>
                     <div class="hero-buttons animate-fade-up-delay-2">
                         <button class="btn btn-primary" onclick="openRegisterModal()">
-                            <i class="fas fa-rocket"></i> Empezar Gratis
+                            <i class="fas fa-rocket"></i> Empezar Prueba Gratuita
                         </button>
                         <a href="#caracteristicas" class="btn btn-outline">
-                            <i class="fas fa-info-circle"></i> Más Información
+                            <i class="fas fa-info-circle"></i> Descubrir Más
                         </a>
                     </div>
-                    <div class="hero-stats">
-                        <div class="stat">
-                            <span class="stat-number">500+</span>
-                            <span class="stat-label">Empresas Activas</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">50K+</span>
-                            <span class="stat-label">Facturas Procesadas</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-number">99.9%</span>
-                            <span class="stat-label">Disponibilidad</span>
-                        </div>
-                    </div>
+                    <!-- Stats eliminados a petición del cliente -->
                 </div>
                 <div class="hero-image">
                     <img src="images/dashboard-preview.png" alt="Dashboard Aleph" class="dashboard-img">
@@ -118,8 +105,8 @@
                     <div class="feature-icon">
                         <i class="fas fa-file-invoice-dollar"></i>
                     </div>
-                    <h3>Facturación Electrónica</h3>
-                    <p>Genera facturas electrónicas con FacturaE, gestión de series y envío automático por email.</p>
+                    <h3>VeriFactu Incluido</h3>
+                    <p>Cumple con la normativa antifraude automáticamente. Facturación verificable y segura.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">
@@ -198,67 +185,32 @@
     <section id="planes" class="pricing">
         <div class="container">
             <div class="section-header">
-                <h2 class="section-title">Planes y Precios</h2>
-                <p class="section-subtitle">Elige el plan que mejor se adapte a tu negocio</p>
+                <h2 class="section-title">Un Único Plan, Todo Incluido</h2>
+                <p class="section-subtitle">Sin sorpresas. Sin costes ocultos. Acceso total.</p>
             </div>
-            <div class="pricing-grid">
-                <div class="pricing-card">
+            <div class="pricing-grid" style="display: flex; justify-content: center;">
+                <div class="pricing-card featured" style="max-width: 450px; width: 100%; transform: scale(1.05);">
+                    <div class="badge">Precio Único</div>
                     <div class="pricing-header">
-                        <h3>Básico</h3>
+                        <h3>Premium</h3>
                         <div class="price">
                             <span class="currency">€</span>
-                            <span class="amount">29</span>
-                            <span class="period">/mes</span>
+                            <span class="amount">20</span>
+                            <span class="period">/mes + IVA</span>
                         </div>
+                        <p style="margin-top: 10px; color: #666;">Sin permanencia. Cancela cuando quieras.</p>
                     </div>
                     <ul class="pricing-features">
-                        <li><i class="fas fa-check"></i> Hasta 100 tickets/mes</li>
-                        <li><i class="fas fa-check"></i> 1 usuario</li>
-                        <li><i class="fas fa-check"></i> Soporte por email</li>
-                        <li><i class="fas fa-check"></i> Backup diario</li>
-                        <li><i class="fas fa-times"></i> Facturación electrónica</li>
-                        <li><i class="fas fa-times"></i> API access</li>
+                        <li><i class="fas fa-check-circle" style="color: #2ecc71;"></i> <strong>VeriFactu Incluido</strong></li>
+                        <li><i class="fas fa-check"></i> Usuarios Ilimitados</li>
+                        <li><i class="fas fa-check"></i> Tickets y Facturas Ilimitados</li>
+                        <li><i class="fas fa-check"></i> Gestión Multi-empresa</li>
+                        <li><i class="fas fa-check"></i> Soporte Prioritario 24/7</li>
+                        <li><i class="fas fa-check"></i> Backups Diarios Automáticos</li>
+                        <li><i class="fas fa-check"></i> Personalización de Marca</li>
+                        <li><i class="fas fa-check"></i> Actualizaciones Gratuitas</li>
                     </ul>
-                    <button class="btn btn-outline-full" onclick="selectPlan('basico')">Elegir Plan</button>
-                </div>
-                <div class="pricing-card featured">
-                    <div class="badge">Más Popular</div>
-                    <div class="pricing-header">
-                        <h3>Profesional</h3>
-                        <div class="price">
-                            <span class="currency">€</span>
-                            <span class="amount">59</span>
-                            <span class="period">/mes</span>
-                        </div>
-                    </div>
-                    <ul class="pricing-features">
-                        <li><i class="fas fa-check"></i> Tickets ilimitados</li>
-                        <li><i class="fas fa-check"></i> 5 usuarios</li>
-                        <li><i class="fas fa-check"></i> Soporte prioritario</li>
-                        <li><i class="fas fa-check"></i> Backup cada hora</li>
-                        <li><i class="fas fa-check"></i> Facturación electrónica</li>
-                        <li><i class="fas fa-check"></i> Integraciones</li>
-                    </ul>
-                    <button class="btn btn-primary-full" onclick="selectPlan('profesional')">Elegir Plan</button>
-                </div>
-                <div class="pricing-card">
-                    <div class="pricing-header">
-                        <h3>Empresa</h3>
-                        <div class="price">
-                            <span class="currency">€</span>
-                            <span class="amount">99</span>
-                            <span class="period">/mes</span>
-                        </div>
-                    </div>
-                    <ul class="pricing-features">
-                        <li><i class="fas fa-check"></i> Todo ilimitado</li>
-                        <li><i class="fas fa-check"></i> Usuarios ilimitados</li>
-                        <li><i class="fas fa-check"></i> Soporte 24/7</li>
-                        <li><i class="fas fa-check"></i> Backup continuo</li>
-                        <li><i class="fas fa-check"></i> Multi-empresa</li>
-                        <li><i class="fas fa-check"></i> Personalización</li>
-                    </ul>
-                    <button class="btn btn-outline-full" onclick="selectPlan('empresa')">Elegir Plan</button>
+                    <button class="btn btn-primary-full" onclick="openRegisterModal()">Empezar Ahora</button>
                 </div>
             </div>
         </div>
@@ -407,8 +359,8 @@
                     </label>
                 </div>
                 
-                <!-- Google reCAPTCHA -->
-                <div class="g-recaptcha" data-sitekey="your-recaptcha-site-key"></div>
+                <!-- Google reCAPTCHA eliminado temporalmente -->
+                <!-- <div class="g-recaptcha" data-sitekey="your-recaptcha-site-key"></div> -->
                 
                 <button type="submit" class="btn btn-primary-full">
                     <i class="fas fa-user-plus"></i> Crear Cuenta
@@ -429,9 +381,14 @@
             </div>
             <h2>¡Registro Exitoso!</h2>
             <p>Tu cuenta ha sido creada correctamente. En breve recibirás un email de confirmación.</p>
-            <button class="btn btn-primary" onclick="window.location.href='/LOGIN.html'">
-                Ir a Iniciar Sesión
-            </button>
+            <div class="success-actions">
+                <button class="btn btn-primary" onclick="closeSuccessModal()">
+                    Entendido
+                </button>
+            </div>
+            <p class="small-text" style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                <i class="fas fa-info-circle"></i> Recuerda que debes validar tu email antes de poder iniciar sesión.
+            </p>
         </div>
     </div>
 

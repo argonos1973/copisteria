@@ -13,7 +13,6 @@ async function abrirModalPerfil() {
         // Llenar formulario de datos
         document.getElementById('perfil-username').value = data.username || '';
         document.getElementById('perfil-email').value = data.email || '';
-        document.getElementById('perfil-telefono').value = data.telefono || '';
         
         // Llenar información en pestaña de contraseña
         const passwordInfoUsername = document.getElementById('password-info-username');
@@ -128,7 +127,6 @@ async function guardarDatos(event) {
         // Usar FormData para enviar archivos
         const formData = new FormData();
         formData.append('email', document.getElementById('perfil-email').value);
-        formData.append('telefono', document.getElementById('perfil-telefono').value);
         
         // Agregar avatar predefinido si se seleccionó uno
         if (avatarSeleccionado) {
@@ -302,7 +300,7 @@ async function cargarPlantillasModal() {
                         <span class="preview-dot" style="background: ${dot3}"></span>
                     </div>
                     <div class="plantilla-icon" style="color: ${primary}">${p.icono}</div>
-                    <div class="plantilla-nombre" style="color: ${text}">${p.nombre}</div>
+                    <div class="plantilla-nombre" style="color: #ffffff; background: rgba(0,0,0,0.7); padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-top: 5px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); display: inline-block;">${p.nombre}</div>
                     <div class="plantilla-check" style="color: ${primary}"><i class="fas fa-check-circle"></i></div>
                 </div>
             `;
@@ -348,6 +346,11 @@ async function cambiarPlantillaUsuario(plantilla, clickedElement) {
             }
             
             mostrarNotificacion('Plantilla cambiada correctamente', 'success');
+            
+            // Limpiar caché para forzar recarga de la nueva configuración
+            if (window.limpiarCacheBranding) {
+                window.limpiarCacheBranding();
+            }
             
             // Recargar la modal para aplicar el nuevo tema
             await cargarPlantillasModal();

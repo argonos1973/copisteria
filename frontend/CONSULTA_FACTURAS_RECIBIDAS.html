@@ -5,15 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Facturas Recibidas</title>
-    <script src="/static/branding.js?v=1763897790"></script>
-    <script src="/static/auto_branding.js?v=1763897790"></script>
+    <script src="/static/branding.js?v=1764787007"></script>
+    <script src="/static/auto_branding.js?v=1764787007"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="../static/css/page_header.css?v=1763897790">
     <link rel="stylesheet" href="/static/css/theme-consumer.css?v=1763897790">
-    <link rel="stylesheet" href="../static/css/styles.css?v=1763897790">
+    <link rel="stylesheet" href="../static/css/styles.css?v=FIX_FINAL_5">
     <link rel="stylesheet" href="../static/css/notificaciones.css?v=1763897790">
     <link rel="stylesheet" href="../static/css/footer.css?v=1763897790">
-    <link rel="stylesheet" href="../static/css/modales.css?v=1763897790">
+    <link rel="stylesheet" href="../static/css/modales.css?v=FIX_FINAL_5">
     <style>
       /* Vista Facturas Recibidas: layout a pantalla completa */
       .facturas-recibidas-page { padding-bottom: 0 !important; }
@@ -172,6 +172,18 @@
         color: inherit !important;
         font-size: 14px;
       }
+      /* Estilos de tabla mejorados */
+      #facturasTable {
+        width: 100%;
+        border-collapse: collapse;
+        /* table-layout: fixed; NO usar fixed si no definimos ancho para todas, mejor dejar auto con min-widths */
+      }
+      
+      #facturasTable th, #facturasTable td {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border-color, #e0e0e0);
+        vertical-align: middle;
+      }
     </style>
 </head>
 <body class="facturas-recibidas-page">
@@ -216,12 +228,24 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="startDate">Desde:</label>
-                <input type="date" id="startDate" class="date-input">
+                <label for="trimestreFilter">Periodo:</label>
+                <select id="trimestreFilter" style="min-width: 150px;">
+                    <option value="actual" selected>Trimestre Actual</option>
+                    <option value="anterior">Trimestre Anterior</option>
+                    <option value="anio_actual">Año Actual</option>
+                    <option value="anio_anterior">Año Anterior</option>
+                    <option value="1T">1er Trimestre</option>
+                    <option value="2T">2do Trimestre</option>
+                    <option value="3T">3er Trimestre</option>
+                    <option value="4T">4to Trimestre</option>
+                    <option value="todos">Todo el Histórico</option>
+                </select>
             </div>
-            <div class="form-group">
-                <label for="endDate">Hasta:</label>
-                <input type="date" id="endDate" class="date-input">
+            <div class="form-group" id="anioContainer" style="display:none;">
+                 <label for="anioFilter">Año:</label>
+                 <select id="anioFilter" style="width: 80px;">
+                     <!-- Se llena con JS -->
+                 </select>
             </div>
             <div class="form-group">
                 <label for="busquedaFilter">Buscar:</label>
@@ -260,14 +284,14 @@
                     <thead>
                         <tr>
                             <th>Proveedor</th>
-                            <th>NIF</th>
-                            <th>Nº Factura</th>
-                            <th>Fecha</th>
-                            <th style="width: 90px;">Venc.</th>
-                            <th style="text-align: right;">Base</th>
-                            <th style="text-align: right;">IVA</th>
-                            <th style="text-align: right;">Total</th>
-                            <th style="width: 80px;">Acciones</th>
+                            <th style="width: 100px;">NIF</th>
+                            <th style="width: 100px;">Nº Factura</th>
+                            <th style="width: 100px;">Fecha</th>
+                            <th style="width: 100px;">Venc.</th>
+                            <th style="text-align: right; width: 100px;">Base</th>
+                            <th style="text-align: right; width: 100px;">IVA</th>
+                            <th style="text-align: right; width: 110px;">Total</th>
+                            <th style="width: 80px; text-align: center;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="facturasBody">
@@ -293,7 +317,7 @@
     <!-- Scripts -->
     <script>
         // Cargar modales dinámicamente
-        fetch('/MODALES_FACTURAS_RECIBIDAS.html')
+        fetch('/MODALES_FACTURAS_RECIBIDAS.html?v=FIX_FINAL_5')
             .then(response => response.text())
             .then(html => {
                 document.getElementById('modales-container').innerHTML = html;

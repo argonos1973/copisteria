@@ -118,7 +118,7 @@ function renderizarProveedores() {
                     <i class="fas fa-users" style="font-size: 48px; color: #ccc; display: block; margin-bottom: 10px;"></i>
                     <p>No hay proveedores que mostrar</p>
                     ${proveedores.length === 0 ? `<button class="btn btn-primary" onclick="document.getElementById('btnNuevoProveedor').click()">
-                        <i class="fas fa-plus"></i> Crear primer proveedor
+                        Crear primer proveedor
                     </button>` : ''}
                 </td>
             </tr>
@@ -405,10 +405,10 @@ function activarEdicionEnDetalle(proveedor) {
     
     // Cambiar botones del footer
     footer.innerHTML = `
-        <button type="button" class="btn btn-secondary" onclick="cancelarEdicionDetalle()">
+        <button type="button" class="btn btn-modal-cancel" onclick="cancelarEdicionDetalle()">
             Cancelar
         </button>
-        <button type="button" class="btn btn-success" onclick="guardarEdicionDetalle()">
+        <button type="button" class="btn btn-modal-save" onclick="guardarEdicionDetalle()">
             Guardar
         </button>
     `;
@@ -473,8 +473,8 @@ window.guardarEdicionDetalle = async function() {
 function restaurarBotonesDetalle() {
     const footer = document.querySelector('#modalDetalleProveedor .modal-footer');
     footer.innerHTML = `
-        <button type="button" class="btn btn-danger" id="btnEliminarDesdeDetalle" style="margin-right: auto;" title="Eliminar">
-            <i class="fas fa-trash"></i>
+        <button type="button" class="btn btn-danger" id="btnEliminarDesdeDetalle" title="Eliminar">
+            Eliminar
         </button>
         <button type="button" class="btn btn-primary" id="btnEditarDesdeDetalle">
             Editar

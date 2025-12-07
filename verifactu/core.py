@@ -174,35 +174,77 @@ def generar_datos_verifactu_para_factura(factura_id, empresa_codigo=None):
                         conn.commit()
                         logger.info(f"Código QR actualizado con CSV para factura {factura_id}")
             else:
-                # Error de AEAT - marcar como ERROR y guardar mensaje
-                logger.error(f"Error al enviar factura {factura_id} a AEAT: {resultado_envio.get('mensaje')}")
-                
-                _ensure_column_exists('estado_envio')
-                _ensure_column_exists('errores')
-                _ensure_column_exists('fecha_envio')
-                
-                # Construir mensaje de error desde los errores devueltos
-                mensaje_error = resultado_envio.get('mensaje', 'Error desconocido')
+                # Error de AEAT - comprobar si es error 3000 (Duplicado)
+                es_duplicado = False
                 if resultado_envio.get('errores'):
-                    errores_str = ' | '.join([
-                        f"{err.get('codigo', 'N/A')}: {err.get('descripcion', 'Sin descripción')}"
-                        for err in resultado_envio['errores']
-                    ])
-                    mensaje_error = errores_str
+                    for err in resultado_envio['errores']:
+                        if str(err.get('codigo')) == '3000':
+                            es_duplicado = True
+                            break
                 
-                cursor.execute(
-                    """
-                    UPDATE registro_facturacion
-                       SET estado_envio = 'ERROR',
-                           errores = ?,
-                           fecha_envio = ?,
-                           enviado_aeat = 0
-                     WHERE factura_id = ?
-                    """,
-                    (mensaje_error, datetime.now().isoformat(), factura_id)
-                )
-                conn.commit()
-                logger.info(f"Estado ERROR registrado para factura {factura_id}")
+                if es_duplicado:
+                    logger.info(f"Factura {factura_id} ya registrada en AEAT (Error 3000). Marcando como ENVIADO localmente.")
+                    
+                    _ensure_column_exists('estado_envio')
+                    _ensure_column_exists('fecha_envio')
+                    _ensure_column_exists('errores')
+                    
+                    # Marcar como ENVIADO
+                    cursor.execute(
+                        """
+                        UPDATE registro_facturacion
+                           SET estado_envio = 'ENVIADO',
+                               fecha_envio = ?,
+                               errores = NULL,
+                               enviado_aeat = 1
+                         WHERE factura_id = ?
+                        """,
+                        (datetime.now().isoformat(), factura_id)
+                    )
+                    conn.commit()
+                    
+                    # Considerar éxito para el frontend
+                    resultado_envio['success'] = True
+                    resultado_envio['mensaje'] = 'Factura ya registrada en AEAT (Sincronizado)'
+                    
+                    # Intentar recuperar CSV si viene en la respuesta (a veces AEAT devuelve CSV del original en errores)
+                    if resultado_envio.get('csv'):
+                        csv_final = resultado_envio['csv']
+                        # Actualizar CSV en BD...
+                        _ensure_column_exists('csv')
+                        cursor.execute("UPDATE registro_facturacion SET csv = ? WHERE factura_id = ?", (csv_final, factura_id))
+                        conn.commit()
+
+                else:
+                    # Error real de AEAT - marcar como ERROR y guardar mensaje
+                    logger.error(f"Error al enviar factura {factura_id} a AEAT: {resultado_envio.get('mensaje')}")
+                    
+                    _ensure_column_exists('estado_envio')
+                    _ensure_column_exists('errores')
+                    _ensure_column_exists('fecha_envio')
+                    
+                    # Construir mensaje de error desde los errores devueltos
+                    mensaje_error = resultado_envio.get('mensaje', 'Error desconocido')
+                    if resultado_envio.get('errores'):
+                        errores_str = ' | '.join([
+                            f"{err.get('codigo', 'N/A')}: {err.get('descripcion', 'Sin descripción')}"
+                            for err in resultado_envio['errores']
+                        ])
+                        mensaje_error = errores_str
+                    
+                    cursor.execute(
+                        """
+                        UPDATE registro_facturacion
+                           SET estado_envio = 'ERROR',
+                               errores = ?,
+                               fecha_envio = ?,
+                               enviado_aeat = 0
+                         WHERE factura_id = ?
+                        """,
+                        (mensaje_error, datetime.now().isoformat(), factura_id)
+                    )
+                    conn.commit()
+                    logger.info(f"Estado ERROR registrado para factura {factura_id}")
                 
         except Exception as e:
             logger.error(f"Error procesando respuesta AEAT: {e}")

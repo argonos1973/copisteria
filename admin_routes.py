@@ -17,6 +17,7 @@ from logger_config import get_logger
 from database_pool import get_database_pool
 
 logger = get_logger(__name__)
+logger.info("!!! CARGANDO ADMIN_ROUTES MODIFICADO CON SOPORTE PARA USERNAME !!!")
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -98,7 +99,7 @@ def listar_usuarios():
                 SELECT 
                     u.id, u.username, u.nombre_completo, u.email, u.telefono,
                     u.activo, u.fecha_alta, u.ultimo_acceso, u.avatar,
-                    u.rol,
+                    ue.rol,
                     ue.es_admin_empresa,
                     GROUP_CONCAT(DISTINCT e.nombre) as empresas,
                     GROUP_CONCAT(DISTINCT e.codigo) as empresas_codigos
@@ -157,9 +158,9 @@ def crear_usuario():
             
             # es_superadmin siempre 0 (ya no hay superadmins)
             cursor.execute('''
-                INSERT INTO usuarios (username, password_hash, nombre_completo, email, telefono, rol, es_superadmin, activo)
-                VALUES (?, ?, ?, ?, ?, ?, 0, 1)
-            ''', (username, password_hash, nombre_completo, email, telefono, rol))
+                INSERT INTO usuarios (username, password_hash, nombre_completo, email, telefono, es_superadmin, activo, avatar)
+                VALUES (?, ?, ?, ?, ?, 0, 1, '/static/avatars/default.svg')
+            ''', (username, password_hash, nombre_completo, email, telefono))
             
             usuario_id = cursor.lastrowid
             
@@ -195,6 +196,7 @@ def actualizar_usuario(usuario_id):
     """Actualiza un usuario existente (admin de empresa solo puede modificar usuarios de su empresa)"""
     try:
         data = request.json
+        logger.info(f"[DEBUG ACTUALIZAR USUARIO] ID: {usuario_id} DATOS RECIBIDOS: {data}")
         
         with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
             cursor = conn.cursor()
@@ -214,6 +216,14 @@ def actualizar_usuario(usuario_id):
             campos = []
             valores = []
             
+            if 'username' in data:
+                # Verificar si el nuevo username ya existe (excepto para el propio usuario)
+                cursor.execute('SELECT id FROM usuarios WHERE username = ? AND id != ?', (data['username'], usuario_id))
+                if cursor.fetchone():
+                    return jsonify({'error': 'El nombre de usuario ya existe'}), 400
+                campos.append('username = ?')
+                valores.append(data['username'])
+
             if 'nombre_completo' in data:
                 campos.append('nombre_completo = ?')
                 valores.append(data['nombre_completo'])
@@ -230,8 +240,16 @@ def actualizar_usuario(usuario_id):
                 rol = data['rol'].strip()
                 # Validar rol
                 if rol in ['admin', 'editor', 'consultor']:
-                    campos.append('rol = ?')
-                    valores.append(rol)
+                    # Actualizar rol en la tabla usuario_empresa
+                    cursor.execute('''
+                        UPDATE usuario_empresa 
+                        SET rol = ? 
+                        WHERE usuario_id = ? AND empresa_id = ?
+                    ''', (rol, usuario_id, empresa_id_editor))
+                    logger.info(f"Rol actualizado para usuario {usuario_id} en empresa {empresa_id_editor}: {rol}")
+                    
+                    # También reasignar permisos
+                    asignar_permisos_segun_rol(usuario_id, empresa_id_editor, rol, cursor)
             
             if 'activo' in data:
                 campos.append('activo = ?')
@@ -247,6 +265,7 @@ def actualizar_usuario(usuario_id):
             valores.append(usuario_id)
             
             query = f"UPDATE usuarios SET {', '.join(campos)} WHERE id = ?"
+            logger.info(f"[DEBUG QUERY] {query} VALORES: {valores}")
             cursor.execute(query, valores)
             
             # Si se actualizó el rol, actualizar permisos automáticamente

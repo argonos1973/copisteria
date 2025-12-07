@@ -1,4 +1,4 @@
-import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
+import { IP_SERVER, PORT, IS_PROD, API_URL } from './constantes.js?v=1762757322';
 import { mostrarConfirmacion } from './notificaciones.js';
 
 export const PRODUCTO_ID_LIBRE = '94';
@@ -1231,7 +1231,8 @@ export async function fetchConManejadorErrores(url, opciones = {}) {
       if (u.pathname.startsWith('/api')) {
         // Solo usar el servidor actual (detectado automáticamente)
         const currentHost = window.location.hostname;
-        const candidate = `http://${currentHost}:${PORT}${u.pathname}${u.search}`;
+        const protocol = window.location.protocol;
+        const candidate = `${protocol}//${currentHost}:${PORT}${u.pathname}${u.search}`;
         if (!candidates.includes(candidate)) candidates.push(candidate);
       }
     } catch (_) {
@@ -1239,7 +1240,8 @@ export async function fetchConManejadorErrores(url, opciones = {}) {
       if (p.startsWith('/api')) {
         // Solo usar el servidor actual (detectado automáticamente)
         const currentHost = window.location.hostname;
-        const candidate = `http://${currentHost}:${PORT}${p}`;
+        const protocol = window.location.protocol;
+        const candidate = `${protocol}//${currentHost}:${PORT}${p}`;
         if (!candidates.includes(candidate)) candidates.push(candidate);
       }
     }
@@ -1270,14 +1272,16 @@ export function buildApiUrl(path) {
   try {
     if (!path) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    
     const p = path.startsWith('/') ? path : `/${path}`;
-    // Para rutas de API, usar protocolo y puerto correctos
+    
+    // Para rutas de API, usar API_URL importada que ya tiene la lógica correcta
     if (p.startsWith('/api')) {
-      // Detectar protocolo automáticamente - IMPORTANTE para Cloudflare
-      const PROTOCOL = window.location.protocol || 'http:';
-      const USE_PORT = (PROTOCOL === 'https:' || window.location.hostname.includes('cloudflare')) ? '' : `:${PORT}`;
-      return `${PROTOCOL}//${IP_SERVER}${USE_PORT}${p}`;
+      // Eliminar slash final de API_URL si lo tuviera para evitar doble slash
+      const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+      return `${baseUrl}${p}`;
     }
+    
     // Para otras rutas, devolver relativo al origen
     return p;
   } catch (e) {

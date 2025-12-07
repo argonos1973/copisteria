@@ -7,7 +7,7 @@
     "provincia": "Barcelona",
     "pais": "ESP",
     "email": "info@aleph70.com",
+    "certificado": "/var/www/html/certs/empresas/cert_d551f0e049e14d9b9dd97ca52cf35611_cert.pem",
     "db_path": "/var/www/html/db/caca/caca.db",
-    "codigo": "caca",
-    "logo": "/static/logos/caca_logo.png"
+    "codigo": "caca"
 }

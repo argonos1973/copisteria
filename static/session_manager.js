@@ -71,6 +71,8 @@ class SessionManager {
 
     clearSession() {
         localStorage.removeItem(this.storageKey);
+        // Limpiar caché de menú también para evitar leaks de permisos entre usuarios
+        sessionStorage.removeItem('menu_data');
         this.sessionData = null;
     }
 
@@ -122,19 +124,28 @@ class SessionManager {
                 credentials: 'include'
             });
             
+            // Leer texto primero para evitar SyntaxError si devuelve HTML
+            const text = await response.text();
+            
             if (response.ok) {
-                const data = await response.json();
-                if (data.username) {
-                    // Sesión válida, actualizar localStorage
-                    const sessionInfo = {
-                        ...data,
-                        timestamp: new Date().toISOString(),
-                        expiry: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
-                    };
-                    localStorage.setItem(this.storageKey, JSON.stringify(sessionInfo));
-                    this.sessionData = sessionInfo;
-                    return true;
+                try {
+                    const data = JSON.parse(text);
+                    if (data.username) {
+                        // Sesión válida, actualizar localStorage
+                        const sessionInfo = {
+                            ...data,
+                            timestamp: new Date().toISOString(),
+                            expiry: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
+                        };
+                        localStorage.setItem(this.storageKey, JSON.stringify(sessionInfo));
+                        this.sessionData = sessionInfo;
+                        return true;
+                    }
+                } catch (e) {
+                    console.error('Error parseando JSON de sesión. Respuesta recibida:', text.substring(0, 100) + '...');
                 }
+            } else {
+                console.warn('Error en verifySession. Status:', response.status, 'Response:', text.substring(0, 100));
             }
             
             // Si no hay sesión válida en el servidor, limpiar localStorage

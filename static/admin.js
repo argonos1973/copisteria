@@ -358,7 +358,7 @@ function mostrarUsuarios(lista) {
     }
 
     let html = `
-        <table>
+        <table class="data-table">
             <thead>
                 <tr>
                     <th>Usuario</th>
@@ -398,7 +398,7 @@ function mostrarUsuarios(lista) {
                 <td>${estado}</td>
                 <td>${rolBadge}</td>
                 <td onclick="event.stopPropagation()">
-                    <button class="btn btn-danger btn-small" onclick="eliminarUsuario(${usuario.id}, '${usuario.username}')" title="Eliminar">
+                    <button class="btn-icon" onclick="eliminarUsuario(${usuario.id}, '${usuario.username}')" title="Eliminar">
                         ✕
                     </button>
                 </td>
@@ -430,11 +430,16 @@ function mostrarModalNuevoUsuario() {
     // Por defecto: activo=1, rol=editor
     document.getElementById('usuario-activo').value = '1';
     document.getElementById('usuario-rol').value = 'editor';
-    document.getElementById('modalUsuario').style.display = 'block';
+    
+    const modal = document.getElementById('modalUsuario');
+    modal.classList.add('active');
+    modal.style.display = ''; // Limpiar estilo inline si existiera
 }
 
 function cerrarModalUsuario() {
-    document.getElementById('modalUsuario').style.display = 'none';
+    const modal = document.getElementById('modalUsuario');
+    modal.classList.remove('active');
+    modal.style.display = ''; // Asegurar que vuelve a display: none por CSS
     document.getElementById('alert-usuario').innerHTML = '';
 }
 
@@ -469,18 +474,54 @@ async function guardarUsuario(event) {
 
         const result = await response.json();
         
-        document.getElementById('alert-usuario').innerHTML = 
-            `<div class="alert alert-success">${result.mensaje}</div>`;
+        // Usar sistema de notificaciones estándar
+        if (window.mostrarNotificacion) {
+            window.mostrarNotificacion(result.mensaje, 'success');
+        } else {
+            // Fallback por si no carga el módulo
+            alert(result.mensaje);
+        }
+        
+        // Limpiar alertas antiguas si las hubiera
+        const alertDiv = document.getElementById('alert-usuario');
+        if (alertDiv) alertDiv.innerHTML = '';
+
+        // VERIFICACIÓN DE CAMBIO DE NOMBRE PROPIO
+        const originalUsername = document.getElementById('usuario-username').dataset.original;
+        const sessionData = window.sessionManager ? window.sessionManager.getSession() : null;
+        const currentUsername = sessionData ? sessionData.username : null;
+        
+        // Si el usuario logueado se cambió su propio nombre
+        if (currentUsername && originalUsername === currentUsername && data.username !== originalUsername) {
+            // Usar notificación estándar en lugar de alert
+            if (window.mostrarNotificacion) {
+                window.mostrarNotificacion('Has cambiado tu nombre de usuario. Redirigiendo al login...', 'warning');
+            } else {
+                alert('Has cambiado tu nombre de usuario. Redirigiendo al login...');
+            }
+            
+            // Dar tiempo para leer la notificación antes de redirigir
+            setTimeout(() => {
+                if (window.sessionManager) window.sessionManager.clearSession();
+                // Usar window.top para asegurar redirección completa fuera de iframes
+                window.top.location.href = '/LOGIN.html';
+            }, 2000);
+            return; // Detener flujo normal
+        }
         
         setTimeout(() => {
             cerrarModalUsuario();
             cargarUsuarios();
             cargarEstadisticas();
-        }, 1500);
+        }, 1000); // Reducido tiempo de espera para agilizar
         
     } catch (error) {
-        document.getElementById('alert-usuario').innerHTML = 
-            `<div class="alert alert-error">${error.message}</div>`;
+        if (window.mostrarNotificacion) {
+            window.mostrarNotificacion(error.message, 'error');
+        } else {
+            document.getElementById('alert-usuario').innerHTML = 
+                `<div class="alert alert-error">${error.message}</div>`;
+        }
     }
 }
 
@@ -491,6 +532,9 @@ async function editarUsuario(id) {
     document.getElementById('modal-usuario-titulo').innerHTML = '<i class="fas fa-user-circle"></i> Editar Usuario';
     document.getElementById('usuario-id').value = usuario.id;
     document.getElementById('usuario-username').value = usuario.username;
+    // Guardar username original para detectar cambios de nombre propio
+    document.getElementById('usuario-username').dataset.original = usuario.username;
+    
     document.getElementById('usuario-password').value = '';
     document.getElementById('usuario-password').required = false;
     document.getElementById('usuario-password').placeholder = '••••••••';
@@ -505,7 +549,9 @@ async function editarUsuario(id) {
     document.getElementById('usuario-rol').value = usuario.rol || 'consultor';
     document.getElementById('usuario-activo').value = usuario.activo === 1 ? '1' : '0';
     
-    document.getElementById('modalUsuario').style.display = 'block';
+    const modal = document.getElementById('modalUsuario');
+    modal.classList.add('active');
+    modal.style.display = '';
 }
 
 async function eliminarUsuario(id, username) {
@@ -3140,9 +3186,37 @@ async function cargarConfiguracionEmpresa() {
             <div class="empresa-main-card">
                 <div class="empresa-main-card-content">
                     <div class="empresa-grid-layout">
+                        <input type="hidden" id="empresa-codigo-hidden" value="${empresa.codigo || ''}">
                         <!-- Información de la empresa -->
                         <div class="empresa-section">
                             <h3 class="empresa-section-title">📋 Datos de la Empresa</h3>
+                            
+                            <!-- Sección Certificado -->
+                            <div class="empresa-section" style="border: 1px solid #2ecc71; border-left: 4px solid #2ecc71; background: #f9fff9; margin-bottom: 20px; padding: 15px; border-radius: 4px;">
+                                <h4 style="margin-top: 0; color: #27ae60; font-size: 14px;"><i class="fas fa-certificate"></i> Certificado Digital (Auto-rellenado)</h4>
+                                <div class="empresa-form-grid" style="grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end;">
+                                    <div class="empresa-form-group full-width">
+                                        <label class="empresa-form-label" style="font-size: 11px;">Archivo (.p12 o .pfx):</label>
+                                        <input type="file" id="empresa-certificado" accept=".p12,.pfx" class="empresa-form-input file-input" style="font-size: 12px;">
+                                    </div>
+                                    <div class="empresa-form-group">
+                                        <label class="empresa-form-label" style="font-size: 11px;">Contraseña:</label>
+                                        <input type="password" id="empresa-certificado-pass" class="empresa-form-input" placeholder="Contraseña del certificado" style="font-size: 12px;">
+                                    </div>
+                                    <div class="empresa-form-group">
+                                        <button type="button" class="btn btn-success" onclick="procesarCertificado()" style="height: 36px; font-size: 12px; padding: 0 15px;">
+                                            <i class="fas fa-cog"></i> Procesar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="certificado-info" style="margin-top: 5px; font-size: 11px; min-height: 15px;">
+                                    ${empresa.ruta_certificado ? 
+                                        `<span style="color: #27ae60; font-weight: bold;"><i class="fas fa-check-circle"></i> Certificado configurado: ${empresa.ruta_certificado.split('/').pop()}</span>` 
+                                        : ''}
+                                </div>
+                                <input type="hidden" id="empresa-ruta-certificado" value="${empresa.ruta_certificado || ''}">
+                            </div>
+
                             <div class="empresa-form-grid">
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">Nombre Comercial:</label>
@@ -3304,6 +3378,94 @@ function getPlantillaDesc(plantilla) {
     return descs[plantilla] || '';
 }
 
+async function procesarCertificado() {
+    const fileInput = document.getElementById('empresa-certificado');
+    const passInput = document.getElementById('empresa-certificado-pass');
+    const infoDiv = document.getElementById('certificado-info');
+    
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        mostrarAlerta('Por favor seleccione un archivo de certificado (.p12 o .pfx)', 'warning');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    const password = passInput.value;
+    
+    if (!password) {
+        mostrarAlerta('Por favor introduzca la contraseña del certificado', 'warning');
+        passInput.focus();
+        return;
+    }
+    
+    infoDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando certificado...';
+    
+    const formData = new FormData();
+    formData.append('certificado', file);
+    formData.append('password', password);
+    
+    // Enviar código de empresa si existe
+    const codigoInput = document.getElementById('empresa-codigo-hidden');
+    if (codigoInput && codigoInput.value) {
+        formData.append('codigo_empresa', codigoInput.value);
+    }
+    
+    try {
+        const response = await fetch('/api/empresas/procesar_certificado', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Rellenar campos
+            const razonSocialInput = document.getElementById('empresa-razon-social');
+            const cifInput = document.getElementById('empresa-cif');
+            const rutaCertInput = document.getElementById('empresa-ruta-certificado');
+            
+            if (razonSocialInput) {
+                razonSocialInput.value = data.razon_social;
+                razonSocialInput.readOnly = true;
+                razonSocialInput.style.backgroundColor = '#e8f0fe';
+                razonSocialInput.style.color = '#155724';
+                razonSocialInput.style.fontWeight = 'bold';
+            }
+            
+            if (cifInput) {
+                cifInput.value = data.nif;
+                cifInput.readOnly = true;
+                cifInput.style.backgroundColor = '#e8f0fe';
+                cifInput.style.color = '#155724';
+                cifInput.style.fontWeight = 'bold';
+            }
+            
+            if (rutaCertInput) {
+                rutaCertInput.value = data.ruta_certificado;
+            }
+            
+            infoDiv.innerHTML = `<span style="color: #27ae60; font-weight: bold;">
+                <i class="fas fa-check-circle"></i> Datos extraídos correctamente. 
+                Certificado guardado en servidor.
+            </span>`;
+            
+            mostrarAlerta('Certificado procesado y datos actualizados', 'success');
+            
+        } else {
+            infoDiv.innerHTML = `<span style="color: #e74c3c;">
+                <i class="fas fa-exclamation-circle"></i> Error: ${data.error}
+            </span>`;
+            mostrarAlerta(data.error || 'Error procesando el certificado', 'error');
+        }
+    } catch (error) {
+        console.error('Error procesando certificado:', error);
+        infoDiv.innerHTML = `<span style="color: #e74c3c;">
+            <i class="fas fa-exclamation-circle"></i> Error de conexión
+        </span>`;
+        mostrarAlerta('Error de conexión al procesar certificado', 'error');
+    }
+}
+
 async function aplicarPlantilla(plantilla, empresaId) {
     try {
         const statusDiv = document.getElementById('plantilla-status');
@@ -3420,6 +3582,12 @@ async function guardarDatosEmpresa(empresaId) {
         formData.append('provincia', document.getElementById('empresa-provincia').value);
         formData.append('telefono', document.getElementById('empresa-telefono').value);
         formData.append('email', document.getElementById('empresa-email').value);
+        
+        // Agregar ruta certificado si existe
+        const rutaCert = document.getElementById('empresa-ruta-certificado');
+        if (rutaCert && rutaCert.value) {
+            formData.append('ruta_certificado', rutaCert.value);
+        }
         
         // Agregar logo si se seleccionó uno
         const logoInput = document.getElementById('empresa-logo');

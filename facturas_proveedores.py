@@ -1532,6 +1532,86 @@ def eliminar_factura(factura_id, empresa_id, usuario='sistema'):
         if not factura:
             raise Exception("Factura no encontrada")
             
+        # Intentar eliminar el gasto asociado antes de borrar la factura
+        try:
+            # Obtener datos detallados para localizar el gasto
+            cursor.execute("""
+                SELECT f.fecha_emision, f.total, f.concepto, p.nombre as proveedor_nombre 
+                FROM facturas_proveedores f
+                LEFT JOIN proveedores p ON f.proveedor_id = p.id
+                WHERE f.id = ?
+            """, (factura_id,))
+            datos_detallados = cursor.fetchone()
+            
+            if datos_detallados:
+                fecha = datos_detallados['fecha_emision']
+                total = datos_detallados['total']
+                importe_neg = -abs(float(total or 0))
+                proveedor_nombre = datos_detallados['proveedor_nombre'] or ''
+                concepto_factura = datos_detallados['concepto'] or ''
+                concepto_generado = f"Factura {proveedor_nombre}"
+                
+                logger.info(f"Buscando gasto a eliminar: Fecha={fecha}, Importe={importe_neg}, Prov={proveedor_nombre}")
+                
+                # Detectar estructura de tabla gastos
+                cursor.execute("PRAGMA table_info(gastos)")
+                columnas = [col['name'] for col in cursor.fetchall()]
+                es_compleja = 'fecha_operacion_iso' in columnas
+                
+                gasto_eliminado = False
+                
+                if es_compleja:
+                     # Estructura compleja (bancaria)
+                     # Borrar por fecha exacta, importe y razon_social/concepto
+                     # Usamos rowid para borrar solo UNO en caso de duplicados
+                     cursor.execute("""
+                        DELETE FROM gastos 
+                        WHERE id IN (
+                            SELECT id FROM gastos
+                            WHERE ABS(importe_eur - ?) < 0.01 
+                            AND fecha_operacion_iso = ?
+                            AND (razon_social = ? OR concepto = ? OR concepto = ?)
+                            LIMIT 1
+                        )
+                     """, (importe_neg, fecha, proveedor_nombre, concepto_factura, concepto_generado))
+                else:
+                     # Estructura simple
+                     cursor.execute("""
+                        DELETE FROM gastos 
+                        WHERE id IN (
+                            SELECT id FROM gastos
+                            WHERE ABS(importe - ?) < 0.01 
+                            AND fecha = ?
+                            AND (proveedor = ? OR concepto = ? OR concepto = ?)
+                            LIMIT 1
+                        )
+                     """, (importe_neg, fecha, proveedor_nombre, concepto_factura, concepto_generado))
+                     
+                if cursor.rowcount > 0:
+                    logger.info(f"✓ Gasto asociado eliminado para factura {factura_id}")
+                else:
+                    # Intento con fecha aproximada si exacta falla (por si hubo problemas de zona horaria o similar)
+                    logger.info("No encontrado por fecha exacta, intentando rango +/- 1 día...")
+                    if es_compleja:
+                        cursor.execute("""
+                            DELETE FROM gastos 
+                            WHERE id IN (
+                                SELECT id FROM gastos
+                                WHERE ABS(importe_eur - ?) < 0.01 
+                                AND fecha_operacion_iso BETWEEN date(?, '-1 day') AND date(?, '+1 day')
+                                AND (razon_social = ? OR concepto LIKE ?)
+                                LIMIT 1
+                            )
+                        """, (importe_neg, fecha, fecha, proveedor_nombre, f"%{proveedor_nombre}%"))
+                    
+                    if cursor.rowcount > 0:
+                        logger.info(f"✓ Gasto asociado eliminado (por fecha aprox) para factura {factura_id}")
+                    else:
+                        logger.warning(f"No se encontró gasto asociado para eliminar (Factura {factura_id})")
+
+        except Exception as ex_gasto:
+            logger.error(f"Error no crítico intentando eliminar gasto asociado: {ex_gasto}")
+
         # Eliminar de BD (cascade eliminará líneas e historial si está configurado, sino hacerlo manual)
         cursor.execute("DELETE FROM facturas_proveedores WHERE id = ?", (factura_id,))
         conn.commit()

@@ -1,3 +1,28 @@
+/* Utilidades de Ancho */
+.w-100 {
+    width: 100% !important;
+}
+
+/* Estilos para tarjetas de plantilla (movidos desde inline) */
+.plantilla-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
+}
+
+.form-control {
+    background: var(--color-fondo);
+    color: var(--color-texto);
+    border: 1px solid var(--color-borde);
+    padding: 8px 12px;
+    border-radius: 5px;
+    width: 100%;
+}
+.form-control:focus {
+    outline: none;
+    border-color: var(--color-primario);
+    box-shadow: 0 0 0 3px rgba(var(--color-primario-rgb, 0, 123, 255), 0.1);
+}
+
 /* ================================= */
 /* SELECTOR: 70px - FORZADO TRIPLE */
 /* TIMESTAMP: 1761595767 */
@@ -408,13 +433,24 @@
     background-color: var(--color-button-hover) !important;
   }
   
-  .btn, .btn-primary, .btn-secondary {
+  .btn, .btn-primary {
     color: var(--color-button-text, #ffffff) !important;
     background: var(--color-button) !important;
   }
   
-  .btn:hover, .btn-primary:hover, .btn-secondary:hover {
+  .btn-secondary {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    border: 1px solid #6c757d !important;
+  }
+  
+  .btn:hover, .btn-primary:hover {
     background-color: var(--color-button-hover) !important;
+  }
+  
+  .btn-secondary:hover {
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
   }
   
   /* Form actions (alineación) */
@@ -527,35 +563,42 @@
     padding: 0;
   }
   
-  /* Botones de acción sin fondo - estilo igual que facturas */
-  /* SOLO PARA TABLAS - NO aplicar a .form-group */
+  /* Botones de acción sin fondo - estilo limpio y minimalista */
+  .btn-icon,
   table .btn-icon,
-  tbody .btn-icon,
   .grid .btn-icon,
   .tabla-consulta .btn-icon {
     width: auto !important;
     height: auto !important;
-    padding: 0 !important;
+    min-width: 24px !important; /* Mínimo ancho touch */
+    padding: 2px 6px !important;
     margin: 0 !important;
+    
+    /* Eliminar estilos de botón */
     border: none !important;
     background-color: transparent !important;
     background: transparent !important;
-    color: var(--primary, var(--color-primario, #007bff)) !important;
+    box-shadow: none !important;
+    border-radius: 4px !important;
+    
+    /* Estilo de icono/texto */
+    color: #555 !important;
     cursor: pointer !important;
     font-size: 16px !important;
-    display: inline !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
     transition: all 0.2s ease !important;
   }
   
+  .btn-icon:hover,
   table .btn-icon:hover,
-  tbody .btn-icon:hover,
-  .grid .btn-icon:hover,
-  .tabla-consulta .btn-icon:hover {
-    color: var(--primary, var(--color-primario, #007bff)) !important;
-    background-color: transparent !important;
-    background: transparent !important;
-    transform: scale(1.2);
-    opacity: 0.8;
+  .grid .btn-icon:hover {
+    color: var(--color-primario, #007bff) !important;
+    background-color: rgba(0,0,0,0.05) !important; /* Sutil fondo al hover */
+    box-shadow: none !important;
+    transform: scale(1.15);
+    opacity: 1;
   }
   
   /* Sortable (flecha de ordenación) */
@@ -841,7 +884,8 @@
     top: 0; left: 0;
     width: 100%;
     height: 100%;
-    background-color: transparent;
+    background-color: rgba(0, 0, 0, 0.5); /* Fondo semi-transparente */
+    backdrop-filter: blur(2px); /* Efecto blur solicitado */
     justify-content: center;
     align-items: center;
   }

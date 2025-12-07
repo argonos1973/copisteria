@@ -414,8 +414,13 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 
                 try {
                     showOverlay();
-                    const response = await fetch(`${API_URL}/api/facturas/email/${facturaId}`, {
-                        method: 'POST'
+                    const response = await fetch(`${API_URL}/api/facturas/${facturaId}/enviar`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({}),
+                        credentials: 'include'
                     });
                     
                     const data = await response.json();

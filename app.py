@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 # Cargar variables de entorno desde .env
 load_dotenv()
 
-from flask import Flask, request, make_response, session
+from flask import Flask, request, make_response, session, send_from_directory
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
@@ -43,6 +43,7 @@ from routes.system_routes import system_bp
 from routes.presupuestos_routes import presupuestos_bp
 from routes.proformas_routes import proformas_bp
 from routes.facturas_recibidas_routes import facturas_recibidas_bp
+from public_routes import public_bp
 
 # Middlewares
 from auth_middleware import login_required, require_admin, require_permission
@@ -86,6 +87,12 @@ def create_app():
     # Registrar middlewares
     register_middlewares(application)
     
+    @application.route('/favicon.ico')
+    def favicon():
+        """Ruta para el favicon"""
+        return send_from_directory(os.path.join(application.root_path, 'static'),
+                                   'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
     # Registrar blueprints
     register_blueprints(application)
     
@@ -114,6 +121,9 @@ def register_middlewares(app):
     @app.before_request
     def before_request():
         """Middleware ejecutado antes de cada request"""
+        # Log de requests para depuración
+        logger.info(f"REQUEST INCOMING: {request.method} {request.path}")
+        
         # Headers para permitir cookies cross-origin (preflight)
         if request.method == "OPTIONS":
             response = make_response()
@@ -184,6 +194,7 @@ def register_blueprints(app):
     app.register_blueprint(conciliacion_bp)
     
     # Nuevos blueprints refactorizados
+    app.register_blueprint(public_bp)          # Rutas públicas (landing page, registro)
     app.register_blueprint(system_bp)          # Rutas de sistema (/config.json, /api/version, etc.)
     app.register_blueprint(productos_bp)       # Rutas de productos y franjas
     app.register_blueprint(contactos_bp)       # Rutas de contactos

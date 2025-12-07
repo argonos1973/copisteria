@@ -235,35 +235,35 @@
     opacity: 0.7;
 }
 
-/* Borde explícito para modales que lo requieran */
+/* Borde explícito para modales que lo requieran - ALINEADO CON ESTILO GLOBAL */
 .modal-bordered {
-    border: 1px solid var(--modal-border, var(--border, #555)) !important;
+    border: 4px solid rgba(255, 255, 255, 0.8) !important;
 }
 
 /* Botones del modal específicos para coincidir con estética */
-/* Aumentamos especificidad para vencer a theme-consumer.css */
-.modal-footer button.btn-modal-cancel,
-.modal button.btn-modal-cancel,
-button.btn-modal-cancel {
-    background-color: #343a40 !important; /* Gris oscuro */
-    border: 1px solid #343a40 !important;
+/* Aumentamos especificidad MÁXIMA para vencer a theme-consumer.css y styles.css */
+html body .modal-footer button.btn-modal-cancel,
+html body .modal button.btn-modal-cancel,
+html body button.btn-modal-cancel {
+    background-color: #6c757d !important; /* Gris estándar */
+    border: 1px solid #6c757d !important;
     color: #fff !important;
     opacity: 1 !important;
 }
 
-.modal-footer button.btn-modal-cancel:hover,
-.modal button.btn-modal-cancel:hover,
-button.btn-modal-cancel:hover {
-    background-color: #23272b !important;
-    border-color: #1d2124 !important;
+html body .modal-footer button.btn-modal-cancel:hover,
+html body .modal button.btn-modal-cancel:hover,
+html body button.btn-modal-cancel:hover {
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
     opacity: 0.9 !important;
 }
 
 .modal-footer button.btn-modal-save,
 .modal button.btn-modal-save,
 button.btn-modal-save {
-    background-color: #0d6efd !important; /* Azul */
-    border: 1px solid #0d6efd !important;
+    background-color: var(--primary, #0d6efd) !important;
+    border: 1px solid var(--primary, #0d6efd) !important;
     color: #fff !important;
     opacity: 1 !important;
 }
@@ -271,8 +271,9 @@ button.btn-modal-save {
 .modal-footer button.btn-modal-save:hover,
 .modal button.btn-modal-save:hover,
 button.btn-modal-save:hover {
-    background-color: #0b5ed7 !important;
-    border-color: #0a58ca !important;
+    background-color: var(--primary, #0b5ed7) !important;
+    border-color: var(--primary, #0a58ca) !important;
+    filter: brightness(0.9);
     opacity: 0.9 !important;
 }
 
@@ -286,7 +287,8 @@ button.btn-modal-save:hover {
     width: 100%;
     height: 100%;
     overflow: auto;
-    background-color: var(--modal-overlay, transparent) !important;
+    background-color: var(--modal-overlay, rgba(0, 0, 0, 0.5)) !important;
+    backdrop-filter: blur(2px);
 }
 
 .modal.show {
@@ -295,12 +297,13 @@ button.btn-modal-save:hover {
     justify-content: center;
 }
 
-.modal-content {
+/* Contenedor del modal - Estilo iOS/Mac */
+html body .modal-content {
     background: var(--modal-bg, var(--bg, #fff)) !important;
     color: var(--modal-text, var(--text, #333)) !important;
-    margin: 5% auto;
+    margin: auto;
     padding: 0;
-    border: 1px solid var(--modal-border, var(--border, #ddd));
+    border: 1px solid var(--modal-border, var(--border, #ddd)) !important;
     border-radius: 12px;
     width: 90%;
     max-width: 900px;
@@ -308,13 +311,25 @@ button.btn-modal-save:hover {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    /* Sombra con borde sutil blanco para destacar en modo oscuro */
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15), 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+    /* Sombra para profundidad */
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+    /* Borde BLANCO explícito y visible (más grueso) - ALTA ESPECIFICIDAD */
+    border: 4px solid rgba(255, 255, 255, 0.8) !important;
 }
 
-/* Modal de usuario más compacta */
-#modalUsuario .modal-content {
-    max-width: 450px;
+/* Modal de usuario más compacta - ALTA ESPECIFICIDAD */
+html body #modalUsuario .modal-content,
+html body #modalDetalle .modal-content,
+html body #modalPagar .modal-content,
+html body #modalEditar .modal-content,
+html body #modalSubir .modal-content,
+html body #modal-perfil .modal-perfil-content,
+html body #modal-selector-avatares .modal-avatares-content {
+    border: 4px solid rgba(255, 255, 255, 0.8) !important;
+}
+
+html body #modalUsuario .modal-content {
+    max-width: 800px !important;
 }
 
 /* Modal de pagos compacta */
@@ -339,7 +354,7 @@ button.btn-modal-save:hover {
 .modal-header {
     background: var(--header-bg, var(--modal-header-bg, var(--primary, #000))) !important;
     color: var(--header-text, var(--modal-header-text, #fff)) !important;
-    padding: 20px 24px;
+    padding: 16px 20px;
     border-radius: 12px 12px 0 0;
     display: flex;
     justify-content: space-between;
@@ -371,7 +386,6 @@ button.btn-modal-save:hover {
     justify-content: center;
     border-radius: 50%;
     opacity: 0.7 !important;
-    transition: all 0.3s ease;
     text-shadow: 0 0 3px rgba(0,0,0,0.3);
 }
 
@@ -383,7 +397,7 @@ button.btn-modal-save:hover {
 .close:focus {
     opacity: 1 !important;
     background: rgba(0,0,0,0.1) !important;
-    transform: scale(1.1);
+    transform: none !important;
 }
 
 /* Forzar que los h2, h3, p dentro del BODY de modales usen el color del tema */

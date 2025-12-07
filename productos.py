@@ -372,6 +372,11 @@ def eliminar_todas_franjas_producto(producto_id: int):
     """
     Elimina todas las franjas de descuento de un producto específico.
     """
+    try:
+        ensure_tabla_descuentos_bandas()
+    except Exception as e:
+        logger.error(f"Error asegurando tabla franjas al eliminar: {e}")
+        
     conn = None
     try:
         conn = get_db_connection()
@@ -467,6 +472,13 @@ def obtener_franjas_descuento_por_producto(producto_id):
     Retorna lista de dicts: [{min, max, descuento}]
     """
     try:
+        ensure_tabla_descuentos_bandas()
+    except Exception as e:
+        logger.error(f"Error asegurando tabla franjas al obtener: {e}")
+        # Si falla la creación de tabla, probablemente no existe, retornamos vacío
+        return []
+
+    try:
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
@@ -502,16 +514,34 @@ def reemplazar_franjas_descuento_producto(producto_id, franjas):
     Param franjas: lista de dicts con keys: min, max, descuento
     """
     try:
+        ensure_tabla_descuentos_bandas()
+    except Exception as e:
+        logger.error(f"Error asegurando tabla franjas al reemplazar: {e}")
+        raise
+
+    try:
         conn = get_db_connection()
         cur = conn.cursor()
         conn.execute('BEGIN IMMEDIATE')
         cur.execute('DELETE FROM descuento_producto_franja WHERE producto_id = ?', (producto_id,))
         for fr in franjas:
-            min_c = int(fr.get('min', 0))
-            max_c = int(fr.get('max', 0))
+            # Detectar formato: diccionario o lista
+            if isinstance(fr, (list, tuple)):
+                # Formato lista: [min, max, descuento]
+                min_c = int(fr[0]) if len(fr) > 0 else 0
+                max_c = int(fr[1]) if len(fr) > 1 else 0
+                try:
+                    original_desc = fr[2] if len(fr) > 2 else 0
+                except IndexError:
+                    original_desc = 0
+            else:
+                # Formato diccionario (existente)
+                min_c = int(fr.get('min', 0))
+                max_c = int(fr.get('max', 0))
+                original_desc = fr.get('descuento', 0)
+
             # Registrar valores originales recibidos
             try:
-                original_desc = fr.get('descuento', 0)
                 desc = float(original_desc)
             except Exception as _e:
                 logger.warning(f"Valor de descuento no numérico para producto {producto_id}, franja {fr}: {_e}. Se usará 0.0")
@@ -1165,3 +1195,7 @@ def obtener_productos_paginado(page=1, page_size=20, sort_by='nombre', order='AS
     except Exception as e:
         logger.error(f"Error obteniendo productos paginados: {e}")
         raise
+
+# Alias para compatibilidad
+guardar_franjas_descuento_producto = reemplazar_franjas_descuento_producto
+

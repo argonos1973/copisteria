@@ -28,8 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
         perPageSelect.value = porPagina;
     }
     
-    // Establecer fechas del trimestre actual
-    establecerTrimestreActual();
+    // Establecer fechas del trimestre actual (no necesario, el select ya tiene 'actual' seleccionado por defecto)
+    // Llenar selector de años
+    llenarSelectorAnios();
     
     // Cargar proveedores para el filtro
     cargarProveedores();
@@ -43,12 +44,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function configurarEventListeners() {
     // Búsqueda interactiva en todos los filtros con debounce
-    const filtros = ['proveedorFilter', 'startDate', 'endDate', 'busquedaFilter'];
+    const filtros = ['proveedorFilter', 'trimestreFilter', 'anioFilter', 'busquedaFilter'];
     filtros.forEach(filtroId => {
         const elemento = document.getElementById(filtroId);
         if (elemento) {
-            // Para selects y fechas: change event
-            elemento.addEventListener('change', (e) => busquedaInteractiva(e));
+            // Para selects: change event
+            elemento.addEventListener('change', (e) => {
+                // Mostrar/ocultar selector de año si es necesario
+                if (e.target.id === 'trimestreFilter') {
+                    toggleSelectorAnio(e.target.value);
+                }
+                busquedaInteractiva(e);
+            });
             
             // Para campo de texto: input event (mientras escribe)
             if (filtroId === 'busquedaFilter') {
@@ -73,45 +80,94 @@ function configurarEventListeners() {
 // FUNCIONES DE TRIMESTRE Y FECHAS
 // ============================================================================
 
-function establecerTrimestreActual() {
-    const hoy = new Date();
-    const año = hoy.getFullYear();
+function llenarSelectorAnios() {
+    const anioSelect = document.getElementById('anioFilter');
+    const anioActual = new Date().getFullYear();
     
-    // Desde el 1 de enero hasta hoy
-    const fechaInicio = new Date(año, 0, 1); // 1 de enero del año actual
-    const fechaFin = hoy; // Fecha actual
-    
-    document.getElementById('startDate').value = formatearFechaInput(fechaInicio);
-    document.getElementById('endDate').value = formatearFechaInput(fechaFin);
-    
-    console.log(`[Facturas] Rango establecido: ${formatearFechaInput(fechaInicio)} - ${formatearFechaInput(fechaFin)}`);
+    for (let i = 0; i < 5; i++) {
+        const option = document.createElement('option');
+        option.value = anioActual - i;
+        option.textContent = anioActual - i;
+        anioSelect.appendChild(option);
+    }
 }
 
-function establecerTrimestreEspecifico(trimestre) {
+function toggleSelectorAnio(valor) {
+    const anioContainer = document.getElementById('anioContainer');
+    // Mostrar selector de año si se elige un trimestre específico (1T, 2T, etc)
+    if (['1T', '2T', '3T', '4T'].includes(valor)) {
+        anioContainer.style.display = 'block';
+    } else {
+        anioContainer.style.display = 'none';
+    }
+}
+
+function obtenerRangoFechas() {
+    const tipo = document.getElementById('trimestreFilter').value;
+    const anioSeleccionado = parseInt(document.getElementById('anioFilter').value) || new Date().getFullYear();
     const hoy = new Date();
-    const año = hoy.getFullYear();
-    let mesInicio, mesFin;
+    const year = (['actual', 'anterior'].includes(tipo)) ? hoy.getFullYear() : anioSeleccionado;
     
-    switch(trimestre) {
-        case 'Q1':
-            mesInicio = 0; mesFin = 2;
+    let inicio, fin;
+
+    switch(tipo) {
+        case 'actual':
+            // Trimestre actual
+            const mes = hoy.getMonth();
+            const q = Math.floor(mes / 3);
+            inicio = new Date(year, q * 3, 1);
+            fin = new Date(year, (q * 3) + 3, 0);
             break;
-        case 'Q2':
-            mesInicio = 3; mesFin = 5;
+        case 'anterior':
+            // Trimestre anterior
+            const mesAnt = hoy.getMonth();
+            const qAnt = Math.floor(mesAnt / 3) - 1;
+            if (qAnt < 0) {
+                inicio = new Date(year - 1, 9, 1);
+                fin = new Date(year - 1, 12, 0);
+            } else {
+                inicio = new Date(year, qAnt * 3, 1);
+                fin = new Date(year, (qAnt * 3) + 3, 0);
+            }
             break;
-        case 'Q3':
-            mesInicio = 6; mesFin = 8;
+        case 'anio_actual':
+            inicio = new Date(hoy.getFullYear(), 0, 1);
+            fin = new Date(hoy.getFullYear(), 11, 31);
             break;
-        case 'Q4':
-            mesInicio = 9; mesFin = 11;
+        case 'anio_anterior':
+            inicio = new Date(hoy.getFullYear() - 1, 0, 1);
+            fin = new Date(hoy.getFullYear() - 1, 11, 31);
             break;
+        case '1T':
+            inicio = new Date(year, 0, 1);
+            fin = new Date(year, 3, 0);
+            break;
+        case '2T':
+            inicio = new Date(year, 3, 1);
+            fin = new Date(year, 6, 0);
+            break;
+        case '3T':
+            inicio = new Date(year, 6, 1);
+            fin = new Date(year, 9, 0);
+            break;
+        case '4T':
+            inicio = new Date(year, 9, 1);
+            fin = new Date(year, 12, 0);
+            break;
+        case 'todos':
+            return { fecha_desde: null, fecha_hasta: null };
+        default:
+             // Fallback trimestre actual
+            const m = hoy.getMonth();
+            const qu = Math.floor(m / 3);
+            inicio = new Date(year, qu * 3, 1);
+            fin = new Date(year, (qu * 3) + 3, 0);
     }
     
-    const fechaInicio = new Date(año, mesInicio, 1);
-    const fechaFin = new Date(año, mesFin + 1, 0);
-    
-    document.getElementById('startDate').value = formatearFechaInput(fechaInicio);
-    document.getElementById('endDate').value = formatearFechaInput(fechaFin);
+    return {
+        fecha_desde: formatearFechaInput(inicio),
+        fecha_hasta: formatearFechaInput(fin)
+    };
 }
 
 function formatearFechaInput(fecha) {
@@ -207,7 +263,7 @@ async function cargarFacturas() {
         const tbody = document.getElementById('facturasBody');
         tbody.innerHTML = `
             <tr>
-                <td colspan="11" style="text-align: center; padding: 40px;">
+                <td colspan="9" style="text-align: center; padding: 40px;">
                     <i class="fas fa-spinner fa-spin"></i> Cargando facturas...
                 </td>
             </tr>
@@ -228,11 +284,10 @@ async function cargarFacturas() {
         }
         
         
-        // Filtro de fechas
-        const fechaDesde = document.getElementById('startDate').value;
-        const fechaHasta = document.getElementById('endDate').value;
-        if (fechaDesde) filtros.fecha_desde = fechaDesde;
-        if (fechaHasta) filtros.fecha_hasta = fechaHasta;
+        // Filtro de fechas calculado dinámicamente
+        const rangoFechas = obtenerRangoFechas();
+        if (rangoFechas.fecha_desde) filtros.fecha_desde = rangoFechas.fecha_desde;
+        if (rangoFechas.fecha_hasta) filtros.fecha_hasta = rangoFechas.fecha_hasta;
         
         // Búsqueda
         const busqueda = document.getElementById('busquedaFilter').value.trim();
@@ -271,7 +326,7 @@ async function cargarFacturas() {
         const tbody = document.getElementById('facturasBody');
         tbody.innerHTML = `
             <tr>
-                <td colspan="11" style="text-align: center; padding: 40px; color: #dc3545;">
+                <td colspan="9" style="text-align: center; padding: 40px; color: #dc3545;">
                     <i class="fas fa-exclamation-triangle"></i> Error al cargar facturas
                 </td>
             </tr>
@@ -290,7 +345,7 @@ function renderizarTabla(facturas) {
     if (facturas.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="11" style="text-align: center; padding: 40px;">
+                <td colspan="9" style="text-align: center; padding: 40px;">
                     📭 No se encontraron facturas con los filtros aplicados
                 </td>
             </tr>

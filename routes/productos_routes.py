@@ -192,6 +192,16 @@ def api_get_franjas_descuento_producto(producto_id):
 def api_set_franjas_descuento_producto(producto_id):
     try:
         body = request.get_json() or {}
+        
+        # Validación de seguridad: body debe ser un diccionario
+        if not isinstance(body, dict):
+            # Si es una lista, quizás enviaron las franjas directamente
+            if isinstance(body, list):
+                logger.warning(f"Recibida lista directa de franjas para producto {producto_id}, adaptando...")
+                body = {'franjas': body}
+            else:
+                return jsonify({'error': 'Formato JSON inválido: se esperaba un objeto'}), 400
+
         try:
             franjas_data = body.get('franjas', [])
             if not isinstance(franjas_data, list):

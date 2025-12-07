@@ -3,7 +3,7 @@ Rutas de sistema (configuración, versión, debug, utilidades)
 """
 
 import os
-from flask import Blueprint, jsonify, request, Response, send_file
+from flask import Blueprint, jsonify, request, Response, send_file, send_from_directory
 from auth_middleware import login_required
 from logger_config import get_logger
 from db_utils import get_db_connection
@@ -19,6 +19,56 @@ APP_VERSION = '1.2.8'
 
 # Blueprint para las rutas de sistema
 system_bp = Blueprint('system', __name__)
+
+@system_bp.route('/')
+def index():
+    """Redirige la raíz a public/index.html"""
+    from flask import redirect
+    return redirect('/public/index.html')
+
+@system_bp.route('/favicon.ico')
+def favicon():
+    """Sirve el favicon"""
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), 'favicon.ico', mimetype='image/x-icon')
+
+@system_bp.route('/public/<path:filename>')
+def serve_public_files(filename):
+    """Sirve archivos estáticos desde la carpeta public"""
+    public_dir = os.path.join(BASE_DIR, 'public')
+    return send_from_directory(public_dir, filename)
+
+@system_bp.route('/<path:filename>')
+def serve_frontend_files(filename):
+    """Sirve archivos HTML estáticos desde la carpeta frontend"""
+    from flask import make_response
+
+    # Ignorar rutas de API (las manejan otros blueprints)
+    if filename.startswith('api/'):
+        return jsonify({'error': 'Recurso no encontrado', 'status': 404}), 404
+    
+    frontend_dir = os.path.join(BASE_DIR, 'frontend')
+    file_to_serve = None
+    
+    # Si termina en .html, servir directamente
+    if filename.endswith('.html'):
+        if os.path.exists(os.path.join(frontend_dir, filename)):
+            file_to_serve = filename
+    else:
+        # Si no tiene extensión, intentar añadir .html
+        html_filename = filename + '.html'
+        if os.path.exists(os.path.join(frontend_dir, html_filename)):
+            file_to_serve = html_filename
+            
+    if file_to_serve:
+        response = make_response(send_from_directory(frontend_dir, file_to_serve))
+        # Deshabilitar caché para asegurar que se ven los cambios
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+    
+    # Si no es HTML o no existe, devolver 404 (dejando que otros blueprints manejen sus rutas)
+    return jsonify({'error': 'Recurso no encontrado', 'status': 404}), 404
 
 @system_bp.route('/config.json', methods=['GET'])
 def servir_config_json():

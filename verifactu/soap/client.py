@@ -592,11 +592,36 @@ def enviar_registro_aeat(factura_id: int) -> dict:
         else:
             cert_dir = os.path.join(base_dir, 'certs')
     
-    cert_path = os.path.join(cert_dir, 'cert_real.pem')
-    key_path = os.path.join(cert_dir, 'clave_real.pem')
+    # Lógica dinámica de selección de certificados por empresa
+    empresa_codigo = os.environ.get('EMPRESA_CODIGO')
+    
+    # Lista de candidatos a buscar (nombre_cert, nombre_clave)
+    candidatos = []
+    
+    if empresa_codigo:
+        # 1. Certificados específicos de la empresa (ej: ALEPH_cert.pem, ALEPH_key.pem)
+        candidatos.append((f"{empresa_codigo}_cert.pem", f"{empresa_codigo}_key.pem"))
+        # Variación común
+        candidatos.append((f"{empresa_codigo}.cert.pem", f"{empresa_codigo}.key.pem"))
 
-    if not (os.path.exists(cert_path) and os.path.exists(key_path)):
-        logger.error("Certificados SSL no encontrados dentro de %s", cert_dir)
+    # 2. Fallback: Certificados por defecto (compatibilidad)
+    candidatos.append(('cert_real.pem', 'clave_real.pem'))
+    candidatos.append(('cert.pem', 'key.pem'))
+    
+    cert_path = None
+    key_path = None
+    
+    for c_name, k_name in candidatos:
+        c_p = os.path.join(cert_dir, c_name)
+        k_p = os.path.join(cert_dir, k_name)
+        if os.path.exists(c_p) and os.path.exists(k_p):
+            cert_path = c_p
+            key_path = k_p
+            logger.info(f"Usando certificados SSL: {c_name} y {k_name}")
+            break
+
+    if not (cert_path and key_path):
+        logger.error("Certificados SSL no encontrados en %s. Se buscaron: %s", cert_dir, candidatos)
         return {'success': False, 'message': 'Certificados SSL no encontrados', 'cert_dir': cert_dir}
 
     headers = {

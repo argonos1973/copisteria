@@ -20,11 +20,17 @@ CREATE TABLE IF NOT EXISTS empresas (
     color_secundario TEXT DEFAULT '#3498db',
     
     -- Datos empresa
+    razon_social TEXT,
     cif TEXT,
     direccion TEXT,
+    codigo_postal TEXT,
+    ciudad TEXT,
+    provincia TEXT,
     telefono TEXT,
     email TEXT,
     web TEXT,
+    plantilla_personalizada TEXT,
+    plantilla TEXT DEFAULT 'classic',
     
     -- Control
     activa INTEGER DEFAULT 1,
@@ -40,11 +46,17 @@ CREATE TABLE IF NOT EXISTS usuarios (
     nombre_completo TEXT NOT NULL,
     email TEXT,
     telefono TEXT,
+    avatar TEXT DEFAULT '/static/avatares/default.png',
+    
+    -- Verificación y Seguridad
+    verification_token TEXT,
+    token_expiry TEXT,
     
     -- Control
     activo INTEGER DEFAULT 1,
     es_superadmin INTEGER DEFAULT 0,
     fecha_alta DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP, -- Alias para compatibilidad
     ultimo_acceso DATETIME,
     intentos_fallidos INTEGER DEFAULT 0
 );
@@ -55,6 +67,7 @@ CREATE TABLE IF NOT EXISTS usuario_empresa (
     usuario_id INTEGER NOT NULL,
     empresa_id INTEGER NOT NULL,
     rol TEXT DEFAULT 'usuario', -- 'admin', 'usuario', 'lectura'
+    plantilla TEXT DEFAULT 'classic',
     es_admin_empresa INTEGER DEFAULT 0,
     fecha_asignacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -125,27 +138,107 @@ CREATE TABLE IF NOT EXISTS auditoria (
     FOREIGN KEY (empresa_id) REFERENCES empresas(id)
 );
 
+-- Tabla de plantillas personalizadas
+CREATE TABLE IF NOT EXISTS plantillas_personalizadas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre TEXT NOT NULL,
+    descripcion TEXT,
+    plantilla_base TEXT,
+    color_primario TEXT,
+    color_secundario TEXT,
+    color_success TEXT,
+    color_warning TEXT,
+    color_danger TEXT,
+    color_info TEXT,
+    color_button TEXT,
+    color_button_hover TEXT,
+    color_button_text TEXT,
+    color_app_bg TEXT,
+    color_header_bg TEXT,
+    color_header_text TEXT,
+    color_grid_header TEXT,
+    color_grid_hover TEXT,
+    color_input_bg TEXT,
+    color_input_text TEXT,
+    color_input_border TEXT,
+    color_select_bg TEXT,
+    color_select_text TEXT,
+    color_select_border TEXT,
+    color_disabled_bg TEXT,
+    color_disabled_text TEXT,
+    color_submenu_bg TEXT,
+    color_submenu_text TEXT,
+    color_submenu_hover TEXT,
+    color_grid_bg TEXT,
+    color_grid_text TEXT,
+    color_icon TEXT,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(nombre)
+);
+
+-- Tabla para recuperación de contraseña
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    usuario_id INTEGER NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NOT NULL,
+    used INTEGER DEFAULT 0,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+);
+
+-- Tablas para integración bancaria (Plaid/Nordigen)
+CREATE TABLE IF NOT EXISTS plaid_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    empresa_id INTEGER NOT NULL,
+    item_id TEXT NOT NULL UNIQUE,
+    access_token TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_sync TIMESTAMP,
+    sync_cursor TEXT,
+    active INTEGER DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS plaid_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id TEXT NOT NULL,
+    account_id TEXT NOT NULL UNIQUE,
+    name TEXT,
+    official_name TEXT,
+    type TEXT,
+    subtype TEXT,
+    mask TEXT,
+    currency TEXT DEFAULT 'EUR',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ============================================================================
 -- DATOS INICIALES
 -- ============================================================================
 
--- Módulos del sistema
-INSERT OR IGNORE INTO modulos (codigo, nombre, ruta, icono, orden) VALUES
-('facturas', 'Facturas', '/GESTION_FACTURAS.html', '📋', 1),
-('tickets', 'Tickets', '/GESTION_TICKETS.html', '🧾', 2),
-('proformas', 'Proformas', '/GESTION_PROFORMAS.html', '📄', 3),
-('presupuestos', 'Presupuestos', '/GESTION_PRESUPUESTOS.html', '📝', 4),
-('productos', 'Productos', '/GESTION_PRODUCTOS.html', '📦', 5),
-('contactos', 'Contactos', '/GESTION_CONTACTOS.html', '👥', 6),
-('gastos', 'Gastos', '/CONSULTA_GASTOS.html', '💳', 7),
-('conciliacion', 'Conciliación', '/conciliacion.html', '✅', 8),
-('estadisticas', 'Estadísticas', '/estadisticas.html', '📊', 9);
+-- Módulos del sistema (Estructura completa)
+INSERT OR IGNORE INTO modulos (codigo, nombre, ruta, icono, orden, activo) VALUES
+('facturas_emitidas', 'Facturas Emitidas', '#', 'fas fa-file-invoice-dollar', 1, 1),
+('facturas_recibidas', 'Facturas Recibidas', '#', 'fas fa-file-invoice', 2, 1),
+('presupuestos', 'Presupuestos', '/CONSULTA_PRESUPUESTOS.html', 'fas fa-file-contract', 3, 1),
+('productos', 'Productos', '/CONSULTA_PRODUCTOS.html', 'fas fa-box', 4, 1),
+('contactos', 'Contactos', '/CONSULTA_CONTACTOS.html', 'fas fa-users', 5, 1),
+('gastos', 'Banco', '/CONSULTA_GASTOS.html', 'fas fa-university', 6, 1),
+('conciliacion', 'Conciliación', '/CONCILIACION_GASTOS.html', 'fas fa-exchange-alt', 6, 0), -- Inactivo por defecto
+('estadisticas', 'Estadísticas', '/estadisticas.html', 'fas fa-chart-line', 9, 0), -- Inactivo por defecto
+('exportar', 'Exportar', '/EXPORTAR.html', 'fas fa-download', 50, 1),
+('admin_empresas', 'Gestión Empresas', '/ADMIN_EMPRESAS.html', 'fas fa-building', 100, 1),
+('facturas', 'Facturas', '#', 'fas fa-file-invoice', 1, 1),
+('tickets', 'Tickets', '#', 'fas fa-receipt', 2, 1),
+('proformas', 'Proformas', '#', 'fas fa-file-alt', 3, 1);
 
 -- Empresa por defecto (Copistería)
 INSERT OR IGNORE INTO empresas (
     codigo, nombre, db_path,
     color_primario, color_secundario,
-    cif, direccion, telefono, email
+    cif, direccion, telefono, email, plantilla
 ) VALUES (
     'copisteria',
     'Copistería Aleph70',
@@ -155,7 +248,8 @@ INSERT OR IGNORE INTO empresas (
     'B12345678',
     'Calle Principal 123',
     '912345678',
-    'info@copisteria.com'
+    'info@copisteria.com',
+    'classic'
 );
 
 -- Usuario admin por defecto
@@ -173,8 +267,8 @@ INSERT OR IGNORE INTO usuarios (
 );
 
 -- Asignar admin a copistería como admin de empresa
-INSERT OR IGNORE INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa)
-SELECT u.id, e.id, 'admin', 1
+INSERT OR IGNORE INTO usuario_empresa (usuario_id, empresa_id, rol, es_admin_empresa, plantilla)
+SELECT u.id, e.id, 'admin', 1, 'classic'
 FROM usuarios u, empresas e
 WHERE u.username = 'admin' AND e.codigo = 'copisteria';
 
@@ -221,6 +315,9 @@ CREATE INDEX IF NOT EXISTS idx_usuario_empresa_empresa ON usuario_empresa(empres
 CREATE INDEX IF NOT EXISTS idx_permisos_usuario ON permisos_usuario_modulo(usuario_id, empresa_id);
 CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha);
+CREATE INDEX IF NOT EXISTS idx_token ON password_reset_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_expires ON password_reset_tokens(expires_at);
+CREATE INDEX IF NOT EXISTS idx_verification_token ON usuarios(verification_token);
 
 -- ============================================================================
 -- FIN DE SCRIPT

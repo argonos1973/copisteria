@@ -389,7 +389,7 @@ def crear_factura(data=None):
                     if ruta_xml_final and ruta_xml_final.lower().endswith('.xsig'):
                         push_notif("XML Facturae generado")
                     logger.info(f"[FACTURAE]Factura electrónica generada correctamente para factura ID: {factura_id}")
-                    conn.commit()
+                    # conn.commit() -> ELIMINADO: La conexión ya está cerrada en este punto.
                 except Exception as e:
                     logger.info(f"[FACTURAE][ERROR] Error generando Facturae: {e}")
                     push_notif("Error al generar XML Facturae", tipo='error')

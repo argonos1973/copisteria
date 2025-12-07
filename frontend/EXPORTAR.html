@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Selector de Ejercicio y Trimestre</title>
-    <script src="/static/branding.js?v=1763897790"></script>
-    <script src="/static/auto_branding.js?v=1763897790"></script>
+    <script src="/static/branding.js?v=1764787007"></script>
+    <script src="/static/auto_branding.js?v=1764787007"></script>
     <link rel="stylesheet" href="/static/css/theme-consumer.css?v=1763897790">
 
   <!-- Enlace a Google Fonts para la fuente Roboto -->
@@ -17,7 +17,7 @@
   <!-- Carga de tu hoja de estilos externa -->
   <link rel="stylesheet" href="../static/css/page_header.css" />
   <link rel="stylesheet" href="../static/css/styles.css?v=1763897790" />
-    <script src="/static/auto_branding.js?v=1763897790"></script>
+    <script src="/static/auto_branding.js?v=1764787007"></script>
 </head>
 <body>
   <div class="container">
@@ -60,7 +60,7 @@
 
   <!-- Script principal usando import de constantes -->
   <script type="module">
-    import { IP_SERVER, PORT } from '../static/constantes.js?v=1763897790';
+    import { API_URL } from '/static/constantes.js?v=1764785000';
     
     // Función para rellenar el selector de Ejercicio
     function rellenarEjercicio() {
@@ -151,8 +151,14 @@
         exportarBtn.disabled = true;
         exportarBtn.textContent = 'Exportando...';
 
-        // Construir la URL con los parámetros de consulta, usando IP_SERVER y PORT
-        const url = new URL(`http://${IP_SERVER}:${PORT}/api/exportar`);
+        // Construir la URL con los parámetros de consulta, usando API_URL
+        // PARCHE: Forzar HTTPS en Cloudflare si API_URL viene mal
+        let baseApi = API_URL;
+        if (window.location.hostname.includes('cloudflare')) {
+            baseApi = baseApi.replace('http:', 'https:').replace(':5001', '');
+        }
+
+        const url = new URL(`${baseApi}/api/exportar`);
         url.searchParams.append('ejercicio', ejercicio);
         url.searchParams.append('trimestre', trimestre);
 

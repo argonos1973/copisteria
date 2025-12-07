@@ -11,8 +11,18 @@ let notificacionesActuales = [];
 // Función para cerrar sesión
 async function cerrarSesion() {
     if (!confirm('¿Cerrar sesión?')) return;
+    
+    // Limpiar sesión local y caché de menú
+    if (window.sessionManager) {
+        window.sessionManager.clearSession();
+    }
+    sessionStorage.removeItem('menu_data');
+    
     try {
-        await fetch('/api/auth/logout', { credentials: 'include' }, { method: 'POST' });
+        await fetch('/api/auth/logout', { 
+            method: 'POST',
+            credentials: 'include' 
+        });
     } catch (error) {
         console.error('Error al cerrar sesión:', error);
     }
@@ -88,7 +98,7 @@ async function inicializarNotificaciones() {
 
 async function cargarNotificaciones() {
     try {
-        const response = await fetch(`${API_URL}/conciliacion/notificaciones`);
+        const response = await fetch(`${API_URL}/conciliacion/notificaciones`, { credentials: 'include' });
         const data = await response.json();
         
         if (data.success) {
@@ -295,7 +305,8 @@ async function marcarSeleccionadasLeidas() {
             const response = await fetch(`${API_URL}/notificaciones/eliminar`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids: notifGenerales })
+                body: JSON.stringify({ ids: notifGenerales }),
+                credentials: 'include'
             });
             
             const data = await response.json();
@@ -310,7 +321,8 @@ async function marcarSeleccionadasLeidas() {
             const response = await fetch(`${API_URL}/conciliacion/marcar-notificadas`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids: notifConciliacion })
+                body: JSON.stringify({ ids: notifConciliacion }),
+                credentials: 'include'
             });
             
             const data = await response.json();
@@ -346,7 +358,8 @@ async function marcarTodasLeidas() {
         const response = await fetch(`${API_URL}/conciliacion/marcar-notificadas`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids })
+            body: JSON.stringify({ ids }),
+            credentials: 'include'
         });
         
         const data = await response.json();

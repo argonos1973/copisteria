@@ -241,8 +241,8 @@ def register_user():
             INSERT INTO usuarios (
                 username, password_hash, nombre_completo, email, telefono,
                 activo, es_superadmin, verification_token, token_expiry,
-                fecha_creacion
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                fecha_creacion, avatar
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, '/static/avatars/default.svg')
         ''', (
             username,
             password_hash,

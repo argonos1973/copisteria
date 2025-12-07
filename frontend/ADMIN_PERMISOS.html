@@ -2,22 +2,25 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administración - Aleph70</title>
-    <script src="/static/branding.js?v=1763897790"></script>
-    <script src="/static/auto_branding.js?v=1763897790"></script>
-    <link rel="stylesheet" href="/static/css/theme-consumer.css?v=1763897790">
-    <link rel="stylesheet" href="/static/css/modales.css?v=1763897790">
+    <script src="/static/branding.js?v=1764787007"></script>
+    <script src="/static/auto_branding.js?v=1764787007"></script>
+    <link rel="stylesheet" href="/static/css/theme-consumer.css?v=FIX_FINAL_5">
+    <link rel="stylesheet" href="/static/css/modales.css?v=FIX_FINAL_6">
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="shortcut icon" type="image/png" href="/static/favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/css/styles.css?v=1763897790">
+    <link rel="stylesheet" href="/static/css/styles.css?v=FIX_FINAL_4">
     <link rel="stylesheet" href="/static/css/notificaciones.css">
-    <link rel="stylesheet" href="/static/css/iframe-adapter.css?v=1763897790">
-    <link rel="stylesheet" href="/static/css/modal-theme-fix.css">
+    <link rel="stylesheet" href="/static/css/iframe-adapter.css?v=FIX_FINAL_4">
+    <link rel="stylesheet" href="/static/css/modal-theme-fix.css?v=FIX_FINAL_4">
     <link rel="stylesheet" href="/static/css/admin-empresa.css">
-    <link rel="stylesheet" href="/static/css/admin-empresas-tab.css?v=1763897790">
+    <link rel="stylesheet" href="/static/css/admin-empresas-tab.css?v=FIX_FINAL_4">
 </head>
 <body>
     <div class="header">
@@ -46,8 +49,8 @@
                 </div>
                 <div class="search-box" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
                     <input type="text" id="buscar-usuario" placeholder="🔍 Buscar usuario..." oninput="filtrarUsuarios()" style="flex: 1;">
-                    <button class="btn btn-primary" onclick="mostrarModalNuevoUsuario()">
-                        <i class="fas fa-plus"></i> Nuevo Usuario
+                    <button class="btn btn-primary" onclick="mostrarModalNuevoUsuario()" style="width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; padding: 0;" title="Crear Nuevo Usuario">
+                        <i class="fas fa-plus"></i>
                     </button>
                 </div>
                 <div id="tabla-usuarios">
@@ -81,75 +84,88 @@
     </div>
 
     <!-- Modal: Usuario -->
-    <div id="modalUsuario" class="modal-usuario" style="display: none;">
-        <div class="modal-usuario-content">
-            <div class="modal-usuario-header">
-                <h2 id="modal-usuario-titulo"><i class="fas fa-user-circle"></i> Nuevo Usuario</h2>
-                <span class="modal-usuario-close" onclick="cerrarModalUsuario()">&times;</span>
+    <div id="modalUsuario" class="modal">
+        <div class="modal-content" style="width: 90% !important; max-width: 800px !important; padding: 20px !important;">
+            <div class="modal-header" style="padding-bottom: 10px;">
+                <h2 id="modal-usuario-titulo" style="font-size: 1.3rem; margin: 0;"><i class="fas fa-user-circle"></i> Nuevo Usuario</h2>
+                <span class="close" onclick="cerrarModalUsuario()">&times;</span>
             </div>
             
-            <div class="modal-usuario-body">
+            <div class="modal-body" style="padding: 0 !important; overflow: hidden;">
                 <div id="alert-usuario"></div>
                 <form id="formUsuario" onsubmit="guardarUsuario(event)">
                     <input type="hidden" id="usuario-id">
                     <input type="hidden" id="usuario-activo" value="1">
                     <input type="hidden" id="usuario-superadmin" value="0">
                     
-                    <!-- Avatar -->
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <div style="position: relative; display: inline-block; width: 100px; height: 100px;">
-                            <img id="usuario-avatar-preview" src="/static/avatars/default.svg" alt="" 
-                                 style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary, var(--color-primario, #3498db)); display: block;">
+                    <div style="display: flex; gap: 15px; align-items: flex-start; margin-top: 10px;">
+                        <!-- Columna Izquierda: Avatar (Más compacto) -->
+                        <div style="flex: 0 0 120px; text-align: center; padding-top: 5px;">
+                            <div style="position: relative; display: inline-block; width: 100px; height: 100px; margin-bottom: 8px;">
+                                <img id="usuario-avatar-preview" src="/static/avatars/default.svg" alt="" 
+                                     style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--primary, var(--color-primario, #3498db)); display: block; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted, #aaa); margin-bottom: 5px; font-weight: 500;">
+                                Foto de perfil
+                            </div>
+                        </div>
+
+                        <!-- Columna Derecha: Campos (Espaciado reducido) -->
+                        <div style="flex: 1; min-width: 0;">
+                            
+                            <!-- Fila 1: Usuario y Contraseña -->
+                            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px;">
+                                <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                                    <label style="color: var(--color-texto, #ddd); font-size: 12px; margin-bottom: 4px;"><i class="fas fa-user"></i> Usuario *</label>
+                                    <input type="text" id="usuario-username" class="form-control" required autocomplete="username" style="width: 100%; box-sizing: border-box; height: 36px;">
+                                </div>
+                                
+                                <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                                    <label style="color: var(--color-texto, #ddd); font-size: 12px; margin-bottom: 4px;"><i class="fas fa-lock"></i> Contraseña <small>(Min 6)</small></label>
+                                    <div style="position: relative; width: 100%;">
+                                        <input type="password" id="usuario-password" class="form-control" autocomplete="new-password" placeholder="••••••••" style="width: 100%; padding-right: 35px; box-sizing: border-box; height: 36px;">
+                                        <i class="fas fa-eye" id="toggle-password-usuario" onclick="togglePasswordUsuario()" 
+                                           style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888; z-index: 10;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Fila 2: Nombre completo -->
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label style="color: var(--color-texto, #ddd); font-size: 12px; margin-bottom: 4px;"><i class="fas fa-id-card"></i> Nombre completo *</label>
+                                <input type="text" id="usuario-nombre" class="form-control" required style="width: 100%; box-sizing: border-box; height: 36px;">
+                            </div>
+                            
+                            <!-- Fila 3: Email y Teléfono -->
+                            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 10px;">
+                                <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                                    <label style="color: var(--color-texto, #ddd); font-size: 12px; margin-bottom: 4px;"><i class="fas fa-envelope"></i> Email</label>
+                                    <input type="email" id="usuario-email" class="form-control" autocomplete="email" style="width: 100%; box-sizing: border-box; height: 36px;">
+                                </div>
+                                <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                                    <label style="color: var(--color-texto, #ddd); font-size: 12px; margin-bottom: 4px;"><i class="fas fa-phone"></i> Teléfono</label>
+                                    <input type="tel" id="usuario-telefono" class="form-control" style="width: 100%; box-sizing: border-box; height: 36px;">
+                                </div>
+                            </div>
+
+                            <!-- Fila 4: Rol -->
+                            <div class="form-group" style="margin-bottom: 8px;">
+                                <label style="color: var(--color-texto, #ddd); font-size: 12px; margin-bottom: 4px;"><i class="fas fa-user-shield"></i> Rol y Permisos *</label>
+                                <select id="usuario-rol" class="form-control" required style="width: 100%; box-sizing: border-box; height: 36px;">
+                                    <option value="admin">Administrador - Acceso total</option>
+                                    <option value="editor">Editor - Sin acceso a Administración</option>
+                                    <option value="consultor">Consultor - Solo lectura</option>
+                                </select>
+                                <small style="font-size: 10px; color: var(--text-muted, #aaa); display: block; margin-top: 3px;">
+                                    Define el nivel de acceso general al sistema.
+                                </small>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label><i class="fas fa-user"></i> Nombre de usuario *</label>
-                        <input type="text" id="usuario-username" required autocomplete="username">
+                    <div class="modal-footer" style="margin-top: 15px; padding-top: 0; border-top: none; padding-bottom: 0;">
+                        <button type="submit" class="btn btn-modal-save w-100" style="height: 40px; display: flex; align-items: center; justify-content: center;">Guardar Usuario</button>
                     </div>
-                    
-                    <div class="form-group">
-                        <label><i class="fas fa-lock"></i> Contraseña *</label>
-                        <div style="position: relative;">
-                            <input type="password" id="usuario-password" autocomplete="new-password" placeholder="••••••••" style="padding-right: 40px;">
-                            <i class="fas fa-eye" id="toggle-password-usuario" onclick="togglePasswordUsuario()" 
-                               style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted, #666); font-size: 16px;"></i>
-                        </div>
-                        <small style="font-size: 11px; color: var(--text-muted, #666); display: block; margin-top: 4px;">
-                            Mínimo 6 caracteres (dejar vacío para no cambiar)
-                        </small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label><i class="fas fa-id-card"></i> Nombre completo *</label>
-                        <input type="text" id="usuario-nombre" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label><i class="fas fa-envelope"></i> Email</label>
-                        <input type="email" id="usuario-email" autocomplete="email">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label><i class="fas fa-phone"></i> Teléfono</label>
-                        <input type="tel" id="usuario-telefono">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label><i class="fas fa-user-shield"></i> Rol *</label>
-                        <select id="usuario-rol" required style="width: 100%; padding: 12px; border: 1px solid var(--border, #ddd); border-radius: 8px; background: var(--input-bg, #fff); color: var(--text, #333);">
-                            <option value="admin">Administrador - Acceso total</option>
-                            <option value="editor">Editor - Sin acceso a Administración</option>
-                            <option value="consultor">Consultor - Solo lectura</option>
-                        </select>
-                        <small style="font-size: 11px; color: var(--text-muted, #666); display: block; margin-top: 4px;">
-                            • Admin: Todos los permisos<br>
-                            • Editor: Igual que admin pero sin menú Administración<br>
-                            • Consultor: Solo puede consultar datos
-                        </small>
-                    </div>
-                    
-                    <button type="submit" class="btn-guardar-usuario"><i class="fas fa-save"></i> Guardar Cambios</button>
                 </form>
             </div>
         </div>
@@ -161,156 +177,9 @@
         import { mostrarNotificacion } from '/static/notificaciones.js';
         window.mostrarNotificacion = mostrarNotificacion;
     </script>
-    <script src="/static/admin.js?v=1763897790"></script>
-    
-    <!-- Estilos adicionales para plantillas -->
-    <style>
-        .plantilla-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.15) !important;
-        }
-        .form-control {
-            background: var(--color-fondo);
-            color: var(--color-texto);
-            border: 1px solid var(--color-borde);
-            padding: 8px 12px;
-            border-radius: 5px;
-            width: 100%;
-        }
-        .form-control:focus {
-            outline: none;
-            border-color: var(--color-primario);
-            box-shadow: 0 0 0 3px rgba(var(--color-primario-rgb, 0, 123, 255), 0.1);
-        }
-        
-        /* Estilos Modal Usuario (similar a Mi Perfil) */
-        .modal-usuario {
-            display: none;
-            position: fixed;
-            z-index: 10000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            animation: fadeIn 0.3s;
-        }
-        
-        .modal-usuario-content {
-            background: var(--bg, #fff);
-            color: var(--text, #333);
-            margin: 3% auto;
-            max-width: 500px;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            animation: slideDown 0.3s;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        @keyframes slideDown {
-            from { transform: translateY(-50px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        
-        .modal-usuario-header {
-            padding: 20px 25px;
-            background: var(--header-bg, var(--modal-header-bg, var(--primary, #000))) !important;
-            color: var(--header-text, var(--modal-header-text, #fff)) !important;
-            border-radius: 12px 12px 0 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .modal-usuario-header h2 {
-            margin: 0;
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--header-text, var(--modal-header-text, #fff)) !important;
-        }
-        
-        .modal-usuario-close {
-            color: var(--header-text, var(--modal-header-text, #fff)) !important;
-            font-size: 32px;
-            font-weight: bold;
-            cursor: pointer;
-            line-height: 1;
-            opacity: 1;
-        }
-        
-        .modal-usuario-close:hover {
-            opacity: 0.8;
-        }
-        
-        .modal-usuario-body {
-            padding: 30px;
-        }
-        
-        .modal-usuario-body .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .modal-usuario-body .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            font-size: 14px;
-            color: var(--text, #333);
-        }
-        
-        .modal-usuario-body .form-group label i {
-            margin-right: 8px;
-            color: var(--primary, var(--color-primario, #3498db));
-            width: 16px;
-            text-align: center;
-        }
-        
-        .modal-usuario-body .form-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid var(--border, #ddd);
-            border-radius: 8px;
-            font-size: 14px;
-            background: var(--bg, #fff);
-            color: var(--text, #333);
-            transition: all 0.3s ease;
-            box-sizing: border-box;
-        }
-        
-        .modal-usuario-body .form-group input:focus {
-            outline: none;
-            border-color: var(--primary, #3498db);
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-        }
-        
-        .btn-guardar-usuario {
-            width: 100%;
-            padding: 14px 20px;
-            background: var(--primary, var(--color-primario, #3498db));
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 10px;
-        }
-        
-        .btn-guardar-usuario:hover {
-            filter: brightness(1.1);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-        
-        .btn-guardar-usuario i {
-            margin-right: 8px;
-        }
-    </style>
+    <!-- Session Manager requerido para validar usuario actual -->
+    <script src="/static/session_manager.js?v=FIX_SESSION"></script>
+    <script src="/static/admin.js?v=FIX_FINAL"></script>
     
     <!-- Inicializar plantillas al cargar -->
     <script>
@@ -328,7 +197,7 @@
         };
         
         // Toggle visibilidad de contraseña
-        function togglePasswordUsuario() {
+        window.togglePasswordUsuario = function() {
             const input = document.getElementById('usuario-password');
             const icon = document.getElementById('toggle-password-usuario');
             
@@ -341,10 +210,10 @@
                 icon.classList.remove('fa-eye-slash');
                 icon.classList.add('fa-eye');
             }
-        }
+        };
     </script>
-    <script src="/static/branding.js?v=1763897790"></script>
-    <script src="/static/auto_branding.js?v=1763897790"></script>
+    <script src="/static/branding.js?v=1764787007"></script>
+    <script src="/static/auto_branding.js?v=1764787007"></script>
     
     <!-- Contenedor para notificaciones -->
     <div id="notificaciones-contenedor"></div>

@@ -18,6 +18,15 @@ def estadisticas_gastos():
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
+            
+            # DEBUG: Verificar BD conectada
+            try:
+                cur.execute("PRAGMA database_list")
+                dbs = cur.fetchall()
+                for db_info in dbs:
+                    logger.info(f"[DASHBOARD] BD CONECTADA: {db_info}")
+            except Exception as e:
+                logger.error(f"[DASHBOARD] Error verificando BD: {e}")
     
             # Parámetros de período seleccionados (año y mes que el usuario ha elegido)
             ahora = datetime.now()
@@ -25,28 +34,60 @@ def estadisticas_gastos():
             mes_param = request.args.get('mes')
             año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
             mes = int(mes_param) if mes_param and mes_param.isdigit() else ahora.month
-            cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur > 0 AND substr(COALESCE(fecha_operacion_iso, substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)), 1, 4) = ?", (str(año),))
-            total_ingresos = cur.fetchone()[0] or 0
+            # Calcular Total Facturado (Tickets + Facturas) del año para INGRESOS
+            logger.info(f"[DASHBOARD] Calculando ingresos para año: {año}")
+            
+            # Tickets
+            cur.execute("""
+                SELECT COALESCE(SUM(total), 0) 
+                FROM tickets 
+                WHERE estado = 'C' AND substr(fecha, 1, 4) = ?
+            """, (str(año),))
+            res_tickets = cur.fetchone()
+            total_tickets_anio = res_tickets[0] if res_tickets else 0
+            logger.info(f"[DASHBOARD] Total Tickets Año {año}: {total_tickets_anio}")
+            
+            # Facturas
+            cur.execute("""
+                SELECT COALESCE(SUM(total), 0) 
+                FROM factura 
+                WHERE estado = 'C' AND substr(fecha, 1, 4) = ?
+            """, (str(año),))
+            res_facturas = cur.fetchone()
+            total_facturas_anio = res_facturas[0] if res_facturas else 0
+            logger.info(f"[DASHBOARD] Total Facturas Año {año}: {total_facturas_anio}")
+            
+            total_ingresos = total_tickets_anio + total_facturas_anio
+            logger.info(f"[DASHBOARD] Total Ingresos Calculado: {total_ingresos}")
+
+            # Gastos siguen siendo los movimientos negativos de la tabla gastos
             cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur < 0 AND substr(COALESCE(fecha_operacion_iso, substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)), 1, 4) = ?", (str(año),))
             total_gastos = cur.fetchone()[0] or 0
-            balance = total_ingresos + total_gastos  # Balance total anual (correcto porque gastos es negativo)
-    
+            
+            balance = total_ingresos + total_gastos  # Balance total anual
+
             # Balance del mes actual
-           
-    
             cur.execute("SELECT MAX(fecha_operacion) FROM gastos")
             ultima_fecha = cur.fetchone()[0]
+            
             # Calcular ingresos y gastos del mes actual
-            ahora = datetime.now()
-            anio_param = request.args.get('anio')
-            mes_param = request.args.get('mes')
-            año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
-            mes = int(mes_param) if mes_param and mes_param.isdigit() else ahora.month
+            # Ingresos = Facturado en el mes
             cur.execute("""
-                SELECT COALESCE(SUM(importe_eur),0) FROM gastos 
-                WHERE importe_eur > 0 AND substr(fecha_operacion, 4, 2) = ? AND substr(fecha_operacion, 7, 4) = ?
+                SELECT COALESCE(SUM(total), 0) 
+                FROM tickets 
+                WHERE estado = 'C' AND strftime('%m', fecha) = ? AND strftime('%Y', fecha) = ?
             """, (str(mes).zfill(2), str(año)))
-            ingresos_mes_actual = cur.fetchone()[0] or 0
+            tickets_mes = cur.fetchone()[0] or 0
+            
+            cur.execute("""
+                SELECT COALESCE(SUM(total), 0) 
+                FROM factura 
+                WHERE estado = 'C' AND strftime('%m', fecha) = ? AND strftime('%Y', fecha) = ?
+            """, (str(mes).zfill(2), str(año)))
+            facturas_mes = cur.fetchone()[0] or 0
+            
+            ingresos_mes_actual = tickets_mes + facturas_mes
+
             cur.execute("""
                 SELECT COALESCE(SUM(importe_eur),0) FROM gastos 
                 WHERE importe_eur < 0 AND substr(fecha_operacion, 4, 2) = ? AND substr(fecha_operacion, 7, 4) = ?

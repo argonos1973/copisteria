@@ -1,4 +1,4 @@
-import { formatearFecha, formatearImporte, fetchConManejadorErrores, parsearImporte, buildApiUrl } from './scripts_utils.js?v=20250924_2157';
+import { formatearFecha, formatearImporte, fetchConManejadorErrores, parsearImporte, buildApiUrl } from './scripts_utils.js?v=MIXED_CONTENT_FIX';
 import { IP_SERVER, PORT, IS_PROD } from './constantes.js';
 
 // ==============================
@@ -242,14 +242,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ==============================
   async function cargarEstadisticas(mes, anio) {
     const mesNum = parseInt(mes, 10); // 1-12
+    const anioPrev = String(parseInt(anio, 10) - 1);
     
     const qp = new URLSearchParams({ mes, anio, t: Date.now() });
-    let datos;
+    
+    // OPTIMIZACION: Carga paralela de todos los recursos necesarios al inicio
+    // Esto evita el "waterfall" de peticiones y el parpadeo por actualizaciones parciales
+    let datos, totalesActual, totalesAnterior;
     try {
-      datos = await fetchConManejadorErrores(buildApiUrl('/api/ventas/media_por_documento?' + qp));
+        const [resMedia, resTotAct, resTotAnt] = await Promise.all([
+            fetchConManejadorErrores(buildApiUrl('/api/ventas/media_por_documento?' + qp)).catch(() => null),
+            fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}&t=${Date.now()}`)).catch(() => null),
+            fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anioPrev}&t=${Date.now()}`)).catch(() => null)
+        ]);
+        datos = resMedia;
+        totalesActual = resTotAct;
+        totalesAnterior = resTotAnt;
     } catch (e) {
-      console.warn('[estadisticas] Fallback: media_por_documento falló, voy a construir datos desde total_mes', e);
-      datos = await construirDatosDesdeTotales(mes, anio);
+        console.error('[estadisticas] Error en carga paralela inicial:', e);
+    }
+
+    if (!datos) {
+      console.warn('[estadisticas] Fallback: media_por_documento falló, voy a construir datos desde total_mes');
+      // Pasamos los totales ya cargados
+      datos = await construirDatosDesdeTotales(mes, anio, totalesActual, totalesAnterior);
     }
     // Si por cualquier motivo vino todo a 0, intentar reconstruir desde totales
     try {
@@ -257,7 +273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const esProd = IS_PROD;
       if (!esProd && (!datos || totAct === 0)) {
         console.warn('[estadisticas] Fallback 2: datos en 0, reconstruyendo desde total_mes');
-        datos = await construirDatosDesdeTotales(mes, anio);
+        datos = await construirDatosDesdeTotales(mes, anio, totalesActual, totalesAnterior);
       }
     } catch (e) {
       console.warn('[estadisticas] Error evaluando fallback:', e);
@@ -267,9 +283,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Ajustamos acumulados y medias usando series mensuales del backend (YTD)
     try {
       {
-        const totales = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}&t=${Date.now()}`));
-        const anioPrev = String(parseInt(anio, 10) - 1);
-        const totalesPrev = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anioPrev}&t=${Date.now()}`));
+        // Usar datos pre-cargados si existen, si no, fetch (seguridad)
+        const totales = totalesActual || await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}&t=${Date.now()}`));
+        const totalesPrev = totalesAnterior || await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anioPrev}&t=${Date.now()}`));
+        
         const keySel = String(mesNum).padStart(2, '0');
         const getCampoVal = (entry, campo) => {
           if (entry == null) return 0;
@@ -382,7 +399,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(datos.proformas) ajustarMediaMensual(datos.proformas);
     if(datos.global) ajustarMediaMensual(datos.global);
     // Completar cantidades del mes con la serie total_mes para garantizar media mensual correcta
-    await completarCantidadesMesDesdeTotales(mes, anio, datos);
+    // Pasamos totalesActual para evitar fetch redundante
+    await completarCantidadesMesDesdeTotales(mes, anio, datos, totalesActual);
     const global = datos.global;
     // cachear para cálculos globales de cantidad vs año pasado
     ultimoDatos = datos;
@@ -416,13 +434,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Construir estructura de "media_por_documento" a partir de /api/ventas/total_mes
-  async function construirDatosDesdeTotales(mes, anio) {
+  async function construirDatosDesdeTotales(mes, anio, totalesActualCache = null, totalesPrevCache = null) {
     const mesNum = parseInt(mes, 10);
     const anioPrev = String(parseInt(anio, 10) - 1);
-    const [totAct, totPrev] = await Promise.all([
-      fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}&t=${Date.now()}`)),
-      fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anioPrev}&t=${Date.now()}`))
-    ]);
+    
+    let totAct = totalesActualCache;
+    let totPrev = totalesPrevCache;
+
+    if (!totAct || !totPrev) {
+      console.log('[estadisticas] Fetching totales en fallback (no caché)');
+      const [resAct, resPrev] = await Promise.all([
+        !totAct ? fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}&t=${Date.now()}`)) : Promise.resolve(totAct),
+        !totPrev ? fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anioPrev}&t=${Date.now()}`)) : Promise.resolve(totPrev)
+      ]);
+      totAct = resAct;
+      totPrev = resPrev;
+    }
+
     const getCampoVal = (entry, campo) => {
       if (entry == null) return 0;
       if (typeof entry === 'number') return campo === 'total' ? entry : 0;
@@ -532,11 +560,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Completa las cantidades del mes seleccionado a partir de /api/ventas/total_mes
   // Esto asegura que la 'Media por Ticket/Factura' pueda calcularse como total_mes / cantidad_mes
   // incluso si el endpoint media_por_documento no envía la cantidad mensual.
-  async function completarCantidadesMesDesdeTotales(mes, anio, datos) {
+  async function completarCantidadesMesDesdeTotales(mes, anio, datos, totalesActualCache = null) {
     try {
       const mesNum = parseInt(mes, 10);
       const keySel = String(mesNum).padStart(2, '0');
-      const totales = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}&t=${Date.now()}`));
+      
+      let totales = totalesActualCache;
+      if (!totales) {
+          totales = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}&t=${Date.now()}`));
+      }
+      
       const getCantidadMes = (serie) => {
         if (!serie) return 0;
         const entry = serie[keySel];

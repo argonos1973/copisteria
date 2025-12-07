@@ -6,8 +6,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Consulta de Contactos</title>
-    <script src="/static/branding.js?v=1763897790"></script>
-    <script src="/static/auto_branding.js?v=1763897790"></script>
+    <script src="/static/branding.js?v=1764787007"></script>
+    <script src="/static/auto_branding.js?v=1764787007"></script>
 
   <!-- Font Awesome para iconos -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
@@ -52,11 +52,29 @@
       max-height: none !important;
       height: 100% !important;
       overflow-y: auto;
+      overflow-x: auto; /* Permitir scroll horizontal */
     }
     /* Compactar espacios para ganar área de grid */
     .form-inline { margin: 4px 0; }
     .pagination { margin-top: 6px; }
     .contactos-page .pagination { margin-bottom: 8px !important; }
+    
+    /* Asegurar ancho mínimo para acciones */
+    .acciones-col {
+        min-width: 140px !important;
+    }
+    
+    /* Forzar layout automático para evitar cortes */
+    .contactos-page table.grid {
+        table-layout: auto !important;
+        width: 100% !important;
+    }
+    
+    /* Asegurar visibilidad de cabeceras */
+    .contactos-page table.grid th {
+        visibility: visible !important;
+        display: table-cell !important;
+    }
   </style>
 
   <!-- Vue.js y Axios (CDN) -->
@@ -130,24 +148,22 @@
         <table class="grid">
           <thead>
             <tr>
-              <th class="razon-social" style="width: 40%;">Razón Social</th>
-              <th class="nif-col">Identificador</th>
-              <th class="email-col">Email</th>
-              <th class="proforma-col" title="Proforma Abierta">Proforma</th>
-              <th class="acciones-col" title="Crear Proforma">✎</th>
-              <th class="acciones-col" title="Crear Factura">⚡</th>
-              <th class="acciones-col" title="Eliminar">✕</th>
+              <th class="razon-social" style="width: 35%;">Razón Social</th>
+              <th class="nif-col" style="width: 15%;">Identificador</th>
+              <th class="email-col" style="width: 25%;">Email</th>
+              <th class="proforma-col" title="Proforma Abierta" style="width: 10%;">Proforma</th>
+              <th class="acciones-col" style="width: 15%; text-align: center;">Acciones</th>
             </tr>
           </thead>
           <tbody>
             <!-- Mensaje de carga -->
             <tr v-if="loading">
-              <td colspan="6" style="text-align: center;">Cargando contactos...</td>
+              <td colspan="5" style="text-align: center;">Cargando contactos...</td>
             </tr>
 
             <!-- Mensaje de sin resultados -->
             <tr v-if="!loading && contactos.length === 0">
-              <td colspan="6" style="text-align: left;">No se encontraron contactos.</td>
+              <td colspan="5" style="text-align: left;">No se encontraron contactos.</td>
             </tr>
 
             <!-- Filas de contactos -->
@@ -168,7 +184,7 @@
               <td class="proforma-col" :title="contacto.numero_proforma_abierta">
                 {{ contacto.numero_proforma_abierta }}
               </td>
-              <td class="acciones-col">
+              <td class="acciones-col" style="text-align: center; white-space: nowrap;">
                 <button
                   v-if="contacto.identificador"
                   data-modulo="proformas"
@@ -176,11 +192,10 @@
                   class="btn-icon"
                   :title="contacto.numero_proforma_abierta ? 'Modificar Proforma' : 'Crear Proforma'"
                   @click.stop="crearProforma(contacto.idContacto)"
+                  style="margin-right: 5px;"
                 >
                   ✎
                 </button>
-              </td>
-              <td class="acciones-col">
                 <button
                   v-if="contacto.identificador"
                   data-modulo="facturas"
@@ -188,11 +203,10 @@
                   class="btn-icon"
                   title="Crear Factura"
                   @click.stop="crearFactura(contacto.idContacto)"
+                  style="margin-right: 5px;"
                 >
                   ⚡
                 </button>
-              </td>
-              <td class="acciones-col">
                 <button
                   data-modulo="contactos"
                   data-accion="eliminar"

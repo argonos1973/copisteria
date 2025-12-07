@@ -21,4 +21,4 @@ IP_SERVIDOR = get_local_ip()
 
 # Base de datos por defecto (solo para scripts sin contexto de sesión)
 # En sistema multiempresa, SIEMPRE se debe usar session['empresa_db']
-DB_NAME = '/var/www/html/db/caca/caca.db'  # BD por defecto para inicialización
+DB_NAME = '/var/www/html/db/aleph70/aleph70.db'  # BD por defecto para inicialización

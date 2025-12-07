@@ -327,9 +327,7 @@ def obtener_menu():
             ],
             'gastos': [
                 {'nombre': 'Consultar Gastos', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_GASTOS.html'},
-                {'nombre': 'Conciliación', 'icono': 'fas fa-exchange-alt', 'ruta': '/CONCILIACION_GASTOS.html'},
-                {'nombre': 'Extracto Bancario', 'icono': 'fas fa-file-invoice-dollar', 'ruta': '/extracto_bancario'},
-                {'nombre': 'Conectar Banco', 'icono': 'fas fa-university', 'ruta': '/conectar_banco'}
+                {'nombre': 'Conciliación', 'icono': 'fas fa-exchange-alt', 'ruta': '/CONCILIACION_GASTOS.html'}
             ],
             'facturas_recibidas': [
                 {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_FACTURAS_RECIBIDAS.html'},
@@ -495,7 +493,11 @@ def obtener_menu():
             # Decidir si incluir el módulo en el menú
             incluir_modulo = False
             
-            if codigo_modulo in modulos_en_submenu:
+            # FILTRO ESPECIAL: Eliminar Banco del menú
+            if codigo_modulo == 'banco' or item['nombre'] == 'Banco':
+                logger.info(f"[MENU] Item omitido (filtro banco): {item['nombre']}")
+                incluir_modulo = False
+            elif codigo_modulo in modulos_en_submenu:
                 # Módulos que están dentro de otros (nunca se muestran independientemente)
                 logger.info(f"[MENU] Item omitido (está en submenu): {item['nombre']}")
                 incluir_modulo = False
@@ -528,10 +530,18 @@ def obtener_menu():
         
         # Obtener rol del usuario
         rol_usuario = session.get('rol', 'consultor')
-        logger.info(f"[MENU] Rol del usuario: {rol_usuario}")
+        logger.info(f"[MENU] Usuario: {session.get('username')} - Rol sesión: {rol_usuario} - Es Admin Empresa: {es_admin_empresa}")
         
-        # Agregar opciones de administración solo si es admin de empresa Y tiene rol 'admin'
-        if es_admin_empresa and rol_usuario == 'admin':
+        # Agregar opciones de administración si es admin de empresa o superadmin
+        if es_admin_empresa or es_superadmin:
+            submenu_admin = [
+                {
+                    'nombre': 'Gestión',
+                    'icono': 'fas fa-users-cog',
+                    'ruta': '/ADMIN_PERMISOS.html'
+                }
+            ]
+            
             menu.append({
                 'codigo': 'admin',
                 'nombre': 'Administración',
@@ -546,15 +556,9 @@ def obtener_menu():
                     'anular': 1,
                     'exportar': 1
                 },
-                'submenu': [
-                    {
-                        'nombre': 'Permisos',
-                        'icono': 'fas fa-cog',
-                        'ruta': '/ADMIN_PERMISOS.html'
-                    }
-                ]
+                'submenu': submenu_admin
             })
-            logger.info("[MENU] Opciones de administración agregadas para admin de empresa")
+            logger.info("[MENU] Opciones de administración agregadas")
         
         conn.close()
         
@@ -678,7 +682,22 @@ def obtener_branding():
             empresa = cursor.fetchone()
         
         if not empresa:
-            return jsonify({'error': 'Empresa no encontrada'}), 404
+            # Si no tiene empresa, devolver configuración por defecto (Minimal)
+            logger.info("[BRANDING] Usuario sin empresa - devolviendo tema minimal por defecto")
+            return jsonify({
+                'empresa_id': None,
+                'logo_header': 'default_header.png',
+                'logo_factura': 'default_header.png',
+                'plantilla': 'minimal',
+                'datos': {
+                    'nombre': 'Mi Empresa',
+                    'cif': '',
+                    'direccion': '',
+                    'telefono': '',
+                    'email': '',
+                    'web': ''
+                }
+            }), 200
         
         # Usar directamente el campo plantilla (minimal, dark, eink)
         plantilla_base = empresa['plantilla'] or 'dark'  # default dark
@@ -942,7 +961,7 @@ def reset_password():
         
         # Actualizar contraseña
         hashed_password = generate_password_hash(new_password)
-        cursor.execute('UPDATE usuarios SET password = ? WHERE id = ?', 
+        cursor.execute('UPDATE usuarios SET password_hash = ? WHERE id = ?', 
                       (hashed_password, token_data['usuario_id']))
         
         # Marcar token como usado

@@ -46,7 +46,8 @@ function applyThemeToModals() {
         // console.log('[MODAL_THEME] ✓ Aplicando a .modal-perfil-content:', modalBg);
         modalPerfilContent.style.setProperty('background-color', modalBg, 'important');
         modalPerfilContent.style.setProperty('color', modalText, 'important');
-        modalPerfilContent.style.setProperty('border-color', modalBorder, 'important');
+        // Borde blanco forzado
+        modalPerfilContent.style.setProperty('border', '4px solid rgba(255, 255, 255, 0.8)', 'important');
     } else {
         // console.log('[MODAL_THEME] ⚠️ No se encontró .modal-perfil-content');
     }
@@ -115,12 +116,11 @@ function applyThemeToModals() {
         input.style.setProperty('border', `2px solid ${modalInputBorder}`, 'important');
     });
     
-    // Aplicar a botón guardar
-    const btnGuardar = document.querySelector('.btn-guardar');
-    if (btnGuardar) {
-        btnGuardar.style.setProperty('background-color', modalHeaderBg, 'important');
-        btnGuardar.style.setProperty('color', modalHeaderText, 'important');
-    }
+    // Aplicar a TODOS los botones guardar (azul uniforme)
+    document.querySelectorAll('.btn-guardar').forEach(btnGuardar => {
+        btnGuardar.style.setProperty('background-color', '#3498db', 'important');
+        btnGuardar.style.setProperty('color', '#ffffff', 'important');
+    });
     
     // Aplicar a las tarjetas de plantillas
     document.querySelectorAll('.plantilla-card-perfil.active').forEach(card => {

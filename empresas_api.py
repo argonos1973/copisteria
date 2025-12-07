@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
-from flask import Blueprint, request, jsonify, send_file, session
+from datetime import datetime
+from flask import Blueprint, request, jsonify, send_file, session, make_response
 from auth_middleware import superadmin_required, require_admin, login_required
 import sqlite3
 import os
 import json
 import re
 import shutil
+import subprocess
+import tempfile
+import uuid
 from werkzeug.utils import secure_filename
 from logger_config import get_logger
 from email_utils import enviar_email_bienvenida_empresa
@@ -333,6 +337,7 @@ def obtener_empresa(empresa_id):
                 empresa['provincia'] = emisor_data.get('provincia', empresa.get('provincia', ''))
                 empresa['email'] = emisor_data.get('email', empresa.get('email', ''))
                 empresa['pais'] = emisor_data.get('pais', 'ESP')
+                empresa['ruta_certificado'] = emisor_data.get('certificado', '')
                 
                 # Incluir emisor_data completo para acceso al logo y otros campos
                 empresa['emisor_data'] = emisor_data
@@ -461,6 +466,45 @@ def crear_empresa():
         except Exception as perm_error:
             logger.warning(f"No se pudieron establecer permisos automáticamente: {perm_error}")
             logger.warning(f"Por favor, ejecute manualmente: sudo chown -R www-data:www-data {empresa_dir} && sudo chmod 775 {empresa_dir} && sudo chmod 664 {bd_destino}")
+
+        # Inicializar numeradores en la nueva base de datos
+        try:
+            # Conectar a la BD recién creada
+            conn_nueva = sqlite3.connect(bd_destino)
+            cursor_nueva = conn_nueva.cursor()
+            
+            anio_actual = datetime.now().year
+            # Tipos de documentos: Factura, Proforma, Ticket, Presupuesto (Offer), Rectificativa
+            tipos_doc = ['F', 'P', 'T', 'O', 'R']
+            
+            # Asegurar que la tabla existe (por si la plantilla fuera antigua)
+            cursor_nueva.execute('''
+                CREATE TABLE IF NOT EXISTS "numerador" (
+                    "id"    INTEGER PRIMARY KEY AUTOINCREMENT,
+                    "tipo"  TEXT,
+                    "numerador"     INTEGER,
+                    "ejercicio"     INTEGER,
+                    UNIQUE("ejercicio","tipo")
+                )
+            ''')
+            
+            for tipo in tipos_doc:
+                # Verificar si ya existe
+                cursor_nueva.execute('SELECT 1 FROM numerador WHERE tipo = ? AND ejercicio = ?', (tipo, anio_actual))
+                if not cursor_nueva.fetchone():
+                    cursor_nueva.execute('''
+                        INSERT INTO numerador (tipo, numerador, ejercicio) 
+                        VALUES (?, 0, ?)
+                    ''', (tipo, anio_actual))
+                    logger.info(f"Numerador inicializado: Tipo {tipo}, Año {anio_actual} -> 0")
+            
+            conn_nueva.commit()
+            conn_nueva.close()
+            logger.info(f"Numeradores inicializados para empresa {codigo}")
+            
+        except Exception as e:
+            logger.error(f"Error inicializando numeradores: {e}")
+            # No bloqueamos la creación de la empresa, pero dejamos constancia
         
         # Insertar empresa en BD de usuarios (SIN COMMIT todavía)
         cursor.execute('''
@@ -548,9 +592,16 @@ def crear_empresa():
         session['empresa_nombre'] = nombre
         session['empresa_db'] = bd_destino
         session['es_admin_empresa'] = True
+        session['rol'] = 'admin'
+        session['empresa_logo'] = logo_filename or 'default_header.png'
+        
+        # Forzar persistencia de sesión
+        session.permanent = True
+        session.modified = True
+        
         logger.info(f"Sesión actualizada con nueva empresa: {nombre} (ID: {empresa_id})")
         
-        return jsonify({
+        response_data = {
             'success': True,
             'empresa_id': empresa_id,
             'codigo': codigo,
@@ -558,7 +609,17 @@ def crear_empresa():
             'db_path': bd_destino,
             'usuario': usuario_actual_username,
             'mensaje': f'Empresa "{nombre}" creada exitosamente y asignada a tu usuario con todos los permisos.'
-        }), 201
+        }
+        
+        response = make_response(jsonify(response_data), 201)
+        
+        # Asegurar headers para manejo de cookies en CORS si fuera necesario
+        origin = request.headers.get('Origin')
+        if origin and 'trycloudflare.com' in origin:
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            
+        return response
         
     except Exception as e:
         print(f"[DEBUG ERROR] {type(e).__name__}: {e}", flush=True)
@@ -675,6 +736,7 @@ def actualizar_empresa(empresa_id):
             'provincia': data.get('provincia', ''),
             'pais': 'ESP',
             'email': data.get('email', ''),
+            'certificado': data.get('ruta_certificado', ''),
             'db_path': db_path_empresa,
             'codigo': codigo_empresa
         }
@@ -888,3 +950,128 @@ def actualizar_emisor(empresa_id):
     except Exception as e:
         logger.error(f"Error actualizando emisor: {e}", exc_info=True)
         return jsonify({'error': 'Error actualizando emisor'}), 500
+
+
+@empresas_bp.route('/api/empresas/procesar_certificado', methods=['POST', 'OPTIONS'])
+@login_required
+def procesar_certificado():
+    if request.method == 'OPTIONS':
+        return '', 200
+        
+    logger.info("➡️ [CERT] Inicio procesar_certificado")
+    try:
+        if 'certificado' not in request.files:
+            logger.error("[CERT] No hay certificado en request.files")
+            return jsonify({'error': 'No se ha subido ningún certificado'}), 400
+            
+        archivo = request.files['certificado']
+        password = request.form.get('password', '')
+        codigo_empresa = request.form.get('codigo_empresa', '')
+        
+        logger.info(f"[CERT] Archivo: {archivo.filename}, PassLen: {len(password)}, Empresa: {codigo_empresa}")
+        
+        if not archivo or archivo.filename == '':
+            return jsonify({'error': 'Archivo inválido'}), 400
+            
+        # Guardar temporalmente
+        fd, temp_path = tempfile.mkstemp(suffix='.p12')
+        os.close(fd)
+        logger.info(f"[CERT] Temp path: {temp_path}")
+        archivo.save(temp_path)
+        
+        try:
+            # Usar OpenSSL para extraer info
+            logger.info("[CERT] Ejecutando OpenSSL pkcs12...")
+            # Extraer Subject
+            cmd = ['openssl', 'pkcs12', '-in', temp_path, '-passin', f'pass:{password}', '-nokeys', '-clcerts']
+            # Usar communicate para evitar deadlocks y timeouts
+            p1 = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
+            cmd2 = ['openssl', 'x509', '-noout', '-subject', '-nameopt', 'RFC2253,utf8'] # utf8 para caracteres especiales
+            p2 = subprocess.Popen(cmd2, stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p1.stdout.close()
+            output, error = p2.communicate()
+            
+            logger.info(f"[CERT] OpenSSL returncode: {p2.returncode}")
+            
+            if p2.returncode != 0:
+                # Probablemente contraseña incorrecta
+                error_msg = error.decode('utf-8') if error else "Error desconocido"
+                logger.error(f"[CERT] Error OpenSSL: {error_msg}")
+                return jsonify({'error': 'Error procesando certificado. Verifique la contraseña.'}), 400
+                
+            subject = output.decode('utf-8').strip()
+            logger.info(f"[CERT] Certificado subject: {subject}")
+            
+            # Parsear CN y SerialNumber (NIF)
+            nif = ''
+            razon_social = ''
+            
+            # Extraer NIF de serialNumber (IDCES-...)
+            match_nif = re.search(r'serialNumber=IDCES-([A-Z0-9]+)', subject, re.IGNORECASE)
+            if match_nif:
+                nif = match_nif.group(1).strip()
+            
+            # Extraer Razón Social de CN
+            match_cn = re.search(r'CN=([^,]+)', subject, re.IGNORECASE)
+            if match_cn:
+                cn_full = match_cn.group(1).strip()
+                if ' - ' in cn_full:
+                    razon_social = cn_full.split(' - ')[0]
+                else:
+                    razon_social = cn_full
+            
+            # Si no hay NIF en serialNumber, buscar en CN
+            if not nif:
+                match_nif_cn = re.search(r'\b([0-9]{8}[A-Z]|[XYZ][0-9]{7}[A-Z])\b', subject)
+                if match_nif_cn:
+                    nif = match_nif_cn.group(0)
+            
+            logger.info(f"[CERT] Respuesta JSON: nif='{nif}', razon_social='{razon_social}'")
+            
+            # GENERAR ARCHIVOS PEM (Key y Cert)
+            cert_dir = '/var/www/html/certs/empresas'
+            os.makedirs(cert_dir, exist_ok=True)
+            
+            if nif:
+                safe_nif = "".join([c for c in nif if c.isalnum()])
+                base_filename = safe_nif
+            else:
+                base_filename = f"cert_{uuid.uuid4().hex}"
+            
+            key_filename = f"{base_filename}_key.pem"
+            cert_filename = f"{base_filename}_cert.pem"
+            
+            key_path = os.path.join(cert_dir, key_filename)
+            cert_path = os.path.join(cert_dir, cert_filename)
+            
+            try:
+                # Extraer Clave Privada
+                cmd_key = ['openssl', 'pkcs12', '-in', temp_path, '-nocerts', '-out', key_path, '-nodes', '-passin', f'pass:{password}']
+                subprocess.run(cmd_key, check=True, capture_output=True)
+                os.chmod(key_path, 0o600) # Permisos seguros
+                
+                # Extraer Certificado Público
+                cmd_cert = ['openssl', 'pkcs12', '-in', temp_path, '-clcerts', '-nokeys', '-out', cert_path, '-passin', f'pass:{password}']
+                subprocess.run(cmd_cert, check=True, capture_output=True)
+                
+                logger.info(f"[CERT] PEMs generados: Key={key_path}, Cert={cert_path}")
+                
+            except subprocess.CalledProcessError as e:
+                error_msg = e.stderr.decode('utf-8') if e.stderr else str(e)
+                logger.error(f"[CERT] Error generando PEMs: {error_msg}")
+                return jsonify({'error': 'Error extrayendo claves del certificado'}), 500
+
+            return jsonify({
+                'nif': nif, 
+                'razon_social': razon_social,
+                'ruta_certificado': cert_path # Devolvemos la ruta del certificado público
+            })
+            
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                
+    except Exception as e:
+        logger.error(f"Excepción procesando certificado: {e}")
+        return jsonify({'error': str(e)}), 500

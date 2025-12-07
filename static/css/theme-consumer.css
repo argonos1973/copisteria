@@ -337,6 +337,19 @@ tbody .btn-icon {
     font-size: 16px !important;
     width: auto !important;
     min-width: auto !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+    color: inherit !important;
+}
+
+table .btn-icon:hover,
+.tabla-consulta .btn-icon:hover,
+.grid .btn-icon:hover,
+tbody .btn-icon:hover {
+    background: transparent !important;
+    transform: scale(1.2);
+    opacity: 0.8;
 }
 
 /* Estilos específicos para btn-icon en formularios (SIN BORDE, solo icono) */
@@ -1162,3 +1175,17 @@ table input[type="checkbox"] {
     width: 16px !important;
     height: 16px !important;
 }
+
+/* REGLA DE SEGURIDAD PARA BTN-ICON GLOBAL */
+.btn-icon, 
+button.btn-icon, 
+a.btn-icon, 
+i.btn-icon {
+    cursor: pointer !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+

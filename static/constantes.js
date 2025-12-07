@@ -27,8 +27,12 @@ export const IP_SERVER = overrideIp || DEFAULT_LOCAL_SERVER_IP;
 export const PORT = 5001;
 
 // Detectar protocolo automáticamente - IMPORTANTE para Cloudflare
-const PROTOCOL = window.location.protocol || 'http:';
-const USE_PORT = (PROTOCOL === 'https:' || window.location.hostname.includes('cloudflare')) ? '' : `:${PORT}`;
+const RAW_PROTOCOL = window.location.protocol || 'http:';
+const IS_CLOUDFLARE = window.location.hostname.includes('cloudflare');
+
+// Si es Cloudflare, forzar HTTPS siempre
+const PROTOCOL = (IS_CLOUDFLARE) ? 'https:' : RAW_PROTOCOL;
+const USE_PORT = (RAW_PROTOCOL === 'https:' || IS_CLOUDFLARE) ? '' : `:${PORT}`;
 
 // Usar protocolo y puerto correctos según el contexto
 export const API_URL = `${PROTOCOL}//${IP_SERVER}${USE_PORT}`;

@@ -22,7 +22,9 @@ def obtener_presupuesto(id):
 @login_required
 def crear_presupuesto():
     try:
+        logger.info("[PRESUPUESTO_ROUTE] Recibiendo POST /api/presupuestos")
         data = request.get_json()
+        logger.info(f"[PRESUPUESTO_ROUTE] Datos recibidos: {data}")
         if not data:
             return jsonify({'error': 'No se recibieron datos'}), 400
             
@@ -36,12 +38,13 @@ def crear_presupuesto():
             
         return presupuesto.crear_presupuesto(data)
     except Exception as e:
-        logger.error(f"Error creando presupuesto: {e}")
+        logger.error(f"Error creando presupuesto: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @presupuestos_bp.route('/api/presupuestos/<int:id>', methods=['PUT'])
 @login_required
 def actualizar_presupuesto(id):
+    logger.info(f"[PRESUPUESTO_ROUTE] Recibiendo PUT /api/presupuestos/{id}")
     try:
         data = request.get_json()
         if not data:

@@ -104,17 +104,21 @@ document.getElementById('createCompanyForm').addEventListener('submit', async (e
                     <strong><i class="fas fa-code"></i> Código:</strong> ${result.codigo}<br>
                     <strong><i class="fas fa-user"></i> Usuario:</strong> ${result.usuario}
                 </div>
-                <p class="mt-3">Redirigiendo a tu nueva empresa...</p>
+                <p class="mt-3">Redirigiendo al Panel de Control...</p>
                 <div class="spinner-border text-primary mt-3" role="status">
                     <span class="sr-only">Cargando...</span>
                 </div>
             `;
             successDiv.style.display = 'block';
             
-            // Recargar la aplicación después de 3 segundos para que vea su nueva empresa
+            console.log('[CREAR EMPRESA] Redirigiendo en 1.5s...');
+            
+            // Recargar la aplicación después de 1.5 segundos para que vea su nueva empresa
             setTimeout(() => {
-                window.parent.location.reload();
-            }, 3000);
+                console.log('[CREAR EMPRESA] Ejecutando redirección a /');
+                // Forzar redirección al root evitando caché usando window.top (más seguro)
+                window.top.location.href = '/?t=' + new Date().getTime();
+            }, 1500);
         } else {
             mostrarAlerta(result.error || 'Error al crear la empresa', 'danger');
             submitBtn.disabled = false;

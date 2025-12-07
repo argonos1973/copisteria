@@ -155,18 +155,32 @@ def ingresos_gastos_totales():
             cur = conn.cursor()
 
             def totales(anio:int):
+                # 1. Calcular Ingresos: Suma de Facturas y Tickets cobrados (estado 'C')
+                cur.execute("SELECT COALESCE(SUM(total), 0) FROM tickets WHERE estado = 'C' AND substr(fecha, 1, 4) = ?", (str(anio),))
+                val = cur.fetchone()
+                t_tickets = val[0] if val else 0
+                
+                cur.execute("SELECT COALESCE(SUM(total), 0) FROM factura WHERE estado = 'C' AND substr(fecha, 1, 4) = ?", (str(anio),))
+                val = cur.fetchone()
+                t_facturas = val[0] if val else 0
+                
+                ingresos = t_tickets + t_facturas
+
+                # 2. Calcular Gastos: Suma de importes negativos en tabla gastos
                 cur.execute(
                     """
                     SELECT 
-                        SUM(CASE WHEN importe_eur > 0 THEN importe_eur ELSE 0 END) AS ingresos,
-                        SUM(CASE WHEN importe_eur < 0 THEN importe_eur ELSE 0 END) AS gastos
+                        SUM(CASE WHEN importe_eur < 0 THEN importe_eur ELSE 0 END)
                     FROM gastos
                     WHERE substr(fecha_operacion, 7, 4) = ?
                     """,
                     (str(anio),)
                 )
-                row = cur.fetchone() or {'ingresos':0,'gastos':0}
-                return float(row['ingresos'] or 0), float(row['gastos'] or 0)
+                row = cur.fetchone()
+                # Acceso por índice 0 porque solo pedimos una columna
+                gastos = float(row[0] or 0) if row else 0.0
+                
+                return float(ingresos), gastos
 
             ingresos_act, gastos_act = totales(anio_actual)
             ingresos_prev, gastos_prev = totales(anio_anterior)

@@ -6,6 +6,15 @@
     <title>Login - Aleph70 Multiempresa</title>
     <!-- SessionManager para Cloudflare -->
     <script src="/static/session_manager.js?v=1763897790"></script>
+    <script>
+        // Limpieza proactiva de sesión al cargar login
+        try {
+            localStorage.removeItem('aleph70_session');
+            sessionStorage.clear();
+            // Asegurar limpieza si SessionManager ya se cargó
+            if(window.sessionManager) window.sessionManager.clearSession();
+        } catch(e) { console.error('Error limpiando sesión:', e); }
+    </script>
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/favicon.png">
     <link rel="shortcut icon" type="image/png" href="/static/favicon.png">
@@ -491,6 +500,7 @@
         });
 
     </script>
-    <script src="/static/auto_branding.js?v=1763897790"></script>
+    <script src="/static/branding.js?v=1764787007"></script>
+    <script src="/static/auto_branding.js?v=1764787007"></script>
 </body>
 </html>

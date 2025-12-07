@@ -1,9 +1,12 @@
 // Variable global para evitar inicialización múltiple
 let menuEventosConfigurados = false;
 
-function inicializarEventosMenu() {
-    // Evitar inicialización múltiple
-    if (menuEventosConfigurados) {
+function inicializarEventosMenu(event) {
+    // Si es un evento forzado (como menuRendered), permitimos reconfigurar
+    const esForzado = event && event.type === 'menuRendered';
+    
+    // Evitar inicialización múltiple solo si NO es forzado y ya está configurado
+    if (menuEventosConfigurados && !esForzado) {
         console.log('[MENU] ⚠️ Eventos ya configurados, omitiendo duplicado');
         return;
     }
@@ -30,8 +33,15 @@ function inicializarEventosMenu() {
     const submenuHeaders = document.querySelectorAll('.submenu-header');
     console.log('[MENU] Submenu headers encontrados:', submenuHeaders.length);
     submenuHeaders.forEach(header => {
+        // Evitar duplicar listeners
+        if (header.dataset.hasMenuListener === 'true') {
+            return;
+        }
+        header.dataset.hasMenuListener = 'true';
+
         header.addEventListener('click', function(e) {
             e.preventDefault();
+            e.stopPropagation();
             const block = header.parentElement; // El .submenu-block
             // Plegar todos los bloques hermanos
             const allBlocks = block.parentElement.querySelectorAll('.submenu-block');
@@ -71,6 +81,11 @@ function inicializarEventosMenu() {
         menuItems.forEach(item => {
             if (item !== currentItem && item.classList.contains('active')) {
                 item.classList.remove('active');
+                
+                // Ocultar submenú explícitamente
+                const submenu = item.querySelector('.submenu');
+                if (submenu) submenu.style.display = '';
+                
                 aplicarEstiloActivo(item, false);
                 // Eliminar del array de activos
                 const menuTitle = item.querySelector('.menu-link').textContent;
@@ -144,8 +159,15 @@ function inicializarEventosMenu() {
         const link = item.querySelector('.menu-link');
         const submenu = item.querySelector('.submenu');
         
+        // Evitar duplicar listeners en el mismo elemento
+        if (link.dataset.hasMenuListener === 'true') {
+            return;
+        }
+        link.dataset.hasMenuListener = 'true';
+        
         link.addEventListener('click', async (e) => {
             e.preventDefault();
+            e.stopPropagation(); // Detener propagación por si acaso
             
             // Si NO tiene submenú Y tiene una ruta → Cargar la página
             if (!submenu && link.dataset.target && link.dataset.target !== '#') {
@@ -165,7 +187,7 @@ function inicializarEventosMenu() {
             // Si tiene submenú → Solo toggle expand/collapse
             console.log('[MENU] Item con submenú, toggle expand/collapse');
             
-            // Cerrar otros menús
+            // Cerrar otros menús PRIMERO
             closeOtherMenus(item);
             
             // Si el ítem ya está activo, lo desactivamos
@@ -173,6 +195,8 @@ function inicializarEventosMenu() {
                 console.log('[MENU] ❌ Desactivando menú:', link.textContent);
                 item.classList.remove('active');
                 aplicarEstiloActivo(item, false);
+                // No manipulamos display manualmente, dejamos que CSS actúe
+                
                 // Eliminar del array de activos
                 const index = activeMenus.indexOf(link.textContent);
                 if (index > -1) {
@@ -182,6 +206,8 @@ function inicializarEventosMenu() {
                 console.log('[MENU] ✅ Activando menú:', link.textContent);
                 item.classList.add('active');
                 aplicarEstiloActivo(item, true);
+                // No manipulamos display manualmente, dejamos que CSS actúe
+                
                 console.log('[MENU] Clase active añadida. classList:', item.classList.value);
                 // Añadir al array de activos
                 activeMenus.push(link.textContent);
@@ -195,6 +221,12 @@ function inicializarEventosMenu() {
     const submenuLinks = document.querySelectorAll('.submenu-item:not(.submenu-header)');
     console.log('[MENU] Submenu links (no headers) encontrados:', submenuLinks.length);
     submenuLinks.forEach(link => {
+        // Evitar duplicar listeners
+        if (link.dataset.hasMenuListener === 'true') {
+            return;
+        }
+        link.dataset.hasMenuListener = 'true';
+
         link.addEventListener('click', async (e) => {
             e.preventDefault();
             
