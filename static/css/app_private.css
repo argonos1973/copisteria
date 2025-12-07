@@ -839,39 +839,30 @@ html body .modal-perfil-content .btn-guardar:active {
     flex-direction: column;
 }
 
-/* Estado Oculto (Desktop - Minimizado) */
+/* Estado Oculto (Desktop - Minimizado Extremo) */
 .layout-container.sidebar-hidden .menu {
-    width: 70px; /* Un poco más ancho para que no quede apretado */
+    width: 50px; /* Solo espacio para el botón */
     margin-left: 0;
+    align-items: center; /* Centrar botón horizontalmente */
 }
 
-.layout-container.sidebar-hidden .sidebar-toggle-btn {
-    right: 50%;
-    transform: translateX(50%); /* Centrado perfectamente */
-    top: 15px;
-}
-
-/* Ocultar elementos en modo minimizado */
-.layout-container.sidebar-hidden .logo-container,
-.layout-container.sidebar-hidden .menu-link span,
-.layout-container.sidebar-hidden #menu-version,
-.layout-container.sidebar-hidden .user-actions-container,
-.layout-container.sidebar-hidden .user-info-bottom,
-.layout-container.sidebar-hidden .menu-item > .submenu {
+/* Ocultar TODO excepto el botón toggle */
+.layout-container.sidebar-hidden .menu > *:not(.sidebar-toggle-btn) {
     display: none !important;
 }
 
-/* Ajustes para iconos centrados */
-.layout-container.sidebar-hidden .menu-link {
-    justify-content: center;
-    padding: 15px 0 !important;
-    text-align: center;
+.layout-container.sidebar-hidden .sidebar-toggle-btn {
+    position: static; /* Ya no absoluto para fluir en el flex column si se quiere, o mantener absoluto */
+    position: absolute; /* Mantener absoluto mejor */
+    right: 50%;
+    transform: translateX(50%);
+    top: 15px;
+    margin: 0;
 }
 
-.layout-container.sidebar-hidden .menu-link i {
-    margin-right: 0;
-    font-size: 20px;
-}
+/* Sobreescribir reglas anteriores de ocultación parcial para limpieza (opcional pero recomendable) */
+/* Estas reglas ya no son necesarias si usamos el > *:not(...) pero las dejo por seguridad o las borro */
+
 
 /* Ajustes Responsive (Móvil) */
 @media (max-width: 768px) {
