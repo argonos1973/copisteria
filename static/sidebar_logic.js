@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const toggleBtn = document.getElementById('sidebar-toggle');
+    const mobileToggleBtn = document.getElementById('mobile-toggle');
     const layout = document.querySelector('.layout-container');
     const menu = document.querySelector('.menu');
 
@@ -19,8 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             
             if (isMobile()) {
-                // Móvil: toggle clase para mostrar/ocultar
-                menu.classList.toggle('mobile-active');
+                // Móvil: Cerrar menú (el botón interno actúa como cierre)
+                menu.classList.remove('mobile-active');
             } else {
                 // Escritorio: toggle clase para colapsar
                 layout.classList.toggle('sidebar-hidden');
@@ -28,11 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    if (mobileToggleBtn) {
+        mobileToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Móvil: Abrir menú
+            menu.classList.add('mobile-active');
+        });
+    }
 
     // Cerrar menú móvil al hacer click fuera
     document.addEventListener('click', (e) => {
         if (isMobile() && menu && menu.classList.contains('mobile-active')) {
-            if (!menu.contains(e.target) && e.target !== toggleBtn && !toggleBtn.contains(e.target)) {
+            // Si click fuera del menú y no en los botones
+            if (!menu.contains(e.target) && 
+                e.target !== toggleBtn && !toggleBtn?.contains(e.target) &&
+                e.target !== mobileToggleBtn && !mobileToggleBtn?.contains(e.target)) {
                 menu.classList.remove('mobile-active');
             }
         }

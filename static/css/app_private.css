@@ -798,40 +798,28 @@ html body .modal-perfil-content .btn-guardar:active {
 }
 
 /* === Sidebar Toggle & Responsive === */
-.app-top-bar {
-    height: 40px;
-    background-color: var(--color-header-bg, #fff);
-    border-bottom: 1px solid var(--color-borde, rgba(0,0,0,0.1));
-    display: flex;
-    align-items: center;
-    padding: 0 10px;
-    transition: background-color 0.3s;
-    flex-shrink: 0;
-}
-
 .sidebar-toggle-btn {
-    position: static;
-    z-index: 100;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 101;
     background: transparent;
-    color: var(--color-header-text, #333);
-    border: none;
-    width: 32px;
-    height: 32px;
+    color: var(--color-header-text, #fff); /* Texto del menú */
+    border: 1px solid rgba(255,255,255,0.1);
+    width: 30px;
+    height: 30px;
     border-radius: 4px;
     cursor: pointer;
-    box-shadow: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
-    font-size: 16px;
-    opacity: 0.7;
+    transition: all 0.3s;
+    opacity: 0.6;
 }
 
 .sidebar-toggle-btn:hover {
-    background: rgba(128,128,128,0.1);
+    background: rgba(255,255,255,0.1);
     opacity: 1;
-    transform: none;
 }
 
 .layout-container {
@@ -841,14 +829,46 @@ html body .modal-perfil-content .btn-guardar:active {
 }
 
 .menu {
-    transition: all 0.3s ease;
-    white-space: nowrap; /* Evitar saltos de línea al encoger */
-    z-index: 9000; /* Asegurar que esté por encima en móvil */
+    transition: width 0.3s ease, margin 0.3s ease, transform 0.3s ease;
+    white-space: nowrap; 
+    z-index: 9000;
+    position: relative;
 }
 
-/* Estado Oculto (Desktop) */
+/* Estado Oculto (Desktop - Minimizado) */
 .layout-container.sidebar-hidden .menu {
-    margin-left: -250px; /* Ocultar moviendo a la izquierda */
+    width: 60px;
+    margin-left: 0;
+}
+
+.layout-container.sidebar-hidden .sidebar-toggle-btn {
+    right: 50%;
+    transform: translateX(50%);
+    top: 10px;
+    border: none;
+}
+
+/* Ocultar elementos en modo minimizado */
+.layout-container.sidebar-hidden .logo-container,
+.layout-container.sidebar-hidden .menu-link span, /* Texto del enlace */
+.layout-container.sidebar-hidden #menu-version,
+.layout-container.sidebar-hidden #user-profile-link span,
+.layout-container.sidebar-hidden .user-details-compact,
+.layout-container.sidebar-hidden .btn-logout-compact span,
+.layout-container.sidebar-hidden .menu-item > .submenu {
+    display: none !important;
+}
+
+/* Ajustes para iconos centrados */
+.layout-container.sidebar-hidden .menu-link {
+    justify-content: center;
+    padding: 15px 5px !important;
+    text-align: center;
+}
+
+.layout-container.sidebar-hidden .menu-link i {
+    margin-right: 0;
+    font-size: 18px;
 }
 
 /* Ajustes Responsive (Móvil) */
@@ -859,8 +879,8 @@ html body .modal-perfil-content .btn-guardar:active {
         left: 0;
         bottom: 0;
         transform: translateX(-100%); /* Oculto por defecto */
-        width: 250px;
-        margin-left: 0; /* Reset */
+        width: 250px; /* Ancho completo en móvil */
+        margin-left: 0;
         box-shadow: none;
     }
     
@@ -883,6 +903,35 @@ html body .modal-perfil-content .btn-guardar:active {
     }
     
     .sidebar-toggle-btn {
-        /* Ajustar posición si hace falta */
+        /* En móvil visible para cerrar */
+        display: flex;
     }
+    
+    .mobile-menu-toggle {
+        display: flex !important;
+    }
+}
+
+/* Botón Toggle Móvil (Externo) */
+.mobile-menu-toggle {
+    display: none;
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    z-index: 95;
+    background: var(--color-primario, #2c3e50);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.mobile-menu-toggle:hover {
+    transform: scale(1.05);
 }
