@@ -899,11 +899,6 @@ html body .modal-perfil-content .btn-guardar:active {
         /* En móvil visible para cerrar */
         display: flex;
     }
-    
-    /* Mostrar botón móvil solo en pantallas pequeñas */
-    .mobile-menu-toggle {
-        display: flex !important;
-    }
 }
 
 /* Ocultar elementos en modo minimizado */
