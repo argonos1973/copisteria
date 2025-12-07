@@ -133,7 +133,18 @@ def enviar_email_verificacion(email, nombre, token):
         msg['To'] = email
         
         # URL de verificación - usar la URL del request o variable de entorno
-        base_url = os.getenv('BASE_URL', 'http://localhost:5002')
+        base_url = os.getenv('BASE_URL')
+        
+        if not base_url:
+            # Intentar detectar desde el request
+            try:
+                # Si estamos detrás de un proxy (Cloudflare), usar headers
+                scheme = request.headers.get('X-Forwarded-Proto', 'https')
+                host = request.headers.get('Host', 'aleph70.com')
+                base_url = f"{scheme}://{host}"
+            except:
+                base_url = 'https://aleph70.com'
+        
         verify_url = f"{base_url}/api/public/verify-email?token={token}"
         
         # HTML del email

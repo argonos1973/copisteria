@@ -16,6 +16,50 @@ from email_utils import enviar_email_bienvenida_empresa
 
 logger = get_logger(__name__)
 
+def es_nif_valido(nif):
+    """Valida NIF/CIF/NIE español"""
+    if not nif: return False
+    nif = nif.upper().replace(' ', '').replace('-', '')
+    
+    # DNI/NIE
+    if re.match(r'^[XYZ]?[0-9]{7,8}[A-Z]$', nif):
+        nie = nif
+        if nie.startswith('X'): nie = '0' + nie[1:]
+        elif nie.startswith('Y'): nie = '1' + nie[1:]
+        elif nie.startswith('Z'): nie = '2' + nie[1:]
+        
+        letras = "TRWAGMYFPDXBNJZSQVHLCKE"
+        try:
+            numero = int(nie[:-1])
+            letra = nie[-1]
+            return letra == letras[numero % 23]
+        except:
+            return False
+    
+    # CIF
+    if re.match(r'^[ABCDEFGHJKLMNPQRSUVW][0-9]{7}[0-9A-J]$', nif):
+        sum_val = 0
+        for i in range(7):
+            try:
+                n = int(nif[i+1])
+                if i % 2 == 0:
+                    n *= 2
+                    if n > 9: n = (n // 10) + (n % 10)
+                sum_val += n
+            except:
+                return False
+        
+        control = (10 - (sum_val % 10)) % 10
+        control_letras = "JABCDEFGHI"
+        
+        ultimo = nif[-1]
+        if ultimo.isdigit():
+            return int(ultimo) == control
+        else:
+            return ultimo == control_letras[control]
+            
+    return False
+
 
 def convertir_tokens_a_legacy(theme_json):
     """Convierte formato nuevo (design tokens) a formato antiguo (color_x)"""
@@ -420,7 +464,112 @@ def crear_empresa():
                 logo_filename = f"{codigo}_logo.{ext}"
                 file.save(os.path.join(UPLOAD_FOLDER, logo_filename))
                 logger.info(f"Logo guardado: {logo_filename}")
+
+        # Procesar certificado si se subió
+        ruta_certificado_publico = ''
         
+        # Verificar si viene ruta validada previamente
+        if 'ruta_certificado' in request.form and request.form['ruta_certificado']:
+            posible_ruta = request.form['ruta_certificado']
+            if os.path.exists(posible_ruta):
+                ruta_certificado_publico = posible_ruta
+                logger.info(f"[CREAR EMPRESA] Usando ruta certificado existente: {ruta_certificado_publico}")
+                # Intentar extraer CIF del certificado existente si no hay CIF
+                try:
+                    import subprocess
+                    import re
+                    # Extraer Subject
+                    cmd = ['openssl', 'x509', '-in', ruta_certificado_publico, '-noout', '-subject', '-nameopt', 'RFC2253,utf8']
+                    result = subprocess.run(cmd, capture_output=True, text=True)
+                    if result.returncode == 0:
+                        subject = result.stdout.strip()
+                        match_nif = re.search(r'serialNumber=IDCES-([A-Z0-9]+)', subject, re.IGNORECASE)
+                        if match_nif:
+                            nif_cert = match_nif.group(1).strip()
+                            if nif_cert and not cif:
+                                cif = nif_cert
+                                logger.info(f"[CREAR EMPRESA] Usando CIF del certificado existente: {cif}")
+                except Exception as e:
+                    logger.error(f"Error extrayendo info de certificado existente: {e}")
+        
+        if 'certificado' in request.files:
+            cert_file = request.files['certificado']
+            cert_pass = request.form.get('password_certificado', '')
+            
+            if cert_file and cert_file.filename:
+                logger.info(f"[CREAR EMPRESA] Procesando certificado: {cert_file.filename}")
+                try:
+                    import tempfile
+                    import subprocess
+                    import uuid
+                    import re
+                    import shutil
+                    
+                    # Guardar temporalmente
+                    fd, temp_path = tempfile.mkstemp(suffix='.p12')
+                    os.close(fd)
+                    cert_file.save(temp_path)
+                    
+                    # 1. Extraer Subject para NIF (OpenSSL)
+                    cmd_info = ['openssl', 'pkcs12', '-in', temp_path, '-passin', f'pass:{cert_pass}', '-nokeys', '-clcerts']
+                    p1 = subprocess.Popen(cmd_info, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    cmd2 = ['openssl', 'x509', '-noout', '-subject', '-nameopt', 'RFC2253,utf8']
+                    p2 = subprocess.Popen(cmd2, stdin=p1.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    p1.stdout.close()
+                    output, error = p2.communicate()
+                    
+                    nif_cert = ''
+                    if p2.returncode == 0:
+                        subject = output.decode('utf-8').strip()
+                        # Extraer NIF
+                        match_nif = re.search(r'serialNumber=IDCES-([A-Z0-9]+)', subject, re.IGNORECASE)
+                        if match_nif:
+                            nif_cert = match_nif.group(1).strip()
+                        else:
+                             # Fallback CN
+                             match_nif_cn = re.search(r'\b([0-9]{8}[A-Z]|[XYZ][0-9]{7}[A-Z])\b', subject)
+                             if match_nif_cn:
+                                nif_cert = match_nif_cn.group(0)
+                        
+                        # Si encontramos NIF y el usuario no puso CIF, usarlo
+                        if nif_cert and not cif:
+                            cif = nif_cert
+                            logger.info(f"[CREAR EMPRESA] Usando CIF del certificado: {cif}")
+
+                    # 2. Generar PEMs
+                    cert_dir = '/var/www/html/certs/empresas'
+                    os.makedirs(cert_dir, exist_ok=True)
+                    
+                    base_filename = "".join([c for c in nif_cert if c.isalnum()]) if nif_cert else f"cert_{uuid.uuid4().hex}"
+                    key_path = os.path.join(cert_dir, f"{base_filename}_key.pem")
+                    cert_path = os.path.join(cert_dir, f"{base_filename}_cert.pem")
+                    
+                    # Extraer Key
+                    subprocess.run(['openssl', 'pkcs12', '-in', temp_path, '-nocerts', '-out', key_path, '-nodes', '-passin', f'pass:{cert_pass}'], check=True, capture_output=True)
+                    os.chmod(key_path, 0o600)
+                    
+                    # Extraer Cert
+                    subprocess.run(['openssl', 'pkcs12', '-in', temp_path, '-clcerts', '-nokeys', '-out', cert_path, '-passin', f'pass:{cert_pass}'], check=True, capture_output=True)
+                    
+                    ruta_certificado_publico = cert_path
+                    logger.info(f"[CREAR EMPRESA] Certificado guardado en: {cert_path}")
+                    
+                except Exception as e:
+                    logger.error(f"Error procesando certificado en creación: {e}")
+                finally:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+        
+        # Validar que tengamos NIF (del formulario o del certificado)
+        if not cif:
+            logger.warning("[CREAR EMPRESA] Intento de creación sin NIF")
+            return jsonify({'error': 'El NIF/CIF es obligatorio'}), 400
+
+        # Validar formato NIF
+        if not es_nif_valido(cif):
+            logger.warning(f"[CREAR EMPRESA] NIF inválido: {cif}")
+            return jsonify({'error': 'El NIF/CIF introducido no es válido'}), 400
+
         # Crear directorio para la empresa
         empresa_dir = os.path.join(DB_DIR, codigo)
         print(f"[DEBUG] Creando directorio: {empresa_dir}", flush=True)
@@ -536,6 +685,7 @@ def crear_empresa():
             "telefono": telefono or "",
             "email": email or "",
             "web": web or "",
+            "certificado": ruta_certificado_publico,
             "db_path": bd_destino,
             "codigo": codigo
         }

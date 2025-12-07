@@ -30,7 +30,8 @@ export function mostrarNotificacion(mensaje, tipo = 'info') {
 
     const notificacion = document.createElement('div');
     notificacion.className = `notificacion ${tipo}`;
-    notificacion.textContent = mensaje;
+    // Usar innerHTML para incluir el icono
+    notificacion.innerHTML = `<span class="notificacion-icono">${ICONOS[tipo] || 'ℹ'}</span><span class="notificacion-contenido">${mensaje}</span>`;
     
     contenedor = document.getElementById('notificaciones-contenedor');
     contenedor.appendChild(notificacion);
@@ -174,4 +175,6 @@ export function mostrarConfirmacion(mensaje, opciones = {}) {
     });
 }
 
-// SSE eliminado: no se conecta a ningún endpoint de notificaciones
+window.mostrarNotificacion = mostrarNotificacion;
+window.mostrarConfirmacion = mostrarConfirmacion;
+window.limpiarNotificaciones = limpiarNotificaciones;

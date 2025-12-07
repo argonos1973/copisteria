@@ -76,7 +76,12 @@
             </div>
         </nav>
         
-        <div class="content-container" style="flex-grow: 1; height: 100vh; overflow: hidden;">
+        <div class="content-container" style="flex-grow: 1; height: 100vh; overflow: hidden; position: relative;">
+            <!-- Botón Toggle Sidebar -->
+            <button id="sidebar-toggle" class="sidebar-toggle-btn" title="Ocultar/Mostrar Menú">
+                <i class="fas fa-bars"></i>
+            </button>
+            
             <div style="height: 100%;">
                 <iframe id="content-frame" name="content-frame" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
@@ -126,6 +131,9 @@
     
     <!-- Cargar versión de la aplicación -->
     <script src="/static/app_version.js"></script>
+    
+    <!-- Lógica del sidebar toggle -->
+    <script src="/static/sidebar_logic.js"></script>
 
     <!-- Modal de Perfil de Usuario -->
     <div id="modal-perfil" class="modal-perfil" style="display: none;">
