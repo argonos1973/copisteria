@@ -5,9 +5,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function cargarResumen() {
+    const summaryCard = document.querySelector('.summary-card');
     try {
         // Consumir API existente de estadísticas
         const response = await fetch('/api/dashboard/estadisticas_gastos');
+        
+        // Manejo de permisos
+        if (response.status === 401 || response.status === 403) {
+            console.warn("Usuario sin permisos para ver estadísticas");
+            if(summaryCard) summaryCard.style.display = 'none';
+            return;
+        }
+
         if (!response.ok) throw new Error('Error cargando datos');
         
         const data = await response.json();
@@ -22,6 +31,7 @@ async function cargarResumen() {
         
     } catch (error) {
         console.error('Error resumen:', error);
+        if(summaryCard) summaryCard.style.display = 'none';
     }
 }
 
@@ -80,8 +90,13 @@ async function cargarTickets() {
 }
 
 function formatCurrency(value) {
-    if (value === null || value === undefined || isNaN(value)) {
+    let num = value;
+    if (typeof value === 'string') {
+        num = parseFloat(value.replace(/\./g, '').replace(',', '.'));
+    }
+    
+    if (num === null || num === undefined || isNaN(num)) {
         return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(0);
     }
-    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(num);
 }

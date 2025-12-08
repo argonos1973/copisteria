@@ -1,4 +1,19 @@
-import { redondearImporte, formatearImporte } from '../../scripts_utils.js';
+// Funciones de utilidad (Copiadas para evitar dependencias de módulos en móvil)
+function redondearImporte(valor) {
+  const n = Number(valor);
+  if (!isFinite(n)) return 0;
+  const factor = 100;
+  return (n >= 0)
+    ? Math.round(n * factor) / factor
+    : -Math.round(Math.abs(n) * factor) / factor;
+}
+
+function formatearImporte(valor) {
+    if (valor === null || valor === undefined || isNaN(valor)) {
+        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(0);
+    }
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(valor);
+}
 
 let ticketId = null; // null = Nuevo
 let lineas = [];

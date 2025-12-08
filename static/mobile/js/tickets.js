@@ -4,33 +4,59 @@ let hasMore = true;
 let searchTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar fechas
+    const today = new Date();
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    
+    // Formato YYYY-MM-DD
+    const formatDate = (d) => d.toISOString().split('T')[0];
+    
+    const inputDesde = document.getElementById('fecha-desde');
+    const inputHasta = document.getElementById('fecha-hasta');
+    
+    if(inputDesde) inputDesde.value = formatDate(today);
+    if(inputHasta) inputHasta.value = formatDate(lastDay);
+
+    // Listeners
+    if(inputDesde) inputDesde.addEventListener('change', () => reload());
+    if(inputHasta) inputHasta.addEventListener('change', () => reload());
+    document.getElementById('btn-refresh')?.addEventListener('click', () => reload());
+
     loadTickets(true);
     
     // Search listener
     document.getElementById('search-input').addEventListener('input', (e) => {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
-            currentPage = 1;
-            hasMore = true;
-            loadTickets(true, e.target.value);
+            reload();
         }, 500);
     });
     
-    // Infinite scroll (simple version)
+    // Infinite scroll
     window.addEventListener('scroll', () => {
         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
             if(!isLoading && hasMore) {
-                loadTickets(false, document.getElementById('search-input').value);
+                loadTickets(false);
             }
         }
     });
 });
 
-async function loadTickets(reset = false, query = '') {
+function reload() {
+    currentPage = 1;
+    hasMore = true;
+    loadTickets(true);
+}
+
+async function loadTickets(reset = false) {
     if(isLoading) return;
     isLoading = true;
     
     const container = document.getElementById('tickets-container');
+    const query = document.getElementById('search-input').value;
+    const fDesde = document.getElementById('fecha-desde')?.value;
+    const fHasta = document.getElementById('fecha-hasta')?.value;
+
     if(reset) {
         container.innerHTML = '<div class="loading-spinner"><i class="fas fa-circle-notch fa-spin"></i> Cargando...</div>';
     }
@@ -38,6 +64,8 @@ async function loadTickets(reset = false, query = '') {
     try {
         let url = `/api/tickets/paginado?page=${currentPage}&limit=10&orden=desc`;
         if(query) url += `&search=${encodeURIComponent(query)}`;
+        if(fDesde) url += `&fecha_inicio=${fDesde}`;
+        if(fHasta) url += `&fecha_fin=${fHasta}`;
         
         const response = await fetch(url);
         const data = await response.json();
