@@ -26,10 +26,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Listeners con persistencia
     if(inputDesde) inputDesde.addEventListener('change', (e) => {
+        e.target.blur(); // Cerrar calendario
         sessionStorage.setItem('tickets_filter_desde', e.target.value);
         reload();
     });
     if(inputHasta) inputHasta.addEventListener('change', (e) => {
+        e.target.blur(); // Cerrar calendario
         sessionStorage.setItem('tickets_filter_hasta', e.target.value);
         reload();
     });
@@ -49,13 +51,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Infinite scroll
-    window.addEventListener('scroll', () => {
-        if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
-            if(!isLoading && hasMore) {
-                loadTickets(false);
+    const mobileContent = document.querySelector('.mobile-content');
+    if (mobileContent) {
+        mobileContent.addEventListener('scroll', () => {
+            if ((mobileContent.scrollTop + mobileContent.clientHeight) >= mobileContent.scrollHeight - 300) {
+                if(!isLoading && hasMore) {
+                    loadTickets(false);
+                }
             }
-        }
-    });
+        });
+    }
 });
 
 function reload() {
@@ -69,7 +74,7 @@ async function loadTickets(reset = false) {
     isLoading = true;
     
     const container = document.getElementById('tickets-container');
-    const query = document.getElementById('search-input').value;
+    const query = document.getElementById('search-input')?.value || '';
     const fDesde = document.getElementById('fecha-desde')?.value;
     const fHasta = document.getElementById('fecha-hasta')?.value;
 
@@ -121,6 +126,10 @@ function createTicketCard(ticket) {
     if(estadoText === 'P') estadoText = 'Pendiente';
     if(estadoText === 'A') estadoText = 'Anulado';
 
+    // Forma de Pago
+    const paymentMap = { 'E': 'Efectivo', 'T': 'Tarjeta', 'R': 'Transf.', 'B': 'Bizum' };
+    const formaPago = paymentMap[ticket.formaPago] || ticket.formaPago || 'Efectivo'; // Default a Efectivo si falta
+
     // Parsear fecha y hora
     let fechaDisplay = ticket.fecha;
     let horaDisplay = '';
@@ -166,10 +175,15 @@ function createTicketCard(ticket) {
         </div>
 
         <div class="tc-footer" style="border-top: none; padding-top: 5px;">
-            <span class="ticket-status ${ticket.estado === 'C' ? 'status-success' : 'status-warning'}" 
-                  style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${ticket.estado === 'C' ? '#d4edda' : (ticket.estado === 'P' ? '#fff3cd' : '#f8d7da')}; color: ${ticket.estado === 'C' ? '#155724' : (ticket.estado === 'P' ? '#856404' : '#721c24')};">
-                ${estadoText}
-            </span>
+            <div style="display:flex; gap: 5px;">
+                <span class="ticket-status ${ticket.estado === 'C' ? 'status-success' : 'status-warning'}" 
+                      style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${ticket.estado === 'C' ? '#d4edda' : (ticket.estado === 'P' ? '#fff3cd' : '#f8d7da')}; color: ${ticket.estado === 'C' ? '#155724' : (ticket.estado === 'P' ? '#856404' : '#721c24')};">
+                    ${estadoText}
+                </span>
+                <span class="ticket-payment" style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #e2e6ea; color: #495057;">
+                    <i class="fas ${formaPago === 'Tarjeta' ? 'fa-credit-card' : (formaPago === 'Transf.' ? 'fa-university' : 'fa-money-bill-wave')}"></i> ${formaPago}
+                </span>
+            </div>
             <div class="tc-actions">
                 <a href="/api/auth/mobile/tickets/gestion?id=${ticket.id}" class="btn-icon-action" onclick="event.stopPropagation()">
                     <i class="fas fa-pen"></i>
