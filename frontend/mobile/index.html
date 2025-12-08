@@ -111,7 +111,7 @@
 
             <!-- Accesos Rápidos -->
             <div class="quick-actions">
-                <button class="btn-mobile" onclick="window.location.href='/GESTION_TICKETS.html'">
+                <button class="btn-mobile" onclick="window.location.href='/api/auth/mobile/tickets/gestion'">
                     <i class="fas fa-plus"></i> Nuevo Ticket
                 </button>
             </div>
@@ -142,7 +142,7 @@
             <i class="fas fa-ticket-alt"></i>
             <span>Tickets</span>
         </a>
-        <a href="/GESTION_TICKETS.html" class="nav-item">
+        <a href="/api/auth/mobile/tickets/gestion" class="nav-item">
             <i class="fas fa-plus-circle" style="font-size: 32px; color: var(--color-primary); margin-bottom: 0;"></i>
         </a>
         <a href="/CONSULTA_GASTOS.html" class="nav-item">
@@ -202,7 +202,7 @@
                 tickets.forEach(ticket => {
                     const el = document.createElement('div');
                     el.className = 'card ticket-item';
-                    el.onclick = () => window.location.href = `/GESTION_TICKETS.html?id=${ticket.id}`; // Editar
+                    el.onclick = () => window.location.href = `/api/auth/mobile/tickets/gestion?id=${ticket.id}`; // Editar
                     
                     // Determinar clase de estado
                     let badgeClass = 'badge-success';

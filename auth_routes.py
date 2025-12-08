@@ -617,6 +617,24 @@ def servir_mobile_tickets():
         logger.error(f"Error sirviendo tickets mobile: {e}", exc_info=True)
         return jsonify({'error': 'Error interno'}), 500
 
+@auth_bp.route('/mobile/tickets/gestion', methods=['GET'])
+@login_required
+def servir_mobile_tickets_gestion():
+    """Sirve la vista móvil de gestión de tickets (crear/editar)"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'gestion_tickets.html')
+        
+        if not os.path.exists(app_path):
+             return jsonify({'error': 'Vista no disponible'}), 404
+
+        with open(app_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo gestion tickets mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
 @auth_bp.route('/branding-preview/<empresa_codigo>', methods=['GET'])
 def obtener_branding_preview(empresa_codigo):
     """

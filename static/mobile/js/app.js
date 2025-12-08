@@ -103,6 +103,7 @@ function createMenuItem(item) {
     // Interceptar rutas para versión móvil
     let href = item.ruta;
     if(href === '/CONSULTA_TICKETS.html') href = '/api/auth/mobile/tickets';
+    if(href === '/GESTION_TICKETS.html') href = '/api/auth/mobile/tickets/gestion';
     // Futuro: if(href === '/CONSULTA_FACTURAS.html') href = '/api/auth/mobile/facturas';
     
     a.href = href === '#' ? 'javascript:void(0)' : href;

@@ -233,7 +233,7 @@
         </div>
 
         <!-- FAB Nuevo Ticket -->
-        <a href="/GESTION_TICKETS.html" class="fab-add">
+        <a href="/api/auth/mobile/tickets/gestion" class="fab-add">
             <i class="fas fa-plus"></i>
         </a>
 
@@ -253,7 +253,7 @@
             <i class="fas fa-ticket-alt"></i>
             <span>Tickets</span>
         </a>
-        <a href="/GESTION_TICKETS.html" class="nav-item">
+        <a href="/api/auth/mobile/tickets/gestion" class="nav-item">
             <i class="fas fa-plus-circle" style="font-size: 32px; color: var(--color-primary); margin-bottom: 0;"></i>
         </a>
         <a href="#" class="nav-item">
@@ -339,7 +339,7 @@
         function createTicketCard(ticket) {
             const div = document.createElement('div');
             div.className = `ticket-card estado-${ticket.estado}`;
-            div.onclick = () => window.location.href = `/GESTION_TICKETS.html?id=${ticket.id}`;
+            div.onclick = () => window.location.href = `/api/auth/mobile/tickets/gestion?id=${ticket.id}`;
             
             // Formatear estado
             let estadoClass = '';
@@ -356,7 +356,7 @@
                 <div class="tc-footer">
                     <span class="tc-total">${formatCurrency(ticket.total)}</span>
                     <div class="tc-actions">
-                        <a href="/GESTION_TICKETS.html?id=${ticket.id}" class="btn-icon-action" onclick="event.stopPropagation()">
+                        <a href="/api/auth/mobile/tickets/gestion?id=${ticket.id}" class="btn-icon-action" onclick="event.stopPropagation()">
                             <i class="fas fa-pen"></i>
                         </a>
                         <!-- Opción imprimir rápida si se desea -->

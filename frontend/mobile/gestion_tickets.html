@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestión Ticket - Aleph70</title>
+    
+    <!-- Fuentes e Iconos -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Estilos Móvil -->
+    <link rel="stylesheet" href="/static/mobile/css/styles.css">
+    
+    <style>
+        body { padding-bottom: 80px; background: #f5f7fa; }
+        
+        .form-section {
+            background: #fff;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .client-selector {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        
+        .line-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .line-item:last-child { border-bottom: none; }
+        
+        .line-info { flex: 1; }
+        .line-title { font-weight: 500; font-size: 14px; color: #333; margin-bottom: 4px; }
+        .line-meta { font-size: 12px; color: #888; }
+        
+        .line-price {
+            font-weight: 700;
+            font-size: 15px;
+            color: #333;
+            margin-right: 15px;
+        }
+        
+        .btn-remove-line {
+            color: #e74c3c;
+            background: none;
+            border: none;
+            font-size: 16px;
+            padding: 5px;
+        }
+
+        /* Footer de Acciones */
+        .gestion-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: #fff;
+            padding: 15px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+        }
+        
+        .total-display {
+            display: flex;
+            flex-direction: column;
+        }
+        .total-label { font-size: 11px; color: #888; text-transform: uppercase; }
+        .total-value { font-size: 24px; font-weight: 700; color: var(--color-primary); }
+        
+        .btn-cobrar {
+            background: #2ecc71;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+        }
+
+        .fab-add-line {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 90;
+            border: none;
+        }
+
+        /* Modal simple para añadir producto */
+        .modal-mobile {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+        }
+        .modal-mobile.active { display: flex; }
+        
+        .modal-header {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .form-group { margin-bottom: 15px; }
+        .form-label { display: block; margin-bottom: 5px; font-size: 12px; color: #666; font-weight: 500; }
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px; /* Evita zoom en iOS */
+            background: #fafafa;
+        }
+        
+        .btn-block {
+            width: 100%;
+            padding: 12px;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="mobile-header">
+        <div class="header-left">
+            <button onclick="history.back()" style="background:none; border:none; font-size: 20px; color: var(--color-text); margin-right: 15px;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <span class="header-title" id="page-title">Nuevo Ticket</span>
+        </div>
+        <div class="header-right">
+            <button onclick="guardarTicket()" style="background:none; border:none; color: var(--color-primary); font-weight: 600;">
+                Guardar
+            </button>
+        </div>
+    </header>
+
+    <!-- Cliente -->
+    <div class="form-section">
+        <div class="form-label">CLIENTE</div>
+        <div class="client-selector" onclick="abrirModalCliente()">
+            <div id="cliente-nombre">Cliente Contado</div>
+            <i class="fas fa-chevron-right" style="color:#ccc;"></i>
+        </div>
+        <input type="hidden" id="cliente-id" value="1"> <!-- 1 = Genérico/Contado -->
+    </div>
+
+    <!-- Líneas -->
+    <div class="form-section" style="min-height: 200px;">
+        <div class="form-label">CONCEPTOS</div>
+        <div id="lineas-container">
+            <!-- Se llena con JS -->
+            <div style="text-align:center; padding: 20px; color: #aaa;" id="empty-msg">
+                Añade productos o conceptos
+            </div>
+        </div>
+    </div>
+
+    <!-- Totales -->
+    <div class="form-section">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span style="color:#888;">Base Imponible</span>
+            <span id="resumen-base">0,00 €</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+            <span style="color:#888;">Impuestos</span>
+            <span id="resumen-iva">0,00 €</span>
+        </div>
+    </div>
+
+    <!-- FAB Añadir -->
+    <button class="fab-add-line" onclick="abrirModalProducto()">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Footer Fijo -->
+    <div class="gestion-footer">
+        <div class="total-display">
+            <span class="total-label">TOTAL A PAGAR</span>
+            <span class="total-value" id="total-final">0,00 €</span>
+        </div>
+        <button class="btn-cobrar" onclick="cobrarTicket()">
+            <i class="fas fa-check"></i> COBRAR
+        </button>
+    </div>
+
+    <!-- MODAL PRODUCTO -->
+    <div class="modal-mobile" id="modal-producto">
+        <div class="modal-header">
+            <button onclick="cerrarModalProducto()" style="border:none; background:none; font-size:20px;"><i class="fas fa-times"></i></button>
+            <span style="font-weight:600;">Añadir Concepto</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Descripción</label>
+                <input type="text" class="form-control" id="prod-desc" placeholder="Ej: Fotocopias B/N">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Cantidad</label>
+                    <input type="number" class="form-control" id="prod-cant" value="1" step="1">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Precio (€)</label>
+                    <input type="number" class="form-control" id="prod-precio" value="0.00" step="0.01">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">IVA (%)</label>
+                <select class="form-control" id="prod-iva">
+                    <option value="21">21%</option>
+                    <option value="10">10%</option>
+                    <option value="4">4%</option>
+                    <option value="0">0%</option>
+                </select>
+            </div>
+            <button class="btn-block" onclick="agregarLineaManual()">Añadir al Ticket</button>
+            
+            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+            <div style="text-align:center; color:#999; font-size:12px;">
+                O busca un producto existente (Próximamente)
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ticketId = null; // null = Nuevo
+        let lineas = [];
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Detectar si es edición
+            const params = new URLSearchParams(window.location.search);
+            if(params.has('id')) {
+                ticketId = params.get('id');
+                document.getElementById('page-title').textContent = `Ticket ${ticketId}`; // Mostrará numero real al cargar
+                cargarTicket(ticketId);
+            }
+        });
+
+        // --- Gestión de Líneas ---
+        function agregarLineaManual() {
+            const desc = document.getElementById('prod-desc').value;
+            const cant = parseFloat(document.getElementById('prod-cant').value) || 0;
+            const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
+            const iva = parseFloat(document.getElementById('prod-iva').value) || 21;
+
+            if(!desc) return alert('Descripción requerida');
+            if(cant <= 0) return alert('Cantidad inválida');
+
+            const total = cant * precio * (1 + iva/100); // Precio incluye IVA? Usualmente precio es base
+            // En sistema Aleph70 normalmente precio es unitario sin IVA o con IVA según configuración.
+            // Asumiremos que el input es BASE. 
+            // Total linea = (cant * precio) + iva
+            
+            const linea = {
+                concepto: desc, // En backend se usa 'concepto'
+                descripcion: desc,
+                cantidad: cant,
+                precio: precio,
+                impuestos: iva,
+                total: cant * precio * (1 + iva/100) // Total con IVA
+            };
+            
+            lineas.push(linea);
+            renderLineas();
+            cerrarModalProducto();
+            limpiarModalProducto();
+        }
+
+        function renderLineas() {
+            const container = document.getElementById('lineas-container');
+            const emptyMsg = document.getElementById('empty-msg');
+            
+            if(lineas.length === 0) {
+                container.innerHTML = '';
+                container.appendChild(emptyMsg);
+                emptyMsg.style.display = 'block';
+            } else {
+                container.innerHTML = '';
+                emptyMsg.style.display = 'none';
+                
+                lineas.forEach((linea, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'line-item';
+                    div.innerHTML = `
+                        <div class="line-info">
+                            <div class="line-title">${linea.concepto}</div>
+                            <div class="line-meta">${linea.cantidad} x ${formatCurrency(linea.precio)} (+${linea.impuestos}%)</div>
+                        </div>
+                        <div class="line-price">${formatCurrency(linea.total)}</div>
+                        <button class="btn-remove-line" onclick="eliminarLinea(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+            calcularTotales();
+        }
+
+        function eliminarLinea(index) {
+            lineas.splice(index, 1);
+            renderLineas();
+        }
+
+        function calcularTotales() {
+            let base = 0;
+            let totalImpuestos = 0;
+            let total = 0;
+
+            lineas.forEach(l => {
+                const baseLinea = l.cantidad * l.precio;
+                const impLinea = baseLinea * (l.impuestos / 100);
+                base += baseLinea;
+                totalImpuestos += impLinea;
+                total += l.total; // O recalcular: base + impuestos
+            });
+
+            document.getElementById('resumen-base').textContent = formatCurrency(base);
+            document.getElementById('resumen-iva').textContent = formatCurrency(totalImpuestos);
+            document.getElementById('total-final').textContent = formatCurrency(total);
+        }
+
+        // --- Acciones ---
+        async function guardarTicket(cobrar = false) {
+            if(lineas.length === 0) return alert('El ticket está vacío');
+
+            const clienteId = document.getElementById('cliente-id').value;
+            const fecha = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            const total = parseFloat(document.getElementById('total-final').textContent.replace(/[^\d.,]/g, '').replace('.','').replace(',','.'));
+            // Mejor recalcular total exacto de lineas
+            let totalCalc = lineas.reduce((sum, l) => sum + l.total, 0);
+
+            const payload = {
+                idContacto: clienteId,
+                fecha: fecha,
+                detalles: lineas,
+                total: totalCalc,
+                estado: cobrar ? 'C' : 'P', // C=Cobrado, P=Pendiente
+                formaPago: 'E', // Defecto Efectivo
+                // Otros campos requeridos por backend
+                numero: ticketId ? document.getElementById('page-title').textContent : 'AUTO', 
+                // Si es nuevo el backend asigna numero, pero espera campo numero. Si 'AUTO' falla, buscar logica.
+                // En routes/tickets_routes.py -> guardar_ticket usa tickets.guardar_ticket
+            };
+
+            const url = ticketId ? `/api/tickets/${ticketId}` : '/api/tickets';
+            const method = ticketId ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                
+                const data = await res.json();
+                
+                if(!res.ok) throw new Error(data.error || 'Error al guardar');
+                
+                alert(cobrar ? 'Ticket Cobrado Correctamente' : 'Ticket Guardado');
+                window.location.href = '/api/auth/mobile/tickets'; // Volver al listado
+                
+            } catch(e) {
+                console.error(e);
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function cobrarTicket() {
+            if(confirm('¿Marcar como cobrado y finalizar?')) {
+                guardarTicket(true);
+            }
+        }
+
+        // --- Carga de Datos (Edición) ---
+        async function cargarTicket(id) {
+            try {
+                const res = await fetch(`/api/tickets/${id}`);
+                if(!res.ok) throw new Error('Error cargando ticket');
+                const data = await res.json();
+                
+                document.getElementById('page-title').textContent = data.numero;
+                document.getElementById('cliente-nombre').textContent = data.razonsocial || 'Cliente';
+                document.getElementById('cliente-id').value = data.idContacto;
+                
+                // Mapear detalles
+                if(data.detalles) {
+                    lineas = data.detalles.map(d => ({
+                        concepto: d.concepto,
+                        descripcion: d.descripcion || d.concepto,
+                        cantidad: d.cantidad,
+                        precio: d.precio,
+                        impuestos: d.impuestos,
+                        total: d.total
+                    }));
+                    renderLineas();
+                }
+                
+            } catch(e) {
+                console.error(e);
+                alert('No se pudo cargar el ticket');
+            }
+        }
+
+        // --- Modales ---
+        function abrirModalProducto() { 
+            document.getElementById('modal-producto').classList.add('active'); 
+            document.getElementById('prod-desc').focus();
+        }
+        function cerrarModalProducto() { document.getElementById('modal-producto').classList.remove('active'); }
+        function limpiarModalProducto() {
+            document.getElementById('prod-desc').value = '';
+            document.getElementById('prod-cant').value = '1';
+            document.getElementById('prod-precio').value = '';
+        }
+
+        function abrirModalCliente() { alert('Selector de clientes próximamente'); }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
+        }
+    </script>
+</body>
+</html>
