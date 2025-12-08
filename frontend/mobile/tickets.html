@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tickets - Aleph70</title>
+    
+    <!-- Fuentes e Iconos -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Estilos Móvil -->
+    <link rel="stylesheet" href="/static/mobile/css/styles.css">
+    
+    <style>
+        .search-bar {
+            padding: 10px 15px;
+            background: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            gap: 10px;
+        }
+        
+        .search-input-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 10px 15px 10px 35px;
+            border: 1px solid #eee;
+            border-radius: 20px;
+            background: #f8f9fa;
+            font-size: 14px;
+            outline: none;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+        
+        .btn-filter {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 1px solid #eee;
+            background: #fff;
+            color: #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tickets-list {
+            padding: 15px;
+            padding-bottom: 80px; /* Espacio para bottom nav y FAB */
+        }
+        
+        .ticket-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ticket-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: #ccc;
+        }
+        
+        .ticket-card.estado-C::before, .ticket-card.estado-Cobrado::before { background: #2ecc71; }
+        .ticket-card.estado-P::before, .ticket-card.estado-Pendiente::before { background: #f39c12; }
+        .ticket-card.estado-A::before { background: #e74c3c; }
+
+        .tc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .tc-number {
+            font-weight: 700;
+            font-size: 16px;
+            color: #2c3e50;
+        }
+        
+        .tc-date {
+            font-size: 12px;
+            color: #95a5a6;
+        }
+        
+        .tc-client {
+            font-size: 14px;
+            color: #34495e;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .tc-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 5px;
+            padding-top: 10px;
+            border-top: 1px solid #f5f5f5;
+        }
+        
+        .tc-total {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+        
+        .tc-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-icon-action {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f8f9fa;
+            color: #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            text-decoration: none;
+        }
+        
+        .fab-add {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+            text-decoration: none;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="mobile-header">
+        <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
+            <button id="btn-menu-drawer" style="background:none; border:none; font-size: 20px; color: var(--color-text); padding: 5px;">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="header-title">Tickets</span>
+        </div>
+        <div class="header-right">
+            <!-- Opcional: Filtros o Sort -->
+        </div>
+    </header>
+
+    <!-- Drawer Menu (Sidebar Móvil) -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <aside class="mobile-drawer" id="mobile-drawer">
+        <div class="drawer-header">
+            <img src="/static/logos/default_header.png" alt="Logo" style="height: 30px;">
+            <button id="btn-close-drawer"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="drawer-content" id="drawer-menu-list">
+            <div style="padding: 20px; text-align: center; color: #999;">Cargando menú...</div>
+        </div>
+        <div class="drawer-footer">
+            <div class="user-mini-profile">
+                <div class="user-name" id="drawer-username">Usuario</div>
+                <div class="user-role" id="drawer-rol">Rol</div>
+            </div>
+            <button class="btn-logout" onclick="logoutApp()">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="mobile-content" style="padding: 0; background: #f5f7fa;">
+        
+        <!-- Buscador -->
+        <div class="search-bar">
+            <div class="search-input-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="search-input" placeholder="Buscar ticket, cliente...">
+            </div>
+            <button class="btn-filter" onclick="alert('Filtros avanzados pronto')">
+                <i class="fas fa-filter"></i>
+            </button>
+        </div>
+
+        <!-- Lista Tickets -->
+        <div class="tickets-list" id="tickets-container">
+            <!-- Se llena vía JS -->
+            <div class="loading-spinner">
+                <i class="fas fa-circle-notch fa-spin"></i> Cargando tickets...
+            </div>
+        </div>
+
+        <!-- FAB Nuevo Ticket -->
+        <a href="/GESTION_TICKETS.html" class="fab-add">
+            <i class="fas fa-plus"></i>
+        </a>
+
+    </main>
+
+    <!-- Navegación Inferior -->
+    <nav class="bottom-nav">
+        <a href="/api/auth/app" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Inicio</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-file-invoice-dollar"></i>
+            <span>Facturas</span>
+        </a>
+        <a href="/api/auth/mobile/tickets" class="nav-item active">
+            <i class="fas fa-ticket-alt"></i>
+            <span>Tickets</span>
+        </a>
+        <a href="/GESTION_TICKETS.html" class="nav-item">
+            <i class="fas fa-plus-circle" style="font-size: 32px; color: var(--color-primary); margin-bottom: 0;"></i>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-chart-pie"></i>
+            <span>Stats</span>
+        </a>
+    </nav>
+
+    <!-- Scripts -->
+    <script src="/static/mobile/js/app.js"></script>
+    <script>
+        let currentPage = 1;
+        let isLoading = false;
+        let hasMore = true;
+        let searchTimer = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTickets(true);
+            
+            // Search listener
+            document.getElementById('search-input').addEventListener('input', (e) => {
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => {
+                    currentPage = 1;
+                    hasMore = true;
+                    loadTickets(true, e.target.value);
+                }, 500);
+            });
+            
+            // Infinite scroll (simple version)
+            window.addEventListener('scroll', () => {
+                if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500) {
+                    if(!isLoading && hasMore) {
+                        loadTickets(false, document.getElementById('search-input').value);
+                    }
+                }
+            });
+        });
+
+        async function loadTickets(reset = false, query = '') {
+            if(isLoading) return;
+            isLoading = true;
+            
+            const container = document.getElementById('tickets-container');
+            if(reset) {
+                container.innerHTML = '<div class="loading-spinner"><i class="fas fa-circle-notch fa-spin"></i> Cargando...</div>';
+            }
+
+            try {
+                // Construir URL
+                // Nota: la API paginado soporta 'search' o 'filtro'? Verificaremos.
+                // Si no, usaremos filtro simple por js o solo paginación.
+                // Asumimos que /api/tickets/paginado acepta ?page=X&limit=10&search=...
+                let url = `/api/tickets/paginado?page=${currentPage}&limit=10&orden=desc`;
+                if(query) url += `&search=${encodeURIComponent(query)}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const tickets = data.tickets || data.data || [];
+                
+                if(reset) container.innerHTML = '';
+                
+                if(tickets.length === 0) {
+                    hasMore = false;
+                    if(reset) container.innerHTML = '<div style="text-align:center; padding:30px; color:#999;">No se encontraron tickets</div>';
+                } else {
+                    tickets.forEach(ticket => {
+                        const card = createTicketCard(ticket);
+                        container.appendChild(card);
+                    });
+                    currentPage++;
+                }
+
+            } catch (error) {
+                console.error('Error loading tickets:', error);
+                if(reset) container.innerHTML = '<div style="text-align:center; color:red;">Error al cargar tickets</div>';
+            } finally {
+                isLoading = false;
+            }
+        }
+
+        function createTicketCard(ticket) {
+            const div = document.createElement('div');
+            div.className = `ticket-card estado-${ticket.estado}`;
+            div.onclick = () => window.location.href = `/GESTION_TICKETS.html?id=${ticket.id}`;
+            
+            // Formatear estado
+            let estadoClass = '';
+            let estadoText = ticket.estado;
+            if(estadoText === 'C') estadoText = 'Cobrado';
+            if(estadoText === 'P') estadoText = 'Pendiente';
+
+            div.innerHTML = `
+                <div class="tc-header">
+                    <span class="tc-number">${ticket.numero}</span>
+                    <span class="tc-date">${ticket.fecha}</span>
+                </div>
+                <div class="tc-client">${ticket.razonsocial || ticket.nombre_cliente || 'Cliente Contado'}</div>
+                <div class="tc-footer">
+                    <span class="tc-total">${formatCurrency(ticket.total)}</span>
+                    <div class="tc-actions">
+                        <a href="/GESTION_TICKETS.html?id=${ticket.id}" class="btn-icon-action" onclick="event.stopPropagation()">
+                            <i class="fas fa-pen"></i>
+                        </a>
+                        <!-- Opción imprimir rápida si se desea -->
+                    </div>
+                </div>
+            `;
+            return div;
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
+        }
+        
+        // Sobreescribir logout para que funcione (ya está en app.js pero por si acaso)
+    </script>
+</body>
+</html>

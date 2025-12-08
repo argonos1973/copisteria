@@ -99,7 +99,13 @@ function renderMenu(items) {
 function createMenuItem(item) {
     const a = document.createElement('a');
     a.className = 'drawer-menu-item';
-    a.href = item.ruta === '#' ? 'javascript:void(0)' : item.ruta;
+    
+    // Interceptar rutas para versión móvil
+    let href = item.ruta;
+    if(href === '/CONSULTA_TICKETS.html') href = '/api/auth/mobile/tickets';
+    // Futuro: if(href === '/CONSULTA_FACTURAS.html') href = '/api/auth/mobile/facturas';
+    
+    a.href = href === '#' ? 'javascript:void(0)' : href;
     
     // Si es una ruta relativa html, asegurar que funcione en móvil (quizás necesite prefijo o manejo de ruta)
     // Por ahora asumimos que las rutas HTML funcionan (abren nueva página)
