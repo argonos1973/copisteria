@@ -32,12 +32,24 @@ async function obtenerSiguienteNumero() {
 // --- Gestión de Líneas ---
 function agregarLineaManual() {
     const desc = document.getElementById('prod-desc').value;
-    const cant = parseFloat(document.getElementById('prod-cant').value) || 0;
-    const precio = parseFloat(document.getElementById('prod-precio').value) || 0;
+    
+    // Parseo robusto: reemplazar coma por punto
+    let cantStr = document.getElementById('prod-cant').value.toString().replace(',', '.');
+    let precioStr = document.getElementById('prod-precio').value.toString().replace(',', '.');
+    
+    const cant = parseFloat(cantStr) || 0;
+    const precio = parseFloat(precioStr) || 0;
     const iva = parseFloat(document.getElementById('prod-iva').value) || 21;
 
     if(!desc) return alert('Descripción requerida');
     if(cant <= 0) return alert('Cantidad inválida');
+
+    const total = cant * precio * (1 + iva/100);
+    
+    // Protección contra NaN
+    if(isNaN(total)) {
+        return alert('Error en el cálculo de totales. Verifica los importes.');
+    }
 
     const linea = {
         concepto: desc, // En backend se usa 'concepto'
@@ -45,7 +57,7 @@ function agregarLineaManual() {
         cantidad: cant,
         precio: precio,
         impuestos: iva,
-        total: cant * precio * (1 + iva/100) // Total con IVA
+        total: total // Total con IVA
     };
     
     lineas.push(linea);
@@ -116,7 +128,12 @@ async function guardarTicket(cobrar = false) {
     const fecha = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     
     // Recalcular total exacto de lineas
-    let totalCalc = lineas.reduce((sum, l) => sum + l.total, 0);
+    let totalCalc = lineas.reduce((sum, l) => sum + (l.total || 0), 0);
+    
+    if (isNaN(totalCalc)) {
+        console.error("Total calculado es NaN");
+        totalCalc = 0;
+    }
     
     // Obtener número (asegurar que no es 'NUEVO' o 'AUTO')
     let numero = document.getElementById('page-title').textContent;
@@ -209,5 +226,8 @@ function limpiarModalProducto() {
 function abrirModalCliente() { alert('Selector de clientes próximamente'); }
 
 function formatCurrency(value) {
+    if (value === null || value === undefined || isNaN(value)) {
+        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(0);
+    }
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
 }

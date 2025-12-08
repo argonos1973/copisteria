@@ -95,5 +95,8 @@ function createTicketCard(ticket) {
 }
 
 function formatCurrency(value) {
+    if (value === null || value === undefined || isNaN(value)) {
+        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(0);
+    }
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
 }
