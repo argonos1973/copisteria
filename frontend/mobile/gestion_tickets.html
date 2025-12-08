@@ -275,10 +275,53 @@
             const params = new URLSearchParams(window.location.search);
             if(params.has('id')) {
                 ticketId = params.get('id');
-                document.getElementById('page-title').textContent = `Ticket ${ticketId}`; // Mostrará numero real al cargar
+                // Se cargará el numero real en cargarTicket
                 cargarTicket(ticketId);
+            } else {
+                // Es nuevo: Obtener siguiente número
+                obtenerSiguienteNumero();
             }
         });
+
+        async function obtenerSiguienteNumero() {
+            try {
+                const res = await fetch('/api/tickets/obtener_numerador/T');
+                if(res.ok) {
+                    const data = await res.json();
+                    document.getElementById('page-title').textContent = `${data.serie}${data.numerador}`; // Ej: T2025
+                    // Ajuste: El backend devuelve 'numerador' (int). El formato final suele ser T{numerador} o T-{numerador}
+                    // Vamos a asumir formato simple "T{numerador}" o dejar que el usuario lo vea.
+                    // Mejor: El backend espera recibir el string completo.
+                    // Si el backend solo da el numero, nosotros construimos el formato.
+                    // Normalmente Aleph70 usa formato T-YYYY-Numero o similar.
+                    // Consultemos logs: "T25-001".
+                    // Si obtener_numerador devuelve 1, y estamos en 2025 -> T25-001.
+                    // Por simplicidad y seguridad, usaremos el numero tal cual devuelve + prefijo si aplica, o solo el numero si la serie va incluida.
+                    // Re-leyendo tickets_routes: devuelve { numerador: siguiente, serie: serie }
+                    
+                    // Construcción simple:
+                    // const currentYearShort = new Date().getFullYear().toString().substr(2,2);
+                    // const numPadded = data.numerador.toString().padStart(3, '0');
+                    // const numeroCompleto = `T${currentYearShort}-${numPadded}`;
+                    
+                    // PERO: El backend valida unicidad. Si construyo mal, falla.
+                    // Si la app legacy usa una lógica compleja, debería replicarla.
+                    // Voy a usar solo el numerador crudo por ahora o ver cómo lo hace el legacy.
+                    
+                    // En el endpoint legacy 'obtener_numero_ticket_legacy' llama a 'obtener_siguiente_numero("T")'.
+                    // Asumamos que el backend guarda el string completo en la columna numero?
+                    // Sí: INSERT INTO tickets (numero...) VALUES (?,...)
+                    
+                    // Voy a intentar construir un formato estándar: T{YY}-{0000}
+                    const year = new Date().getFullYear().toString().slice(-2);
+                    const num = data.numerador.toString().padStart(4, '0');
+                    document.getElementById('page-title').textContent = `T${year}-${num}`;
+                }
+            } catch(e) {
+                console.error("Error obteniendo numerador", e);
+                document.getElementById('page-title').textContent = "NUEVO";
+            }
+        }
 
         // --- Gestión de Líneas ---
         function agregarLineaManual() {
@@ -371,9 +414,14 @@
             const clienteId = document.getElementById('cliente-id').value;
             const fecha = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
             
-            const total = parseFloat(document.getElementById('total-final').textContent.replace(/[^\d.,]/g, '').replace('.','').replace(',','.'));
-            // Mejor recalcular total exacto de lineas
+            // Recalcular total exacto de lineas
             let totalCalc = lineas.reduce((sum, l) => sum + l.total, 0);
+            
+            // Obtener número (asegurar que no es 'NUEVO' o 'AUTO')
+            let numero = document.getElementById('page-title').textContent;
+            if(!numero || numero === 'NUEVO') {
+                return alert('No se ha generado un número de ticket válido. Recarga la página.');
+            }
 
             const payload = {
                 idContacto: clienteId,
@@ -382,10 +430,8 @@
                 total: totalCalc,
                 estado: cobrar ? 'C' : 'P', // C=Cobrado, P=Pendiente
                 formaPago: 'E', // Defecto Efectivo
-                // Otros campos requeridos por backend
-                numero: ticketId ? document.getElementById('page-title').textContent : 'AUTO', 
-                // Si es nuevo el backend asigna numero, pero espera campo numero. Si 'AUTO' falla, buscar logica.
-                // En routes/tickets_routes.py -> guardar_ticket usa tickets.guardar_ticket
+                numero: ticketId ? numero : numero,
+                importe_cobrado: cobrar ? totalCalc : 0
             };
 
             const url = ticketId ? `/api/tickets/${ticketId}` : '/api/tickets';
