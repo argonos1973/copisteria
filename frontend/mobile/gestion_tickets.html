@@ -29,8 +29,8 @@
         </div>
     </header>
 
-    <!-- Cliente -->
-    <div class="form-section">
+    <!-- Cliente (Oculto por defecto) -->
+    <div class="form-section" style="display:none;">
         <div class="form-label">CLIENTE</div>
         <div class="client-selector" onclick="abrirModalCliente()">
             <div id="cliente-nombre">Cliente Contado</div>
@@ -85,9 +85,21 @@
             <span style="font-weight:600;">Añadir Concepto</span>
         </div>
         <div class="modal-body">
+            <!-- Buscador -->
+            <div class="form-group" style="position:relative; margin-bottom:20px;">
+                <label class="form-label">BUSCAR PRODUCTO</label>
+                <div class="search-input-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" id="prod-search" placeholder="Escribe para buscar..." oninput="buscarProductos(this.value)" autocomplete="off">
+                </div>
+                <div id="prod-resultados" style="max-height:200px; overflow-y:auto; border:1px solid #eee; border-top:none; border-radius:0 0 8px 8px; display:none; background:#fff; position:absolute; width:100%; z-index:100; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                    <!-- Resultados JS -->
+                </div>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Descripción</label>
-                <input type="text" class="form-control" id="prod-desc" placeholder="Ej: Fotocopias B/N">
+                <input type="text" class="form-control" id="prod-desc" placeholder="Descripción del concepto">
             </div>
             <div style="display:flex; gap:10px;">
                 <div class="form-group" style="flex:1;">
@@ -109,11 +121,38 @@
                 </select>
             </div>
             <button class="btn-block" onclick="agregarLineaManual()">Añadir al Ticket</button>
-            
-            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
-            <div style="text-align:center; color:#999; font-size:12px;">
-                O busca un producto existente (Próximamente)
+        </div>
+    </div>
+
+    <!-- MODAL PAGOS -->
+    <div class="modal-mobile" id="modal-pagos">
+        <div class="modal-header">
+            <button onclick="cerrarModalPagos()" style="border:none; background:none; font-size:20px;"><i class="fas fa-times"></i></button>
+            <span style="font-weight:600;">Cobrar Ticket</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Total a Pagar</label>
+                <input type="text" class="form-control" id="pago-total" readonly style="background:#eee; font-weight:bold; font-size:24px; text-align:right;">
             </div>
+            <div class="form-group">
+                <label class="form-label">Forma de Pago</label>
+                <select class="form-control" id="pago-metodo" onchange="actualizarCambio()">
+                    <option value="E">Efectivo</option>
+                    <option value="T">Tarjeta</option>
+                    <option value="R">Transferencia</option>
+                    <option value="B">Bizum</option>
+                </select>
+            </div>
+            <div class="form-group" id="div-entregado">
+                <label class="form-label">Entregado (€)</label>
+                <input type="number" class="form-control" id="pago-entregado" step="0.01" oninput="actualizarCambio()" style="font-size:20px; text-align:right;">
+            </div>
+            <div class="form-group" id="div-cambio">
+                <label class="form-label">Cambio (€)</label>
+                <input type="text" class="form-control" id="pago-cambio" readonly style="background:#eee; font-weight:bold; text-align:right; color:var(--color-primary); font-size:20px;">
+            </div>
+            <button class="btn-block btn-cobrar" onclick="confirmarPago()">FINALIZAR COBRO</button>
         </div>
     </div>
 
