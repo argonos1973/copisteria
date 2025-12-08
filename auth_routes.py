@@ -576,7 +576,22 @@ def servir_aplicacion():
     """Sirve la aplicación principal (requiere autenticación)"""
     try:
         BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        
+        # Detección básica de dispositivo móvil/tablet
+        user_agent = request.headers.get('User-Agent', '').lower()
+        is_mobile = 'mobile' in user_agent or 'android' in user_agent or 'iphone' in user_agent
+        is_tablet = 'ipad' in user_agent or 'tablet' in user_agent
+        
+        # Definir ruta por defecto (Escritorio)
         app_path = os.path.join(BASE_DIR, 'frontend', '_app_private.html')
+        
+        # Si es móvil o tablet, intentar servir la versión móvil
+        if is_mobile or is_tablet:
+            mobile_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'index.html')
+            if os.path.exists(mobile_path):
+                app_path = mobile_path
+                logger.info(f"Sirviendo versión móvil para UA: {user_agent[:30]}...")
+            
         with open(app_path, 'r', encoding='utf-8') as f:
             content = f.read()
         return Response(content, mimetype='text/html')

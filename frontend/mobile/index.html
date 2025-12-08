@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dashboard - Aleph70</title>
+    
+    <!-- Fuentes e Iconos -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Estilos Móvil -->
+    <link rel="stylesheet" href="/static/mobile/css/styles.css">
+    
+    <style>
+        .summary-card {
+            background: linear-gradient(135deg, var(--color-primary), #c0392b);
+            color: white;
+        }
+        .summary-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .text-muted {
+            color: rgba(255,255,255,0.8);
+        }
+        .section-title {
+            margin: 20px 0 10px;
+            font-weight: 600;
+            color: #7f8c8d;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+        
+        .ticket-item {
+            display: flex;
+            flex-direction: column;
+            padding: 12px;
+        }
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .ticket-id { font-weight: bold; }
+        .ticket-total { font-size: 18px; font-weight: 600; color: var(--color-primary); }
+        .ticket-body {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+        .badge-success {
+            background-color: #2ecc71;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Fijo Superior -->
+    <header class="mobile-header">
+        <div class="header-left">
+            <img src="/static/logos/default_header.png" alt="Logo" style="height: 30px;">
+        </div>
+        <div class="header-center">
+            <span class="header-title">Resumen</span>
+        </div>
+        <div class="header-right">
+            <i class="fas fa-user-circle" style="font-size: 24px; color: #555;"></i>
+        </div>
+    </header>
+
+    <!-- Contenido Principal (Scrollable) -->
+    <main class="mobile-content">
+        <div class="dashboard-mobile">
+            <!-- Resumen Ventas -->
+            <div class="card summary-card">
+                <h4>Ventas Mes Actual</h4>
+                <div class="summary-value" id="ventas-hoy">0,00 €</div>
+                <small class="text-muted">Balance: <span id="balance-mes">0,00 €</span></small>
+            </div>
+
+            <!-- Accesos Rápidos -->
+            <div class="quick-actions">
+                <button class="btn-mobile" onclick="alert('Funcionalidad en desarrollo')">
+                    <i class="fas fa-plus"></i> Nuevo Ticket
+                </button>
+            </div>
+
+            <!-- Últimos Movimientos -->
+            <div class="section-title">Últimos Tickets</div>
+            <div id="ultimos-tickets-list">
+                <div class="card ticket-item">
+                    <div class="ticket-header">
+                        <span class="ticket-id">Cargando...</span>
+                        <span class="ticket-status badge-success">...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Navegación Inferior (Sticky Bottom) -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active">
+            <i class="fas fa-home"></i>
+            <span>Inicio</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-file-invoice-dollar"></i>
+            <span>Facturas</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-ticket-alt"></i>
+            <span>Tickets</span>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-plus-circle" style="font-size: 32px; color: var(--color-primary); margin-bottom: 0;"></i>
+        </a>
+        <a href="#" class="nav-item">
+            <i class="fas fa-chart-pie"></i>
+            <span>Stats</span>
+        </a>
+    </nav>
+
+    <!-- Scripts -->
+    <script src="/static/mobile/js/app.js"></script>
+    <script>
+        // Lógica específica del dashboard móvil
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Dashboard Móvil Iniciado');
+            cargarResumen();
+        });
+
+        async function cargarResumen() {
+            try {
+                // Consumir API existente de estadísticas
+                const response = await fetch('/api/dashboard/estadisticas_gastos');
+                if (!response.ok) throw new Error('Error cargando datos');
+                
+                const data = await response.json();
+                
+                // Actualizar UI
+                if(data.ingresos_mes_actual !== undefined) {
+                    document.getElementById('ventas-hoy').textContent = formatCurrency(data.ingresos_mes_actual);
+                }
+                if(data.balance_mes_actual !== undefined) {
+                    document.getElementById('balance-mes').textContent = formatCurrency(data.balance_mes_actual);
+                }
+                
+                // Limpiar lista tickets
+                const list = document.getElementById('ultimos-tickets-list');
+                list.innerHTML = '<div style="padding:10px; text-align:center; color:#999;">Datos en tiempo real conectados</div>';
+                
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
+        }
+    </script>
+</body>
+</html>
