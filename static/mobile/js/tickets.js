@@ -4,7 +4,7 @@ let hasMore = true;
 let searchTimer = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Inicializar fechas
+    // Inicializar fechas y recuperar estado
     const today = new Date();
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
     
@@ -13,24 +13,40 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const inputDesde = document.getElementById('fecha-desde');
     const inputHasta = document.getElementById('fecha-hasta');
+    const inputSearch = document.getElementById('search-input');
     
-    if(inputDesde) inputDesde.value = formatDate(today);
-    if(inputHasta) inputHasta.value = formatDate(lastDay);
+    // Recuperar filtros guardados
+    const savedDesde = sessionStorage.getItem('tickets_filter_desde');
+    const savedHasta = sessionStorage.getItem('tickets_filter_hasta');
+    const savedSearch = sessionStorage.getItem('tickets_filter_search');
+    
+    if(inputDesde) inputDesde.value = savedDesde || formatDate(today);
+    if(inputHasta) inputHasta.value = savedHasta || formatDate(lastDay);
+    if(inputSearch && savedSearch) inputSearch.value = savedSearch;
 
-    // Listeners
-    if(inputDesde) inputDesde.addEventListener('change', () => reload());
-    if(inputHasta) inputHasta.addEventListener('change', () => reload());
+    // Listeners con persistencia
+    if(inputDesde) inputDesde.addEventListener('change', (e) => {
+        sessionStorage.setItem('tickets_filter_desde', e.target.value);
+        reload();
+    });
+    if(inputHasta) inputHasta.addEventListener('change', (e) => {
+        sessionStorage.setItem('tickets_filter_hasta', e.target.value);
+        reload();
+    });
     document.getElementById('btn-refresh')?.addEventListener('click', () => reload());
 
     loadTickets(true);
     
     // Search listener
-    document.getElementById('search-input').addEventListener('input', (e) => {
-        clearTimeout(searchTimer);
-        searchTimer = setTimeout(() => {
-            reload();
-        }, 500);
-    });
+    if(inputSearch) {
+        inputSearch.addEventListener('input', (e) => {
+            sessionStorage.setItem('tickets_filter_search', e.target.value);
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                reload();
+            }, 500);
+        });
+    }
     
     // Infinite scroll
     window.addEventListener('scroll', () => {
@@ -103,15 +119,57 @@ function createTicketCard(ticket) {
     let estadoText = ticket.estado;
     if(estadoText === 'C') estadoText = 'Cobrado';
     if(estadoText === 'P') estadoText = 'Pendiente';
+    if(estadoText === 'A') estadoText = 'Anulado';
+
+    // Parsear fecha y hora
+    let fechaDisplay = ticket.fecha;
+    let horaDisplay = '';
+    
+    if (ticket.timestamp) {
+        try {
+            const dateObj = new Date(ticket.timestamp);
+            if (!isNaN(dateObj.getTime())) {
+                const day = dateObj.getDate().toString().padStart(2, '0');
+                const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+                const year = dateObj.getFullYear();
+                const hours = dateObj.getHours().toString().padStart(2, '0');
+                const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+                fechaDisplay = `${day}/${month}/${year}`;
+                horaDisplay = `${hours}:${minutes}`;
+            }
+        } catch(e) { console.error(e); }
+    }
 
     div.innerHTML = `
         <div class="tc-header">
             <span class="tc-number">${ticket.numero}</span>
-            <span class="tc-date">${ticket.fecha}</span>
+            <div class="tc-date-time" style="text-align: right;">
+                <div class="tc-date">${fechaDisplay}</div>
+                ${horaDisplay ? `<div class="tc-time" style="font-size: 11px; color: #999;">${horaDisplay}</div>` : ''}
+            </div>
         </div>
         <div class="tc-client">${ticket.razonsocial || ticket.nombre_cliente || 'Cliente Contado'}</div>
-        <div class="tc-footer">
-            <span class="tc-total">${formatCurrency(ticket.total)}</span>
+        
+        <div class="tc-details" style="margin-top: 8px; padding: 8px 0; border-top: 1px dashed #eee; border-bottom: 1px dashed #eee; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                <span style="color: #7f8c8d;">Base:</span>
+                <span>${formatCurrency(ticket.importe_bruto)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                <span style="color: #7f8c8d;">IVA:</span>
+                <span>${formatCurrency(ticket.importe_impuestos)}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: #7f8c8d;">Total:</span>
+                <span style="font-weight: 600;">${formatCurrency(ticket.total)}</span>
+            </div>
+        </div>
+
+        <div class="tc-footer" style="border-top: none; padding-top: 5px;">
+            <span class="ticket-status ${ticket.estado === 'C' ? 'status-success' : 'status-warning'}" 
+                  style="font-size: 11px; padding: 2px 8px; border-radius: 4px; background: ${ticket.estado === 'C' ? '#d4edda' : (ticket.estado === 'P' ? '#fff3cd' : '#f8d7da')}; color: ${ticket.estado === 'C' ? '#155724' : (ticket.estado === 'P' ? '#856404' : '#721c24')};">
+                ${estadoText}
+            </span>
             <div class="tc-actions">
                 <a href="/api/auth/mobile/tickets/gestion?id=${ticket.id}" class="btn-icon-action" onclick="event.stopPropagation()">
                     <i class="fas fa-pen"></i>
