@@ -1,3 +1,5 @@
+import { redondearImporte, formatearImporte } from '../../scripts_utils.js';
+
 let ticketId = null; // null = Nuevo
 let lineas = [];
 
@@ -44,20 +46,22 @@ function agregarLineaManual() {
     if(!desc) return alert('Descripción requerida');
     if(cant <= 0) return alert('Cantidad inválida');
 
-    const total = cant * precio * (1 + iva/100);
+    // CÁLCULO ESTÁNDAR: Usando redondearImporte de scripts_utils
+    const subtotalRaw = cant * precio;
+    const impuestoMonto = redondearImporte(subtotalRaw * (iva / 100));
+    const totalLinea = redondearImporte(subtotalRaw + impuestoMonto);
     
-    // Protección contra NaN
-    if(isNaN(total)) {
+    if(isNaN(totalLinea)) {
         return alert('Error en el cálculo de totales. Verifica los importes.');
     }
 
     const linea = {
-        concepto: desc, // En backend se usa 'concepto'
+        concepto: desc,
         descripcion: desc,
         cantidad: cant,
         precio: precio,
         impuestos: iva,
-        total: total // Total con IVA
+        total: totalLinea
     };
     
     lineas.push(linea);
@@ -84,9 +88,9 @@ function renderLineas() {
             div.innerHTML = `
                 <div class="line-info">
                     <div class="line-title">${linea.concepto}</div>
-                    <div class="line-meta">${linea.cantidad} x ${formatCurrency(linea.precio)} (+${linea.impuestos}%)</div>
+                    <div class="line-meta">${linea.cantidad} x ${formatearImporte(linea.precio)} (+${linea.impuestos}%)</div>
                 </div>
-                <div class="line-price">${formatCurrency(linea.total)}</div>
+                <div class="line-price">${formatearImporte(linea.total)}</div>
                 <button class="btn-remove-line" onclick="eliminarLinea(${index})">
                     <i class="fas fa-trash"></i>
                 </button>
@@ -108,16 +112,17 @@ function calcularTotales() {
     let total = 0;
 
     lineas.forEach(l => {
-        const baseLinea = l.cantidad * l.precio;
-        const impLinea = baseLinea * (l.impuestos / 100);
-        base += baseLinea;
-        totalImpuestos += impLinea;
-        total += l.total; // O recalcular: base + impuestos
+        const subtotalRaw = l.cantidad * l.precio;
+        const impuestoMonto = redondearImporte(subtotalRaw * (l.impuestos / 100));
+        
+        base += subtotalRaw;
+        totalImpuestos += impuestoMonto;
+        total += l.total;
     });
 
-    document.getElementById('resumen-base').textContent = formatCurrency(base);
-    document.getElementById('resumen-iva').textContent = formatCurrency(totalImpuestos);
-    document.getElementById('total-final').textContent = formatCurrency(total);
+    document.getElementById('resumen-base').textContent = formatearImporte(base);
+    document.getElementById('resumen-iva').textContent = formatearImporte(totalImpuestos);
+    document.getElementById('total-final').textContent = formatearImporte(total);
 }
 
 // --- Acciones ---
@@ -135,7 +140,7 @@ async function guardarTicket(cobrar = false) {
         totalCalc = 0;
     }
     
-    // Obtener número (asegurar que no es 'NUEVO' o 'AUTO')
+    // Obtener número
     let numero = document.getElementById('page-title').textContent;
     if(!numero || numero === 'NUEVO') {
         return alert('No se ha generado un número de ticket válido. Recarga la página.');
@@ -146,8 +151,8 @@ async function guardarTicket(cobrar = false) {
         fecha: fecha,
         detalles: lineas,
         total: totalCalc,
-        estado: cobrar ? 'C' : 'P', // C=Cobrado, P=Pendiente
-        formaPago: 'E', // Defecto Efectivo
+        estado: cobrar ? 'C' : 'P',
+        formaPago: 'E',
         numero: ticketId ? numero : numero,
         importe_cobrado: cobrar ? totalCalc : 0
     };
@@ -200,7 +205,7 @@ async function cargarTicket(id) {
                 cantidad: parseFloat(d.cantidad),
                 precio: parseFloat(d.precio),
                 impuestos: parseFloat(d.impuestos),
-                total: parseFloat(d.total.replace(',','.')) // Si viene formateado
+                total: parseFloat(d.total.replace(',','.'))
             }));
             renderLineas();
         }
@@ -225,9 +230,12 @@ function limpiarModalProducto() {
 
 function abrirModalCliente() { alert('Selector de clientes próximamente'); }
 
-function formatCurrency(value) {
-    if (value === null || value === undefined || isNaN(value)) {
-        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(0);
-    }
-    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(value);
-}
+// Exponer funciones al scope global para que los onclick del HTML funcionen
+window.agregarLineaManual = agregarLineaManual;
+window.eliminarLinea = eliminarLinea;
+window.guardarTicket = guardarTicket;
+window.cobrarTicket = cobrarTicket;
+window.abrirModalProducto = abrirModalProducto;
+window.cerrarModalProducto = cerrarModalProducto;
+window.limpiarModalProducto = limpiarModalProducto;
+window.abrirModalCliente = abrirModalCliente;
