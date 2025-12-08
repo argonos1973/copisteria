@@ -7,10 +7,21 @@ document.addEventListener('DOMContentLoaded', () => {
 async function cargarResumen() {
     const summaryCard = document.querySelector('.summary-card');
     try {
+        // Verificar permisos primero
+        const sessionRes = await fetch('/api/auth/session');
+        if(sessionRes.ok) {
+            const user = await sessionRes.json();
+            // Si no es admin ni tiene rol de admin, ocultar
+            if (!user.es_admin && user.rol !== 'admin' && !user.es_superadmin) {
+                if(summaryCard) summaryCard.style.display = 'none';
+                return;
+            }
+        }
+
         // Consumir API existente de estadísticas
         const response = await fetch('/api/dashboard/estadisticas_gastos');
         
-        // Manejo de permisos
+        // Manejo de permisos (backend status)
         if (response.status === 401 || response.status === 403) {
             console.warn("Usuario sin permisos para ver estadísticas");
             if(summaryCard) summaryCard.style.display = 'none';
