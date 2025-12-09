@@ -13,7 +13,103 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.header-title').textContent = 'Detalle Factura';
         cargarFactura(params.get('id'));
     }
+    
+    // Listener OCR
+    const fileInput = document.getElementById('archivo');
+    if(fileInput) {
+        fileInput.addEventListener('change', async (e) => {
+            if(e.target.files.length > 0) {
+                await procesarOcr(e.target.files[0]);
+            }
+        });
+    }
 });
+
+async function procesarOcr(file) {
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'ocr-loading';
+    loadingDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.9);z-index:9999;display:flex;justify-content:center;align-items:center;flex-direction:column;';
+    loadingDiv.innerHTML = '<i class="fas fa-magic fa-spin" style="font-size:40px;color:var(--color-primary);"></i><div style="margin-top:15px;font-weight:bold;font-size:18px;">Analizando factura con IA...</div>';
+    document.body.appendChild(loadingDiv);
+
+    try {
+        const formData = new FormData();
+        formData.append('archivo', file);
+        
+        const res = await fetch('/api/facturas-proveedores/ocr', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await res.json();
+        
+        if(data.success && data.datos) {
+            const d = data.datos;
+            
+            if(d.numero_factura) document.getElementById('numero').value = d.numero_factura;
+            if(d.fecha_emision) document.getElementById('fecha').value = d.fecha_emision;
+            if(d.concepto) document.getElementById('concepto').value = d.concepto;
+            
+            if(d.importes) {
+                document.getElementById('base').value = d.importes.base || 0;
+                document.getElementById('iva').value = d.importes.iva || 0;
+                document.getElementById('total').value = d.importes.total || 0;
+            }
+            
+            if(d.proveedor) {
+                await buscarYSeleccionarProveedor(d.proveedor.nombre, d.proveedor.nif);
+            }
+            
+            // alert('Datos extraídos con IA. Por favor verifica antes de guardar.');
+        } else {
+            console.error('OCR Error:', data);
+            alert('No se pudieron extraer datos automáticamente. Rellena el formulario manualmente.');
+        }
+    } catch(e) {
+        console.error(e);
+        alert('Error al analizar factura');
+    } finally {
+        if(document.body.contains(loadingDiv)) document.body.removeChild(loadingDiv);
+    }
+}
+
+async function buscarYSeleccionarProveedor(nombre, nif) {
+    if(!nombre && !nif) return;
+    
+    try {
+        const res = await fetch(`/api/proveedores/listar?activos=true`);
+        const data = await res.json();
+        const items = data.proveedores || [];
+        
+        let match = null;
+        // Buscar por NIF
+        if(nif) {
+            match = items.find(p => p.nif && p.nif.toLowerCase().replace(/[^a-z0-9]/g, '') === nif.toLowerCase().replace(/[^a-z0-9]/g, ''));
+        }
+        // Buscar por Nombre
+        if(!match && nombre) {
+            match = items.find(p => p.nombre.toLowerCase().includes(nombre.toLowerCase()));
+        }
+        
+        if(match) {
+            document.getElementById('proveedor-id').value = match.id;
+            document.getElementById('proveedor-nombre').textContent = match.nombre;
+        } else if(nombre) {
+            if(confirm(`Proveedor "${nombre}" no encontrado. ¿Deseas crearlo ahora?`)) {
+                 const resProv = await fetch('/api/proveedores/crear', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({nombre: nombre, nif: nif || ''})
+                });
+                const dProv = await resProv.json();
+                if(dProv.success) {
+                    document.getElementById('proveedor-id').value = dProv.id;
+                    document.getElementById('proveedor-nombre').textContent = nombre;
+                }
+            }
+        }
+    } catch(e) { console.error(e); }
+}
 
 async function cargarFactura(id) {
     try {

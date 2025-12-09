@@ -12,6 +12,7 @@ Fecha: 2025-10-21
 import os
 import uuid
 import secrets
+import requests
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
@@ -96,6 +97,131 @@ def login():
     except Exception as e:
         logger.error(f"Error en endpoint login: {e}", exc_info=True)
         return jsonify({'error': 'Error en el servidor'}), 500
+
+@auth_bp.route('/google', methods=['POST'])
+def google_auth():
+    """
+    Autenticación/Registro con Google
+    Recibe un JWT credential del frontend.
+    """
+    try:
+        data = request.json
+        token = data.get('token')
+        
+        if not token:
+            return jsonify({'error': 'Token no proporcionado'}), 400
+            
+        # Verificar token con Google
+        google_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={token}"
+        res = requests.get(google_url)
+        
+        if res.status_code != 200:
+            logger.error(f"Token Google inválido: {res.text}")
+            return jsonify({'error': 'Token de Google inválido'}), 401
+            
+        google_data = res.json()
+        
+        email = google_data.get('email')
+        name = google_data.get('name')
+        picture = google_data.get('picture')
+        
+        if not email:
+            return jsonify({'error': 'Google no proporcionó email'}), 400
+            
+        # Buscar usuario en BD
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM usuarios WHERE email = ?", (email,))
+            usuario = cursor.fetchone()
+            
+            user_id = None
+            username = ""
+            rol = "consultor"
+            
+            if usuario:
+                # Usuario existe
+                user_id = usuario['id']
+                username = usuario['username']
+                rol = usuario['rol']
+                logger.info(f"Login Google: Usuario existente {email}")
+                
+                # Actualizar avatar si no tiene
+                if picture and not usuario['avatar']:
+                    cursor.execute("UPDATE usuarios SET avatar = ? WHERE id = ?", (picture, user_id))
+                    conn.commit()
+            else:
+                # Usuario no existe, CREARLO
+                logger.info(f"Login Google: Creando nuevo usuario {email}")
+                
+                # Generar username único
+                username_base = email.split('@')[0]
+                username = username_base
+                counter = 1
+                while True:
+                    cursor.execute("SELECT 1 FROM usuarios WHERE username = ?", (username,))
+                    if not cursor.fetchone():
+                        break
+                    username = f"{username_base}{counter}"
+                    counter += 1
+                
+                # Password aleatoria
+                password_random = secrets.token_urlsafe(16)
+                password_hash = generate_password_hash(password_random)
+                
+                cursor.execute("""
+                    INSERT INTO usuarios (username, password_hash, email, nombre_completo, avatar, rol, activo, fecha_creacion)
+                    VALUES (?, ?, ?, ?, ?, 'consultor', 1, CURRENT_TIMESTAMP)
+                """, (username, password_hash, email, name, picture))
+                
+                user_id = cursor.lastrowid
+                conn.commit()
+        
+        # Iniciar sesión
+        session.clear()
+        session['user_id'] = user_id
+        session['username'] = username
+        session['email'] = email
+        session['rol'] = rol
+        session['nombre_completo'] = name
+        session['ultimo_acceso'] = datetime.now().isoformat()
+        
+        # Intentar auto-seleccionar empresa si tiene una sola
+        empresas = obtener_empresas_usuario(username)
+        if len(empresas) == 1:
+            emp = empresas[0]
+            session['empresa_id'] = emp['id']
+            session['empresa_nombre'] = emp['nombre']
+            session['empresa_codigo'] = emp['codigo']
+            session['empresa_logo'] = emp['logo']
+            
+            # Verificar rol específico en esa empresa
+            with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT es_admin FROM usuario_empresa WHERE usuario_id=? AND empresa_id=?", (user_id, emp['id']))
+                row = cursor.fetchone()
+                if row and row[0]:
+                    session['es_admin_empresa'] = True
+        
+        # Registrar auditoría
+        registrar_auditoria('login_google', f"Login vía Google: {email}")
+        
+        # Respuesta exitosa
+        response = make_response(jsonify({
+            'success': True,
+            'usuario': name,
+            'redirect': '/api/auth/app'
+        }), 200)
+        
+        session.permanent = True
+        session.modified = True
+        
+        return response
+
+    except Exception as e:
+        logger.error(f"Error en auth google: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno al procesar login Google'}), 500
 
 @auth_bp.route('/logout', methods=['POST'])
 @login_required
