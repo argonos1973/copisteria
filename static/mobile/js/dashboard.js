@@ -1,23 +1,36 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Dashboard Móvil Iniciado');
-    cargarResumen();
-    cargarTickets();
+    initDashboard();
 });
+
+async function initDashboard() {
+    const hasPermission = await checkStatsPermission();
+    if (hasPermission) {
+        cargarResumen();
+    } else {
+        const card = document.querySelector('.summary-card');
+        if(card) card.style.display = 'none';
+    }
+    cargarTickets();
+}
+
+async function checkStatsPermission() {
+    try {
+        const res = await fetch('/api/auth/session');
+        if(res.ok) {
+            const data = await res.json();
+            // Lógica idéntica a escritorio: solo admin empresa o superadmin ven estadísticas
+            return data.es_admin_empresa || data.es_superadmin;
+        }
+        return false;
+    } catch(e) {
+        console.error('Error verificando permisos:', e);
+        return false;
+    }
+}
 
 async function cargarResumen() {
     const summaryCard = document.querySelector('.summary-card');
     try {
-        // Verificar permisos primero
-        const sessionRes = await fetch('/api/auth/session');
-        if(sessionRes.ok) {
-            const user = await sessionRes.json();
-            // Si no es admin ni tiene rol de admin, ocultar
-            if (!user.es_admin && user.rol !== 'admin' && !user.es_superadmin) {
-                if(summaryCard) summaryCard.style.display = 'none';
-                return;
-            }
-        }
-
         // Consumir API existente de estadísticas
         const response = await fetch('/api/dashboard/estadisticas_gastos');
         
