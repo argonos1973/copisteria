@@ -274,7 +274,62 @@ def inicializar_bd_usuarios():
         logger.error(f"❌ Error creando BD de usuarios: {e}", exc_info=True)
         return False
 
+def verificar_y_actualizar_esquema():
+    """
+    Verifica que existan las columnas necesarias y las crea si faltan.
+    Hace el sistema robusto a cambios de esquema.
+    """
+    import sqlite3
+    
+    if not os.path.exists(DB_USUARIOS_PATH):
+        return
+
+    try:
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        
+        # 1. Verificar tabla USUARIOS
+        cursor.execute("PRAGMA table_info(usuarios)")
+        columnas_usuarios = {row[1] for row in cursor.fetchall()}
+        
+        columnas_requeridas_usuarios = {
+            'rol': "TEXT DEFAULT 'consultor'",
+            'avatar': "TEXT",
+            'verification_token': "TEXT",
+            'token_expiry': "DATETIME",
+            'intentos_fallidos': "INTEGER DEFAULT 0",
+            'ultimo_acceso': "DATETIME"
+        }
+        
+        for col, tipo in columnas_requeridas_usuarios.items():
+            if col not in columnas_usuarios:
+                logger.info(f"🛠️ Migración: Agregando columna '{col}' a tabla 'usuarios'...")
+                try:
+                    cursor.execute(f"ALTER TABLE usuarios ADD COLUMN {col} {tipo}")
+                except Exception as e:
+                    logger.error(f"Error agregando columna {col}: {e}")
+
+        # 2. Verificar tabla USUARIO_EMPRESA
+        cursor.execute("PRAGMA table_info(usuario_empresa)")
+        columnas_ue = {row[1] for row in cursor.fetchall()}
+        
+        if 'es_admin_empresa' not in columnas_ue:
+            logger.info(f"🛠️ Migración: Agregando columna 'es_admin_empresa' a tabla 'usuario_empresa'...")
+            try:
+                cursor.execute("ALTER TABLE usuario_empresa ADD COLUMN es_admin_empresa BOOLEAN DEFAULT 0")
+            except Exception as e:
+                logger.error(f"Error agregando columna es_admin_empresa: {e}")
+
+        conn.commit()
+        conn.close()
+        
+    except Exception as e:
+        logger.error(f"Error verificando esquema: {e}", exc_info=True)
+
 # Inicializar BD al importar el módulo
 if not os.path.exists(DB_USUARIOS_PATH):
     logger.info("Detectada primera ejecución del sistema multiempresa")
     inicializar_bd_usuarios()
+else:
+    # Verificar esquema en cada inicio para asegurar integridad
+    verificar_y_actualizar_esquema()
