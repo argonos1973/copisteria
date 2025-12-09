@@ -489,3 +489,5 @@ window.seleccionarCliente = seleccionarCliente;
 window.confirmarPago = confirmarPago;
 window.cerrarModalPagos = cerrarModalPagos;
 window.actualizarCambio = actualizarCambio;
+window.buscarProductos = buscarProductos;
+window.seleccionarProducto = seleccionarProducto;

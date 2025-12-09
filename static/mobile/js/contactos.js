@@ -80,7 +80,12 @@ function createContactoCard(c) {
     const div = document.createElement('div');
     div.className = 'ticket-card';
     div.style.borderLeft = '4px solid #3498db';
-    div.onclick = () => window.location.href = `/api/auth/mobile/contactos/gestion?id=${c.id || c.idContacto}`;
+    
+    div.onclick = (e) => {
+        // Evitar navegación si clic en botones
+        if(e.target.closest('.btn-action')) return;
+        window.location.href = `/api/auth/mobile/contactos/gestion?id=${c.id || c.idContacto}`;
+    };
     
     div.innerHTML = `
         <div class="tc-header">
@@ -91,6 +96,23 @@ function createContactoCard(c) {
             <div>${c.mail || c.email || ''}</div>
             <div>${c.telefono || ''}</div>
         </div>
+        <div class="tc-footer" style="margin-top:10px; padding-top:10px; border-top:1px dashed #eee; display:flex; gap:10px; justify-content:flex-end;">
+            <button class="btn-action" onclick="crearDocumento('factura', ${c.id || c.idContacto})" style="background:#e6f7ff; color:#1890ff; border:none; padding:8px 12px; border-radius:4px; font-size:12px; font-weight:500;">
+                <i class="fas fa-file-invoice"></i> Factura
+            </button>
+            <button class="btn-action" onclick="crearDocumento('proforma', ${c.id || c.idContacto})" style="background:#fff7e6; color:#fa8c16; border:none; padding:8px 12px; border-radius:4px; font-size:12px; font-weight:500;">
+                <i class="fas fa-file-contract"></i> Proforma
+            </button>
+        </div>
     `;
     return div;
 }
+
+function crearDocumento(tipo, idContacto) {
+    if(tipo === 'factura') {
+        window.location.href = `/api/auth/mobile/facturas/gestion?cliente_id=${idContacto}`;
+    } else if(tipo === 'proforma') {
+        window.location.href = `/api/auth/mobile/proformas/gestion?cliente_id=${idContacto}`;
+    }
+}
+window.crearDocumento = crearDocumento;

@@ -57,6 +57,22 @@ async function cargarUsuario() {
             if(elUser) elUser.textContent = data.usuario || data.username;
             if(elRol) elRol.textContent = data.rol || 'Usuario';
             
+            // Inyectar Avatar
+            const userProfile = document.querySelector('.user-mini-profile');
+            if(userProfile && data.avatar) {
+                userProfile.style.display = 'flex';
+                userProfile.style.alignItems = 'center';
+                
+                let img = userProfile.querySelector('img.user-avatar');
+                if(!img) {
+                    img = document.createElement('img');
+                    img.className = 'user-avatar';
+                    img.style.cssText = 'width:40px;height:40px;border-radius:50%;object-fit:cover;margin-right:10px;';
+                    userProfile.insertBefore(img, userProfile.firstChild);
+                }
+                img.src = data.avatar;
+            }
+            
             // Actualizar logos
             if(data.logo) {
                 if(drawerLogo) drawerLogo.src = data.logo;
