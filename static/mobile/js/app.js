@@ -118,6 +118,20 @@ function createMenuItem(item) {
     if(href === '/CONSULTA_FACTURAS.html') href = '/api/auth/mobile/facturas';
     if(href === '/GESTION_FACTURAS.html') href = '/api/auth/mobile/facturas/gestion';
     
+    if(href === '/CONSULTA_GASTOS.html') href = '/api/auth/mobile/gastos';
+    
+    if(href === '/CONSULTA_CONTACTOS.html') href = '/api/auth/mobile/contactos';
+    if(href === '/GESTION_CONTACTOS.html') href = '/api/auth/mobile/contactos/gestion';
+    
+    if(href === '/CONSULTA_PRODUCTOS.html') href = '/api/auth/mobile/productos';
+    if(href === '/GESTION_PRODUCTOS.html') href = '/api/auth/mobile/productos/gestion';
+    
+    if(href === '/CONSULTA_PRESUPUESTOS.html') href = '/api/auth/mobile/presupuestos';
+    if(href === '/GESTION_PRESUPUESTOS.html') href = '/api/auth/mobile/presupuestos/gestion';
+    
+    if(href === '/CONSULTA_PROFORMAS.html') href = '/api/auth/mobile/proformas';
+    if(href === '/GESTION_PROFORMAS.html') href = '/api/auth/mobile/proformas/gestion';
+    
     a.href = href === '#' ? 'javascript:void(0)' : href;
     
     // Si es una ruta relativa html, asegurar que funcione en móvil (quizás necesite prefijo o manejo de ruta)

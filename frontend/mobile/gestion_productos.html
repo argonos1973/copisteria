@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestión Producto - Aleph70</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/mobile/css/styles.css">
+</head>
+<body>
+    <header class="mobile-header">
+        <div class="header-left">
+            <button onclick="history.back()" style="background:none; border:none; font-size: 20px; color: var(--color-text); margin-right: 15px;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <span class="header-title" id="page-title">Nuevo Producto</span>
+        </div>
+        <div class="header-right">
+            <button onclick="guardarProducto()" style="background:none; border:none; color: var(--color-primary); font-weight: 600;">Guardar</button>
+        </div>
+    </header>
+
+    <main class="mobile-content" style="background: #fff; padding: 20px;">
+        <div class="form-group">
+            <label class="form-label">Nombre</label>
+            <input type="text" class="form-control" id="nombre" placeholder="Nombre del producto">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Referencia</label>
+            <input type="text" class="form-control" id="referencia" placeholder="REF-001">
+        </div>
+        <div style="display:flex; gap:10px;">
+            <div class="form-group" style="flex:1;">
+                <label class="form-label">Precio Venta (€)</label>
+                <input type="number" class="form-control" id="precio_venta" step="0.01">
+            </div>
+            <div class="form-group" style="flex:1;">
+                <label class="form-label">IVA (%)</label>
+                <select class="form-control" id="iva">
+                    <option value="21">21%</option>
+                    <option value="10">10%</option>
+                    <option value="4">4%</option>
+                    <option value="0">0%</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Descripción</label>
+            <textarea class="form-control" id="descripcion" rows="3"></textarea>
+        </div>
+    </main>
+
+    <script src="/static/mobile/js/app.js"></script>
+    <script src="/static/mobile/js/gestion_productos.js"></script>
+</body>
+</html>

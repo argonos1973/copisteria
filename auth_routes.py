@@ -671,6 +671,134 @@ def servir_mobile_facturas_gestion():
         logger.error(f"Error sirviendo gestion facturas mobile: {e}", exc_info=True)
         return jsonify({'error': 'Error interno'}), 500
 
+@auth_bp.route('/mobile/gastos', methods=['GET'])
+@login_required
+def servir_mobile_gastos():
+    """Sirve la vista móvil de gastos"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'gastos.html')
+        
+        if not os.path.exists(app_path):
+             return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo gastos mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+@auth_bp.route('/mobile/contactos', methods=['GET'])
+@login_required
+def servir_mobile_contactos():
+    """Sirve la vista móvil de contactos"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'contactos.html')
+        if not os.path.exists(app_path): return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo contactos mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+@auth_bp.route('/mobile/contactos/gestion', methods=['GET'])
+@login_required
+def servir_mobile_contactos_gestion():
+    """Sirve la vista móvil de gestión de contactos"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'gestion_contactos.html')
+        if not os.path.exists(app_path): return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo gestion contactos mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+@auth_bp.route('/mobile/productos', methods=['GET'])
+@login_required
+def servir_mobile_productos():
+    """Sirve la vista móvil de productos"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'productos.html')
+        if not os.path.exists(app_path): return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo productos mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+@auth_bp.route('/mobile/productos/gestion', methods=['GET'])
+@login_required
+def servir_mobile_productos_gestion():
+    """Sirve la vista móvil de gestión de productos"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'gestion_productos.html')
+        if not os.path.exists(app_path): return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo gestion productos mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+@auth_bp.route('/mobile/presupuestos', methods=['GET'])
+@login_required
+def servir_mobile_presupuestos():
+    """Sirve la vista móvil de presupuestos"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'presupuestos.html')
+        if not os.path.exists(app_path): return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo presupuestos mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+@auth_bp.route('/mobile/presupuestos/gestion', methods=['GET'])
+@login_required
+def servir_mobile_presupuestos_gestion():
+    """Sirve la vista móvil de gestión de presupuestos"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'gestion_presupuestos.html')
+        if not os.path.exists(app_path): return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo gestion presupuestos mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+@auth_bp.route('/mobile/proformas', methods=['GET'])
+@login_required
+def servir_mobile_proformas():
+    """Sirve la vista móvil de proformas"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'proformas.html')
+        if not os.path.exists(app_path): return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo proformas mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+@auth_bp.route('/mobile/proformas/gestion', methods=['GET'])
+@login_required
+def servir_mobile_proformas_gestion():
+    """Sirve la vista móvil de gestión de proformas"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'gestion_proformas.html')
+        if not os.path.exists(app_path): return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo gestion proformas mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
 @auth_bp.route('/branding-preview/<empresa_codigo>', methods=['GET'])
 def obtener_branding_preview(empresa_codigo):
     """

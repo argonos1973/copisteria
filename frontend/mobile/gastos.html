@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gastos - Aleph70</title>
+    
+    <!-- Fuentes e Iconos -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Estilos Móvil -->
+    <link rel="stylesheet" href="/static/mobile/css/styles.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="mobile-header">
+        <div class="header-left" style="display: flex; align-items: center; gap: 15px;">
+            <button id="btn-menu-drawer" style="background:none; border:none; font-size: 20px; color: var(--color-text); padding: 5px;">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="header-title">Gastos</span>
+        </div>
+        <div class="header-right">
+            <!-- Header Logo se llenará con JS -->
+            <img src="" alt="" style="height: 28px; display:none;"> 
+        </div>
+    </header>
+
+    <!-- Drawer Menu (Sidebar Móvil) -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <aside class="mobile-drawer" id="mobile-drawer">
+        <div class="drawer-header">
+            <img src="/static/logos/default_header.png" alt="Logo" style="height: 30px;">
+            <button id="btn-close-drawer"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="drawer-content" id="drawer-menu-list">
+            <div style="padding: 20px; text-align: center; color: #999;">Cargando menú...</div>
+        </div>
+        <div class="drawer-footer">
+            <div class="user-mini-profile">
+                <div class="user-name" id="drawer-username">Usuario</div>
+                <div class="user-role" id="drawer-rol">Rol</div>
+            </div>
+            <button class="btn-logout" onclick="logoutApp()">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="mobile-content" style="padding: 0; background: #f5f7fa;">
+        
+        <!-- Buscador y Filtros -->
+        <div class="search-bar" style="flex-direction: column; gap: 8px;">
+            <div class="search-input-container" style="width: 100%;">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-input" id="search-input" placeholder="Buscar concepto...">
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <input type="date" id="fecha-desde" class="search-input" style="padding: 8px; font-size: 12px;">
+                <input type="date" id="fecha-hasta" class="search-input" style="padding: 8px; font-size: 12px;">
+                <button class="btn-filter" id="btn-refresh" style="width: auto; padding: 0 15px; border-radius: 8px;">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Lista Gastos -->
+        <div class="tickets-list" id="tickets-container">
+            <div class="loading-spinner">
+                <i class="fas fa-circle-notch fa-spin"></i> Cargando gastos...
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Navegación Inferior -->
+    <nav class="bottom-nav">
+        <a href="/api/auth/app" class="nav-item">
+            <i class="fas fa-home"></i>
+            <span>Inicio</span>
+        </a>
+        <a href="/api/auth/mobile/facturas" class="nav-item">
+            <i class="fas fa-file-invoice-dollar"></i>
+            <span>Facturas</span>
+        </a>
+        <a href="/api/auth/mobile/tickets" class="nav-item">
+            <i class="fas fa-ticket-alt"></i>
+            <span>Tickets</span>
+        </a>
+        <a href="/api/auth/mobile/gastos" class="nav-item active">
+            <i class="fas fa-chart-pie"></i>
+            <span>Gastos</span>
+        </a>
+    </nav>
+
+    <!-- Scripts -->
+    <script src="/static/mobile/js/app.js"></script>
+    <script src="/static/mobile/js/gastos.js"></script>
+</body>
+</html>
