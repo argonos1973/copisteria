@@ -124,6 +124,22 @@
         </div>
     </div>
 
+    <!-- Modal Selector Cliente -->
+    <div id="modal-cliente" class="modal-mobile">
+        <div class="modal-header">
+            <button onclick="cerrarModalCliente()" style="background:none; border:none; font-size:20px;"><i class="fas fa-times"></i></button>
+            <span style="font-weight:600; font-size:18px;">Seleccionar Cliente</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <input type="text" class="form-control" id="cliente-search" placeholder="Buscar cliente..." oninput="buscarClientes(this.value)">
+            </div>
+            <div id="cliente-resultados">
+                <!-- Lista de clientes -->
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL PAGOS -->
     <div class="modal-mobile" id="modal-pagos">
         <div class="modal-header">
