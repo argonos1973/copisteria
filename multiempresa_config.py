@@ -71,6 +71,11 @@ DEFAULT_BRANDING = {
     'logo_factura': DEFAULT_LOGOS['factura']
 }
 
+# Configuración de Google Auth
+GOOGLE_AUTH_CONFIG = {
+    'CLIENT_ID': 'YOUR_GOOGLE_CLIENT_ID' # REEMPLAZAR CON ID REAL DE GOOGLE CLOUD CONSOLE
+}
+
 # Módulos del sistema con configuración
 MODULOS_SISTEMA = {
     'facturas': {

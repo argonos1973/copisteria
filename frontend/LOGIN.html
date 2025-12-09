@@ -271,24 +271,8 @@
                     <a href="/forgot-password.html">¿Olvidaste tu contraseña?</a>
                 </div>
 
-                <div style="margin-top: 20px; display: flex; justify-content: center;">
-                    <div id="g_id_onload"
-                         data-client_id="YOUR_GOOGLE_CLIENT_ID"
-                         data-context="signup"
-                         data-ux_mode="popup"
-                         data-callback="handleGoogleCredentialResponse"
-                         data-auto_prompt="false">
-                    </div>
-
-                    <div class="g_id_signin"
-                         data-type="standard"
-                         data-shape="rectangular"
-                         data-theme="outline"
-                         data-text="signup_with"
-                         data-size="large"
-                         data-logo_alignment="left">
-                    </div>
-                </div>
+                <!-- Contenedor botón Google -->
+                <div style="margin-top: 20px; display: flex; justify-content: center;" id="google-btn-container"></div>
             </form>
             
             <!-- Paso 2: Selector de empresa (oculto inicialmente) -->
@@ -346,6 +330,35 @@
                 mostrarCargando(false);
             }
         }
+
+        // Inicializar Google Auth
+        async function initGoogleAuth() {
+            try {
+                const res = await fetch('/api/auth/config');
+                if(res.ok) {
+                    const config = await res.json();
+                    if(config.google_client_id && config.google_client_id !== 'YOUR_GOOGLE_CLIENT_ID') {
+                        google.accounts.id.initialize({
+                            client_id: config.google_client_id,
+                            callback: handleGoogleCredentialResponse,
+                            context: 'signup',
+                            ux_mode: 'popup',
+                            auto_select: false
+                        });
+                        google.accounts.id.renderButton(
+                            document.getElementById("google-btn-container"),
+                            { theme: "outline", size: "large", width: 340, text: "signup_with" }
+                        );
+                    } else {
+                        console.log('Google Auth no configurado o usando ID por defecto.');
+                    }
+                }
+            } catch(e) { console.error('Error init google', e); }
+        }
+
+        window.onload = function() {
+            initGoogleAuth();
+        };
 
         // Manejo del formulario de login
         document.getElementById('login-form').addEventListener('submit', async (e) => {

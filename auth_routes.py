@@ -23,7 +23,7 @@ from auth_middleware import (
     login_required, registrar_auditoria
 )
 import sqlite3
-from multiempresa_config import DB_USUARIOS_PATH
+from multiempresa_config import DB_USUARIOS_PATH, GOOGLE_AUTH_CONFIG
 from database_pool import get_database_pool
 from email_utils import enviar_email_recuperacion_password
 
@@ -42,6 +42,13 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 # ============================================================================
 # ENDPOINTS DE AUTENTICACIÓN
 # ============================================================================
+
+@auth_bp.route('/config', methods=['GET'])
+def get_auth_config():
+    """Retorna configuración pública de autenticación"""
+    return jsonify({
+        'google_client_id': GOOGLE_AUTH_CONFIG.get('CLIENT_ID')
+    })
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
