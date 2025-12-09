@@ -73,7 +73,7 @@ DEFAULT_BRANDING = {
 
 # Configuración de Google Auth
 GOOGLE_AUTH_CONFIG = {
-    'CLIENT_ID': 'YOUR_GOOGLE_CLIENT_ID' # REEMPLAZAR CON ID REAL DE GOOGLE CLOUD CONSOLE
+    'CLIENT_ID': '496347553218-qmp8qtqm3qub97j03ibcl2hu3l6n8oqm.apps.googleusercontent.com'
 }
 
 # Módulos del sistema con configuración
