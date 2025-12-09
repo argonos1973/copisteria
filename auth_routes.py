@@ -206,7 +206,7 @@ def google_auth():
             # Verificar rol específico en esa empresa
             with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute("SELECT es_admin FROM usuario_empresa WHERE usuario_id=? AND empresa_id=?", (user_id, emp['id']))
+                cursor.execute("SELECT es_admin_empresa FROM usuario_empresa WHERE usuario_id=? AND empresa_id=?", (user_id, emp['id']))
                 row = cursor.fetchone()
                 if row and row[0]:
                     session['es_admin_empresa'] = True
@@ -228,7 +228,8 @@ def google_auth():
 
     except Exception as e:
         logger.error(f"Error en auth google: {e}", exc_info=True)
-        return jsonify({'error': 'Error interno al procesar login Google'}), 500
+        # DEBUG: Retornar el error específico para depuración
+        return jsonify({'error': f'Error interno: {str(e)}'}), 500
 
 @auth_bp.route('/logout', methods=['POST'])
 @login_required

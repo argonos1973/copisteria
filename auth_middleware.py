@@ -371,7 +371,7 @@ def obtener_empresas_usuario(username):
         cursor = conn.cursor()
         
         cursor.execute('''
-            SELECT e.codigo, e.nombre, e.logo_header
+            SELECT e.id, e.codigo, e.nombre, e.logo_header
             FROM empresas e
             JOIN usuario_empresa ue ON e.id = ue.empresa_id
             JOIN usuarios u ON ue.usuario_id = u.id
@@ -382,9 +382,10 @@ def obtener_empresas_usuario(username):
         empresas = []
         for row in cursor.fetchall():
             empresas.append({
-                'codigo': row[0],
-                'nombre': row[1],
-                'logo': row[2]
+                'id': row[0],
+                'codigo': row[1],
+                'nombre': row[2],
+                'logo': row[3]
             })
         
         conn.close()
