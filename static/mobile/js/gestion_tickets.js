@@ -241,9 +241,27 @@ async function buscarProductos(query) {
 }
 
 function seleccionarProducto(p) {
-    document.getElementById('prod-desc').value = p.nombre;
-    document.getElementById('prod-precio').value = p.precio_venta;
-    document.getElementById('prod-iva').value = p.iva;
+    document.getElementById('prod-desc').value = p.nombre || '';
+    
+    // Precio: asegurar formato numérico con 2 decimales
+    const precio = parseFloat(p.precio_venta || p.precio || 0);
+    document.getElementById('prod-precio').value = precio.toFixed(2);
+    
+    // IVA: seleccionar opción correcta
+    const iva = parseInt(p.iva || 21);
+    const selectIva = document.getElementById('prod-iva');
+    selectIva.value = iva.toString();
+    
+    // Fallback por si el valor exacto (string) no coincide
+    if(selectIva.value !== iva.toString()) {
+        for(let i=0; i<selectIva.options.length; i++) {
+            if(parseInt(selectIva.options[i].value) === iva) {
+                selectIva.selectedIndex = i;
+                break;
+            }
+        }
+    }
+    
     document.getElementById('prod-resultados').style.display = 'none';
     document.getElementById('prod-search').value = '';
 }
