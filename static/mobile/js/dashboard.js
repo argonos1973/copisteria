@@ -18,14 +18,36 @@ async function checkStatsPermission() {
         const res = await fetch('/api/auth/session');
         if(res.ok) {
             const data = await res.json();
-            // Lógica idéntica a escritorio: solo admin empresa o superadmin ven estadísticas
-            return data.es_admin_empresa || data.es_superadmin;
+            
+            // Actualizar UI con datos de sesión
+            updateSessionUI(data);
+
+            // Permiso para estadísticas
+            // Permitir si es admin de empresa, superadmin O si tiene rol 'admin'
+            return data.es_admin_empresa || data.es_superadmin || data.rol === 'admin';
         }
         return false;
     } catch(e) {
         console.error('Error verificando permisos:', e);
         return false;
     }
+}
+
+function updateSessionUI(data) {
+    // Header Logo
+    const headerLogo = document.querySelector('.header-left img');
+    if(headerLogo && data.logo) {
+        headerLogo.src = data.logo; // data.logo viene con /static/logos/...
+    }
+    
+    // Drawer Info
+    const drawerUsername = document.getElementById('drawer-username');
+    const drawerRol = document.getElementById('drawer-rol');
+    const drawerLogo = document.querySelector('.drawer-header img');
+    
+    if(drawerUsername) drawerUsername.textContent = data.usuario || data.username;
+    if(drawerRol) drawerRol.textContent = data.rol || 'Usuario';
+    if(drawerLogo && data.logo) drawerLogo.src = data.logo;
 }
 
 async function cargarResumen() {

@@ -51,8 +51,19 @@ async function cargarUsuario() {
             const data = await response.json();
             const elUser = document.getElementById('drawer-username');
             const elRol = document.getElementById('drawer-rol');
+            const drawerLogo = document.querySelector('.drawer-header img');
+            const headerLogo = document.querySelector('.header-left img'); // Header principal
+
             if(elUser) elUser.textContent = data.usuario || data.username;
             if(elRol) elRol.textContent = data.rol || 'Usuario';
+            
+            // Actualizar logos
+            if(data.logo) {
+                if(drawerLogo) drawerLogo.src = data.logo;
+                if(headerLogo && !headerLogo.src.includes(data.logo)) {
+                     headerLogo.src = data.logo;
+                }
+            }
         }
     } catch(e) { console.error('Error cargando usuario', e); }
 }
@@ -104,7 +115,8 @@ function createMenuItem(item) {
     let href = item.ruta;
     if(href === '/CONSULTA_TICKETS.html') href = '/api/auth/mobile/tickets';
     if(href === '/GESTION_TICKETS.html') href = '/api/auth/mobile/tickets/gestion';
-    // Futuro: if(href === '/CONSULTA_FACTURAS.html') href = '/api/auth/mobile/facturas';
+    if(href === '/CONSULTA_FACTURAS.html') href = '/api/auth/mobile/facturas';
+    if(href === '/GESTION_FACTURAS.html') href = '/api/auth/mobile/facturas/gestion';
     
     a.href = href === '#' ? 'javascript:void(0)' : href;
     
