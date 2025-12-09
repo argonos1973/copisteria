@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tickets - Aleph70</title>
+    <title>Facturas - Aleph70</title>
     
     <!-- Fuentes e Iconos -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
@@ -20,7 +20,7 @@
             <button id="btn-menu-drawer" style="background:none; border:none; font-size: 20px; color: var(--color-text); padding: 5px;">
                 <i class="fas fa-bars"></i>
             </button>
-            <span class="header-title">Tickets</span>
+            <span class="header-title">Facturas</span>
         </div>
         <div class="header-right">
             <!-- Opcional: Filtros o Sort -->
@@ -55,7 +55,7 @@
         <div class="search-bar" style="flex-direction: column; gap: 8px;">
             <div class="search-input-container" style="width: 100%;">
                 <i class="fas fa-search search-icon"></i>
-                <input type="text" class="search-input" id="search-input" placeholder="Buscar ticket, cliente...">
+                <input type="text" class="search-input" id="search-input" placeholder="Buscar factura, cliente...">
             </div>
             <div style="display: flex; gap: 5px;">
                 <input type="date" id="fecha-desde" class="search-input" style="padding: 8px; font-size: 12px;">
@@ -66,16 +66,16 @@
             </div>
         </div>
 
-        <!-- Lista Tickets -->
+        <!-- Lista Facturas -->
         <div class="tickets-list" id="tickets-container">
-            <!-- Se llena vía JS -->
+            <!-- Se llena vía JS (reutilizamos clase tickets-list por estilos) -->
             <div class="loading-spinner">
-                <i class="fas fa-circle-notch fa-spin"></i> Cargando tickets...
+                <i class="fas fa-circle-notch fa-spin"></i> Cargando facturas...
             </div>
         </div>
 
-        <!-- FAB Nuevo Ticket -->
-        <a href="/api/auth/mobile/tickets/gestion" class="fab-add">
+        <!-- FAB Nuevo -->
+        <a href="/api/auth/mobile/facturas/gestion" class="fab-add">
             <i class="fas fa-plus"></i>
         </a>
 
@@ -87,11 +87,11 @@
             <i class="fas fa-home"></i>
             <span>Inicio</span>
         </a>
-        <a href="/api/auth/mobile/facturas" class="nav-item">
+        <a href="/api/auth/mobile/facturas" class="nav-item active">
             <i class="fas fa-file-invoice-dollar"></i>
             <span>Facturas</span>
         </a>
-        <a href="/api/auth/mobile/tickets" class="nav-item active">
+        <a href="/api/auth/mobile/tickets" class="nav-item">
             <i class="fas fa-ticket-alt"></i>
             <span>Tickets</span>
         </a>
@@ -106,6 +106,6 @@
 
     <!-- Scripts -->
     <script src="/static/mobile/js/app.js"></script>
-    <script src="/static/mobile/js/tickets.js"></script>
+    <script src="/static/mobile/js/facturas.js"></script>
 </body>
 </html>

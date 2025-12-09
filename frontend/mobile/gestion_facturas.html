@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestión Factura - Aleph70</title>
+    
+    <!-- Fuentes e Iconos -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Estilos Móvil -->
+    <link rel="stylesheet" href="/static/mobile/css/styles.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="mobile-header">
+        <div class="header-left">
+            <button onclick="history.back()" style="background:none; border:none; font-size: 20px; color: var(--color-text); margin-right: 15px;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <span class="header-title" id="page-title">Nueva Factura</span>
+        </div>
+        <div class="header-right">
+            <button onclick="guardarFactura()" style="background:none; border:none; color: var(--color-primary); font-weight: 600;">
+                Guardar
+            </button>
+        </div>
+    </header>
+
+    <!-- Cliente (Visible en Facturas) -->
+    <div class="form-section">
+        <div class="form-label">CLIENTE</div>
+        <div class="client-selector" onclick="abrirModalCliente()">
+            <div id="cliente-nombre">Seleccionar Cliente...</div>
+            <i class="fas fa-chevron-right" style="color:#ccc;"></i>
+        </div>
+        <input type="hidden" id="cliente-id" value="">
+    </div>
+
+    <!-- Líneas -->
+    <div class="form-section" style="min-height: 200px;">
+        <div class="form-label">CONCEPTOS</div>
+        <div id="lineas-container">
+            <!-- Se llena con JS -->
+            <div style="text-align:center; padding: 20px; color: #aaa;" id="empty-msg">
+                Añade productos o conceptos
+            </div>
+        </div>
+    </div>
+
+    <!-- Totales -->
+    <div class="form-section">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+            <span style="color:#888;">Base Imponible</span>
+            <span id="resumen-base">0,00 €</span>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+            <span style="color:#888;">Impuestos</span>
+            <span id="resumen-iva">0,00 €</span>
+        </div>
+    </div>
+
+    <!-- FAB Añadir -->
+    <button class="fab-add-line" onclick="abrirModalProducto()">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Footer Fijo -->
+    <div class="gestion-footer">
+        <div class="total-display">
+            <span class="total-label">TOTAL A PAGAR</span>
+            <span class="total-value" id="total-final">0,00 €</span>
+        </div>
+        <button class="btn-cobrar" onclick="cobrarFactura()">
+            <i class="fas fa-check"></i> COBRAR
+        </button>
+    </div>
+
+    <!-- MODAL PRODUCTO -->
+    <div class="modal-mobile" id="modal-producto">
+        <div class="modal-header">
+            <button onclick="cerrarModalProducto()" style="border:none; background:none; font-size:20px;"><i class="fas fa-times"></i></button>
+            <span style="font-weight:600;">Añadir Concepto</span>
+        </div>
+        <div class="modal-body">
+            <!-- Buscador -->
+            <div class="form-group" style="position:relative; margin-bottom:20px;">
+                <label class="form-label">BUSCAR PRODUCTO</label>
+                <div class="search-input-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" id="prod-search" placeholder="Escribe para buscar..." oninput="buscarProductos(this.value)" autocomplete="off">
+                </div>
+                <div id="prod-resultados" style="max-height:200px; overflow-y:auto; border:1px solid #eee; border-top:none; border-radius:0 0 8px 8px; display:none; background:#fff; position:absolute; width:100%; z-index:100; box-shadow:0 4px 10px rgba(0,0,0,0.1);">
+                    <!-- Resultados JS -->
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Descripción</label>
+                <input type="text" class="form-control" id="prod-desc" placeholder="Descripción del concepto">
+            </div>
+            <div style="display:flex; gap:10px;">
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Cantidad</label>
+                    <input type="number" class="form-control" id="prod-cant" value="1" step="1">
+                </div>
+                <div class="form-group" style="flex:1;">
+                    <label class="form-label">Precio (€)</label>
+                    <input type="number" class="form-control" id="prod-precio" value="0.00" step="0.01">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">IVA (%)</label>
+                <select class="form-control" id="prod-iva">
+                    <option value="21">21%</option>
+                    <option value="10">10%</option>
+                    <option value="4">4%</option>
+                    <option value="0">0%</option>
+                </select>
+            </div>
+            <button class="btn-block" onclick="agregarLineaManual()">Añadir a Factura</button>
+        </div>
+    </div>
+
+    <!-- MODAL PAGOS -->
+    <div class="modal-mobile" id="modal-pagos">
+        <div class="modal-header">
+            <button onclick="cerrarModalPagos()" style="border:none; background:none; font-size:20px;"><i class="fas fa-times"></i></button>
+            <span style="font-weight:600;">Cobrar Factura</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Total a Pagar</label>
+                <input type="text" class="form-control" id="pago-total" readonly style="background:#eee; font-weight:bold; font-size:24px; text-align:right;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Forma de Pago</label>
+                <select class="form-control" id="pago-metodo" onchange="actualizarCambio()">
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Bizum">Bizum</option>
+                </select>
+            </div>
+            <div class="form-group" id="div-entregado">
+                <label class="form-label">Entregado (€)</label>
+                <input type="number" class="form-control" id="pago-entregado" step="0.01" oninput="actualizarCambio()" style="font-size:20px; text-align:right;">
+            </div>
+            <div class="form-group" id="div-cambio">
+                <label class="form-label">Cambio (€)</label>
+                <input type="text" class="form-control" id="pago-cambio" readonly style="background:#eee; font-weight:bold; text-align:right; color:var(--color-primary); font-size:20px;">
+            </div>
+            <button class="btn-block btn-cobrar" onclick="confirmarPago()">FINALIZAR COBRO</button>
+        </div>
+    </div>
+
+    <!-- MODAL CLIENTES -->
+    <div class="modal-mobile" id="modal-cliente">
+        <div class="modal-header">
+            <button onclick="cerrarModalCliente()" style="border:none; background:none; font-size:20px;"><i class="fas fa-times"></i></button>
+            <span style="font-weight:600;">Seleccionar Cliente</span>
+        </div>
+        <div class="modal-body">
+             <div class="form-group" style="position:relative; margin-bottom:20px;">
+                <div class="search-input-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" id="cliente-search" placeholder="Buscar cliente..." oninput="buscarClientes(this.value)" autocomplete="off">
+                </div>
+            </div>
+            <div id="clientes-resultados" style="max-height:300px; overflow-y:auto;">
+                <!-- Resultados -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/mobile/js/app.js"></script>
+    <script src="/static/mobile/js/gestion_facturas.js"></script>
+</body>
+</html>
