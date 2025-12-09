@@ -1299,3 +1299,31 @@ def obtener_permisos():
     except Exception as e:
         logger.error(f"Error obteniendo permisos: {e}", exc_info=True)
         return jsonify({'error': 'Error obteniendo permisos'}), 500
+
+@auth_bp.route('/mobile/facturas_recibidas', methods=['GET'])
+@login_required
+def servir_mobile_facturas_recibidas():
+    """Sirve la vista móvil de facturas recibidas"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'facturas_recibidas.html')
+        if not os.path.exists(app_path): return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo facturas recibidas mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500
+
+@auth_bp.route('/mobile/facturas_recibidas/gestion', methods=['GET'])
+@login_required
+def servir_mobile_facturas_recibidas_gestion():
+    """Sirve la vista móvil de gestión de facturas recibidas"""
+    try:
+        BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+        app_path = os.path.join(BASE_DIR, 'frontend', 'mobile', 'gestion_facturas_recibidas.html')
+        if not os.path.exists(app_path): return jsonify({'error': 'Vista no disponible'}), 404
+        with open(app_path, 'r', encoding='utf-8') as f: content = f.read()
+        return Response(content, mimetype='text/html')
+    except Exception as e:
+        logger.error(f"Error sirviendo gestion facturas recibidas mobile: {e}", exc_info=True)
+        return jsonify({'error': 'Error interno'}), 500

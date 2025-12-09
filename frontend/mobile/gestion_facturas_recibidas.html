@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subir Factura - Aleph70</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/mobile/css/styles.css">
+</head>
+<body>
+    <header class="mobile-header">
+        <div class="header-left">
+            <button onclick="history.back()" style="background:none; border:none; font-size: 20px; color: var(--color-text); margin-right: 15px;">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <span class="header-title">Nueva Factura Recibida</span>
+        </div>
+        <div class="header-right">
+            <button onclick="guardarFactura()" style="background:none; border:none; color: var(--color-primary); font-weight: 600;">Guardar</button>
+        </div>
+    </header>
+
+    <div class="mobile-content" style="padding: 15px;">
+        <!-- File Upload -->
+        <div class="form-group" style="text-align:center; padding: 20px; border: 2px dashed #ddd; border-radius: 8px; background: #fff;">
+            <i class="fas fa-cloud-upload-alt" style="font-size: 40px; color: #ccc;"></i>
+            <div style="margin-top: 10px; font-weight: 500;">Subir Factura (PDF/Foto)</div>
+            <input type="file" id="archivo" accept="image/*,application/pdf" style="margin-top: 10px; width: 100%;">
+        </div>
+
+        <div class="form-section">
+            <div class="form-label">PROVEEDOR</div>
+            <div class="client-selector" onclick="abrirModalProveedor()">
+                <div id="proveedor-nombre">Seleccionar Proveedor</div>
+                <i class="fas fa-chevron-right" style="color:#ccc;"></i>
+            </div>
+            <input type="hidden" id="proveedor-id">
+        </div>
+
+        <div class="form-section">
+            <div class="form-group">
+                <label class="form-label">Número Factura</label>
+                <input type="text" class="form-control" id="numero">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Fecha Emisión</label>
+                <input type="date" class="form-control" id="fecha">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Concepto</label>
+                <input type="text" class="form-control" id="concepto">
+            </div>
+        </div>
+
+        <div class="form-section">
+            <div class="form-group">
+                <label class="form-label">Base Imponible (€)</label>
+                <input type="number" class="form-control" id="base" step="0.01" oninput="calcularTotal()">
+            </div>
+            <div class="form-group">
+                <label class="form-label">IVA (€)</label>
+                <input type="number" class="form-control" id="iva" step="0.01" oninput="calcularTotal()">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Total (€)</label>
+                <input type="number" class="form-control" id="total" step="0.01" style="font-weight:bold;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Proveedor -->
+    <div id="modal-proveedor" class="modal-mobile">
+        <div class="modal-header">
+            <button onclick="cerrarModalProveedor()" style="background:none; border:none; font-size:20px;"><i class="fas fa-times"></i></button>
+            <span style="font-weight:600;">Seleccionar Proveedor</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <input type="text" class="form-control" id="prov-search" placeholder="Buscar..." oninput="buscarProveedores(this.value)">
+            </div>
+            <div id="prov-resultados"></div>
+            <button class="btn-block" style="margin-top:10px; background:#eee; color:#333;" onclick="crearNuevoProveedor()">+ Nuevo Proveedor</button>
+        </div>
+    </div>
+
+    <script src="/static/mobile/js/app.js"></script>
+    <script src="/static/mobile/js/gestion_facturas_recibidas.js"></script>
+</body>
+</html>

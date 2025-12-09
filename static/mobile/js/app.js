@@ -133,6 +133,8 @@ function createMenuItem(item) {
     if(href === '/GESTION_FACTURAS.html') href = '/api/auth/mobile/facturas/gestion';
     
     if(href === '/CONSULTA_GASTOS.html') href = '/api/auth/mobile/gastos';
+    if(href === '/CONSULTA_FACTURAS_RECIBIDAS.html') href = '/api/auth/mobile/facturas_recibidas';
+    if(href === '/SUBIR_FACTURAS_MASIVO.html') href = '/api/auth/mobile/facturas_recibidas/gestion';
     
     if(href === '/CONSULTA_CONTACTOS.html') href = '/api/auth/mobile/contactos';
     if(href === '/GESTION_CONTACTOS.html') href = '/api/auth/mobile/contactos/gestion';
