@@ -29,6 +29,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // Es nuevo: Obtener siguiente número
         obtenerSiguienteNumero();
     }
+
+    // Vincular buscador de productos explícitamente
+    const prodSearch = document.getElementById('prod-search');
+    if(prodSearch) {
+        prodSearch.addEventListener('input', (e) => buscarProductos(e.target.value));
+        prodSearch.addEventListener('focus', () => {
+            // Si está vacío, buscar iniciales
+            if(!prodSearch.value) buscarProductos('');
+            else document.getElementById('prod-resultados').style.display = 'block';
+        });
+    }
 });
 
 async function obtenerSiguienteNumero() {
@@ -204,15 +215,18 @@ async function guardarTicket(cobrar = false) {
 let searchTimeout = null;
 async function buscarProductos(query) {
     const container = document.getElementById('prod-resultados');
-    if(!query || query.length < 2) {
-        container.style.display = 'none';
-        return;
-    }
     
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(async () => {
         try {
-            const res = await fetch(`/api/productos/paginado?search=${encodeURIComponent(query)}&page_size=10`);
+            let url = `/api/productos/paginado?page_size=20`;
+            if(query && query.trim().length > 0) {
+                url += `&search=${encodeURIComponent(query.trim())}`;
+            } else {
+                url += `&sort=nombre&order=ASC`;
+            }
+            
+            const res = await fetch(url);
             if(res.ok) {
                 const data = await res.json();
                 const productos = data.items || data.productos || [];
@@ -233,7 +247,8 @@ async function buscarProductos(query) {
                         container.appendChild(div);
                     });
                 } else {
-                    container.style.display = 'none';
+                    container.style.display = 'block';
+                    container.innerHTML = '<div style="padding:10px;text-align:center;color:#999">No se encontraron productos</div>';
                 }
             }
         } catch(e) { console.error(e); }
@@ -416,7 +431,15 @@ async function cargarTicket(id) {
 // --- Modales ---
 function abrirModalProducto() { 
     document.getElementById('modal-producto').classList.add('active'); 
-    document.getElementById('prod-desc').focus();
+    const input = document.getElementById('prod-search');
+    // Enfocar buscador y cargar lista inicial
+    if(input) {
+        input.value = '';
+        input.focus();
+        buscarProductos('');
+    } else {
+        document.getElementById('prod-desc').focus();
+    }
 }
 function cerrarModalProducto() { document.getElementById('modal-producto').classList.remove('active'); }
 function limpiarModalProducto() {
