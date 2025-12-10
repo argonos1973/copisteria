@@ -531,7 +531,7 @@ export async function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad,
 }
 
 // Flag global para controlar llamadas concurrentes
-let calculandoFranjas = false;
+let abortControllerFranjas = null;
 
 async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId) {
   if (!productoId) {
@@ -540,25 +540,28 @@ async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, product
     return precioUnitarioSinIVA;
   }
 
-  if (calculandoFranjas) {
-    console.warn('Cálculo de franjas ya en progreso, ignorando llamada duplicada');
-    registrarFranjaAplicada(null);
-    return precioUnitarioSinIVA;
+  // Cancelar petición anterior si existe
+  if (abortControllerFranjas) {
+    abortControllerFranjas.abort();
   }
-
-  calculandoFranjas = true;
+  abortControllerFranjas = new AbortController();
+  const signal = abortControllerFranjas.signal;
 
   try {
-    const response = await originalFetch(buildApiUrl(`/api/productos/${productoId}/franjas_descuento`), {
+    // Usar window.originalFetch si existe (interceptor bypass) o fetch nativo
+    const fetchFunc = window.originalFetch || window.fetch;
+    
+    const response = await fetchFunc(buildApiUrl(`/api/productos/${productoId}/franjas_descuento`), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      signal
     });
+    
     if (!response.ok) {
       console.warn(`Error al obtener franjas para producto ${productoId}: ${response.status}`);
       registrarFranjaAplicada(null);
-      calculandoFranjas = false;
       return precioUnitarioSinIVA;
     }
 
@@ -568,7 +571,6 @@ async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, product
     if (franjas.length === 0) {
       console.warn(`No hay franjas definidas para producto ${productoId}`);
       registrarFranjaAplicada(null);
-      calculandoFranjas = false;
       return precioUnitarioSinIVA;
     }
 
@@ -621,11 +623,18 @@ async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, product
 
     return precioConDescuento;
   } catch (error) {
+    if (error.name === 'AbortError') {
+      console.log('Cálculo de franjas abortado por nueva petición');
+      // Re-lanzar para detener la cadena de promesas en el caller
+      throw error; 
+    }
     console.error(`Error al calcular descuento por franja para producto ${productoId}:`, error);
     registrarFranjaAplicada(null);
     return precioUnitarioSinIVA;
   } finally {
-    calculandoFranjas = false;
+    if (abortControllerFranjas && abortControllerFranjas.signal === signal) {
+        abortControllerFranjas = null;
+    }
   }
 }
 

@@ -168,11 +168,13 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
             for detalle in detalles:
                 cantidad = Decimal(str(detalle.get('cantidad', 1)))
                 importe = Decimal(str(detalle.get('importe', detalle.get('precio', 0))))
-                base_imponible_temp += cantidad * importe
+                # Redondear subtotal de línea a 2 decimales antes de sumar
+                base_linea = (cantidad * importe).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                base_imponible_temp += base_linea
             
             # Solo asignar si el original estaba en 0
             if base_imponible_total == Decimal('0.00'):
-                base_imponible_total = base_imponible_temp.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                base_imponible_total = base_imponible_temp
                 
             # Calcular IVA solo si no viene del frontend
             if cuota_iva == Decimal('0.00'):

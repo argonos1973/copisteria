@@ -976,7 +976,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     inicializarModalContactos();
 
     const busquedaProducto = document.getElementById('busqueda-producto');
-    if (busquedaProducto) busquedaProducto.addEventListener('input', () => filtrarProductos());
+    if (busquedaProducto) busquedaProducto.addEventListener('input', debounce(() => filtrarProductos(), 300));
     const conceptoDetalle = document.getElementById('concepto-detalle');
     if (conceptoDetalle) conceptoDetalle.addEventListener('change', () => seleccionarProducto());
     const btnAgregarDetalle = document.getElementById('btn-agregar-detalle');

@@ -212,7 +212,7 @@ def obtener_db_empresa(empresa_id=None):
         db_path_tabla = result[1]
         
         # Intentar leer db_path desde emisor.json (método principal)
-        emisor_path = os.path.join(BASE_DIR, 'static', 'emisores', f'{codigo}_emisor.json')
+        emisor_path = os.path.join(BASE_DIR, 'emisores', f'{codigo}_emisor.json')
         
         if os.path.exists(emisor_path):
             try:

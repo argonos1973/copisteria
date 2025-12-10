@@ -1976,8 +1976,8 @@ td .fas {
 }
 
 .detalle-proforma-item-importe input[type="number"]#precio-detalle {
-    width: 70px;
-    max-width: 70px;
+    width: 95px;
+    max-width: 95px;
 }
 
 .precio-label-row {
@@ -1994,9 +1994,9 @@ td .fas {
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    background: linear-gradient(135deg, var(--color-primario) 0%, var(--color-secundario) 100%);
-    color: #ffffff;
-    border: none;
+    background: var(--color-primario, #2c3e50) !important;
+    color: #ffffff !important;
+    border: none !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2005,6 +2005,10 @@ td .fas {
     cursor: pointer;
     padding: 0;
     transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.icono-info-precio span {
+    color: #ffffff !important;
 }
 .icono-info-precio.oculto {
     display: none;
@@ -2358,16 +2362,18 @@ table:not(.fixed-footer table) tbody tr:hover {
 }
 
 .readonly-field {
-    background-color: #e9ecef;
-    border: 1px solid #ced4da;
+    background-color: var(--input-readonly-bg, #e9ecef);
+    color: var(--input-readonly-text, inherit);
+    border: 1px solid var(--color-input-border, #ced4da);
     border-radius: 4px;
     padding: 6px 12px;
     width: 120px;
 }
 
 .total-proforma-display {
-    background-color: #e9ecef;
-    border: 1px solid #ced4da;
+    background-color: var(--input-readonly-bg, #e9ecef);
+    color: var(--input-readonly-text, inherit);
+    border: 1px solid var(--color-input-border, #ced4da);
     border-radius: 4px;
     padding: 6px 12px;
     width: 120px;
@@ -3667,11 +3673,23 @@ textarea::placeholder {
   opacity: 0.6;
 }
 
+/* Ajuste ancho input precio - Ampliado para mostrar decimales */
+.detalle-proforma-container .detalle-proforma-item-importe.flex-1:has(> #precio-detalle),
+.detalle-proforma-container .detalle-proforma-item-importe.precio-info-container,
+.detalle-ticket-container .detalle-ticket-item-importe.precio-info-container {
+    flex: 0 0 105px !important;
+    max-width: 105px !important;
+    min-width: 105px !important;
+}
+
 /* Readonly/total displays */
 .readonly-field,
-.total-proforma-display {
-  background-color: var(--color-input-bg, var(--color-app-bg, #1f1f1f)) !important;
-  color: var(--color-input-text, var(--color-texto, #ecf0f1)) !important;
+.total-proforma-display,
+input[readonly]:not(.hidden-field) {
+  background-color: var(--input-readonly-bg, #e9ecef) !important;
+  color: var(--input-readonly-text, inherit) !important;
+  border-color: var(--color-input-border, #ced4da) !important;
+  cursor: default !important;
 }
 
 /* Tablas (celdas) - Estilos oscuros */

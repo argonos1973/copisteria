@@ -64,6 +64,55 @@ async function cargarUsuario() {
                      headerLogo.src = data.logo;
                 }
             }
+            
+            console.log("[Mobile] Check Empresa:", { 
+                codigo: data.empresa_codigo, 
+                nombre: data.empresa 
+            });
+            
+            // Lógica para usuarios sin empresa
+            if (!data.empresa_codigo || data.empresa_codigo === 'null') {
+                console.log("[Mobile] Usuario SIN empresa, ocultando elementos...");
+                
+                // Ocultar acciones rápidas
+                const quickActions = document.querySelector('.quick-actions');
+                if (quickActions) quickActions.style.display = 'none';
+
+                // Ocultar resumen de ventas
+                const summaryCard = document.querySelector('.summary-card');
+                if (summaryCard) summaryCard.style.display = 'none';
+                
+                // Ocultar items del bottom nav excepto Inicio
+                const navItems = document.querySelectorAll('.bottom-nav .nav-item');
+                navItems.forEach(item => {
+                    // Si no es el home (primer hijo usualmente, o check href)
+                    if (!item.getAttribute('href').includes('/api/auth/app')) {
+                        item.style.display = 'none';
+                    }
+                });
+                
+                // Mostrar mensaje
+                const dashboard = document.querySelector('.dashboard-mobile');
+                if(dashboard && !document.getElementById('no-company-msg')) {
+                    // Limpiar contenido previo del dashboard para que se vea limpio
+                    // (Opcional, pero mejor dejar solo el mensaje)
+                    // dashboard.innerHTML = ''; 
+                    
+                    const msg = document.createElement('div');
+                    msg.id = 'no-company-msg';
+                    msg.innerHTML = `
+                        <div style="text-align:center; padding: 40px 20px;">
+                            <i class="fas fa-building" style="font-size: 48px; color: #ddd; margin-bottom: 20px;"></i>
+                            <h3>Bienvenido</h3>
+                            <p style="color:#666; margin-bottom: 20px;">No tienes ninguna empresa seleccionada.</p>
+                            <button class="btn-mobile" onclick="window.location.href='/crear_empresa'" style="background: var(--color-primary);">
+                                <i class="fas fa-plus"></i> Crear Empresa
+                            </button>
+                        </div>
+                    `;
+                    dashboard.appendChild(msg);
+                }
+            }
         }
     } catch(e) { console.error('Error cargando usuario', e); }
 }

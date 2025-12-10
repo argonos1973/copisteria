@@ -6,15 +6,21 @@ let searchTimer = null;
 document.addEventListener('DOMContentLoaded', () => {
     // Inicializar fechas
     const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-    const formatDate = (d) => d.toISOString().split('T')[0];
+    const formatDate = (d) => {
+        const year = d.getFullYear();
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const day = d.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
     
     const inputDesde = document.getElementById('fecha-desde');
     const inputHasta = document.getElementById('fecha-hasta');
     const inputSearch = document.getElementById('search-input');
     
     // Recuperar filtros
-    inputDesde.value = sessionStorage.getItem('presup_desde') || formatDate(today);
+    inputDesde.value = sessionStorage.getItem('presup_desde') || formatDate(firstDay);
     inputHasta.value = sessionStorage.getItem('presup_hasta') || formatDate(lastDay);
     if(inputSearch) inputSearch.value = sessionStorage.getItem('presup_search') || '';
 

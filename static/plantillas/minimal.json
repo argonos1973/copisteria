@@ -44,7 +44,9 @@
       "bg": "{palette.white}",
       "text": "{semantic.text}",
       "border": "{semantic.primary}",
-      "placeholder": "{semantic.text-muted}"
+      "placeholder": "{semantic.text-muted}",
+      "readonly-bg": "{palette.gray100}",
+      "readonly-text": "{semantic.text}"
     },
     "select": {
       "bg": "{palette.white}",

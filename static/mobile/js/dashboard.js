@@ -6,11 +6,11 @@ async function initDashboard() {
     const hasPermission = await checkStatsPermission();
     if (hasPermission) {
         cargarResumen();
+        cargarTickets();
     } else {
-        const card = document.querySelector('.summary-card');
-        if(card) card.style.display = 'none';
+        const dashboard = document.querySelector('.dashboard-mobile');
+        if(dashboard) dashboard.style.display = 'none';
     }
-    cargarTickets();
 }
 
 async function checkStatsPermission() {

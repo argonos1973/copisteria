@@ -16,8 +16,18 @@
   <!-- Enlace a tus hojas de estilos -->
   <link rel="stylesheet" href="/static/css/theme-consumer.css?v=1763897790">
   <link rel="stylesheet" href="/static/css/modales.css?v=1763897790">
-  <link rel="stylesheet" href="../static/css/styles.css" />
+  <link rel="stylesheet" href="../static/css/styles.css?v=1765400000" />
   <link rel="stylesheet" href="../static/css/notificaciones.css" />
+  <!-- Estilos readonly con tema -->
+  <style>
+    .readonly-field,
+    .total-proforma-display,
+    input[readonly]:not(.hidden-field) {
+      background-color: var(--input-readonly-bg, #e9ecef) !important;
+      color: var(--input-readonly-text, inherit) !important;
+      border-color: var(--color-input-border, #ced4da) !important;
+    }
+  </style>
 </head>
 <body>
   <div class="page-header">

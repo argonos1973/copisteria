@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, request
 
 from db_utils import get_db_connection, redondear_importe
 from logger_config import get_logger
+from auth_middleware import login_required
 
 # Inicializar logger
 logger = get_logger(__name__)
@@ -14,6 +15,8 @@ logger = get_logger(__name__)
 dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route('/estadisticas_gastos', methods=['GET'])
+@dashboard_bp.route('/api/dashboard/estadisticas_gastos', methods=['GET'])
+@login_required
 def estadisticas_gastos():
     try:
         with get_db_connection() as conn:

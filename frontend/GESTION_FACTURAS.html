@@ -25,6 +25,15 @@
             margin: 0;
         }
         
+        /* Estilos readonly con tema */
+        .readonly-field,
+        .total-proforma-display,
+        input[readonly]:not(.hidden-field) {
+            background-color: var(--input-readonly-bg, #e9ecef) !important;
+            color: var(--input-readonly-text, inherit) !important;
+            border-color: var(--color-input-border, #ced4da) !important;
+        }
+        
         .cabecera-ticket {
             padding: 15px;
         }

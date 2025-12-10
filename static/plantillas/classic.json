@@ -56,6 +56,8 @@
       "text": "{semantic.text}",
       "border": "{semantic.border}",
       "placeholder": "{semantic.text-muted}",
+      "readonly-bg": "{palette.gray100}",
+      "readonly-text": "{semantic.text}",
       "focus-border": "{semantic.primary}"
     },
     "select": {

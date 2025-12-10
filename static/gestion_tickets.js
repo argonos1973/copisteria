@@ -182,7 +182,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Agregar eventos para "concepto-input" si existe
     const conceptoInput = document.getElementById('concepto-input');
     if (conceptoInput) {
-      conceptoInput.addEventListener('input', filtrarProductos);
+       // Listener eliminado: escribir en concepto no debe filtrar productos
     }
 
     // Asociar evento al botón cobrar
@@ -318,7 +318,8 @@ function asociarEventos() {
   // Input "busqueda-producto" => filtrarProductos
   const busquedaProducto = document.getElementById('busqueda-producto');
   if (busquedaProducto) {
-    busquedaProducto.addEventListener('input', () => filtrarProductos());
+    // Usar debounce para evitar parpadeos al filtrar la lista de productos
+    busquedaProducto.addEventListener('input', debounce(() => filtrarProductos(), 300));
   }
 
   // Selector "concepto-detalle" => seleccionarProducto

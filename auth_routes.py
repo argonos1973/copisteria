@@ -23,7 +23,7 @@ from auth_middleware import (
     login_required, registrar_auditoria
 )
 import sqlite3
-from multiempresa_config import DB_USUARIOS_PATH, GOOGLE_AUTH_CONFIG
+from multiempresa_config import DB_USUARIOS_PATH, GOOGLE_AUTH_CONFIG, obtener_db_empresa
 from database_pool import get_database_pool
 from email_utils import enviar_email_recuperacion_password
 
@@ -203,6 +203,14 @@ def google_auth():
             session['empresa_codigo'] = emp['codigo']
             session['empresa_logo'] = emp['logo']
             
+            # Obtener y establecer la BD de la empresa
+            db_path = obtener_db_empresa(emp['id'])
+            if db_path:
+                session['empresa_db'] = db_path
+                logger.info(f"Login Google: BD establecida para {username}: {db_path}")
+            else:
+                logger.error(f"Login Google: No se pudo obtener BD para empresa {emp['id']}")
+            
             # Verificar rol específico en esa empresa
             with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
                 cursor = conn.cursor()
@@ -284,21 +292,41 @@ def obtener_sesion():
     """
     try:
         user_id = session.get('user_id')
+        empresa_id = session.get('empresa_id')
         
-        # Obtener avatar, email y teléfono de la base de datos
+        # Valores por defecto de sesión
         avatar = None
         email = None
         telefono = None
+        rol = session.get('rol')
+        es_admin_empresa = session.get('es_admin_empresa', False)
+        es_superadmin = session.get('es_superadmin', False)
+        
         if user_id:
             with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
                 cursor = conn.cursor()
-                cursor.execute('SELECT avatar, email, telefono FROM usuarios WHERE id = ?', (user_id,))
+                # Leer datos actualizados del usuario incluyendo rol
+                cursor.execute('SELECT avatar, email, telefono, rol, es_superadmin FROM usuarios WHERE id = ?', (user_id,))
                 result = cursor.fetchone()
                 if result:
                     avatar = result[0] if result[0] else None
                     email = result[1] if result[1] else None
                     telefono = result[2] if result[2] else None
-        
+                    rol = result[3] # Actualizar rol
+                    es_superadmin = bool(result[4]) if result[4] is not None else False
+                    
+                    # Actualizar sesión con datos frescos
+                    session['rol'] = rol
+                    session['es_superadmin'] = es_superadmin
+                
+                # Si hay empresa, verificar permiso de admin actualizado
+                if empresa_id:
+                    cursor.execute("SELECT es_admin_empresa FROM usuario_empresa WHERE usuario_id=? AND empresa_id=?", (user_id, empresa_id))
+                    row_emp = cursor.fetchone()
+                    if row_emp:
+                        es_admin_empresa = bool(row_emp[0])
+                        session['es_admin_empresa'] = es_admin_empresa
+
         return jsonify({
             'usuario': session.get('nombre_completo'),
             'username': session.get('username'),
@@ -308,10 +336,10 @@ def obtener_sesion():
             'empresa_codigo': session.get('empresa_codigo'),
             'logo': f"/static/logos/{session.get('empresa_logo', 'default_header.png')}",
             'avatar': avatar,
-            'rol': session.get('rol'),
-            'es_admin': session.get('es_admin_empresa') or session.get('es_superadmin'),
-            'es_admin_empresa': session.get('es_admin_empresa', False),
-            'es_superadmin': session.get('es_superadmin'),
+            'rol': rol,
+            'es_admin': es_admin_empresa or es_superadmin,
+            'es_admin_empresa': es_admin_empresa,
+            'es_superadmin': es_superadmin,
             'ultimo_acceso': session.get('ultimo_acceso')
         }), 200
     except Exception as e:

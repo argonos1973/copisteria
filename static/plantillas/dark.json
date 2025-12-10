@@ -65,6 +65,8 @@
       "text": "{palette.white}",
       "border": "{semantic.border}",
       "placeholder": "{semantic.text-muted}",
+      "readonly-bg": "{palette.base800}",
+      "readonly-text": "{palette.base300}",
       "focus-ring": "{semantic.focus-ring}"
     },
     "select": {

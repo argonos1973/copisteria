@@ -49,13 +49,16 @@ async function cargarPermisos() {
  * Verificar si el usuario tiene un permiso específico
  */
 function tienePermiso(modulo, accion) {
+    // Helper para verificar booleano o entero 1
+    const isTrue = (val) => val === true || val === 1 || val === '1';
+
     // Superadmin tiene todos los permisos
-    if (sesionUsuario && sesionUsuario.es_superadmin === 1) {
+    if (sesionUsuario && isTrue(sesionUsuario.es_superadmin)) {
         return true;
     }
     
     // Admin de empresa tiene todos los permisos
-    if (sesionUsuario && sesionUsuario.es_admin_empresa === 1) {
+    if (sesionUsuario && isTrue(sesionUsuario.es_admin_empresa)) {
         return true;
     }
     
@@ -66,20 +69,20 @@ function tienePermiso(modulo, accion) {
         switch(accion) {
             case 'ver':
             case 'consultar':
-                return permisos.puede_ver === 1;
+                return isTrue(permisos.puede_ver);
             case 'crear':
             case 'nuevo':
-                return permisos.puede_crear === 1;
+                return isTrue(permisos.puede_crear);
             case 'editar':
             case 'modificar':
-                return permisos.puede_editar === 1;
+                return isTrue(permisos.puede_editar);
             case 'eliminar':
             case 'borrar':
-                return permisos.puede_eliminar === 1;
+                return isTrue(permisos.puede_eliminar);
             case 'anular':
-                return permisos.puede_anular === 1;
+                return isTrue(permisos.puede_anular);
             case 'exportar':
-                return permisos.puede_exportar === 1;
+                return isTrue(permisos.puede_exportar);
             default:
                 return false;
         }
@@ -109,12 +112,38 @@ function aplicarPermisosUI() {
             // console.log(`[PERMISOS] Ocultado: ${modulo}.${accion}`);
         } else {
             // console.log(`[PERMISOS] Permitido: ${modulo}.${accion}`);
+            // Asegurar que se muestre si estaba oculto (siempre que no tenga display:none por otra razón CSS)
+            // elemento.style.display = ''; 
+            // Mejor no forzar display '' si no sabemos su estado original, pero si lo ocultamos nosotros...
+            if (elemento.style.display === 'none') elemento.style.display = '';
+            elemento.disabled = false;
         }
     });
     
     // Ocultar columnas de acciones si no hay permisos
     ocultarColumnasAcciones();
 }
+
+// Alias para compatibilidad
+const aplicarPermisosAElementos = aplicarPermisosUI;
+
+// Exponer globalmente
+window.tienePermiso = tienePermiso;
+window.aplicarPermisosUI = aplicarPermisosUI;
+window.aplicarPermisosAElementos = aplicarPermisosUI;
+window.verificarPermisoConAlerta = (modulo, accion) => {
+    if (!tienePermiso(modulo, accion)) {
+        // Asumiendo que mostrarNotificacion está disponible globalmente o se importa
+        // Si no, usar alert básico
+        if (window.mostrarNotificacion) {
+            window.mostrarNotificacion('No tienes permisos para realizar esta acción', 'error');
+        } else {
+            alert('No tienes permisos para realizar esta acción');
+        }
+        return false;
+    }
+    return true;
+};
 
 /**
  * Ocultar columnas de tabla que solo contienen acciones sin permiso

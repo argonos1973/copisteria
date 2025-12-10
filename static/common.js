@@ -6,19 +6,46 @@ import {
   calcularPrecioConDescuento,
   calcularTotalDetalle,
   resetInfoPrecio,
-  registrarFranjaAplicada
+  registrarFranjaAplicada,
+  debounce
 } from './scripts_utils.js';
 import { mostrarNotificacion } from './notificaciones.js';
 
 // Funciones comunes para manejo de productos
+const CACHE_KEY_PRODUCTOS = 'ALEPH_PRODUCTOS_DATA';
+const CACHE_KEY_TIMESTAMP = 'ALEPH_PRODUCTOS_TIMESTAMP';
+const CACHE_DURATION_MS = 6 * 60 * 60 * 1000; // 6 horas
+
 export async function cargarProductos() {
   try {
+    // Verificar caché
+    const cachedData = localStorage.getItem(CACHE_KEY_PRODUCTOS);
+    const cachedTimestamp = localStorage.getItem(CACHE_KEY_TIMESTAMP);
+
+    if (cachedData && cachedTimestamp) {
+      const now = Date.now();
+      const timestamp = parseInt(cachedTimestamp, 10);
+      if (now - timestamp < CACHE_DURATION_MS) {
+        console.log('Cargando productos desde caché local (validez 6h)');
+        return JSON.parse(cachedData);
+      }
+    }
+
     // Usar API_URL que ya tiene el protocolo correcto
     const response = await fetch(`${API_URL}/api/productos`);
     if (!response.ok) {
       throw new Error(`Error al cargar productos: ${response.statusText}`);
     }
     const data = await response.json();
+
+    // Guardar en caché
+    try {
+      localStorage.setItem(CACHE_KEY_PRODUCTOS, JSON.stringify(data));
+      localStorage.setItem(CACHE_KEY_TIMESTAMP, Date.now().toString());
+    } catch (e) {
+      console.warn('Error al guardar productos en caché local:', e);
+    }
+
     return data;
   } catch (error) {
     console.error('Error al cargar productos:', error);
@@ -133,7 +160,15 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
 
   // Primero removemos todos los event listeners anteriores
   precioDetalle.removeEventListener('input', calcularTotalDetalle);
-  cantidadDetalle.removeEventListener('input', calcularTotalDetalle);
+  
+  // Limpiar listener de cantidad (normal o debounced)
+  if (cantidadDetalle._debouncedHandler) {
+    cantidadDetalle.removeEventListener('input', cantidadDetalle._debouncedHandler);
+    delete cantidadDetalle._debouncedHandler;
+  } else {
+    cantidadDetalle.removeEventListener('input', calcularTotalDetalle);
+  }
+  
   totalDetalle.removeEventListener('input', calcularTotalDetalle);
 
   if (productoId === PRODUCTO_ID_LIBRE) {
@@ -149,20 +184,28 @@ export async function seleccionarProducto(formElements, productosOriginales, tip
     if (conceptoInput) {
       conceptoInput.style.display = 'block';
       if (!conceptoInput.dataset.listenerAdded) {
-        conceptoInput.addEventListener('input', () => {
+        // Usar debounce para evitar parpadeos al filtrar
+        const handlerBusqueda = debounce(() => {
           const busqueda = conceptoInput.value;
           const productosFiltrados = filtrarProductos(busqueda, productosOriginales);
           actualizarSelectProductos(productosFiltrados, conceptoDetalle);
-        });
+        }, 300);
+        
+        conceptoInput.addEventListener('input', handlerBusqueda);
         conceptoInput.dataset.listenerAdded = true;
+        // Guardamos referencia para poder limpiarlo si fuera necesario (aunque aquí usamos flag listenerAdded)
+        conceptoInput._debouncedSearch = handlerBusqueda;
       }
     }
   } else {
     precioDetalle.readOnly = true;
     totalDetalle.readOnly = true;
 
-    // Para productos normales, añadir listener solo en cantidad para calcular franjas
-    cantidadDetalle.addEventListener('input', calcularTotalDetalle);
+    // Para productos normales, añadir listener solo en cantidad para calcular franjas (con debounce)
+    // Esto evita llamadas concurrentes que resultan en "Cálculo en progreso"
+    const handler = debounce(calcularTotalDetalle, 500);
+    cantidadDetalle._debouncedHandler = handler;
+    cantidadDetalle.addEventListener('input', handler);
 
     // Ocultar y limpiar el campo de concepto personalizado si existe
     if (conceptoInput) {

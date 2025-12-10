@@ -2340,26 +2340,30 @@ def actualizar_factura(id, data):
                     # Si algún valor sigue siendo None, calcularlo desde los detalles
                     if base_imponible is None or impuestos is None or total is None:
                         # Calcular base imponible
-                        base_imponible_calc = 0
-                        impuestos_calc = 0
-                        total_calc = 0
+                        base_imponible_calc = 0.0
+                        impuestos_calc = 0.0
+                        bases_por_iva = {}
                         
                         for detalle in detalles:
                             cantidad = float(detalle.get('cantidad', 1))
                             precio = float(detalle.get('precio', 0))
                             porc_iva = float(detalle.get('impuestos', porcentaje_iva))
                             
+                            # 1) Subtotal línea = ROUND(precio * cantidad, 2)
                             base_linea = round(cantidad * precio, 2)
-                            iva_linea = round(base_linea * porc_iva / 100, 2)
                             
+                            # Acumular base total
                             base_imponible_calc += base_linea
-                            impuestos_calc += iva_linea
-                            total_calc += (base_linea + iva_linea)
+                            
+                            # Acumular por tipo de IVA
+                            bases_por_iva[porc_iva] = bases_por_iva.get(porc_iva, 0.0) + base_linea
                         
-                        # Redondear a 2 decimales
-                        base_imponible_calc = round(base_imponible_calc, 2)
-                        impuestos_calc = round(impuestos_calc, 2)
-                        total_calc = round(total_calc, 2)
+                        # 2) IVA = ROUND(Base Imponible * %IVA, 2) (Global por tipo)
+                        for rate, base in bases_por_iva.items():
+                            impuestos_calc += round(base * rate / 100, 2)
+                        
+                        # 3) Total = Base + IVA
+                        total_calc = round(base_imponible_calc + impuestos_calc, 2)
                         
                         # Usar valores calculados solo si los originales son None
                         if base_imponible is None:
@@ -2370,7 +2374,7 @@ def actualizar_factura(id, data):
                             total = total_calc
                         
                         with safe_append_debug('facturae_debug.log') as log_file:
-                            log_file.write(f"TOTALES USADOS DESPUÉS DE CÁLCULO: Base={base_imponible}, IVA={impuestos}, Total={total}\n")
+                            log_file.write(f"TOTALES USADOS DESPUÉS DE CÁLCULO (Global): Base={base_imponible}, IVA={impuestos}, Total={total}\n")
                     
                     # Asegurarse de que los valores no sean None
                     base_imponible = base_imponible if base_imponible is not None else 0.0
@@ -2405,6 +2409,10 @@ def actualizar_factura(id, data):
                         'importe_bruto': base_imponible,  # Base imponible
                         'importe_impuestos': impuestos,  # Impuestos
                         'total': total,  # Total factura
+                        # Claves para el generador XML (compatibilidad)
+                        'base_amount': base_imponible,
+                        'taxes': impuestos,
+                        'total_amount': total,
                         'presentar_face': 1,  # Siempre 1 cuando se ejecuta esta rama
                         'dir3_oficina': contacto_dict.get('dir3_oficina', ''),
                         'dir3_organo': contacto_dict.get('dir3_organo', ''),

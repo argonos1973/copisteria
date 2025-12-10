@@ -15,6 +15,15 @@
     <link rel="stylesheet" href="/static/css/notificaciones.css?v=1763897790">
 
     <style>
+        /* Estilos readonly con tema */
+        .readonly-field,
+        .total-proforma-display,
+        input[readonly]:not(.hidden-field) {
+            background-color: var(--input-readonly-bg, #e9ecef) !important;
+            color: var(--input-readonly-text, inherit) !important;
+            border-color: var(--color-input-border, #ced4da) !important;
+        }
+        
         .contact-header {
             display: flex;
             gap: 20px;

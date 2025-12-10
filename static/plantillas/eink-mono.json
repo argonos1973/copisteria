@@ -51,6 +51,8 @@
       "text": "{semantic.text}",
       "border": "{semantic.border}",
       "placeholder": "{semantic.text-muted}",
+      "readonly-bg": "{palette.ink100}",
+      "readonly-text": "{semantic.text}",
       "focus-ring": "{semantic.focus-ring}"
     },
     "select": {

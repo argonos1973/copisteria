@@ -16,6 +16,7 @@ function formatearImporte(valor) {
 }
 
 let facturaId = null; // null = Nueva
+let numeroFacturaGenerado = ''; // Almacenar el número
 let lineas = [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,18 +25,41 @@ document.addEventListener('DOMContentLoaded', () => {
         facturaId = params.get('id');
         cargarFactura(facturaId);
     } else {
+        // Restricción: Solo permitir crear si hay cliente_id
+        if(!params.has('cliente_id')) {
+            alert("Para crear una factura debe seleccionar un cliente desde la Agenda.");
+            window.location.href = '/api/auth/mobile/tickets'; // Redirigir a inicio/tickets
+            return;
+        }
+
         obtenerSiguienteNumero();
+        // Cargar cliente si viene por parámetro
+        if(params.has('cliente_id')) {
+            cargarCliente(params.get('cliente_id'));
+        }
     }
 });
+
+async function cargarCliente(id) {
+    try {
+        // Usar endpoint de contactos
+        const res = await fetch(`/api/contactos/get_contacto/${id}`);
+        if(res.ok) {
+            const cliente = await res.json();
+            seleccionarCliente(cliente);
+        }
+    } catch(e) { console.error("Error cargando cliente", e); }
+}
 
 async function obtenerSiguienteNumero() {
     try {
         const res = await fetch('/api/facturas/obtener_numerador/F');
         if(res.ok) {
             const data = await res.json();
-            const year = new Date().getFullYear();
-            const num = data.numerador.toString().padStart(4, '0');
-            document.getElementById('page-title').textContent = `Nueva F${year}-${num}`; // Estimado
+            const year = new Date().getFullYear().toString().substr(-2); // 2 dígitos (25)
+            const num = data.numerador.toString().padStart(4, '0'); // 4 dígitos (0501)
+            numeroFacturaGenerado = `F${year}${num}`;
+            document.getElementById('page-title').textContent = `Nueva ${numeroFacturaGenerado}`;
         }
     } catch(e) {
         console.error("Error obteniendo numerador", e);
@@ -143,6 +167,7 @@ async function guardarFactura(opcionesPago = null) {
     // Payload compatible con crear_factura
     const payload = {
         id: facturaId ? facturaId : undefined,
+        numero: numeroFacturaGenerado, // Incluir número
         idcontacto: clienteId,
         fecha: fecha,
         detalles: lineas,
@@ -206,9 +231,10 @@ async function buscarProductos(query) {
                         div.style.padding = '10px';
                         div.style.borderBottom = '1px solid #eee';
                         div.style.cursor = 'pointer';
+                        const precio = p.precio_venta || p.precio || 0;
                         div.innerHTML = `
                             <div style="font-weight:500;">${p.nombre}</div>
-                            <div style="font-size:12px; color:#666;">${formatearImporte(p.precio_venta)} + ${p.iva}% IVA</div>
+                            <div style="font-size:12px; color:#666;">${formatearImporte(precio)} + ${p.iva}% IVA</div>
                         `;
                         div.onclick = () => seleccionarProducto(p);
                         container.appendChild(div);
@@ -223,7 +249,7 @@ async function buscarProductos(query) {
 
 function seleccionarProducto(p) {
     document.getElementById('prod-desc').value = p.nombre;
-    document.getElementById('prod-precio').value = p.precio_venta;
+    document.getElementById('prod-precio').value = p.precio_venta || p.precio || 0;
     document.getElementById('prod-iva').value = p.iva;
     document.getElementById('prod-resultados').style.display = 'none';
     document.getElementById('prod-search').value = '';
@@ -270,8 +296,24 @@ async function buscarClientes(query) {
 }
 
 function seleccionarCliente(c) {
-    document.getElementById('cliente-id').value = c.id || c.idContacto;
-    document.getElementById('cliente-nombre').textContent = c.razonsocial || c.nombre;
+    const id = c.id || c.idContacto;
+    const nombre = c.razonsocial || c.nombre || 'Cliente sin nombre';
+    const nif = c.nif || c.identificador || '';
+    const direccion = c.direccion || '';
+    
+    document.getElementById('cliente-id').value = id;
+    
+    // Renderizar tarjeta de cliente en lugar de texto simple
+    const container = document.querySelector('.client-selector');
+    container.innerHTML = `
+        <div class="client-info-card" style="width:100%;">
+            <div style="font-weight:600; font-size:16px;">${nombre}</div>
+            <div style="font-size:13px; color:#666; margin-top:2px;">${nif}</div>
+            ${direccion ? `<div style="font-size:12px; color:#888; margin-top:2px;">${direccion}</div>` : ''}
+        </div>
+        <i class="fas fa-pen" style="color:var(--color-primary); margin-left:10px;"></i>
+    `;
+    
     cerrarModalCliente();
 }
 
@@ -354,15 +396,15 @@ async function cargarFactura(id) {
         const json = await res.json();
         const data = json.factura || json;
         
+        numeroFacturaGenerado = data.numero; // Guardar número existente
         document.getElementById('page-title').textContent = data.numero || `Factura #${id}`;
         
         if(data.contacto) {
-            document.getElementById('cliente-id').value = data.contacto.id || data.contacto.idContacto;
-            document.getElementById('cliente-nombre').textContent = data.contacto.razonsocial || 'Cliente';
+            // Usar nueva lógica de selección
+            seleccionarCliente(data.contacto);
         } else if(data.idContacto) {
-            // Fetch contact?
-             document.getElementById('cliente-id').value = data.idContacto;
-             document.getElementById('cliente-nombre').textContent = data.razonsocial || 'Cliente';
+             // Fetch contact?
+             cargarCliente(data.idContacto);
         }
 
         if(data.detalles) {

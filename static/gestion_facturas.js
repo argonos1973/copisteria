@@ -23,7 +23,8 @@ import {
     marcarCambiosSinGuardar,
     resetearCambiosSinGuardar,
     mostrarCargando,
-    ocultarCargando
+    ocultarCargando,
+    debounce
 } from './scripts_utils.js';
 import { 
     calcularTotalesDocumento, 
@@ -1084,7 +1085,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Input "busqueda-producto" => filtrarProductos
     const busquedaProducto = document.getElementById('busqueda-producto');
     if (busquedaProducto) {
-      busquedaProducto.addEventListener('input', () => filtrarProductos());
+      busquedaProducto.addEventListener('input', debounce(() => filtrarProductos(), 300));
     }
 
     // Selector "concepto-detalle" => seleccionarProducto
