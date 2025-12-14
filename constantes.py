@@ -1,10 +1,12 @@
 # constantes.py
+import os
 import socket
 
 # Detectar IP automáticamente o usar localhost
 from logger_config import get_logger
 
 logger = get_logger(__name__)
+
 def get_local_ip():
     try:
         # Obtener la IP local del servidor actual
@@ -21,4 +23,8 @@ IP_SERVIDOR = get_local_ip()
 
 # Base de datos por defecto (solo para scripts sin contexto de sesión)
 # En sistema multiempresa, SIEMPRE se debe usar session['empresa_db']
-DB_NAME = '/var/www/html/db/aleph70/aleph70.db'  # BD por defecto para inicialización
+_DEFAULT_DB_CANDIDATES = [
+    '/var/www/html/db/aleph70/aleph70.db',
+    '/var/www/html/db/aleph70.db',
+]
+DB_NAME = next((p for p in _DEFAULT_DB_CANDIDATES if os.path.exists(p)), _DEFAULT_DB_CANDIDATES[0])  # BD por defecto para inicialización

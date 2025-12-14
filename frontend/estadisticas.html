@@ -39,6 +39,7 @@
     <script>
     // Variable global para el gráfico de gastos del año
     let graficoGastosAnio = null;
+    const API_BASE = window.location.origin;
     
     // Definir función global ANTES de cargar estadisticas_facturas.js
     window.cargarGraficoGastosAnio = async function() {
@@ -54,10 +55,7 @@
                 // console.log('[GRAFICO ANIO] Usando año actual:', anio);
             }
             
-            const apiProtocol = window.location.protocol;
-            const apiHost = window.location.hostname;
-            const apiPort = apiProtocol === 'https:' ? '' : ':5001';
-            const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/gastos/por-categoria-anio?anio=${anio}`);
+            const response = await fetch(`${API_BASE}/api/gastos/por-categoria-anio?anio=${anio}`);
             
             if (!response.ok) {
                 // console.error('[GRAFICO ANIO] Error en respuesta:', response.status);
@@ -1243,10 +1241,7 @@ window.cargarDatosGastos = async function() {
         // console.log(`[INLINE] ✅ Año: ${anio}, Mes: ${mes}`);
         
         // Cargar estadísticas generales (usar protocolo y host dinámicos)
-        const apiProtocol = window.location.protocol;
-        const apiHost = window.location.hostname;
-        const apiPort = apiProtocol === 'https:' ? '' : ':5001'; // No usar puerto si es HTTPS
-        const urlEstadisticas = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`;
+        const urlEstadisticas = `${API_BASE}/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`;
         // console.log('[INLINE] 📡 Haciendo fetch a:', urlEstadisticas);
         
         const respuesta = await fetch(urlEstadisticas);
@@ -1325,10 +1320,7 @@ async function cargarTop10GastosInline(anio) {
         
         tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;">⏳ Cargando Top 10...</td></tr>';
         
-        const apiProtocol = window.location.protocol;
-        const apiHost = window.location.hostname;
-        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
-        const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/top10?anio=${anio}`;
+        const url = `${API_BASE}/api/gastos/top10?anio=${anio}`;
         // console.log('[INLINE] URL:', url);
         
         const respuesta = await fetch(url);
@@ -1457,10 +1449,7 @@ async function abrirModalDetallesGasto(concepto, anio) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
-        const apiProtocol = window.location.protocol;
-        const apiHost = window.location.hostname;
-        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
-        const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/detalles?concepto=${encodeURIComponent(concepto)}&anio=${anio}`;
+        const url = `${API_BASE}/api/gastos/detalles?concepto=${encodeURIComponent(concepto)}&anio=${anio}`;
         // console.log('[MODAL] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1558,10 +1547,7 @@ async function abrirModalDetallesGastoMes(categoria) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
-        const apiProtocol = window.location.protocol;
-        const apiHost = window.location.hostname;
-        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
-        const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&mes=${parseInt(mes)}`;
+        const url = `${API_BASE}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&mes=${parseInt(mes)}`;
         // console.log('[MODAL MES] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1660,10 +1646,7 @@ async function abrirModalDetallesGastoAnio(categoria) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
-        const apiProtocol = window.location.protocol;
-        const apiHost = window.location.hostname;
-        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
-        const url = `${apiProtocol}//${apiHost}${apiPort}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
+        const url = `${API_BASE}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
         // console.log('[MODAL ANIO] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1757,10 +1740,7 @@ async function cargarGraficoGastosMes() {
         const [anio, mes] = selectorFecha.value.split('-');
         // console.log('[GRAFICO] Cargando gráfico para:', mes, '/', anio);
         
-        const apiProtocol = window.location.protocol;
-        const apiHost = window.location.hostname;
-        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
-        const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/gastos/por-categoria-mes?anio=${anio}&mes=${parseInt(mes)}`);
+        const response = await fetch(`${API_BASE}/api/gastos/por-categoria-mes?anio=${anio}&mes=${parseInt(mes)}`);
         
         if (!response.ok) {
             // console.error('[GRAFICO] Error en respuesta:', response.status);
@@ -1898,10 +1878,7 @@ async function cargarGraficoGastosMensual(categoria) {
         
         // console.log('[GRAFICO MENSUAL] Cargando para:', categoria, anio);
         
-        const apiProtocol = window.location.protocol;
-        const apiHost = window.location.hostname;
-        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
-        const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`);
+        const response = await fetch(`${API_BASE}/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`);
         
         if (!response.ok) {
             // console.error('[GRAFICO MENSUAL] Error en respuesta:', response.status);
@@ -2034,10 +2011,7 @@ async function abrirModalInformeSituacion() {
     const [anio, mes] = selectorFecha.value.split('-');
     
     try {
-        const apiProtocol = window.location.protocol;
-        const apiHost = window.location.hostname;
-        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
-        const response = await fetch(`${apiProtocol}//${apiHost}${apiPort}/api/informe-situacion?anio=${anio}&mes=${parseInt(mes)}`);
+        const response = await fetch(`${API_BASE}/api/informe-situacion?anio=${anio}&mes=${parseInt(mes)}`);
         
         if (!response.ok) {
             throw new Error(`Error HTTP: ${response.status}`);
@@ -2220,9 +2194,7 @@ async function ejecutarSimulacion() {
     
     try {
         // Usar protocolo dinámico para evitar problemas de Mixed Content
-        const apiProtocol = window.location.protocol;
-        const apiPort = apiProtocol === 'https:' ? '' : ':5001';
-        const apiUrl = `${apiProtocol}//${window.location.hostname}${apiPort}/api/simulador-financiero`;
+        const apiUrl = `${API_BASE}/api/simulador-financiero`;
         // console.log('[SIMULADOR] Llamando a:', apiUrl);
         
         const response = await fetch(apiUrl, {
@@ -2303,9 +2275,7 @@ async function aplicarEstrategia() {
     // console.log('[ESTRATEGIA] Aplicando estrategia:', estrategiaSeleccionada);
     
     // Obtener datos reales primero
-    const apiProtocol = window.location.protocol;
-    const apiPort = apiProtocol === 'https:' ? '' : ':5001';
-    const apiUrl = `${apiProtocol}//${window.location.hostname}${apiPort}/api/simulador-financiero`;
+    const apiUrl = `${API_BASE}/api/simulador-financiero`;
     
     try {
         // 1. Obtener situación base

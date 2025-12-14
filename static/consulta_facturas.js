@@ -74,7 +74,7 @@ function formatDateToDisplay(dateStr) {
 // Estado de paginación
 let pagination = {
     page: 1,
-    pageSize: 20,
+    pageSize: 10,
     totalPages: 1
 };
 
@@ -84,7 +84,7 @@ function loadPaginationState() {
         if (saved) {
             const p = JSON.parse(saved);
             pagination.page = Math.max(parseInt(p.page || 1), 1);
-            pagination.pageSize = Math.min(Math.max(parseInt(p.pageSize || 20), 1), 100);
+            pagination.pageSize = Math.min(Math.max(parseInt(p.pageSize || 10), 1), 100);
             pagination.totalPages = parseInt(p.totalPages || 1) || 1;
         }
     } catch {}
@@ -102,12 +102,19 @@ function updatePaginationUI() {
     if (pageInfo) pageInfo.textContent = `Página ${pagination.page} de ${pagination.totalPages}`;
     if (prevBtn) prevBtn.disabled = pagination.page <= 1;
     if (nextBtn) nextBtn.disabled = pagination.page >= pagination.totalPages;
-    if (pageSizeSel) pageSizeSel.value = String(pagination.pageSize);
+    if (pageSizeSel) {
+        // Asegurar que el valor del select coincida con el estado
+        if (![10, 20, 50, 100].includes(pagination.pageSize)) {
+             pagination.pageSize = 10;
+        }
+        pageSizeSel.value = String(pagination.pageSize);
+    }
 }
 
 function handlePageSizeChange() {
     const sel = document.getElementById('pageSizeSelectFacturas');
-    const newSize = parseInt(sel.value || '20');
+    const newSize = parseInt(sel.value || '10');
+    console.log('[FACTURAS] Cambio de tamaño de página:', newSize);
     pagination.pageSize = Math.min(Math.max(newSize, 1), 100);
     pagination.page = 1; // reset al cambiar tamaño
     savePaginationState();

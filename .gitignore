@@ -65,3 +65,6 @@ static/tmp_qr/
 /index.html
 .env
 logs/
+
+deploy_backups/
+static/gestion_contactos_*.js

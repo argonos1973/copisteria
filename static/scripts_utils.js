@@ -518,8 +518,8 @@ export async function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad,
   }
 
   if (tipoDocumento === 'factura') {
-    registrarFranjaAplicada(null);
-    return precioUnitarioSinIVA;
+    // Permitir descuentos en facturas (ahora usan caché)
+    return await aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId);
   }
 
   if (tipoFactura === 'A') {
@@ -533,6 +533,20 @@ export async function calcularPrecioConDescuento(precioUnitarioSinIVA, cantidad,
 // Flag global para controlar llamadas concurrentes
 let abortControllerFranjas = null;
 
+// Caché de franjas en frontend: Map<productoId, {franjas: Array, timestamp: Number}>
+const _franjasFrontendCache = new Map();
+const CACHE_TTL_MS = 1000 * 60 * 5; // 5 minutos
+
+export function limpiarCacheFranjasFrontend(productoId = null) {
+  if (productoId) {
+    _franjasFrontendCache.delete(String(productoId));
+    console.log(`[Cache] Invalidado caché franjas para producto ${productoId}`);
+  } else {
+    _franjasFrontendCache.clear();
+    console.log('[Cache] Caché de franjas limpiado completamente');
+  }
+}
+
 async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, productoId) {
   if (!productoId) {
     console.warn('No se proporcionó productoId, usando precio original sin descuento');
@@ -540,102 +554,132 @@ async function aplicarDescuentoPorFranja(precioUnitarioSinIVA, cantidad, product
     return precioUnitarioSinIVA;
   }
 
-  // Cancelar petición anterior si existe
-  if (abortControllerFranjas) {
-    abortControllerFranjas.abort();
+  // 1. Intentar obtener de caché
+  const now = Date.now();
+  const cacheKey = String(productoId);
+  
+  let franjas = null;
+  
+  if (_franjasFrontendCache.has(cacheKey)) {
+    const entry = _franjasFrontendCache.get(cacheKey);
+    if (now - entry.timestamp < CACHE_TTL_MS) {
+      franjas = entry.franjas;
+      // console.log(`[Cache] Hit para producto ${productoId}`);
+    } else {
+      _franjasFrontendCache.delete(cacheKey);
+      // console.log(`[Cache] Expirado para producto ${productoId}`);
+    }
   }
-  abortControllerFranjas = new AbortController();
-  const signal = abortControllerFranjas.signal;
 
-  try {
-    // Usar window.originalFetch si existe (interceptor bypass) o fetch nativo
-    const fetchFunc = window.originalFetch || window.fetch;
-    
-    const response = await fetchFunc(buildApiUrl(`/api/productos/${productoId}/franjas_descuento`), {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      signal
-    });
-    
-    if (!response.ok) {
-      console.warn(`Error al obtener franjas para producto ${productoId}: ${response.status}`);
+  // 2. Si no hay caché, hacer fetch
+  if (!franjas) {
+    // Cancelar petición anterior si existe
+    if (abortControllerFranjas) {
+      abortControllerFranjas.abort();
+    }
+    abortControllerFranjas = new AbortController();
+    const signal = abortControllerFranjas.signal;
+
+    try {
+      // Usar window.originalFetch si existe (interceptor bypass) o fetch nativo
+      const fetchFunc = window.originalFetch || window.fetch;
+      
+      const response = await fetchFunc(buildApiUrl(`/api/productos/${productoId}/franjas_descuento`), {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        signal
+      });
+      
+      if (!response.ok) {
+        console.warn(`Error al obtener franjas para producto ${productoId}: ${response.status}`);
+        registrarFranjaAplicada(null);
+        return precioUnitarioSinIVA;
+      }
+
+      const data = await response.json();
+      franjas = data.franjas || [];
+      
+      // Guardar en caché si obtuvimos respuesta válida
+      _franjasFrontendCache.set(cacheKey, {
+        franjas: franjas,
+        timestamp: Date.now()
+      });
+      
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log('Cálculo de franjas abortado por nueva petición');
+        // Re-lanzar para detener la cadena de promesas en el caller
+        throw error; 
+      }
+      console.error(`Error al calcular descuento por franja para producto ${productoId}:`, error);
       registrarFranjaAplicada(null);
       return precioUnitarioSinIVA;
-    }
-
-    const data = await response.json();
-    const franjas = data.franjas || [];
-
-    if (franjas.length === 0) {
-      console.warn(`No hay franjas definidas para producto ${productoId}`);
-      registrarFranjaAplicada(null);
-      return precioUnitarioSinIVA;
-    }
-
-    let descuentoAplicable = 0;
-    let franjaAplicada = null;
-
-    for (const franja of franjas) {
-      if (cantidad >= franja.min_cantidad && cantidad <= franja.max_cantidad) {
-        descuentoAplicable = franja.porcentaje_descuento;
-        franjaAplicada = {
-          min: franja.min_cantidad,
-          max: franja.max_cantidad,
-          descuento: franja.porcentaje_descuento
-        };
-        break;
+    } finally {
+      if (abortControllerFranjas && abortControllerFranjas.signal === signal) {
+          abortControllerFranjas = null;
       }
     }
+  }
 
-    if (!franjaAplicada && franjas.length > 0) {
-      const ultimaFranja = franjas[franjas.length - 1];
-      if (cantidad > ultimaFranja.max_cantidad) {
-        descuentoAplicable = ultimaFranja.porcentaje_descuento;
-        franjaAplicada = {
-          min: ultimaFranja.min_cantidad,
-          max: ultimaFranja.max_cantidad,
-          descuento: ultimaFranja.porcentaje_descuento
-        };
-      }
-    }
-
-    if (!franjaAplicada) {
-      console.warn(`No se encontró franja para cantidad ${cantidad} en producto ${productoId}`);
-      registrarFranjaAplicada(null);
-      return precioUnitarioSinIVA;
-    }
-
-    registrarFranjaAplicada(franjaAplicada);
-
-    const factorDescuento = (100 - descuentoAplicable) / 100;
-    const precioConDescuento = precioUnitarioSinIVA * factorDescuento;
-
-    console.log('=== CÁLCULO DE FRANJA DE DESCUENTO (BD) ===');
-    console.log(`Producto ID: ${productoId}`);
-    console.log(`Precio original: ${precioUnitarioSinIVA.toFixed(5)}€`);
-    console.log(`Cantidad: ${cantidad} unidades`);
-    console.log(`Franja aplicada: ${franjaAplicada.min}-${franjaAplicada.max} unidades`);
-    console.log(`Descuento aplicable: ${descuentoAplicable}%`);
-    console.log(`Precio con descuento: ${precioConDescuento.toFixed(5)}€`);
-    console.log('==========================================');
-
-    return precioConDescuento;
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      console.log('Cálculo de franjas abortado por nueva petición');
-      // Re-lanzar para detener la cadena de promesas en el caller
-      throw error; 
-    }
-    console.error(`Error al calcular descuento por franja para producto ${productoId}:`, error);
+  // 3. Aplicar lógica de franjas sobre la lista (sea de caché o fresca)
+  if (franjas.length === 0) {
+    // console.warn(`No hay franjas definidas para producto ${productoId}`);
     registrarFranjaAplicada(null);
     return precioUnitarioSinIVA;
-  } finally {
-    if (abortControllerFranjas && abortControllerFranjas.signal === signal) {
-        abortControllerFranjas = null;
+  }
+
+  let descuentoAplicable = 0;
+  let franjaAplicada = null;
+
+  for (const franja of franjas) {
+    if (cantidad >= franja.min_cantidad && cantidad <= franja.max_cantidad) {
+      descuentoAplicable = franja.porcentaje_descuento;
+      franjaAplicada = {
+        min: franja.min_cantidad,
+        max: franja.max_cantidad,
+        descuento: franja.porcentaje_descuento
+      };
+      break;
     }
   }
+
+  if (!franjaAplicada && franjas.length > 0) {
+    const ultimaFranja = franjas[franjas.length - 1];
+    if (cantidad > ultimaFranja.max_cantidad) {
+      descuentoAplicable = ultimaFranja.porcentaje_descuento;
+      franjaAplicada = {
+        min: ultimaFranja.min_cantidad,
+        max: ultimaFranja.max_cantidad,
+        descuento: ultimaFranja.porcentaje_descuento
+      };
+    }
+  }
+
+  if (!franjaAplicada) {
+    console.warn(`No se encontró franja para cantidad ${cantidad} en producto ${productoId}`);
+    registrarFranjaAplicada(null);
+    return precioUnitarioSinIVA;
+  }
+
+  registrarFranjaAplicada(franjaAplicada);
+
+  const factorDescuento = (100 - descuentoAplicable) / 100;
+  const precioConDescuento = precioUnitarioSinIVA * factorDescuento;
+
+  /*
+  console.log('=== CÁLCULO DE FRANJA DE DESCUENTO (BD) ===');
+  console.log(`Producto ID: ${productoId}`);
+  console.log(`Precio original: ${precioUnitarioSinIVA.toFixed(5)}€`);
+  console.log(`Cantidad: ${cantidad} unidades`);
+  console.log(`Franja aplicada: ${franjaAplicada.min}-${franjaAplicada.max} unidades`);
+  console.log(`Descuento aplicable: ${descuentoAplicable}%`);
+  console.log(`Precio con descuento: ${precioConDescuento.toFixed(5)}€`);
+  console.log('==========================================');
+  */
+
+  return precioConDescuento;
 }
 
 export async function calcularTotalDetalle() {
@@ -710,7 +754,12 @@ export async function calcularTotalDetalle() {
   let tipoDocumento = 'N';
   const tipoPresupuestoElem = document.getElementById('tipo-presupuesto');
   const tipoProformaElem = document.getElementById('tipo-proforma');
-  if (tipoPresupuestoElem) {
+  const totalTicketElem = document.getElementById('total-ticket');
+
+  if (totalTicketElem) {
+    tipoDocumento = 'ticket';
+    console.log('Detectado contexto: ticket');
+  } else if (tipoPresupuestoElem) {
     tipoDocumento = tipoPresupuestoElem.value || 'N';
     sessionStorage.setItem('tipoPresupuesto', tipoDocumento);
     console.log('Detectado tipo de presupuesto:', tipoDocumento);
@@ -1238,19 +1287,15 @@ export async function fetchConManejadorErrores(url, opciones = {}) {
     try {
       const u = new URL(primaria, window.location.origin);
       if (u.pathname.startsWith('/api')) {
-        // Solo usar el servidor actual (detectado automáticamente)
-        const currentHost = window.location.hostname;
-        const protocol = window.location.protocol;
-        const candidate = `${protocol}//${currentHost}:${PORT}${u.pathname}${u.search}`;
+        // Solo usar el servidor actual (detectado automáticamente) sin forzar puertos
+        const candidate = `${window.location.origin}${u.pathname}${u.search}`;
         if (!candidates.includes(candidate)) candidates.push(candidate);
       }
     } catch (_) {
       const p = (typeof url === 'string' && url.startsWith('/')) ? url : `/${url}`;
       if (p.startsWith('/api')) {
-        // Solo usar el servidor actual (detectado automáticamente)
-        const currentHost = window.location.hostname;
-        const protocol = window.location.protocol;
-        const candidate = `${protocol}//${currentHost}:${PORT}${p}`;
+        // Solo usar el servidor actual (detectado automáticamente) sin forzar puertos
+        const candidate = `${window.location.origin}${p}`;
         if (!candidates.includes(candidate)) candidates.push(candidate);
       }
     }

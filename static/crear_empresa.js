@@ -68,11 +68,46 @@ document.getElementById('createCompanyForm').addEventListener('submit', async (e
         return;
     }
 
-    if (!validarNifEspanol(nif)) {
+    if (window.NifCifValidator ? !window.NifCifValidator.isValid(nif) : !validarNifEspanol(nif)) {
         mostrarAlerta('El NIF/CIF introducido no es válido', 'danger');
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Crear Empresa y Empezar';
         return;
+    }
+
+    const cpInput = document.getElementById('codigoPostal');
+    if (cpInput && cpInput.value.trim() && window.CpValidator) {
+        const cp = window.CpValidator.normalizeCp(cpInput.value);
+        cpInput.value = cp;
+
+        if (!window.CpValidator.isValidFormat(cp)) {
+            mostrarAlerta('El Código Postal debe tener 5 dígitos', 'danger');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Crear Empresa y Empezar';
+            return;
+        }
+
+        try {
+            const data = await window.CpValidator.getCpData(cp);
+            if (!Array.isArray(data) || !data.length) {
+                mostrarAlerta('El Código Postal introducido no existe', 'danger');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Crear Empresa y Empezar';
+                return;
+            }
+
+            const row = data[0] || {};
+            const ciudadEl = document.getElementById('ciudad');
+            const provinciaEl = document.getElementById('provincia');
+            if (ciudadEl && !ciudadEl.value.trim()) ciudadEl.value = row.poblacio || '';
+            if (provinciaEl && !provinciaEl.value.trim()) provinciaEl.value = row.provincia || '';
+        } catch (err) {
+            console.error('[CP] Error:', err);
+            mostrarAlerta('No se pudo validar el Código Postal', 'danger');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-check-circle"></i> Crear Empresa y Empezar';
+            return;
+        }
     }
     
     formData.append('nombre', nombreEmpresa);

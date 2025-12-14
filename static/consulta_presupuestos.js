@@ -6,6 +6,11 @@ import { formatearFechaSoloDia, getEstadoFormateado, getEstadoClass, parsearImpo
 const showOverlay = () => { const el = document.getElementById('overlay'); if (el) el.style.display = 'flex'; };
 const hideOverlay = () => { const el = document.getElementById('overlay'); if (el) el.style.display = 'none'; };
 
+// Variables de paginación
+let page = 1;
+let pageSize = 10;
+let totalPages = 1;
+
 // Actualiza totales del footer
 const updateTotals = (items) => {
   let totalBase = 0, totalIVA = 0, totalCobrado = 0, totalTotal = 0;
@@ -37,7 +42,7 @@ async function buscarPresupuestos() {
     const presupuestoNumber = document.getElementById('presupuestoNumber').value.trim();
     const contacto = document.getElementById('contacto').value.trim();
     const identificador = document.getElementById('identificador').value.trim();
-    const pageSize = document.getElementById('pageSizeSelectPresupuestos').value || '20';
+    const pageSize = document.getElementById('pageSizeSelectPresupuestos').value || '10';
 
     const params = new URLSearchParams();
     const hayFiltrosAdicionales = !!(status || presupuestoNumber || (contacto && contacto.length >= 2) || identificador);

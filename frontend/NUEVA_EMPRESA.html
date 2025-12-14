@@ -7,6 +7,8 @@
     <script src="/static/auto_branding.js?v=1764787007"></script>
     <link rel="stylesheet" href="/static/css/theme-consumer.css?v=1763897790">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <script src="/static/nif_cif_validator.js?v=1763897790"></script>
+    <script src="/static/cp_validator.js?v=1763897790"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 15px; }
@@ -77,7 +79,7 @@
                     <label for="cif">
                         <i class="fas fa-id-card"></i> NIF
                     </label>
-                    <input type="text" id="cif" name="cif" placeholder="B12345678" maxlength="9" class="w-nif">
+                    <input type="text" id="cif" name="cif" placeholder="B12345678" maxlength="9" class="w-nif" data-validate-nifcif="1">
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 0;">
@@ -100,7 +102,7 @@
                     <label for="codigo_postal">
                         <i class="fas fa-mail-bulk"></i> C.P.
                     </label>
-                    <input type="text" id="codigo_postal" name="codigo_postal" placeholder="28001" maxlength="5" class="w-cp">
+                    <input type="text" id="codigo_postal" name="codigo_postal" placeholder="28001" maxlength="5" class="w-cp" data-validate-cp="1" data-cp-locality-id="ciudad" data-cp-province-id="provincia" data-cp-no-submit-block="1">
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label for="ciudad">
@@ -201,6 +203,37 @@
         
         async function crearEmpresa(event) {
             event.preventDefault();
+
+            const cpRaw = document.getElementById('codigo_postal')?.value?.trim() || '';
+            if (cpRaw && window.CpValidator) {
+                const cp = window.CpValidator.normalizeCp(cpRaw);
+                document.getElementById('codigo_postal').value = cp;
+                if (!window.CpValidator.isValidFormat(cp)) {
+                    mostrarAlerta(
+                        `<strong>❌ Error</strong><br>El Código Postal debe tener 5 dígitos`,
+                        'error'
+                    );
+                    return;
+                }
+
+                const data = await window.CpValidator.getCpData(cp);
+                if (!Array.isArray(data) || !data.length) {
+                    mostrarAlerta(
+                        `<strong>❌ Error</strong><br>El Código Postal introducido no existe`,
+                        'error'
+                    );
+                    return;
+                }
+            }
+
+            const cifValue = document.getElementById('cif')?.value?.trim() || '';
+            if (cifValue && window.NifCifValidator && !window.NifCifValidator.isValid(cifValue)) {
+                mostrarAlerta(
+                    `<strong>❌ Error</strong><br>El NIF/NIE/CIF introducido no es válido`,
+                    'error'
+                );
+                return;
+            }
             
             const formData = new FormData(event.target);
             const submitBtn = event.target.querySelector('button[type="submit"]');

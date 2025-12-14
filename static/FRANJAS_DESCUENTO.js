@@ -1,5 +1,5 @@
 import { API_URL_PRIMARY, API_URL_FALLBACK } from './constantes.js?v=1762757322';
-import { fetchConManejadorErrores, debounce, norm, parsearImporte } from './scripts_utils.js';
+import { fetchConManejadorErrores, debounce, norm, parsearImporte, limpiarCacheFranjasFrontend } from './scripts_utils.js';
 import { mostrarConfirmacion } from './notificaciones.js';
 
 const productoSelect = document.getElementById('productoSelect');
@@ -483,6 +483,8 @@ btnGuardar.addEventListener('click', async () => {
     listado = enforceStrictDecreasingPrices(listado);
     console.log('[FRANJAS] Datos después de enforce:', listado);
     await saveFranjas(id, listado);
+    // Invalidar caché frontend
+    limpiarCacheFranjasFrontend(id);
     franjas = listado;
     // Actualizar franjas originales y resetear flag de cambios
     franjasOriginales = JSON.parse(JSON.stringify(listado));
@@ -597,6 +599,8 @@ if (productoSelect) {
             let listado = leerFranjasDeTabla();
             listado = enforceStrictDecreasingPrices(listado);
             await saveFranjas(id, listado);
+            // Invalidar caché frontend
+            limpiarCacheFranjasFrontend(id);
             cambiosSinGuardar = false;
           }
         } catch (e) {
@@ -636,6 +640,8 @@ document.addEventListener('click', async (e) => {
           let listado = leerFranjasDeTabla();
           listado = enforceStrictDecreasingPrices(listado);
           await saveFranjas(id, listado);
+          // Invalidar caché frontend
+          limpiarCacheFranjasFrontend(id);
           cambiosSinGuardar = false;
           setStatus('Guardado correctamente');
           

@@ -9,6 +9,27 @@ from logger_config import get_productos_logger
 # Inicializar logger
 logger = get_productos_logger()
 
+import time
+
+# Caché global para franjas de descuento: {producto_id: {'data': lista_franjas, 'timestamp': float}}
+_FRANJAS_CACHE = {}
+_CACHE_TTL = 300  # 5 minutos de vida útil
+
+def invalidar_cache_franjas(producto_id=None):
+    """
+    Invalida el caché de franjas.
+    
+    Args:
+        producto_id (int, optional): ID del producto a invalidar. Si es None, limpia todo el caché.
+    """
+    global _FRANJAS_CACHE
+    if producto_id is None:
+        _FRANJAS_CACHE = {}
+        logger.debug("Caché de franjas limpiado completamente")
+    elif producto_id in _FRANJAS_CACHE:
+        del _FRANJAS_CACHE[producto_id]
+        logger.debug(f"Invalidado caché de franjas para producto {producto_id}")
+
 
 def obtener_productos():
     """
@@ -383,6 +404,8 @@ def eliminar_todas_franjas_producto(producto_id: int):
         cur = conn.cursor()
         cur.execute('DELETE FROM descuento_producto_franja WHERE producto_id = ?', (producto_id,))
         conn.commit()
+        # Invalidar caché
+        invalidar_cache_franjas(producto_id)
         logger.info(f"Eliminadas {cur.rowcount} franjas del producto {producto_id}")
         return True
     finally:
@@ -471,6 +494,17 @@ def obtener_franjas_descuento_por_producto(producto_id):
     Devuelve lista de franjas de descuento para un producto dado, ordenadas por min_cantidad.
     Retorna lista de dicts: [{min, max, descuento}]
     """
+    # Verificar caché primero
+    now = time.time()
+    if producto_id in _FRANJAS_CACHE:
+        entry = _FRANJAS_CACHE[producto_id]
+        if now - entry['timestamp'] < _CACHE_TTL:
+            # Devolver una copia para evitar modificación accidental
+            return [f.copy() for f in entry['data']]
+        else:
+            # Caducado
+            del _FRANJAS_CACHE[producto_id]
+
     try:
         ensure_tabla_descuentos_bandas()
     except Exception as e:
@@ -491,15 +525,22 @@ def obtener_franjas_descuento_por_producto(producto_id):
             (producto_id,)
         )
         filas = cur.fetchall()
-        return [
+        resultado = [
             {
                 'min_cantidad': int(row[0]),
                 'max_cantidad': int(row[1]),
-                # Servir 6 decimales para preservar granularidad fina
                 'porcentaje_descuento': round(float(row[2]), 6)
             }
             for row in filas
         ]
+        
+        # Guardar en caché con timestamp
+        _FRANJAS_CACHE[producto_id] = {
+            'data': resultado,
+            'timestamp': now
+        }
+        
+        return resultado
     except Exception as e:
         logger.error(f"Error consultando franjas de producto {producto_id}: {e}", exc_info=True)
         raise
@@ -567,6 +608,8 @@ def reemplazar_franjas_descuento_producto(producto_id, franjas):
             )
             logger.debug(f"Insertada franja producto {producto_id}: min={min_c}, max={max_c}, desc={clamped_desc}")
         conn.commit()
+        # Invalidar caché después de actualizar
+        invalidar_cache_franjas(producto_id)
         return True
     except Exception as e:
         if 'conn' in locals():
@@ -1001,6 +1044,9 @@ def actualizar_producto(id_producto, data):
         
         conn.commit()
 
+        # Invalidar caché de franjas por si acaso (aunque se gestiona en las funciones específicas)
+        invalidar_cache_franjas(id_producto)
+
         # Gestionar franjas según configuración
         try:
             config_franjas = data.get('config_franjas', {})
@@ -1098,6 +1144,9 @@ def eliminar_producto(id_producto):
             cursor.execute('DELETE FROM descuento_producto_franja WHERE producto_id = ?', (id_producto,))
             cursor.execute('DELETE FROM productos WHERE id = ?', (id_producto,))
             conn.commit()
+            
+            # Invalidar caché
+            invalidar_cache_franjas(id_producto)
         except Exception as e_tr:
             if 'conn' in locals():
                 conn.rollback()

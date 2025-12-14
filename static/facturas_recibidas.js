@@ -8,12 +8,113 @@ import { formatearImporte } from './scripts_utils.js';
 
 // Variables globales
 let paginaActual = 1;
-let porPagina = parseInt(sessionStorage.getItem('facturas_por_pagina')) || 20;
+let porPagina = parseInt(sessionStorage.getItem('facturas_por_pagina')) || 10;
 let totalPaginas = 1;
 let proveedores = [];
 let filtrosActuales = {};
 let timeoutBusqueda = null;
 let facturasCache = [];
+
+let __nuevaFacturaPreviewBlobUrl = null;
+
+function _revokeNuevaFacturaPreviewBlobUrl() {
+    try {
+        if (__nuevaFacturaPreviewBlobUrl) {
+            URL.revokeObjectURL(__nuevaFacturaPreviewBlobUrl);
+        }
+    } catch (_) {}
+    __nuevaFacturaPreviewBlobUrl = null;
+}
+
+function _renderNuevaFacturaPreview(preview) {
+    let url = '';
+    let mime = '';
+    if (preview && typeof preview === 'object') {
+        url = String(preview.url || preview.preview_url || '');
+        mime = String(preview.mime || preview.type || '');
+    } else {
+        url = String(preview || '');
+    }
+    if (!url) return;
+
+    // Opción A: la vista previa se muestra en el panel derecho.
+    // Si está colapsado, se expande automáticamente para que el usuario vea el preview.
+    try {
+        const right = document.getElementById('nuevaFacturaRightCol');
+        const isCollapsed = !right || right.style.display === 'none';
+        if (isCollapsed && typeof window._setPanelNuevaFacturaCollapsed === 'function') {
+            window._setPanelNuevaFacturaCollapsed(false);
+        }
+    } catch (_) {}
+
+    const container = document.getElementById('nuevaFacturaPreviewContainer');
+    const body = document.getElementById('nuevaFacturaPreviewBody');
+    if (!container || !body) return;
+
+    body.innerHTML = '';
+
+    const lower = url.toLowerCase();
+    const isPdf = (mime && mime.toLowerCase().includes('pdf')) || lower.includes('.pdf');
+    if (isPdf) {
+        const embed = document.createElement('embed');
+        embed.src = url;
+        embed.type = 'application/pdf';
+        embed.style.width = '100%';
+        embed.style.height = '100%';
+        embed.style.border = '0';
+        body.appendChild(embed);
+    } else {
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = 'Vista previa factura';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        img.style.display = 'block';
+        body.appendChild(img);
+    }
+
+    container.style.display = 'block';
+}
+
+function _hideNuevaFacturaPreview() {
+    _revokeNuevaFacturaPreviewBlobUrl();
+    const containerRight = document.getElementById('nuevaFacturaPreviewContainer');
+    const bodyRight = document.getElementById('nuevaFacturaPreviewBody');
+    if (bodyRight) bodyRight.innerHTML = '';
+    if (containerRight) containerRight.style.display = 'none';
+}
+
+window._setPanelNuevaFacturaCollapsed = function(collapsed) {
+    const left = document.getElementById('nuevaFacturaLeftCol');
+    const right = document.getElementById('nuevaFacturaRightCol');
+    const icon = document.getElementById('btnToggleNuevaFacturaPanelIcon');
+
+    if (!left || !right) return;
+
+    if (collapsed) {
+        right.style.display = 'none';
+        left.style.width = '100%';
+        left.style.flex = '1 1 auto';
+        if (icon) icon.textContent = '⟩';
+    } else {
+        right.style.display = 'flex';
+        left.style.width = '68%';
+        left.style.flex = '0 0 68%';
+        if (icon) icon.textContent = '⟨';
+    }
+
+    // Persistencia suave en sesión
+    try {
+        sessionStorage.setItem('facturas_recibidas_nueva_panel_collapsed', collapsed ? '1' : '0');
+    } catch (_) {}
+};
+
+window.togglePanelNuevaFactura = function() {
+    const right = document.getElementById('nuevaFacturaRightCol');
+    const isCollapsed = !right || right.style.display === 'none';
+    window._setPanelNuevaFacturaCollapsed(!isCollapsed);
+};
 
 // ============================================================================
 // INICIALIZACIÓN
@@ -40,6 +141,18 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Event listeners
     configurarEventListeners();
+
+    try {
+        const params = new URLSearchParams(window.location.search || '');
+        const shouldOpen = params.get('nueva') === '1' || window.location.hash === '#nueva';
+        if (shouldOpen) {
+            setTimeout(() => abrirNuevaFactura(), 200);
+            params.delete('nueva');
+            const newQuery = params.toString();
+            const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : '') + '';
+            window.history.replaceState({}, '', newUrl);
+        }
+    } catch (_) {}
 });
 
 function configurarEventListeners() {
@@ -74,7 +187,563 @@ function configurarEventListeners() {
         paginaActual = 1;
         cargarFacturas();
     });
+
+    const btnNueva = document.getElementById('btnNuevaFactura');
+    if (btnNueva) {
+        btnNueva.addEventListener('click', () => {
+            abrirNuevaFactura();
+        });
+    }
 }
+
+function waitForElement(id, timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
+        const start = Date.now();
+        const tick = () => {
+            const el = document.getElementById(id);
+            if (el) return resolve(el);
+            if (Date.now() - start > timeoutMs) return reject(new Error(`No se encontró #${id}`));
+            setTimeout(tick, 100);
+        };
+        tick();
+    });
+}
+
+async function abrirNuevaFactura() {
+    try {
+        await waitForElement('modalNuevaFactura', 6000);
+
+        try {
+            if (typeof window._ensureNuevaFacturaArchivoBlock === 'function') {
+                window._ensureNuevaFacturaArchivoBlock();
+            }
+        } catch (_) {}
+
+        try { _hideNuevaFacturaPreview(); } catch (_) {}
+
+        // Fecha por defecto
+        const hoy = new Date().toISOString().split('T')[0];
+        const fechaEmisionEl = document.getElementById('nueva-fecha-emision');
+        if (fechaEmisionEl) fechaEmisionEl.value = hoy;
+
+        // Reset form
+        const form = document.getElementById('formNuevaFactura');
+        if (form) form.reset();
+        if (fechaEmisionEl) fechaEmisionEl.value = hoy;
+
+        const ocrEstado = document.getElementById('nueva-ocr-estado');
+        if (ocrEstado) ocrEstado.textContent = '';
+        const fileEl = document.getElementById('nueva-archivo');
+        if (fileEl) {
+            fileEl.value = '';
+            fileEl.onchange = () => {
+                const hasFile = !!fileEl?.files?.[0];
+                if (!hasFile) {
+                    try { _hideNuevaFacturaPreview(); } catch (_) {}
+                    return;
+                }
+
+                try {
+                    const f = fileEl.files[0];
+                    try {
+                        if (typeof window._setPanelNuevaFacturaCollapsed === 'function') {
+                            window._setPanelNuevaFacturaCollapsed(false);
+                        }
+                    } catch (_) {}
+                    _revokeNuevaFacturaPreviewBlobUrl();
+                    __nuevaFacturaPreviewBlobUrl = URL.createObjectURL(f);
+                    _renderNuevaFacturaPreview({ url: __nuevaFacturaPreviewBlobUrl, mime: f.type });
+                } catch (_) {}
+            };
+        }
+
+        // Panel derecho: colapsado por defecto (si el usuario lo expandió antes, se respeta)
+        try {
+            if (typeof window._setPanelNuevaFacturaCollapsed === 'function') {
+                let initialCollapsed = true;
+                try {
+                    const stored = sessionStorage.getItem('facturas_recibidas_nueva_panel_collapsed');
+                    if (stored !== null) initialCollapsed = stored === '1';
+                } catch (_) {}
+                window._setPanelNuevaFacturaCollapsed(initialCollapsed);
+            }
+        } catch (_) {}
+
+        // Default IVA
+        const ivaPct = document.getElementById('nueva-iva-porcentaje');
+        if (ivaPct && !ivaPct.value) ivaPct.value = '21';
+
+        // Modo proveedor por defecto
+        const provExistBlock = document.getElementById('proveedorExistenteBlock');
+        const provManualBlock = document.getElementById('proveedorManualBlock');
+        if (provExistBlock) provExistBlock.style.display = 'block';
+        if (provManualBlock) provManualBlock.style.display = 'none';
+        const radioExist = document.querySelector('input[name="proveedorModo"][value="existente"]');
+        if (radioExist) radioExist.checked = true;
+
+        // Rellenar proveedores en select
+        await cargarProveedoresParaModalNueva();
+
+        // Toggle proveedor modo
+        const radios = Array.from(document.querySelectorAll('input[name="proveedorModo"]'));
+        radios.forEach(r => {
+            r.onchange = () => {
+                const modo = document.querySelector('input[name="proveedorModo"]:checked')?.value;
+                if (provExistBlock) provExistBlock.style.display = (modo === 'existente') ? 'block' : 'none';
+                if (provManualBlock) provManualBlock.style.display = (modo === 'manual') ? 'block' : 'none';
+            };
+        });
+
+        // Calcular importes
+        const baseInput = document.getElementById('nueva-base');
+        const ivaInput = document.getElementById('nueva-iva-porcentaje');
+        const calcular = () => {
+            const base = parseFloat(baseInput?.value) || 0;
+            const ivaPorcentaje = parseFloat(ivaInput?.value) || 0;
+            const ivaImporte = base * (ivaPorcentaje / 100);
+            const total = base + ivaImporte;
+            const ivaImpEl = document.getElementById('nueva-iva-importe');
+            const totalEl = document.getElementById('nueva-total');
+            if (ivaImpEl) ivaImpEl.value = ivaImporte.toFixed(2);
+            if (totalEl) totalEl.value = total.toFixed(2);
+        };
+        if (baseInput) baseInput.oninput = calcular;
+        if (ivaInput) ivaInput.oninput = calcular;
+        calcular();
+
+        // Adjuntar CP validator (manual proveedor)
+        try {
+            if (window.CpValidator && typeof window.CpValidator.attachToInput === 'function') {
+                const cpEl = document.getElementById('nueva-prov-cp');
+                if (cpEl) {
+                    window.CpValidator.attachToInput(cpEl, {
+                        localityId: 'nueva-prov-poblacion',
+                        provinceId: 'nueva-prov-provincia',
+                        noSubmitBlock: true
+                    });
+                }
+            }
+        } catch (_) {}
+
+        abrirModal('modalNuevaFactura');
+    } catch (err) {
+        console.error('[Facturas] Error abriendo modal nueva:', err);
+        mostrarNotificacion('No se pudo abrir el formulario de nueva factura', 'error');
+    }
+}
+
+window._ensureNuevaFacturaArchivoBlock = function() {
+    if (document.getElementById('nueva-archivo')) return;
+
+    const modal = document.getElementById('modalNuevaFactura');
+    if (!modal) return;
+
+    const form = document.getElementById('formNuevaFactura') || modal.querySelector('form') || null;
+    const anchor = document.getElementById('proveedorManualBlock') ||
+        document.getElementById('proveedorExistenteBlock') ||
+        document.getElementById('nueva-proveedor') ||
+        (form ? form.querySelector('#nueva-proveedor') : null);
+
+    if (!form || !anchor) {
+        try {
+            if (!window.__reloading_modales_facturas_recibidas__) {
+                window.__reloading_modales_facturas_recibidas__ = true;
+                const container = document.getElementById('modales-container');
+                if (container) {
+                    fetch('/MODALES_FACTURAS_RECIBIDAS.html?cb=' + Date.now())
+                        .then(r => r.text())
+                        .then(html => {
+                            container.innerHTML = html;
+                            window.__reloading_modales_facturas_recibidas__ = false;
+                            setTimeout(() => {
+                                try { window._ensureNuevaFacturaArchivoBlock(); } catch (_) {}
+                            }, 50);
+                        })
+                        .catch(() => { window.__reloading_modales_facturas_recibidas__ = false; });
+                } else {
+                    window.__reloading_modales_facturas_recibidas__ = false;
+                }
+            }
+        } catch (_) {
+            window.__reloading_modales_facturas_recibidas__ = false;
+        }
+        return;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'form-group';
+    wrapper.style.marginTop = '10px';
+    wrapper.innerHTML = `
+        <label for="nueva-archivo" style="display:block;font-weight:bold;margin-bottom:5px;">Archivo (PDF/Imagen) (opcional)</label>
+        <input type="file" id="nueva-archivo" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp" />
+        <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-modal-primary" id="btnOcrNuevaFactura">
+                <i class="fas fa-magic"></i> Escanear con IA
+            </button>
+            <span id="nueva-ocr-estado" style="font-size: 12px; opacity: 0.9;"></span>
+        </div>
+        <small>Si escaneas, se rellenarán automáticamente proveedor y datos de la factura (usa GPT-4 Vision).</small>
+    `.trim();
+
+    if (anchor && anchor.insertAdjacentElement) {
+        anchor.insertAdjacentElement('afterend', wrapper);
+    } else if (form && form.appendChild) {
+        form.appendChild(wrapper);
+    }
+
+    const btn = document.getElementById('btnOcrNuevaFactura');
+    if (btn) {
+        btn.onclick = () => {
+            if (typeof window.escanearNuevaFacturaOCR === 'function') {
+                window.escanearNuevaFacturaOCR();
+            }
+        };
+    }
+};
+
+function _setOcrEstado(texto) {
+    const el = document.getElementById('nueva-ocr-estado');
+    if (el) el.textContent = texto || '';
+}
+
+function _normalizarNumero(v) {
+    if (v === null || v === undefined) return '';
+    const s = String(v).replace(',', '.').trim();
+    return s;
+}
+
+function _toFloatOrZero(v) {
+    const n = parseFloat(_normalizarNumero(v));
+    return isFinite(n) ? n : 0;
+}
+
+function _buscarProveedorExistenteId(datosProveedor) {
+    if (!datosProveedor) return null;
+    const nif = (datosProveedor.nif || '').toUpperCase().replace(/[-\s]/g, '').trim();
+    const nombre = (datosProveedor.nombre || '').toUpperCase().trim();
+
+    if (Array.isArray(proveedores) && proveedores.length) {
+        if (nif) {
+            const matchNif = proveedores.find(p => (p.nif || '').toUpperCase().replace(/[-\s]/g, '').trim() === nif);
+            if (matchNif) return matchNif.id;
+        }
+        if (nombre) {
+            const matchNombre = proveedores.find(p => (p.nombre || '').toUpperCase().trim() === nombre);
+            if (matchNombre) return matchNombre.id;
+        }
+    }
+    return null;
+}
+
+function _rellenarProveedorEnModal(datosProveedor) {
+    const prov = datosProveedor || {};
+    const existenteId = _buscarProveedorExistenteId(prov);
+
+    if (existenteId) {
+        const radioExist = document.querySelector('input[name="proveedorModo"][value="existente"]');
+        if (radioExist) radioExist.checked = true;
+        const provExistBlock = document.getElementById('proveedorExistenteBlock');
+        const provManualBlock = document.getElementById('proveedorManualBlock');
+        if (provExistBlock) provExistBlock.style.display = 'block';
+        if (provManualBlock) provManualBlock.style.display = 'none';
+        const select = document.getElementById('nueva-proveedor');
+        if (select) select.value = String(existenteId);
+        return;
+    }
+
+    const radioManual = document.querySelector('input[name="proveedorModo"][value="manual"]');
+    if (radioManual) radioManual.checked = true;
+    const provExistBlock = document.getElementById('proveedorExistenteBlock');
+    const provManualBlock = document.getElementById('proveedorManualBlock');
+    if (provExistBlock) provExistBlock.style.display = 'none';
+    if (provManualBlock) provManualBlock.style.display = 'block';
+
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el) el.value = (val || '').toString();
+    };
+
+    setVal('nueva-prov-nombre', (prov.nombre || '').toString().toUpperCase());
+    setVal('nueva-prov-nif', (prov.nif || '').toString().toUpperCase());
+    setVal('nueva-prov-direccion', prov.direccion || '');
+    setVal('nueva-prov-email', prov.email || '');
+    setVal('nueva-prov-telefono', prov.telefono || '');
+}
+
+function _rellenarFacturaEnModal(datosFactura) {
+    const f = datosFactura || {};
+
+    const setVal = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined && val !== null) el.value = String(val);
+    };
+
+    setVal('nueva-numero', f.numero || '');
+    setVal('nueva-fecha-emision', f.fecha_emision || '');
+    setVal('nueva-fecha-vencimiento', f.fecha_vencimiento || '');
+    setVal('nueva-concepto', f.concepto || '');
+
+    const base = _toFloatOrZero(f.base_imponible);
+    const ivaImporte = _toFloatOrZero(f.iva);
+    const total = _toFloatOrZero(f.total);
+    const ivaPct = base > 0 ? (ivaImporte / base) * 100 : (parseFloat(document.getElementById('nueva-iva-porcentaje')?.value || '0') || 0);
+
+    setVal('nueva-base', base ? base.toFixed(2) : '0.00');
+    setVal('nueva-iva-porcentaje', isFinite(ivaPct) ? Math.round(ivaPct).toString() : '0');
+    setVal('nueva-iva-importe', ivaImporte ? ivaImporte.toFixed(2) : '0.00');
+    setVal('nueva-total', total ? total.toFixed(2) : (base + ivaImporte).toFixed(2));
+}
+
+window.escanearNuevaFacturaOCR = async function() {
+    try {
+        const fileEl = document.getElementById('nueva-archivo');
+        const archivo = fileEl?.files?.[0];
+        if (!archivo) {
+            try { _hideNuevaFacturaPreview(); } catch (_) {}
+            mostrarNotificacion('Selecciona un archivo (PDF o imagen) para escanear', 'error');
+            return;
+        }
+
+        _setOcrEstado('Escaneando con IA...');
+
+        const formData = new FormData();
+        formData.append('archivo', archivo);
+
+        const response = await fetch('/api/facturas-proveedores/ocr', {
+            method: 'POST',
+            body: formData
+        });
+
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('text/html')) {
+            throw new Error('Sesión expirada. Recarga la página e inicia sesión de nuevo.');
+        }
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Error en OCR');
+        }
+
+        await cargarProveedores();
+
+        const datos = data.datos || {};
+        _rellenarProveedorEnModal(datos.proveedor || {});
+        _rellenarFacturaEnModal(datos.factura || {});
+
+        try {
+            if (data.preview_url) {
+                _renderNuevaFacturaPreview(data.preview_url);
+            } else {
+                _hideNuevaFacturaPreview();
+            }
+        } catch (_) {}
+
+        _setOcrEstado('✅ OCR completado. Revisa y ajusta antes de guardar.');
+        mostrarNotificacion('OCR completado. Revisa los datos antes de guardar.', 'success');
+    } catch (err) {
+        console.error('[Facturas] Error OCR nueva factura:', err);
+        try { _hideNuevaFacturaPreview(); } catch (_) {}
+        _setOcrEstado('❌ Error en OCR');
+        mostrarNotificacion('Error en OCR: ' + (err.message || err), 'error');
+    }
+};
+
+async function cargarProveedoresParaModalNueva() {
+    // Reutilizar el array global "proveedores" si ya está cargado; si no, recargar.
+    if (!Array.isArray(proveedores) || proveedores.length === 0) {
+        await cargarProveedores();
+    }
+
+    const select = document.getElementById('nueva-proveedor');
+    if (!select) return;
+    select.innerHTML = '<option value="">Seleccionar proveedor...</option>';
+    proveedores.forEach(prov => {
+        const opt = document.createElement('option');
+        opt.value = prov.id;
+        opt.textContent = `${prov.nombre} (${prov.nif})`;
+        select.appendChild(opt);
+    });
+}
+
+window.guardarNuevaFactura = async function() {
+    try {
+        const fileEl = document.getElementById('nueva-archivo');
+        const archivoAdjunto = fileEl?.files?.[0] || null;
+
+        const modo = document.querySelector('input[name="proveedorModo"]:checked')?.value || 'existente';
+
+        let proveedorId = null;
+        let proveedorManual = null;
+
+        if (modo === 'existente') {
+            proveedorId = parseInt(document.getElementById('nueva-proveedor')?.value || '', 10);
+            if (!proveedorId) {
+                mostrarNotificacion('Selecciona un proveedor', 'error');
+                return;
+            }
+        } else {
+            const nombre = (document.getElementById('nueva-prov-nombre')?.value || '').trim();
+            const nifEl = document.getElementById('nueva-prov-nif');
+            const nif = (nifEl?.value || '').trim();
+            if (!nombre) {
+                mostrarNotificacion('El nombre del proveedor es obligatorio', 'error');
+                return;
+            }
+
+            // Validar CP si se rellena
+            const cpEl = document.getElementById('nueva-prov-cp');
+            const cpRaw = (cpEl?.value || '').trim();
+            if (cpRaw && window.CpValidator) {
+                const cp = window.CpValidator.normalizeCp(cpRaw);
+                if (cpEl) cpEl.value = cp;
+                if (!window.CpValidator.isValidFormat(cp)) {
+                    mostrarNotificacion('El CP del proveedor debe tener 5 dígitos', 'error');
+                    return;
+                }
+
+                if (typeof window.CpValidator.getCpData === 'function') {
+                    const data = await window.CpValidator.getCpData(cp);
+                    if (!Array.isArray(data) || !data.length) {
+                        mostrarNotificacion('El CP del proveedor no existe', 'error');
+                        return;
+                    }
+                }
+            }
+
+            proveedorManual = {
+                nombre,
+                nif,
+                direccion: (document.getElementById('nueva-prov-direccion')?.value || '').trim(),
+                cp: (document.getElementById('nueva-prov-cp')?.value || '').trim(),
+                poblacion: (document.getElementById('nueva-prov-poblacion')?.value || '').trim(),
+                provincia: (document.getElementById('nueva-prov-provincia')?.value || '').trim(),
+                email: (document.getElementById('nueva-prov-email')?.value || '').trim(),
+                telefono: (document.getElementById('nueva-prov-telefono')?.value || '').trim()
+            };
+        }
+
+        const fechaEmision = document.getElementById('nueva-fecha-emision')?.value;
+        const base = parseFloat(document.getElementById('nueva-base')?.value || '0');
+        const ivaPct = parseFloat(document.getElementById('nueva-iva-porcentaje')?.value || '0');
+        const ivaImp = parseFloat(document.getElementById('nueva-iva-importe')?.value || '0');
+        const total = parseFloat(document.getElementById('nueva-total')?.value || '0');
+
+        if (!fechaEmision) {
+            mostrarNotificacion('La fecha de emisión es obligatoria', 'error');
+            return;
+        }
+        if (!isFinite(base) || base < 0) {
+            mostrarNotificacion('La base imponible no es válida', 'error');
+            return;
+        }
+
+        // Si hay archivo, reutilizar pipeline de subida masiva (OCR opcional previo)
+        if (archivoAdjunto) {
+            // Resolver proveedor_id (creando si hace falta)
+            if (!proveedorId) {
+                const nuevoProveedor = {
+                    nombre: (proveedorManual?.nombre || 'Proveedor sin nombre').toUpperCase(),
+                    nif: (proveedorManual?.nif || '').toUpperCase(),
+                    email: proveedorManual?.email || '',
+                    telefono: proveedorManual?.telefono || '',
+                    direccion: proveedorManual?.direccion || '',
+                    cp: proveedorManual?.cp || '',
+                    poblacion: proveedorManual?.poblacion || '',
+                    provincia: proveedorManual?.provincia || '',
+                    activo: true,
+                    requiere_revision: true
+                };
+
+                const respProv = await fetch('/api/proveedores/crear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(nuevoProveedor)
+                });
+                const dataProv = await respProv.json();
+                if (!respProv.ok || !dataProv.success) {
+                    throw new Error(dataProv.error || 'Error creando proveedor');
+                }
+                proveedorId = dataProv.id || dataProv.proveedor?.id;
+                if (!proveedorId) throw new Error('No se pudo obtener el ID del proveedor creado');
+            }
+
+            const formData = new FormData();
+            formData.append('proveedor_id', String(proveedorId));
+            formData.append('numero_factura', (document.getElementById('nueva-numero')?.value || '').trim());
+            formData.append('fecha_emision', fechaEmision);
+            formData.append('fecha_vencimiento', (document.getElementById('nueva-fecha-vencimiento')?.value || '').trim());
+            formData.append('base_imponible', String(isFinite(base) ? base : 0));
+            formData.append('iva_porcentaje', String(isFinite(ivaPct) ? ivaPct : 0));
+            formData.append('iva', String(isFinite(ivaImp) ? ivaImp : 0));
+            formData.append('total', String(isFinite(total) ? total : 0));
+            formData.append('concepto', (document.getElementById('nueva-concepto')?.value || '').trim());
+            formData.append('notas', (document.getElementById('nueva-notas')?.value || '').trim());
+            formData.append('estado', 'P');
+            formData.append('archivos', archivoAdjunto);
+
+            const respUp = await fetch('/api/facturas-proveedores/subir', {
+                method: 'POST',
+                body: formData
+            });
+
+            const contentType = respUp.headers.get('content-type');
+            if (contentType && contentType.includes('text/html')) {
+                throw new Error('Sesión expirada. Por favor, recarga la página y vuelve a iniciar sesión.');
+            }
+
+            const dataUp = await respUp.json();
+            if (!respUp.ok || !dataUp.success) {
+                if (dataUp.duplicada) {
+                    mostrarNotificacion('⚠️ Factura duplicada: ya existe', 'warning');
+                    return;
+                }
+                throw new Error(dataUp.error || 'Error guardando factura con archivo');
+            }
+
+            mostrarNotificacion('✅ Factura creada correctamente (con archivo)', 'success');
+            cerrarModal('modalNuevaFactura');
+            await cargarProveedores();
+            cargarFacturas();
+            return;
+        }
+
+        const payload = {
+            proveedor_id: proveedorId,
+            proveedor: proveedorManual,
+            factura: {
+                numero_factura: (document.getElementById('nueva-numero')?.value || '').trim(),
+                fecha_emision: fechaEmision,
+                fecha_vencimiento: (document.getElementById('nueva-fecha-vencimiento')?.value || '').trim(),
+                base_imponible: base,
+                iva_porcentaje: ivaPct,
+                iva_importe: ivaImp,
+                total,
+                concepto: (document.getElementById('nueva-concepto')?.value || '').trim(),
+                notas: (document.getElementById('nueva-notas')?.value || '').trim(),
+                estado: 'P'
+            }
+        };
+
+        const response = await fetch('/api/facturas-proveedores/crear', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Error creando factura');
+        }
+
+        mostrarNotificacion('✅ Factura creada correctamente', 'success');
+        cerrarModal('modalNuevaFactura');
+        await cargarProveedores();
+        cargarFacturas();
+    } catch (err) {
+        console.error('[Facturas] Error creando factura:', err);
+        mostrarNotificacion('Error al crear factura: ' + (err.message || err), 'error');
+    }
+};
 
 // ============================================================================
 // FUNCIONES DE TRIMESTRE Y FECHAS
@@ -694,6 +1363,24 @@ function mostrarModalPagar(factura) {
     abrirModal('modalPagar');
 }
 
+function _setEditarPreviewVisible(visible) {
+    const modal = document.getElementById('modalEditar');
+    if (!modal) return;
+    const formCol = modal.querySelector('.edit-form-column');
+    const previewCol = modal.querySelector('.edit-preview-column');
+    if (!formCol || !previewCol) return;
+
+    if (visible) {
+        previewCol.style.display = 'flex';
+        formCol.style.width = '40%';
+        formCol.style.flex = '0 0 40%';
+    } else {
+        previewCol.style.display = 'none';
+        formCol.style.width = '100%';
+        formCol.style.flex = '1 1 auto';
+    }
+}
+
 function mostrarModalEditar(factura) {
     document.getElementById('editar-factura-id').value = factura.id;
     
@@ -746,23 +1433,53 @@ function mostrarModalEditar(factura) {
     // Cargar previsualización en iframe
     const previewFrame = document.getElementById('editar-preview-frame');
     const previewPlaceholder = document.getElementById('editar-preview-placeholder');
-    
-    if (factura.id) {
-        // Usar el endpoint de descarga/visualización
-        const url = `/api/facturas-proveedores/${factura.id}/pdf`;
-        previewFrame.src = url;
-        previewFrame.style.display = 'block';
+
+    const tieneArchivo = !!(factura && factura.ruta_archivo && String(factura.ruta_archivo).trim());
+    const url = (factura && factura.id) ? `/api/facturas-proveedores/${factura.id}/pdf` : '';
+
+    if (!previewFrame) {
+        _setEditarPreviewVisible(false);
+    } else if (!tieneArchivo || !url) {
+        previewFrame.src = '';
+        previewFrame.style.display = 'none';
         if (previewPlaceholder) previewPlaceholder.style.display = 'none';
-        
-        // Manejar error de carga en el iframe
-        previewFrame.onerror = function() {
-            previewFrame.style.display = 'none';
-            if (previewPlaceholder) previewPlaceholder.style.display = 'flex';
-        };
+        _setEditarPreviewVisible(false);
     } else {
+        // Por defecto mostramos placeholder mientras validamos que el endpoint devuelve un archivo
+        _setEditarPreviewVisible(true);
         previewFrame.src = '';
         previewFrame.style.display = 'none';
         if (previewPlaceholder) previewPlaceholder.style.display = 'flex';
+
+        // Validación ligera: si el endpoint responde JSON/HTML o 404, ocultar el preview
+        fetch(url, { method: 'HEAD' })
+            .then(resp => {
+                const ct = (resp.headers.get('content-type') || '').toLowerCase();
+                const isBad = ct.includes('application/json') || ct.includes('text/html');
+                if (!resp.ok || isBad) {
+                    previewFrame.src = '';
+                    previewFrame.style.display = 'none';
+                    if (previewPlaceholder) previewPlaceholder.style.display = 'none';
+                    _setEditarPreviewVisible(false);
+                    return;
+                }
+                previewFrame.src = url;
+                previewFrame.style.display = 'block';
+                if (previewPlaceholder) previewPlaceholder.style.display = 'none';
+            })
+            .catch(() => {
+                previewFrame.src = '';
+                previewFrame.style.display = 'none';
+                if (previewPlaceholder) previewPlaceholder.style.display = 'none';
+                _setEditarPreviewVisible(false);
+            });
+
+        previewFrame.onerror = function() {
+            previewFrame.src = '';
+            previewFrame.style.display = 'none';
+            if (previewPlaceholder) previewPlaceholder.style.display = 'none';
+            _setEditarPreviewVisible(false);
+        };
     }
     
     abrirModal('modalEditar');

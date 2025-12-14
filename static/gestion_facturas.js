@@ -45,6 +45,53 @@ import {
 // Variables globales
 let detalles = [];
 let idFactura = null;
+
+/**
+ * Verifica si el usuario tiene permiso para anular
+ * Retorna true si es admin o tiene permiso específico
+ */
+function verificarPermisoAnular(modulo) {
+    // 1. Verificar si es admin (buscar en sessionStorage o window)
+    try {
+        let sessionData = window.sessionData;
+        if (!sessionData) {
+            // Probar ambas claves de sessionStorage
+            let stored = sessionStorage.getItem('sessionData') || sessionStorage.getItem('aleph70_session_data');
+            if (stored) sessionData = JSON.parse(stored);
+        }
+        if (!sessionData && window.parent && window.parent !== window) {
+            sessionData = window.parent.sessionData;
+            if (!sessionData) {
+                try {
+                    let stored = window.parent.sessionStorage.getItem('sessionData') || 
+                                 window.parent.sessionStorage.getItem('aleph70_session_data');
+                    if (stored) sessionData = JSON.parse(stored);
+                } catch (e) { /* cross-origin */ }
+            }
+        }
+        
+        // Admin tiene todos los permisos
+        if (sessionData && (sessionData.es_admin_empresa === true || sessionData.es_admin_empresa === 1 ||
+            sessionData.es_superadmin === true || sessionData.es_superadmin === 1)) {
+            console.log('[PERMISOS] Usuario es admin, permiso anular concedido');
+            return true;
+        }
+    } catch (e) {
+        console.warn('[PERMISOS] Error verificando admin:', e);
+    }
+    
+    // 2. Verificar permiso específico via función tienePermiso
+    const fnTienePermiso = window.tienePermiso || window.parent?.tienePermiso;
+    if (fnTienePermiso) {
+        const tiene = fnTienePermiso(modulo, 'anular');
+        console.log(`[PERMISOS] tienePermiso(${modulo}, anular) = ${tiene}`);
+        return tiene;
+    }
+    
+    // 3. Si no hay sistema de permisos, permitir por defecto
+    console.log('[PERMISOS] No hay sistema de permisos, permitiendo por defecto');
+    return true;
+}
 let idContacto = null;
 let productosOriginales = [];
 let detalleEnEdicion = null;
@@ -129,7 +176,7 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
         return;
     }
 
-    const razonSocial = document.getElementById('razonSocial').value;
+    const razonSocial = document.getElementById('razonSocial').textContent;
     if (!razonSocial) {
         mostrarNotificacion("Debe seleccionar un cliente", "warning");
         return;
@@ -212,7 +259,7 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
             numero: document.getElementById('numero').value,
             fecha: convertirFechaParaAPI(document.getElementById('fecha').value),
             idContacto: idContacto,
-            nif: document.getElementById('identificador').value,
+            nif: document.getElementById('identificador').textContent,
             detalles: detallesBase,
             total: total,
             formaPago: formaPago,
@@ -750,41 +797,70 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // NOTA: Control de visibilidad de botones ahora se hace en buscarFacturaAbierta()
-    // Este código legacy está comentado para evitar conflictos
     
+    // Configuración del botón Anular
     const btnAnular = document.getElementById("btnAnular");
     if (btnAnular) {
-      // Reiniciar listeners para evitar duplicados
-      btnAnular.replaceWith(btnAnular.cloneNode(true));
-      const btnAnularActual = document.getElementById("btnAnular");
-      btnAnularActual.addEventListener('click', async () => {
+      // Reemplazar el elemento para eliminar listeners previos (evita duplicados)
+      const nuevoBtnAnular = btnAnular.cloneNode(true);
+      btnAnular.parentNode.replaceChild(nuevoBtnAnular, btnAnular);
+      
+      nuevoBtnAnular.addEventListener('click', async () => {
         // Verificar permiso de anular facturas
         if (typeof verificarPermisoConAlerta !== 'undefined') {
           if (!verificarPermisoConAlerta('facturas', 'anular')) {
             return;
           }
+        } else {
+             // Fallback si no existe la función global
+             const tienePermiso = verificarPermisoAnular('facturas');
+             if (!tienePermiso) {
+                 mostrarNotificacion('No tiene permiso para anular facturas', 'error');
+                 return;
+             }
         }
         
+        // Verificar que hay una factura cargada
         if (!idFactura) {
           mostrarNotificacion('No se puede anular una factura que aún no ha sido guardada', 'warning');
           return;
         }
-        const confirmado = await mostrarConfirmacion('¿Está seguro de anular esta factura? Se creará una rectificativa.');
+
+        const confirmado = await mostrarConfirmacion(
+            '¿Está seguro de anular esta factura?',
+            'Se creará una factura rectificativa. Esta acción no se puede deshacer.'
+        );
+        
         if (!confirmado) return;
+
         try {
+          mostrarCargando();
           const resp = await fetch(`/api/facturas/anular/${idFactura}`, {
             method: 'POST'
           });
+          
           if (!resp.ok) {
             const errData = await resp.json().catch(() => ({}));
             throw new Error(errData.error || 'Error al anular la factura');
           }
+          
+          const data = await resp.json();
           mostrarNotificacion('Factura anulada correctamente', 'success');
-          // Opcional: redirigir o refrescar tras unos segundos
-          setTimeout(() => volverSegunOrigen(), 2500);
+          
+          // Recargar o volver tras unos segundos
+          setTimeout(() => {
+              if (typeof volverSegunOrigen === 'function') {
+                  volverSegunOrigen();
+              } else {
+                  window.location.reload();
+              }
+          }, 1500);
+          
         } catch (e) {
           console.error('Error al anular factura:', e);
           mostrarNotificacion(e.message || 'Error al anular la factura', 'error');
+        } finally {
+            ocultarCargando();
         }
       });
     }
@@ -802,7 +878,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
 
-        const razonSocial = document.getElementById('razonSocial').value;
+        const razonSocial = document.getElementById('razonSocial').textContent;
         if (!razonSocial) {
           mostrarNotificacion("Debe seleccionar un cliente", "warning");
           return;
@@ -938,7 +1014,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
 
-        const razonSocial = document.getElementById('razonSocial').value;
+        const razonSocial = document.getElementById('razonSocial').textContent;
         if (!razonSocial) {
           mostrarNotificacion("Debe seleccionar un cliente", "warning");
           return;
@@ -1266,11 +1342,11 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
             const contactoNormalizado = normalizarContactoBackend(contacto) || {};
             contactoActual = contactoNormalizado;
 
-            document.getElementById('razonSocial').value = contactoNormalizado.razonsocial || '';
-            document.getElementById('identificador').value = contactoNormalizado.identificador || '';
-            document.getElementById('direccion').value = contactoNormalizado.direccion || '';
+            document.getElementById('razonSocial').textContent = contactoNormalizado.razonsocial || '';
+            document.getElementById('identificador').textContent = contactoNormalizado.identificador || '';
+            document.getElementById('direccion').textContent = contactoNormalizado.direccion || '';
             document.getElementById('cp-localidad').textContent = (contactoNormalizado.cp || '') + (contactoNormalizado.cp && contactoNormalizado.localidad ? ' ' : '') + (contactoNormalizado.localidad || '');
-            document.getElementById('provincia').value = contactoNormalizado.provincia || '';
+            document.getElementById('provincia').textContent = contactoNormalizado.provincia || '';
 
             actualizarCamposContactoUI(contactoNormalizado);
         } else {
@@ -1404,20 +1480,19 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
                         }
                     }, 1000);
                 }
-                // Solo mostrar Anular si tiene permiso
+                // Factura cobrada: verificar permiso para mostrar Anular
                 if (btnAnular) {
-                    // Verificar si fue ocultado por el sistema de permisos
-                    const ocultoPorPermisos = btnAnular.getAttribute('data-permiso-oculto') === 'true';
-                    
-                    if (ocultoPorPermisos) {
-                        console.log('[CONTROL BOTONES] → Botón Anular ya fue OCULTADO por sistema de permisos, respetando');
-                    } else if (typeof tienePermiso !== 'undefined' && tienePermiso('facturas', 'anular')) {
-                        btnAnular.style.display = 'inline-block';
-                        console.log('[CONTROL BOTONES] → Botón Anular VISIBLE (tiene permiso)');
+                    const tienePermiso = verificarPermisoAnular('facturas');
+                    if (tienePermiso) {
+                        btnAnular.removeAttribute('data-permiso-oculto');
+                        btnAnular.classList.remove('hidden');
+                        btnAnular.style.removeProperty('display');
+                        btnAnular.style.setProperty('display', 'inline-block', 'important');
+                        console.log('[CONTROL BOTONES] → Botón Anular VISIBLE (cobrada + permiso)');
                     } else {
+                        btnAnular.classList.add('hidden');
                         btnAnular.style.setProperty('display', 'none', 'important');
-                        btnAnular.setAttribute('data-permiso-oculto', 'true');
-                        console.log('[CONTROL BOTONES] → Botón Anular OCULTADO (sin permiso)');
+                        console.log('[CONTROL BOTONES] → Botón Anular OCULTADO (sin permiso anular)');
                     }
                 }
                 if (btnAgregarDetalle) {
@@ -1528,11 +1603,11 @@ async function cargarDatosContacto(id) {
     const contacto = await response.json();
     contactoActual = normalizarContactoBackend(contacto);
 
-    document.getElementById('razonSocial').value = contactoActual.razonsocial;
-    document.getElementById('identificador').value = contactoActual.identificador;
-    document.getElementById('direccion').value = contactoActual.direccion || '';
+    document.getElementById('razonSocial').textContent = contactoActual.razonsocial;
+    document.getElementById('identificador').textContent = contactoActual.identificador;
+    document.getElementById('direccion').textContent = contactoActual.direccion || '';
     document.getElementById('cp-localidad').textContent = (contactoActual.cp || '') + (contactoActual.cp && contactoActual.localidad ? ' ' : '') + (contactoActual.localidad || '');
-    document.getElementById('provincia').value = contactoActual.provincia || '';
+    document.getElementById('provincia').textContent = contactoActual.provincia || '';
 
     actualizarCamposContactoUI(contactoActual);
 

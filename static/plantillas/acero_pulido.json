@@ -1,0 +1,141 @@
+{
+  "name": "Acero Pulido",
+  "version": 1,
+  "meta": {
+    "author": "aleph70",
+    "icon": "⚙️",
+    "dark": true,
+    "description": "Acero pulido: base grafito/metal, acento azul frío y superficies brillantes con alto contraste"
+  },
+  "palette": {
+    "graphite950": "#0b0f14",
+    "graphite900": "#101722",
+    "graphite850": "#131c28",
+    "steel800": "#1c2632",
+    "steel700": "#2a3645",
+    "steel650": "#334253",
+    "steel600": "#3e5166",
+    "steel500": "#5a708a",
+    "steel300": "#c6d0dc",
+    "steel200": "#b5c2cf",
+    "ice100": "#e8f0f8",
+    "cyan500": "#2fb6ff",
+    "cyan600": "#1aa7f7",
+    "green500": "#2fbf71",
+    "yellow500": "#ffd166",
+    "red500": "#ff5a5f"
+  },
+  "semantic": {
+    "bg": "{palette.graphite900}",
+    "bg-elevated": "{palette.graphite850}",
+    "text": "{palette.steel300}",
+    "text-muted": "{palette.steel200}",
+    "primary": "{palette.cyan500}",
+    "secondary": "{palette.steel650}",
+    "success": "{palette.green500}",
+    "warning": "{palette.yellow500}",
+    "danger": "{palette.red500}",
+    "info": "{palette.cyan600}",
+    "border": "{palette.steel600}",
+    "hover": "{palette.steel700}"
+  },
+  "components": {
+    "button": {
+      "bg": "{semantic.primary}",
+      "text": "{palette.graphite950}",
+      "hover-bg": "{palette.cyan600}",
+      "border": "{semantic.primary}"
+    },
+    "button-secondary": {
+      "bg": "{palette.steel700}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.steel650}",
+      "border": "{semantic.border}"
+    },
+    "button-card": {
+      "bg": "{palette.steel700}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.steel650}",
+      "border": "{semantic.border}"
+    },
+    "button-table": {
+      "bg": "{palette.graphite950}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.graphite850}",
+      "border": "{semantic.border}"
+    },
+    "input": {
+      "bg": "{palette.steel800}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "placeholder": "{palette.steel200}",
+      "readonly-bg": "{palette.graphite850}",
+      "readonly-text": "{palette.steel200}",
+      "focus-border": "{semantic.primary}"
+    },
+    "select": {
+      "bg": "{palette.steel800}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "focus-border": "{semantic.primary}"
+    },
+    "modal": {
+      "bg": "{palette.graphite850}",
+      "text": "{semantic.text}",
+      "overlay": "transparent",
+      "border": "transparent",
+      "border-width": "0",
+      "border-radius": "10px",
+      "shadow": "0 10px 26px rgba(0,0,0,0.6)",
+      "header-bg": "transparent",
+      "header-text": "{semantic.text}",
+      "body-bg": "transparent",
+      "body-text": "{semantic.text}",
+      "label-color": "{semantic.text}",
+      "input-bg": "{palette.steel800}",
+      "input-text": "{semantic.text}",
+      "input-border": "{semantic.border}"
+    },
+    "table": {
+      "bg": "{palette.graphite850}",
+      "text": "{semantic.text}",
+      "header-bg": "{palette.graphite950}",
+      "header-text": "{semantic.text}",
+      "row-hover": "{palette.graphite850}"
+    },
+    "menu": {
+      "bg": "{semantic.bg}",
+      "text": "{semantic.text}",
+      "hover": "{palette.steel800}",
+      "active-bg": "{semantic.primary}",
+      "active-text": "{palette.graphite950}",
+      "border": "{semantic.border}",
+      "icon": "{semantic.text}"
+    },
+    "header": {
+      "bg": "{palette.graphite950}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}"
+    },
+    "icon": {
+      "color": "{semantic.text}"
+    },
+    "spinner": {
+      "border": "{semantic.primary}"
+    },
+    "tab": {
+      "active-bg": "{semantic.primary}",
+      "active-text": "{palette.graphite950}",
+      "inactive-text": "{palette.steel200}",
+      "border": "{semantic.primary}"
+    },
+    "disabled": {
+      "bg": "{palette.graphite850}",
+      "text": "{palette.steel200}"
+    },
+    "amount": {
+      "positive": "{palette.green500}",
+      "negative": "{palette.red500}"
+    }
+  }
+}

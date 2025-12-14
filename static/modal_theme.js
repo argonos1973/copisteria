@@ -85,21 +85,6 @@ function applyThemeToModals() {
         tabContent.style.setProperty('color', modalText, 'important');
     });
     
-    // Aplicar a todos los botones de tabs
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        if (btn.classList.contains('active')) {
-            btn.style.setProperty('color', tabActiveText, 'important');
-            btn.style.setProperty('background-color', tabActiveBg, 'important');
-            btn.style.setProperty('border-bottom-color', tabBorder, 'important');
-            btn.style.setProperty('border-bottom-width', '3px', 'important');
-            btn.style.setProperty('border-bottom-style', 'solid', 'important');
-        } else {
-            btn.style.setProperty('color', tabInactiveText, 'important');
-            btn.style.setProperty('background-color', 'transparent', 'important');
-            btn.style.setProperty('border-bottom-color', 'transparent', 'important');
-        }
-    });
-    
     // Aplicar a todos los labels
     document.querySelectorAll('.modal-perfil .form-group label').forEach(label => {
         label.style.setProperty('color', modalLabelColor, 'important');
@@ -120,12 +105,6 @@ function applyThemeToModals() {
     document.querySelectorAll('.btn-guardar').forEach(btnGuardar => {
         btnGuardar.style.setProperty('background-color', '#3498db', 'important');
         btnGuardar.style.setProperty('color', '#ffffff', 'important');
-    });
-    
-    // Aplicar a las tarjetas de plantillas
-    document.querySelectorAll('.plantilla-card-perfil.active').forEach(card => {
-        card.style.setProperty('border-color', modalHeaderBg, 'important');
-        card.style.setProperty('background', `linear-gradient(135deg, ${modalHeaderBg} 0%, ${modalHeaderBg}dd 100%)`, 'important');
     });
     
     // MODAL DE AVATARES

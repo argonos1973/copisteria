@@ -16,7 +16,9 @@
     <link rel="stylesheet" href="../static/css/footer.css">
     <link rel="stylesheet" href="../static/css/notificaciones.css">
     <link rel="stylesheet" href="../static/css/footer.css">
-    <link rel="stylesheet" href="/static/css/gestion_proveedores.css?v=1763897790">
+    <link rel="stylesheet" href="/static/css/gestion_proveedores.css?v=FIX_PROV_MODAL_NO_SCROLL_20251214E">
+    <script src="/static/nif_cif_validator.js?v=1763897790"></script>
+    <script src="/static/cp_validator.js?v=1763897790"></script>
 </head>
 <body class="proveedores-page">
     <div class="container">
@@ -94,7 +96,7 @@
                 <form id="formProveedor">
                     <input type="hidden" id="proveedorId">
                     
-                    <div class="form-group">
+                    <div class="form-group prov-span-2">
                         <label for="nombre">Nombre *</label>
                         <input type="text" id="nombre" required placeholder="RAZÓN SOCIAL O MARCA">
                         <small class="text-muted text-small">Se guardará en mayúsculas automáticamente</small>
@@ -102,7 +104,7 @@
                     
                     <div class="form-group">
                         <label for="nif">NIF/CIF *</label>
-                        <input type="text" id="nif" required>
+                        <input type="text" id="nif" required data-validate-nifcif="1" data-nifcif-required="1">
                     </div>
                     
                     <div class="form-group">
@@ -110,7 +112,7 @@
                         <input type="email" id="email">
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group prov-span-2">
                         <label for="email_facturacion">Email Facturación (donde enviar facturas)</label>
                         <input type="email" id="email_facturacion">
                     </div>
@@ -120,15 +122,15 @@
                         <input type="tel" id="telefono">
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group prov-span-2">
                         <label for="direccion">Dirección</label>
                         <input type="text" id="direccion" placeholder="Calle y número">
                     </div>
 
-                    <div class="grid-3-cols">
+                    <div class="grid-3-cols prov-span-2">
                         <div class="form-group">
                             <label for="cp">CP</label>
-                            <input type="text" id="cp">
+                            <input type="text" id="cp" data-validate-cp="1" data-cp-locality-id="poblacion" data-cp-province-id="provincia">
                         </div>
                         <div class="form-group">
                             <label for="poblacion">Población</label>
@@ -140,7 +142,7 @@
                         </div>
                     </div>
                     
-                    <div class="form-group">
+                    <div class="form-group prov-span-2">
                         <label for="notas">Notas Internas</label>
                         <textarea id="notas" rows="3"></textarea>
                     </div>
@@ -178,6 +180,6 @@
         </div>
     </div>
 
-    <script type="module" src="/static/gestion_proveedores.js?v=1763897790"></script>
+    <script type="module" src="/static/gestion_proveedores.js?v=FIX_PROV_MODAL_CENTER_20251214A"></script>
 </body>
 </html>

@@ -2,6 +2,11 @@ import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
 import { formatearImporte, formatearFechaSoloDia, getEstadoFormateado, getEstadoClass, parsearImporte } from './scripts_utils.js';
 
+// Variables de paginación
+let page = 1;
+let pageSize = 10;
+let totalPages = 1;
+
 // Función para mostrar el overlay de carga
 const showOverlay = () => {
     document.getElementById('overlay').style.display = 'flex';
@@ -11,6 +16,35 @@ const showOverlay = () => {
 const hideOverlay = () => {
     document.getElementById('overlay').style.display = 'none';
 };
+
+// Actualiza UI de paginación
+function updatePaginationUI() {
+    const pageInfo = document.getElementById('pageInfoProformas');
+    const prevBtn = document.getElementById('prevPageProformas');
+    const nextBtn = document.getElementById('nextPageProformas');
+    const pageSizeSel = document.getElementById('pageSizeSelectProformas');
+
+    if (pageInfo) pageInfo.textContent = `Página ${page} de ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = page <= 1;
+    if (nextBtn) nextBtn.disabled = page >= totalPages;
+    if (pageSizeSel) pageSizeSel.value = String(pageSize);
+}
+
+function prevPage() {
+    if (page > 1) {
+        page--;
+        guardarFiltros();
+        buscarProformas();
+    }
+}
+
+function nextPage() {
+    if (page < totalPages) {
+        page++;
+        guardarFiltros();
+        buscarProformas();
+    }
+}
 
 // Función para actualizar los totales desde el backend (totales globales)
 const updateTotalsFromBackend = (totalesGlobales) => {
@@ -76,18 +110,18 @@ async function buscarProformas() {
         const contacto = document.getElementById('contacto').value.trim();
         const identificador = document.getElementById('identificador').value.trim();
 
+        // Actualizar pageSize desde el selector
+        const pageSizeSelect = document.getElementById('pageSizeSelectProformas');
+        if (pageSizeSelect) {
+            pageSize = parseInt(pageSizeSelect.value) || 10;
+        }
+
         console.log('Realizando búsqueda con parámetros:', {
-            startDate,
-            endDate,
-            status,
-            proformaNumber,
-            contacto,
-            identificador
+            startDate, endDate, status, proformaNumber, contacto, identificador, page, pageSize
         });
 
         const params = new URLSearchParams();
         
-        // Comprobar si hay algún filtro adicional informado
         const hayFiltrosAdicionales = !!(
             status ||
             (proformaNumber && proformaNumber.length >= 1) ||
@@ -95,35 +129,25 @@ async function buscarProformas() {
             (identificador && identificador.length >= 1)
         );
         
-        // Las fechas ya vienen en formato YYYY-MM-DD del input type="date"
-        // Solo agregar fechas si no hay otros filtros
+        // Solo agregar fechas si no hay otros filtros (lógica de negocio mantenida)
         if (!hayFiltrosAdicionales) {
             if (startDate) params.append('fecha_inicio', startDate);
             if (endDate) params.append('fecha_fin', endDate);
         }
 
-        // Añadir los demás filtros si tienen valor
         if (status) params.append('estado', status);
-        
-        // Manejar búsqueda por número de proforma
-        if (proformaNumber && proformaNumber.length >= 1) {
-            params.append('numero', proformaNumber);
-            params.append('limit', '10');
-        }
-        
-        // Manejar búsqueda por razón social
-        if (contacto && contacto.length >= 2) {
-            params.append('contacto', contacto);
-            params.append('limit', '10');
-        }
+        if (proformaNumber && proformaNumber.length >= 1) params.append('numero', proformaNumber);
+        if (contacto && contacto.length >= 2) params.append('contacto', contacto);
+        if (identificador && identificador.length >= 1) params.append('identificador', identificador);
 
-        // Manejar búsqueda por identificador
-        if (identificador && identificador.length >= 1) {
-            params.append('identificador', identificador);
-            params.append('limit', '10');
-        }
+        // Paginación
+        params.append('page', page);
+        params.append('page_size', pageSize);
+        params.append('sort', 'fecha');
+        params.append('order', 'DESC');
 
-        const url = `${API_URL}/api/proformas/consulta?${params}`;
+        // Usar endpoint paginado
+        const url = `${API_URL}/api/proformas/paginado?${params.toString()}`;
         console.log('URL de búsqueda:', url);
 
         const response = await fetch(url, { credentials: "include" });
@@ -134,21 +158,29 @@ async function buscarProformas() {
         
         console.log('Resultados obtenidos:', data);
 
-        // Manejar nueva estructura de respuesta con totales globales
-        const proformas = data.items || data;
-        const totalesGlobales = data.totales_globales;
-
-        if (!Array.isArray(proformas)) {
+        let proformas = [];
+        if (data.items && Array.isArray(data.items)) {
+            proformas = data.items;
+            totalPages = parseInt(data.total_pages || 1);
+            page = parseInt(data.page || page);
+        } else if (Array.isArray(data)) {
+            proformas = data;
+            totalPages = 1;
+            page = 1;
+        } else {
             console.error('La respuesta no contiene un array válido:', data);
             throw new Error('Formato de respuesta inválido');
         }
+
+        updatePaginationUI();
+
+        const totalesGlobales = data.totales_globales;
 
         const tbody = document.getElementById('gridBody');
         tbody.innerHTML = '';
 
         if (proformas.length === 0) {
             tbody.innerHTML = '<tr><td colspan="9" class="text-center">No se encontraron resultados</td></tr>';
-            // Actualizar totales a cero
             updateTotals([]);
             return;
         }

@@ -21,7 +21,7 @@ const nextPageBtn = document.getElementById('nextPageGastos');
 const pageInfoSpan = document.getElementById('pageInfoGastos');
 const pageSizeSelect = document.getElementById('pageSizeSelectGastos');
 let page = 1;
-let pageSize = parseInt(pageSizeSelect?.value || '20', 10);
+let pageSize = parseInt(pageSizeSelect?.value || '10', 10);
 
 function getTotalPages() {
     if (!Array.isArray(datosConsulta) || datosConsulta.length === 0) return 1;

@@ -19,6 +19,24 @@
     --color-borde: var(--border);
     --color-shadow: var(--shadow);
     --color-hover: var(--menu-hover);
+
+    --color-grid-bg: var(--table-bg, var(--bg-elevated, var(--bg)));
+    --color-grid-text: var(--table-text, var(--text));
+    --color-grid-header: var(--table-header-bg, var(--bg-elevated, var(--bg)));
+    --color-grid-header-text: var(--table-header-text, var(--text));
+    --color-grid-hover: var(--table-row-hover, var(--bg-elevated, var(--bg)));
+
+    --color-button: var(--button-bg);
+    --color-button-text: var(--button-text);
+    --color-button-hover: var(--button-hover, var(--button-bg));
+    
+    /* Variable para footer semitransparente adaptado al tema */
+    --footer-bg-transparente: color-mix(in srgb, var(--bg-elevated) 35%, transparent);
+}
+
+/* Definir versión con alpha de bg-elevated si no existe, aproximación */
+body {
+    --bg-elevated-alpha: color-mix(in srgb, var(--bg-elevated) 85%, transparent);
 }
 
 /* ==================== BODY ==================== */
@@ -61,8 +79,8 @@ p, span, div, a {
 
 /* ==================== TABLAS ==================== */
 table, .table {
-    background: var(--table-bg) !important;
-    color: var(--table-text) !important;
+    background: var(--table-bg, var(--bg-elevated, var(--bg))) !important;
+    color: var(--table-text, var(--text)) !important;
     border-collapse: collapse !important;
 }
 
@@ -76,8 +94,8 @@ thead, thead th,
 #tabla-detalle-proforma th,
 #tabla-detalle-presupuesto thead th,
 #tabla-detalle-presupuesto th {
-    background: var(--table-header-bg) !important;
-    color: var(--table-header-text) !important;
+    background: var(--table-header-bg, var(--bg-elevated, var(--bg))) !important;
+    color: var(--table-header-text, var(--text)) !important;
     font-weight: bold !important;
 }
 
@@ -86,22 +104,22 @@ thead th, table thead th, .table thead th,
 #tabla-detalle-ticket thead th,
 #tabla-detalle-proforma thead th,
 #tabla-detalle-presupuesto thead th {
-    color: var(--table-header-text) !important;
+    color: var(--table-header-text, var(--text)) !important;
 }
 
 table tbody, .table tbody {
-    background: var(--table-bg) !important;
-    color: var(--table-text) !important;
+    background: var(--table-bg, var(--bg-elevated, var(--bg))) !important;
+    color: var(--table-text, var(--text)) !important;
 }
 
 table tbody tr, .table tbody tr {
-    background: var(--table-bg) !important;
-    color: var(--table-text) !important;
+    background: var(--table-bg, var(--bg-elevated, var(--bg))) !important;
+    color: var(--table-text, var(--text)) !important;
 }
 
 table td, .table td,
 table th, .table th {
-    color: var(--table-text) !important;
+    color: var(--table-text, var(--text)) !important;
     border: none !important;
 }
 
@@ -110,18 +128,18 @@ table tbody tr, .table tbody tr {
 }
 
 table tbody tr:hover, .table tbody tr:hover {
-    background: var(--table-row-hover) !important;
+    background: var(--table-row-hover, var(--bg-elevated, var(--bg))) !important;
 }
 
 /* ==================== GRIDS ==================== */
 .grid, .data-grid {
-    background: var(--table-bg) !important;
-    color: var(--table-text) !important;
+    background: var(--table-bg, var(--bg-elevated, var(--bg))) !important;
+    color: var(--table-text, var(--text)) !important;
 }
 
 .grid-header, .data-grid-header {
-    background: var(--table-header-bg) !important;
-    color: var(--table-header-text) !important;
+    background: var(--table-header-bg, var(--bg-elevated, var(--bg))) !important;
+    color: var(--table-header-text, var(--text)) !important;
     font-weight: bold !important;
 }
 
@@ -136,16 +154,17 @@ table tbody tr:hover, .table tbody tr:hover {
 .fixed-footer-factura,
 .fixed-footer-gastos,
 .fixed-footer-ticket {
-    background: var(--bg) !important;
+    background: var(--footer-bg-transparente) !important;
     color: var(--text) !important;
-    border-top: 1px solid var(--border) !important;
+    border-top: none !important;
+    box-shadow: none !important;
 }
 
 .fixed-footer table,
 .fixed-footer-factura table,
 .fixed-footer-gastos table,
 .fixed-footer-ticket table {
-    background: var(--bg) !important;
+    background: transparent !important;
     color: var(--text) !important;
 }
 
@@ -157,7 +176,7 @@ table tbody tr:hover, .table tbody tr:hover {
 .fixed-footer-factura th,
 .fixed-footer-gastos th,
 .fixed-footer-ticket th {
-    background: var(--bg) !important;
+    background: transparent !important;
     color: var(--text) !important;
 }
 
@@ -877,6 +896,7 @@ input::placeholder, textarea::placeholder {
     margin-bottom: 5px;
     line-height: 1.3;
     display: -webkit-box;
+    line-clamp: 2;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;

@@ -1,0 +1,142 @@
+{
+  "name": "Óxido Desgastado",
+  "version": 1,
+  "meta": {
+    "author": "aleph70",
+    "icon": "🧱",
+    "dark": true,
+    "description": "Óxido industrial desgastado: base carbón, acentos cobre/óxido y superficies envejecidas"
+  },
+  "palette": {
+    "coal950": "#0f1113",
+    "coal900": "#15181b",
+    "coal850": "#1b2024",
+    "coal800": "#22282d",
+    "coal700": "#2b343b",
+    "ash300": "#c8c3bb",
+    "ash200": "#b8b2a8",
+    "ash150": "#a39b91",
+    "rust700": "#8a3a1e",
+    "rust650": "#9b4322",
+    "rust600": "#b04d25",
+    "rust500": "#c45c2a",
+    "copper500": "#c97c4a",
+    "brass500": "#c7a45a",
+    "green500": "#4d7a58",
+    "red500": "#b24a3a",
+    "yellow500": "#d4b04f"
+  },
+  "semantic": {
+    "bg": "{palette.coal900}",
+    "bg-elevated": "{palette.coal850}",
+    "text": "{palette.ash300}",
+    "text-muted": "{palette.ash200}",
+    "primary": "{palette.rust600}",
+    "secondary": "{palette.coal700}",
+    "success": "{palette.green500}",
+    "warning": "{palette.yellow500}",
+    "danger": "{palette.red500}",
+    "info": "{palette.copper500}",
+    "border": "{palette.coal700}",
+    "hover": "{palette.coal800}"
+  },
+  "components": {
+    "button": {
+      "bg": "{semantic.primary}",
+      "text": "{palette.coal950}",
+      "hover-bg": "{palette.rust500}",
+      "border": "{semantic.primary}"
+    },
+    "button-secondary": {
+      "bg": "{palette.coal800}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.coal700}",
+      "border": "{semantic.border}"
+    },
+    "button-card": {
+      "bg": "{palette.coal800}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.coal700}",
+      "border": "{semantic.border}"
+    },
+    "button-table": {
+      "bg": "{palette.coal950}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.coal850}",
+      "border": "{semantic.border}"
+    },
+    "input": {
+      "bg": "{palette.coal800}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "placeholder": "{palette.ash150}",
+      "readonly-bg": "{palette.coal850}",
+      "readonly-text": "{palette.ash200}",
+      "focus-border": "{semantic.primary}"
+    },
+    "select": {
+      "bg": "{palette.coal800}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "focus-border": "{semantic.primary}"
+    },
+    "modal": {
+      "bg": "{palette.coal850}",
+      "text": "{semantic.text}",
+      "overlay": "transparent",
+      "border": "transparent",
+      "border-width": "0",
+      "border-radius": "10px",
+      "shadow": "0 8px 24px rgba(0,0,0,0.6)",
+      "header-bg": "transparent",
+      "header-text": "{semantic.text}",
+      "body-bg": "transparent",
+      "body-text": "{semantic.text}",
+      "label-color": "{semantic.text}",
+      "input-bg": "{palette.coal800}",
+      "input-text": "{semantic.text}",
+      "input-border": "{semantic.border}"
+    },
+    "table": {
+      "bg": "{palette.coal850}",
+      "text": "{semantic.text}",
+      "header-bg": "{palette.coal950}",
+      "header-text": "{semantic.text}",
+      "row-hover": "{palette.coal800}"
+    },
+    "menu": {
+      "bg": "{semantic.bg}",
+      "text": "{semantic.text}",
+      "hover": "{palette.coal800}",
+      "active-bg": "{semantic.primary}",
+      "active-text": "{palette.coal950}",
+      "border": "{semantic.border}",
+      "icon": "{semantic.text}"
+    },
+    "header": {
+      "bg": "{palette.coal950}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}"
+    },
+    "icon": {
+      "color": "{semantic.text}"
+    },
+    "spinner": {
+      "border": "{semantic.primary}"
+    },
+    "tab": {
+      "active-bg": "{semantic.primary}",
+      "active-text": "{palette.coal950}",
+      "inactive-text": "{palette.ash200}",
+      "border": "{semantic.primary}"
+    },
+    "disabled": {
+      "bg": "{palette.coal850}",
+      "text": "{palette.ash150}"
+    },
+    "amount": {
+      "positive": "{palette.green500}",
+      "negative": "{palette.red500}"
+    }
+  }
+}

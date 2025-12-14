@@ -493,6 +493,7 @@ def obtener_menu():
             ],
             'facturas_recibidas': [
                 {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_FACTURAS_RECIBIDAS.html'},
+                {'nombre': 'Nueva', 'icono': 'fas fa-plus', 'ruta': '/CONSULTA_FACTURAS_RECIBIDAS.html?nueva=1'},
                 {'nombre': 'Subir Factura', 'icono': 'fas fa-file-upload', 'ruta': '/SUBIR_FACTURAS_MASIVO.html'},
                 {'nombre': 'Proveedores', 'icono': 'fas fa-users', 'ruta': '/GESTION_PROVEEDORES.html'}
             ]  # Submenu de facturas de proveedores
@@ -641,7 +642,7 @@ def obtener_menu():
                             nombre_subsub = submenu_item.get('nombre', '')
                             
                             # Filtrar "Nuevo" si no tiene permiso de crear en el módulo padre
-                            if nombre_subsub == 'Nuevo':
+                            if nombre_subsub in ('Nuevo', 'Nueva'):
                                 if permisos_usuario.get(codigo_modulo, {}).get('puede_crear', 0) == 1:
                                     submenu_filtrado.append(submenu_item)
                             else:

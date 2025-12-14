@@ -7,16 +7,22 @@
     <title>Facturas Recibidas</title>
     <script src="/static/branding.js?v=1764787007"></script>
     <script src="/static/auto_branding.js?v=1764787007"></script>
+    <script src="/static/nif_cif_validator.js?v=1763897790"></script>
+    <script src="/static/cp_validator.js?v=1763897790"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="../static/css/page_header.css?v=1763897790">
     <link rel="stylesheet" href="/static/css/theme-consumer.css?v=1763897790">
     <link rel="stylesheet" href="../static/css/styles.css?v=FIX_FINAL_5">
     <link rel="stylesheet" href="../static/css/notificaciones.css?v=1763897790">
     <link rel="stylesheet" href="../static/css/footer.css?v=1763897790">
-    <link rel="stylesheet" href="../static/css/modales.css?v=FIX_FINAL_5">
+    <link rel="stylesheet" href="../static/css/modales.css?v=FIX_NUEVA_FACTURA_LAYOUT_20251214AA">
     <style>
       /* Vista Facturas Recibidas: layout a pantalla completa */
       .facturas-recibidas-page { padding-bottom: 0 !important; }
+      .facturas-recibidas-page {
+        background: var(--bg, var(--app-bg, #f5f5f5));
+        color: var(--text, var(--text-primary, #333));
+      }
       .container {
         display: flex;
         flex-direction: column;
@@ -31,15 +37,25 @@
         display: flex;
         flex-direction: column;
         min-height: 0;
+        background: var(--bg-elevated, var(--bg, #fff));
+        border: 1px solid var(--border, var(--border-color, #e0e0e0));
+        border-radius: 8px;
+        overflow: hidden;
       }
       .table-responsive {
         flex: 1;
         max-height: none !important;
         height: 100% !important;
         overflow-y: auto;
+        background: var(--bg-elevated, var(--bg, #fff));
       }
       .form-inline { margin: 4px 0; }
       .pagination { margin-top: 6px; }
+      .facturas-recibidas-page .pagination {
+        border-color: var(--border, var(--border-color, #e0e0e0)) !important;
+        background: var(--bg-elevated, var(--card-bg, #fff));
+        color: var(--text, var(--text-primary, #333));
+      }
       
       /* Alertas en la parte superior */
       .alertas-container {
@@ -83,8 +99,8 @@
         transition: background-color 0.2s ease;
       }
       #facturasTable tbody tr:hover {
-        background-color: rgba(0, 123, 255, 0.05) !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        background-color: var(--table-row-hover, rgba(0, 123, 255, 0.05)) !important;
+        box-shadow: 0 2px 4px var(--shadow, rgba(0,0,0,0.1));
       }
       
       /* Resumen de importes */
@@ -99,19 +115,19 @@
         min-width: 150px;
         padding: 12px;
         border-radius: 8px;
-        border: 1px solid var(--border-color, #e0e0e0) !important;
-        background: var(--card-bg, #fff) !important;
+        border: 1px solid var(--border, var(--border-color, #e0e0e0)) !important;
+        background: var(--bg-elevated, var(--card-bg, #fff)) !important;
       }
       .resumen-card .label {
         font-size: 11px;
-        color: var(--text-secondary, #666) !important;
+        color: var(--text-muted, var(--text-secondary, #666)) !important;
         text-transform: uppercase;
         margin-bottom: 4px;
       }
       .resumen-card .valor {
         font-size: 20px;
         font-weight: 600;
-        color: var(--text-primary, #333) !important;
+        color: var(--text, var(--text-primary, #333)) !important;
       }
       
       /* Iconos de estado en tabla */
@@ -137,24 +153,24 @@
         transform: scale(1.05);
       }
       .btn-action.btn-primary {
-        background: var(--primary-color, #007bff);
-        color: white;
+        background: var(--primary, var(--button-bg, #007bff));
+        color: var(--button-text, #fff);
       }
       .btn-action.btn-success {
-        background: var(--success-color, #28a745);
-        color: var(--button-text, white);
+        background: var(--success, #28a745);
+        color: var(--button-text, #fff);
       }
       .btn-action.btn-info {
-        background: var(--info-color, #17a2b8);
-        color: var(--button-text, white);
+        background: var(--info, #17a2b8);
+        color: var(--button-text, #fff);
       }
       .btn-action.btn-warning {
-        background: var(--warning-color, #ffc107);
-        color: var(--text-primary, #333);
+        background: var(--warning, #ffc107);
+        color: var(--text, #333);
       }
       .btn-action.btn-danger {
-        background: var(--danger-color, #dc3545) !important;
-        color: var(--button-text, white) !important;
+        background: var(--danger, #dc3545) !important;
+        color: var(--button-text, #fff) !important;
         font-size: 18px !important;
         font-weight: bold !important;
         line-height: 1 !important;
@@ -178,10 +194,25 @@
         border-collapse: collapse;
         /* table-layout: fixed; NO usar fixed si no definimos ancho para todas, mejor dejar auto con min-widths */
       }
+
+      #facturasTable thead th {
+        background: var(--table-header-bg, var(--bg-elevated, var(--bg, #f0f0f0)));
+        color: var(--table-header-text, var(--text, #333));
+        border-bottom: 1px solid var(--border, var(--border-color, #e0e0e0));
+      }
+
+      #facturasTable tbody {
+        background: var(--bg-elevated, var(--bg, #fff));
+      }
+
+      #facturasTable tbody tr {
+        background: var(--table-row-bg, transparent);
+        color: var(--text, var(--text-primary, #333));
+      }
       
       #facturasTable th, #facturasTable td {
         padding: 10px 12px;
-        border-bottom: 1px solid var(--border-color, #e0e0e0);
+        border-bottom: 1px solid var(--border, var(--border-color, #e0e0e0));
         vertical-align: middle;
       }
     </style>
@@ -256,6 +287,11 @@
                     </span>
                 </div>
             </div>
+            <div class="form-group" style="margin-left:auto;">
+                <button id="btnNuevaFactura" class="btn-action btn-primary" type="button" title="Nueva">
+                    <i class="fas fa-plus"></i> Nueva
+                </button>
+            </div>
         </div>
 
         <!-- Paginación superior -->
@@ -268,8 +304,8 @@
           <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
             <label>Por página:
               <select id="perPage" style="padding:2px 6px;font-size:12px;">
-                <option value="10">10</option>
-                <option value="20" selected>20</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
                 <option value="50">50</option>
                 <option value="100">100</option>
               </select>
@@ -317,13 +353,21 @@
     <!-- Scripts -->
     <script>
         // Cargar modales dinámicamente
-        fetch('/MODALES_FACTURAS_RECIBIDAS.html?v=FIX_FINAL_5')
+        fetch('/MODALES_FACTURAS_RECIBIDAS.html?v=FIX_FINAL_6')
             .then(response => response.text())
             .then(html => {
                 document.getElementById('modales-container').innerHTML = html;
+                try {
+                    const hasNuevaArchivo = html.includes('id="nueva-archivo"');
+                    const el = document.getElementById('nueva-archivo');
+                    console.log('[Facturas Recibidas][MODALES] HTML incluye #nueva-archivo:', hasNuevaArchivo);
+                    console.log('[Facturas Recibidas][MODALES] DOM tiene #nueva-archivo:', !!el);
+                } catch (e) {
+                    console.warn('[Facturas Recibidas][MODALES] No se pudo verificar #nueva-archivo', e);
+                }
             })
             .catch(error => console.error('Error cargando modales:', error));
     </script>
-    <script type="module" src="/static/facturas_recibidas.js?v=1763897790"></script>
+    <script type="module" src="/static/facturas_recibidas.js?v=FIX_PANEL_NUEVA_FACTURA_COLLAPSED_20251214E"></script>
 </body>
 </html>

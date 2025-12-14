@@ -113,6 +113,493 @@
 }
 
 /* ================================= */
+/* FACTURAS RECIBIDAS - MODAL NUEVA FACTURA (EVITAR SCROLL) */
+/* ================================= */
+
+#modalNuevaFactura .modal-content {
+    width: min(92vw, 1200px) !important;
+    max-width: 1200px !important;
+    max-height: 90vh !important;
+    height: auto !important;
+    overflow: hidden !important;
+    border: 2px solid rgba(255, 255, 255, 0.45) !important;
+    outline: 2px solid rgba(255, 255, 255, 0.55) !important;
+    outline-offset: -2px;
+    box-shadow:
+        0 10px 40px var(--modal-shadow, rgba(0, 0, 0, 0.5)),
+        0 0 0 2px rgba(255, 255, 255, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.25) inset !important;
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    margin: 0 !important;
+    border-radius: 12px !important;
+}
+
+#modalNuevaFactura .modal-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset;
+    pointer-events: none;
+}
+
+/* Header: asegurar contraste y que el título se renderice como el resto de modales */
+#modalNuevaFactura .modal-header {
+    background: var(--header-bg, var(--modal-header-bg, var(--primary, #000))) !important;
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
+    padding: 16px 20px !important;
+    margin: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid var(--modal-border, var(--border, rgba(255, 255, 255, 0.12))) !important;
+}
+
+#modalNuevaFactura .modal-header h2 {
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
+    margin: 0 !important;
+    line-height: 1.15;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 20px !important;
+    font-weight: 600 !important;
+}
+
+#modalNuevaFactura .modal-header .close {
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
+    position: static !important;
+    margin: 0 !important;
+    align-self: center;
+}
+
+/* Modal Editar Factura (Facturas Recibidas): header como Gestión Tickets */
+#modalEditar .modal-header {
+    background: var(--header-bg, var(--modal-header-bg, var(--primary, #000))) !important;
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
+    padding: 16px 20px !important;
+    margin: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 12px 12px 0 0;
+    border-bottom: 1px solid var(--modal-border, var(--border, rgba(255, 255, 255, 0.12))) !important;
+}
+
+#modalEditar .modal-header h2 {
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
+    margin: 0 !important;
+    line-height: 1.15;
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#modalEditar .modal-header .close {
+    color: var(--header-text, var(--modal-header-text, #fff)) !important;
+    position: static !important;
+    margin: 0 !important;
+    align-self: center;
+}
+
+/* Modal Editar Factura (Facturas Recibidas): borde visible como Tickets */
+#modalEditar .modal-content {
+    border: 2px solid rgba(255, 255, 255, 0.45) !important;
+    outline: 2px solid rgba(255, 255, 255, 0.55) !important;
+    outline-offset: -2px;
+    border-radius: 12px !important;
+    box-shadow:
+        0 10px 40px var(--modal-shadow, rgba(0, 0, 0, 0.5)),
+        0 0 0 2px rgba(255, 255, 255, 0.35),
+        0 0 0 1px rgba(255, 255, 255, 0.25) inset !important;
+    position: relative;
+}
+
+#modalEditar .modal-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset;
+    pointer-events: none;
+}
+
+#modalEditar .modal-content {
+    width: min(92vw, 1200px) !important;
+    max-width: 1200px !important;
+    max-height: 90vh !important;
+    height: auto !important;
+    overflow: hidden !important;
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    margin: 0 !important;
+}
+
+#modalEditar .modal-body {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 520px);
+    gap: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+}
+
+#modalEditar .edit-form-column {
+    width: auto !important;
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    overflow-y: hidden !important;
+    padding: 16px !important;
+    height: auto !important;
+    border-right: 1px solid var(--border, rgba(255, 255, 255, 0.12)) !important;
+}
+
+#modalEditar .edit-preview-column {
+    flex: 0 0 520px !important;
+    max-width: 520px !important;
+    background: var(--bg-elevated, #525659) !important;
+    height: auto !important;
+}
+
+#modalEditar #formEditar {
+    max-width: none !important;
+    margin: 0 !important;
+}
+
+#modalEditar #formEditar .form-group,
+#modalEditar #formEditar label,
+#modalEditar #formEditar input,
+#modalEditar #formEditar select,
+#modalEditar #formEditar textarea {
+    text-align: left !important;
+}
+
+#modalEditar #formEditar .form-row[style*="background"] {
+    display: grid !important;
+    grid-template-columns: minmax(120px, 1fr) 84px minmax(120px, 1fr) minmax(120px, 1fr);
+    gap: 10px !important;
+    padding: 0 !important;
+    align-items: end;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Importes: alinear números a la derecha (como Gestión Tickets) */
+#modalEditar #formEditar .form-row[style*="background"] label {
+    text-align: right !important;
+}
+
+#modalEditar #formEditar .form-row[style*="background"] input {
+    text-align: right !important;
+}
+
+#modalEditar #formEditar #editar-base,
+#modalEditar #formEditar #editar-iva-porcentaje,
+#modalEditar #formEditar #editar-iva-importe,
+#modalEditar #formEditar #editar-total {
+    text-align: right !important;
+}
+
+@media (max-width: 900px) {
+    #modalEditar .modal-body {
+        grid-template-columns: 1fr;
+    }
+
+    #modalEditar .edit-preview-column {
+        max-width: none !important;
+    }
+}
+
+#modalNuevaFactura .modal-body {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+    gap: 0 !important;
+    overflow: hidden;
+}
+
+@supports selector(:has(*)) {
+    #modalNuevaFactura .modal-body:has(#nuevaFacturaRightCol[style*="display: none"]) {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1200px) {
+    #modalNuevaFactura .modal-body {
+        grid-template-columns: 1fr;
+    }
+}
+
+#modalNuevaFactura #nuevaFacturaLeftCol {
+    width: auto !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow-x: hidden !important;
+}
+
+#modalNuevaFactura #nuevaFacturaRightCol {
+    flex: 0 0 auto !important;
+    max-width: none !important;
+    overflow-x: hidden !important;
+}
+
+#modalNuevaFactura #nuevaFacturaLeftCol {
+    padding: 10px !important;
+}
+
+/* Layout 2 columnas dentro del formulario para aprovechar ancho y evitar scroll vertical */
+#modalNuevaFactura #formNuevaFactura .nueva-factura-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    align-items: start;
+}
+
+#modalNuevaFactura #formNuevaFactura .nueva-factura-form-left,
+#modalNuevaFactura #formNuevaFactura .nueva-factura-form-right {
+    min-width: 0;
+}
+
+@media (max-width: 900px) {
+    #modalNuevaFactura #formNuevaFactura .nueva-factura-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (min-width: 901px) {
+    #modalNuevaFactura #nuevaFacturaLeftCol {
+        overflow-y: hidden !important;
+    }
+}
+
+/* Menos altura: compactar filas flex globales dentro de esta modal */
+#modalNuevaFactura #formNuevaFactura .form-row {
+    gap: 10px;
+    margin-bottom: 10px;
+    justify-content: stretch;
+}
+
+/* Evitar campos excesivamente anchos: limitar ancho del formulario y centrarlo */
+#modalNuevaFactura #formNuevaFactura {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+#modalNuevaFactura #formNuevaFactura .form-group {
+    text-align: left;
+}
+
+#modalNuevaFactura #formNuevaFactura label {
+    text-align: left !important;
+}
+
+#modalNuevaFactura #formNuevaFactura input,
+#modalNuevaFactura #formNuevaFactura select,
+#modalNuevaFactura #formNuevaFactura textarea {
+    text-align: left !important;
+}
+
+/* Compactar header/footer para ganar altura útil */
+#modalNuevaFactura .modal-header {
+    padding: 16px 20px !important;
+    border-bottom: 1px solid var(--modal-border, var(--border, rgba(255, 255, 255, 0.12))) !important;
+}
+
+#modalNuevaFactura .modal-footer {
+    padding: 10px 14px !important;
+}
+
+#modalNuevaFactura #nuevaFacturaRightCol > div {
+    padding: 10px !important;
+}
+
+#modalNuevaFactura #formNuevaFactura .form-group {
+    margin-bottom: 8px !important;
+}
+
+/* Inputs más compactos dentro de esta modal */
+#modalNuevaFactura #formNuevaFactura .form-control {
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+#modalNuevaFactura #formNuevaFactura label {
+    font-size: 12px;
+    margin-bottom: 4px !important;
+}
+
+/* En esta modal queremos aprovechar ancho y alinear, no centrar/encoger */
+#modalNuevaFactura #formNuevaFactura .container-centered-limited {
+    max-width: none;
+    width: 100%;
+}
+
+#modalNuevaFactura #formNuevaFactura .form-centered .form-group {
+    text-align: left;
+}
+
+#modalNuevaFactura #formNuevaFactura .form-centered label {
+    text-align: left;
+}
+
+#modalNuevaFactura #formNuevaFactura .input-centered input,
+#modalNuevaFactura #formNuevaFactura .input-centered select {
+    text-align: left !important;
+}
+
+/* Anchos fijos globales (.form-col-*) rompen el layout aquí */
+#modalNuevaFactura #formNuevaFactura .form-col-small,
+#modalNuevaFactura #formNuevaFactura .form-col-medium,
+#modalNuevaFactura #formNuevaFactura .form-col-large,
+#modalNuevaFactura #formNuevaFactura .form-col-xl {
+    width: auto !important;
+    flex: 1 1 0 !important;
+    min-width: 0;
+}
+
+/* Reducir altura de textos auxiliares */
+#modalNuevaFactura #formNuevaFactura small {
+    font-size: 11px;
+    line-height: 1.2;
+    margin-top: 4px;
+    display: block;
+}
+
+/* Compactar márgenes de wrappers con inline styles de margen superior */
+#modalNuevaFactura #formNuevaFactura div[style*="margin-top: 10px"],
+#modalNuevaFactura #formNuevaFactura div[style*="margin-top:10px"] {
+    margin-top: 6px !important;
+}
+
+/* Fila 'Datos de factura' en grid para alineación limpia */
+#modalNuevaFactura #formNuevaFactura .form-row.form-centered.nueva-factura-datos-grid {
+    display: grid !important;
+    grid-template-columns: minmax(220px, 1.8fr) 140px 140px;
+    gap: 10px;
+    justify-content: stretch;
+    align-items: end;
+    margin-bottom: 10px;
+}
+
+#modalNuevaFactura #formNuevaFactura .form-row.form-centered.nueva-factura-datos-grid .form-group {
+    margin-bottom: 0 !important;
+}
+
+/* Panel derecho: un poco más compacto para que no genere scrollbar */
+#modalNuevaFactura #nuevaFacturaRightCol > div {
+    padding: 8px !important;
+}
+
+#modalNuevaFactura #nuevaFacturaRightCol {
+    font-size: 12px;
+}
+
+#modalNuevaFactura #formNuevaFactura hr {
+    margin: 10px 0 !important;
+}
+
+/* Bloque importes (inline styles en HTML): compactar */
+#modalNuevaFactura #formNuevaFactura .form-row[style*="background"] {
+    display: grid !important;
+    grid-template-columns: minmax(120px, 1fr) 84px minmax(120px, 1fr) minmax(120px, 1fr);
+    gap: 10px !important;
+    padding: 0 !important;
+    align-items: end;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Anular alineaciones inline (text-align:right) en labels/inputs de importes */
+#modalNuevaFactura #formNuevaFactura .form-row[style*="background"] label {
+    text-align: left !important;
+}
+
+#modalNuevaFactura #formNuevaFactura .form-row[style*="background"] input {
+    text-align: left !important;
+}
+
+#modalNuevaFactura #formNuevaFactura .form-row[style*="background"] .form-group {
+    margin-bottom: 0 !important;
+    min-width: 0 !important;
+}
+
+#modalNuevaFactura #formNuevaFactura #nueva-base,
+#modalNuevaFactura #formNuevaFactura #nueva-iva-porcentaje,
+#modalNuevaFactura #formNuevaFactura #nueva-iva-importe,
+#modalNuevaFactura #formNuevaFactura #nueva-total {
+    text-align: left !important;
+}
+
+/* Proveedor manual: redistribuir en grid y compactar altura */
+#modalNuevaFactura #proveedorManualBlock label {
+    font-size: 12px !important;
+    margin-bottom: 4px !important;
+}
+
+#modalNuevaFactura #proveedorManualBlock .form-control {
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+}
+
+#modalNuevaFactura #proveedorManualBlock .form-group {
+    margin-bottom: 8px !important;
+}
+
+/* 1) Nombre + NIF */
+#modalNuevaFactura #proveedorManualBlock .form-row.form-centered.nueva-prov-grid-1 {
+    display: grid !important;
+    grid-template-columns: 2fr 1fr;
+    gap: 10px;
+    align-items: end;
+}
+
+/* 2) CP + Población + Provincia */
+#modalNuevaFactura #proveedorManualBlock .form-row.form-centered.nueva-prov-grid-2 {
+    display: grid !important;
+    grid-template-columns: 90px 1fr 1fr;
+    gap: 10px;
+    align-items: end;
+}
+
+/* 3) Email + Teléfono */
+#modalNuevaFactura #proveedorManualBlock .form-row.form-centered.nueva-prov-grid-3 {
+    display: grid !important;
+    grid-template-columns: minmax(180px, 1fr) minmax(180px, 1.4fr);
+    gap: 10px;
+    align-items: end;
+}
+
+/* Concepto/Notas en dos columnas para ahorrar altura */
+#modalNuevaFactura #formNuevaFactura .nueva-factura-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    align-items: start;
+}
+
+#modalNuevaFactura #formNuevaFactura #nueva-notas {
+    resize: none !important;
+    height: 44px;
+}
+
+@media (max-width: 980px) {
+    #modalNuevaFactura #formNuevaFactura .nueva-factura-bottom-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ================================= */
 /* UTILIDADES PARA MODALES LIMPIOS */
 /* ================================= */
 
@@ -237,7 +724,7 @@
 
 /* Borde explícito para modales que lo requieran - ALINEADO CON ESTILO GLOBAL */
 .modal-bordered {
-    border: 4px solid rgba(255, 255, 255, 0.8) !important;
+    border: 1px solid var(--modal-border, var(--border, rgba(0, 0, 0, 0.2))) !important;
 }
 
 /* Botones del modal específicos para coincidir con estética */
@@ -245,34 +732,34 @@
 html body .modal-footer button.btn-modal-cancel,
 html body .modal button.btn-modal-cancel,
 html body button.btn-modal-cancel {
-    background-color: #6c757d !important; /* Gris estándar */
-    border: 1px solid #6c757d !important;
-    color: #fff !important;
+    background-color: transparent !important;
+    border: 1px solid var(--modal-border, var(--border, rgba(255, 255, 255, 0.18))) !important;
+    color: var(--modal-text, var(--text, #e6e6e6)) !important;
     opacity: 1 !important;
 }
 
 html body .modal-footer button.btn-modal-cancel:hover,
 html body .modal button.btn-modal-cancel:hover,
 html body button.btn-modal-cancel:hover {
-    background-color: #5a6268 !important;
-    border-color: #545b62 !important;
+    background-color: color-mix(in srgb, var(--modal-bg, var(--bg, #1b1b1b)) 88%, var(--text, #e6e6e6) 12%) !important;
+    border-color: var(--modal-border, var(--border, rgba(255, 255, 255, 0.28))) !important;
     opacity: 0.9 !important;
 }
 
 .modal-footer button.btn-modal-save,
 .modal button.btn-modal-save,
 button.btn-modal-save {
-    background-color: var(--primary, #0d6efd) !important;
-    border: 1px solid var(--primary, #0d6efd) !important;
-    color: #fff !important;
+    background-color: var(--button-bg) !important;
+    border: 1px solid var(--button-border) !important;
+    color: var(--button-text) !important;
     opacity: 1 !important;
 }
 
 .modal-footer button.btn-modal-save:hover,
 .modal button.btn-modal-save:hover,
 button.btn-modal-save:hover {
-    background-color: var(--primary, #0b5ed7) !important;
-    border-color: var(--primary, #0a58ca) !important;
+    background-color: var(--button-hover, var(--button-bg)) !important;
+    border-color: var(--button-border) !important;
     filter: brightness(0.9);
     opacity: 0.9 !important;
 }
@@ -312,9 +799,9 @@ html body .modal-content {
     display: flex;
     flex-direction: column;
     /* Sombra para profundidad */
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+    box-shadow: 0 10px 40px var(--modal-shadow, rgba(0, 0, 0, 0.5)) !important;
     /* Borde BLANCO explícito y visible (más grueso) - ALTA ESPECIFICIDAD */
-    border: 4px solid rgba(255, 255, 255, 0.8) !important;
+    border: 1px solid var(--modal-border, var(--border, rgba(0, 0, 0, 0.2))) !important;
 }
 
 /* Modal de usuario más compacta - ALTA ESPECIFICIDAD */
@@ -325,7 +812,7 @@ html body #modalEditar .modal-content,
 html body #modalSubir .modal-content,
 html body #modal-perfil .modal-perfil-content,
 html body #modal-selector-avatares .modal-avatares-content {
-    border: 4px solid rgba(255, 255, 255, 0.8) !important;
+    border: 1px solid var(--modal-border, var(--border, rgba(0, 0, 0, 0.2))) !important;
 }
 
 html body #modalUsuario .modal-content {
@@ -345,6 +832,29 @@ html body #modalUsuario .modal-content {
 
 #modal-pagos .modal-header h3 {
     color: var(--header-text, var(--modal-header-text, #fff)) !important;
+}
+
+html body #modal-pagos .boton-centro button,
+html body #modal-pagos #btn-cobrar,
+html body #modal-pagos #btn-cobrar-modal {
+    background-color: var(--button-bg, var(--primary, #2c3e50)) !important;
+    color: var(--button-text, #ffffff) !important;
+    border: 1px solid var(--button-border, var(--button-bg, var(--primary, #2c3e50))) !important;
+    box-shadow: 0 10px 20px color-mix(in srgb, var(--button-bg, var(--primary, #2c3e50)) 25%, transparent) !important;
+}
+
+html body #modal-pagos .boton-centro button:hover,
+html body #modal-pagos #btn-cobrar:hover,
+html body #modal-pagos #btn-cobrar-modal:hover {
+    background-color: var(--button-hover, var(--button-bg, var(--primary, #2c3e50))) !important;
+    border-color: var(--button-border, var(--button-bg, var(--primary, #2c3e50))) !important;
+}
+
+html body #modal-pagos .boton-centro button:disabled,
+html body #modal-pagos #btn-cobrar:disabled,
+html body #modal-pagos #btn-cobrar-modal:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
 }
 
 .modal-content.modal-large {
@@ -405,15 +915,24 @@ html body #modalUsuario .modal-content {
 .modal-body h2,
 .modal-body h3,
 .modal-body h4,
-.modal-content p,
-.modal-content label,
-.modal-content span {
+.modal-body p,
+.modal-body label,
+.modal-body span {
     color: var(--modal-text) !important;
 }
 
 /* Asegurar que los divs dentro de modales también usen el fondo correcto */
-.modal-content div {
+.modal-body div {
     color: var(--modal-text) !important;
+}
+
+.modal-body .plantilla-card-perfil .plantilla-nombre.plantilla-nombre-badge {
+    color: var(--pv-button-text, #ffffff) !important;
+    background: var(--pv-button, var(--pv-primary, var(--primary, #3498db))) !important;
+}
+
+.modal-body .plantilla-card-perfil .plantilla-icon {
+    color: var(--pv-primary, var(--primary, #3498db)) !important;
 }
 
 /* ================================= */
@@ -512,21 +1031,21 @@ html body #modalUsuario .modal-content {
 }
 
 .modal-footer .btn-success {
-    background: #27ae60;
-    color: white;
+    background: var(--success, var(--button-bg));
+    color: var(--button-text);
 }
 
 .modal-footer .btn-success:hover {
-    background: #229954;
+    background: color-mix(in srgb, var(--success, var(--button-bg)) 85%, black);
 }
 
 .modal-footer .btn-secondary {
-    background: #6c757d;
-    color: white;
+    background: var(--secondary, var(--button-bg));
+    color: var(--button-text);
 }
 
 .modal-footer .btn-secondary:hover {
-    background: #5a6268;
+    background: color-mix(in srgb, var(--secondary, var(--button-bg)) 85%, black);
 }
 
 /* ================================= */

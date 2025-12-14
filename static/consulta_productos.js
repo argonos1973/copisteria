@@ -13,7 +13,7 @@ createApp({
     const loading = ref(false);
     const page = ref(1);
     const MAX_PAGE_SIZE = 100;
-    const pageSize = ref(20);
+    const pageSize = ref(10);
     const total = ref(0);
     const totalPages = ref(1);
 
@@ -116,12 +116,18 @@ createApp({
       }
     };
 
-    const changePageSize = async (newSize) => {
-      const ns = Math.max(1, Math.min(MAX_PAGE_SIZE, Number(newSize) || 20));
-      if (ns === pageSize.value) return;
-      pageSize.value = ns;
-      page.value = 1;
-      await fetchProductos();
+    const handlePageSizeChange = () => {
+      // Validar valor permitido
+      if (![10, 20, 50, 100].includes(pageSize.value)) {
+        pageSize.value = 10;
+      }
+      page.value = 1; // Volver a primera página
+      guardarFiltros();
+      fetchProductos();
+    };
+
+    const changePageSize = () => {
+      handlePageSizeChange();
     };
 
     const eliminarProducto = async (id) => {

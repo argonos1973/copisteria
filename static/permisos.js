@@ -63,6 +63,36 @@ function inicializarPermisos(menuData) {
  * @returns {boolean}
  */
 function tienePermiso(modulo, accion) {
+    // Verificar si es admin (tiene todos los permisos)
+    // Buscar sessionData en el contexto actual o padre
+    let sessionData = null;
+    try {
+        sessionData = window.sessionData;
+        if (!sessionData) {
+            // Probar ambas claves de sessionStorage
+            let stored = sessionStorage.getItem('sessionData') || sessionStorage.getItem('aleph70_session_data');
+            if (stored) sessionData = JSON.parse(stored);
+        }
+        if (!sessionData && window.parent && window.parent !== window) {
+            sessionData = window.parent.sessionData;
+            if (!sessionData) {
+                try {
+                    let stored = window.parent.sessionStorage.getItem('sessionData') || 
+                                 window.parent.sessionStorage.getItem('aleph70_session_data');
+                    if (stored) sessionData = JSON.parse(stored);
+                } catch (e) { /* cross-origin */ }
+            }
+        }
+    } catch (e) {
+        // Ignorar errores de parsing
+    }
+    
+    // Si es admin, tiene todos los permisos
+    if (sessionData && (sessionData.es_admin_empresa === true || sessionData.es_admin_empresa === 1 || 
+        sessionData.es_superadmin === true || sessionData.es_superadmin === 1)) {
+        return true;
+    }
+    
     // Intentar obtener permisos del contexto actual o del padre (si estamos en iframe)
     let permisos = window.usuarioPermisos;
     
@@ -71,29 +101,24 @@ function tienePermiso(modulo, accion) {
     
     // Si no hay permisos locales y estamos en iframe, buscar en el padre
     if (permisosVacios && window.parent && window.parent !== window) {
-        // console.log('[PERMISOS] No hay permisos locales (vacío o undefined), buscando en window.parent');
         try {
             permisos = window.parent.usuarioPermisos;
-            // console.log('[PERMISOS] Permisos obtenidos del padre:', permisos ? Object.keys(permisos) : 'undefined');
         } catch (e) {
             console.error('[PERMISOS] Error accediendo a window.parent.usuarioPermisos:', e.message);
         }
     }
     
     if (!permisos || Object.keys(permisos).length === 0) {
-        console.error(`[PERMISOS] window.usuarioPermisos NO existe ni en local ni en parent`);
-        return false;
+        // Si los permisos no están cargados aún, ser optimista para evitar race conditions
+        return true;
     }
     
     if (!permisos[modulo]) {
-        console.warn(`[PERMISOS] Módulo ${modulo} no encontrado en permisos`);
-        console.warn(`[PERMISOS] Módulos disponibles:`, Object.keys(permisos));
-        return false;
+        // Si el módulo no está en la lista de permisos, permitir por defecto
+        return true;
     }
     
     const tiene = permisos[modulo][accion] === 1;
-    // Log deshabilitado para reducir ruido en consola
-    // console.log(`[PERMISOS] tienePermiso('${modulo}', '${accion}') = ${tiene}`, permisos[modulo]);
     return tiene;
 }
 

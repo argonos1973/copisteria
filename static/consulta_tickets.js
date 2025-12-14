@@ -8,7 +8,7 @@ const botones = document.querySelectorAll('button');
 const API_ENDPOINT = '/api/tickets/paginado'
 // Estado de paginación
 let currentPageTickets = 1
-let pageSizeTickets = 20
+let pageSizeTickets = 10
 let totalPagesTickets = 1
 
 // Añade un evento de clic a cada botón

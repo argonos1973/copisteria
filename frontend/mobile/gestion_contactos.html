@@ -7,6 +7,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/mobile/css/styles.css">
+    <script src="/static/nif_cif_validator.js?v=1763897790"></script>
+    <script src="/static/cp_validator.js?v=1763897790"></script>
 </head>
 <body>
     <header class="mobile-header">
@@ -28,7 +30,7 @@
         </div>
         <div class="form-group">
             <label class="form-label">NIF / CIF</label>
-            <input type="text" class="form-control" id="identificador" placeholder="12345678X">
+            <input type="text" class="form-control" id="identificador" placeholder="12345678X" data-validate-nifcif="1" data-nifcif-required="1">
         </div>
         <div class="form-group">
             <label class="form-label">Email</label>
@@ -45,7 +47,7 @@
         <div style="display:flex; gap:10px;">
             <div class="form-group" style="flex:1;">
                 <label class="form-label">C.P.</label>
-                <input type="text" class="form-control" id="cp">
+                <input type="text" class="form-control" id="cp" data-validate-cp="1" data-cp-locality-id="localidad" data-cp-province-id="provincia">
             </div>
             <div class="form-group" style="flex:2;">
                 <label class="form-label">Localidad</label>
@@ -58,7 +60,7 @@
         </div>
     </main>
 
-    <script src="/static/mobile/js/app.js"></script>
-    <script src="/static/mobile/js/gestion_contactos.js"></script>
+    <script src="/static/mobile/js/app.js?v=1763897790"></script>
+    <script src="/static/mobile/js/gestion_contactos.js?v=1763897790"></script>
 </body>
 </html>

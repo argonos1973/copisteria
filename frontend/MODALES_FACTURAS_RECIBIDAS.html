@@ -283,6 +283,184 @@
     </div>
 </div>
 
+<!-- Modal: Nueva Factura -->
+<div id="modalNuevaFactura" class="modal">
+    <div class="modal-content modal-extra-wide modal-bordered" style="max-width: 98%; width: 98%; height: 96vh; display: flex; flex-direction: column; padding: 0 !important;">
+        <div class="modal-header" style="padding: 15px 20px;">
+            <h2>Nueva Factura Recibida</h2>
+            <span class="close" onclick="cerrarModal('modalNuevaFactura')">&times;</span>
+        </div>
+
+        <div class="modal-body" style="display: flex; gap: 0; flex: 1; overflow: hidden; padding: 0 !important;">
+            <!-- Columna Izquierda: Formulario -->
+            <div id="nuevaFacturaLeftCol" class="edit-form-column" style="width: 68%; flex: 0 0 68%; min-width: 520px; overflow-y: auto; padding: 20px; height: 100%; border-right: 1px solid var(--border, #ddd);">
+                <form id="formNuevaFactura">
+                    <div class="nueva-factura-form-grid">
+                        <div class="nueva-factura-form-left">
+
+                    <!-- Proveedor -->
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label style="display:block;font-weight:bold;margin-bottom:6px;">Proveedor</label>
+                        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                            <label style="display:flex;align-items:center;gap:6px;">
+                                <input type="radio" name="proveedorModo" value="existente" checked>
+                                Existente
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;">
+                                <input type="radio" name="proveedorModo" value="manual">
+                                Nuevo / Manual
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="proveedorExistenteBlock" class="form-group" style="margin-bottom: 15px;">
+                        <label for="nueva-proveedor" style="display:block;font-weight:bold;margin-bottom:5px;">Seleccionar proveedor *</label>
+                        <select id="nueva-proveedor" class="form-control" style="width:100%;" required>
+                            <option value="">Cargando proveedores...</option>
+                        </select>
+                    </div>
+
+                    <div id="proveedorManualBlock" style="display:none;">
+                        <div class="form-row form-centered nueva-prov-grid-1">
+                            <div class="form-group form-col-xl input-centered">
+                                <label for="nueva-prov-nombre">Nombre proveedor *</label>
+                                <input type="text" id="nueva-prov-nombre" class="form-control" placeholder="RAZÓN SOCIAL" />
+                            </div>
+                            <div class="form-group form-col-medium input-centered">
+                                <label for="nueva-prov-nif">NIF/CIF</label>
+                                <input type="text" id="nueva-prov-nif" class="form-control" placeholder="B12345678" />
+                            </div>
+                        </div>
+
+                        <div class="form-group container-centered-limited">
+                            <label for="nueva-prov-direccion">Dirección</label>
+                            <input type="text" id="nueva-prov-direccion" class="form-control" placeholder="Calle y número" />
+                        </div>
+
+                        <div class="form-row form-centered nueva-prov-grid-2">
+                            <div class="form-group form-col-small input-centered">
+                                <label for="nueva-prov-cp">CP</label>
+                                <input type="text" id="nueva-prov-cp" class="form-control" maxlength="5" data-validate-cp="1" data-cp-locality-id="nueva-prov-poblacion" data-cp-province-id="nueva-prov-provincia" data-cp-no-submit-block="1" />
+                            </div>
+                            <div class="form-group form-col-medium input-centered">
+                                <label for="nueva-prov-poblacion">Población</label>
+                                <input type="text" id="nueva-prov-poblacion" class="form-control" />
+                            </div>
+                            <div class="form-group form-col-medium input-centered">
+                                <label for="nueva-prov-provincia">Provincia</label>
+                                <input type="text" id="nueva-prov-provincia" class="form-control" />
+                            </div>
+                        </div>
+
+                        <div class="form-row form-centered nueva-prov-grid-3">
+                            <div class="form-group form-col-medium input-centered">
+                                <label for="nueva-prov-email">Email</label>
+                                <input type="email" id="nueva-prov-email" class="form-control" />
+                            </div>
+                            <div class="form-group form-col-medium input-centered">
+                                <label for="nueva-prov-telefono">Teléfono</label>
+                                <input type="text" id="nueva-prov-telefono" class="form-control" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label for="nueva-archivo" style="display:block;font-weight:bold;margin-bottom:5px;">Archivo (PDF/Imagen) (opcional)</label>
+                        <input type="file" id="nueva-archivo" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp" />
+                        <div style="display:flex; gap:10px; margin-top:10px; align-items:center; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-modal-primary" id="btnOcrNuevaFactura" onclick="escanearNuevaFacturaOCR()">
+                                <i class="fas fa-magic"></i> Escanear con IA
+                            </button>
+                            <span id="nueva-ocr-estado" style="font-size: 12px; opacity: 0.9;"></span>
+                        </div>
+                        <small>Si escaneas, se rellenarán automáticamente proveedor y datos de la factura (usa GPT-4 Vision).</small>
+                    </div>
+
+                        </div>
+
+                        <div class="nueva-factura-form-right">
+                            <!-- Datos de factura -->
+                            <div class="form-row form-centered nueva-factura-datos-grid">
+                        <div class="form-group form-col-xl input-centered">
+                            <label for="nueva-numero">Número de Factura</label>
+                            <input type="text" id="nueva-numero" class="form-control" placeholder="Ej: F-2025-0001" />
+                        </div>
+                        <div class="form-group form-col-medium input-centered">
+                            <label for="nueva-fecha-emision">Fecha Emisión *</label>
+                            <input type="date" id="nueva-fecha-emision" class="form-control" required />
+                        </div>
+                        <div class="form-group form-col-medium input-centered">
+                            <label for="nueva-fecha-vencimiento">Vencimiento</label>
+                            <input type="date" id="nueva-fecha-vencimiento" class="form-control" />
+                        </div>
+                            </div>
+
+                    <div class="form-row" style="background: var(--bg-elevated, rgba(0,0,0,0.05)); padding: 15px; border-radius: 6px; border: 1px solid var(--border, #ccc); display: flex; flex-wrap: nowrap; gap: 10px; justify-content: space-between; align-items: flex-end;">
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label for="nueva-base" style="display:block;text-align:right;">Base Imp. *</label>
+                            <input type="number" id="nueva-base" class="form-control" step="0.01" min="0" required style="text-align:right;" />
+                        </div>
+                        <div class="form-group" style="flex: 0 0 70px;">
+                            <label for="nueva-iva-porcentaje" style="display:block;text-align:right;">IVA %</label>
+                            <input type="number" id="nueva-iva-porcentaje" class="form-control" min="0" max="100" step="1" value="21" style="text-align:right;" />
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label for="nueva-iva-importe" style="display:block;text-align:right;">Imp. IVA</label>
+                            <input type="number" id="nueva-iva-importe" class="form-control" step="0.01" min="0" readonly style="text-align:right;" />
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                            <label for="nueva-total" style="display:block;font-weight:bold;text-align:right;">Total</label>
+                            <input type="number" id="nueva-total" class="form-control" step="0.01" min="0" readonly style="font-weight:bold;text-align:right;font-size:1.1em;" />
+                        </div>
+                    </div>
+
+                            <div class="nueva-factura-bottom-grid">
+                        <div class="form-group container-centered-limited">
+                            <label for="nueva-concepto">Concepto</label>
+                            <input type="text" id="nueva-concepto" class="form-control" />
+                        </div>
+
+                        <div class="form-group container-centered-limited">
+                            <label for="nueva-notas">Notas</label>
+                            <textarea id="nueva-notas" class="form-control" rows="2" style="resize: vertical;"></textarea>
+                        </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Columna Derecha: Info -->
+            <div id="nuevaFacturaRightCol" class="edit-preview-column" style="flex: 0 0 32%; max-width: 520px; background: var(--bg-elevated, #525659); height: 100%; display: flex; flex-direction: column;">
+                <div style="background: var(--table-header-bg, #eee); padding: 5px 10px; border-bottom: 1px solid var(--border, #ddd); font-size: 12px; font-weight: bold; color: var(--table-header-text, #666); display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                    <span><i class="fas fa-info-circle"></i> Creación manual</span>
+                    <button type="button" class="btn btn-modal-primary" id="btnToggleNuevaFacturaPanel" onclick="togglePanelNuevaFactura()" style="padding: 4px 8px; font-size: 12px;">
+                        <span id="btnToggleNuevaFacturaPanelIcon">⟨</span>
+                    </button>
+                </div>
+                <div style="flex: 1; padding: 16px; color: var(--text, #fff); overflow: auto;">
+                    <div id="nuevaFacturaPreviewContainer" style="display:none; margin-bottom: 12px; border: 1px solid var(--border, rgba(255,255,255,0.2)); border-radius: 6px; overflow: hidden; background: var(--bg, rgba(0,0,0,0.15));">
+                        <div style="padding: 6px 10px; font-size: 12px; font-weight: 600; background: var(--table-header-bg, rgba(255,255,255,0.08)); color: var(--table-header-text, var(--text, #fff));">Vista previa</div>
+                        <div id="nuevaFacturaPreviewBody" style="height: 320px;">
+                        </div>
+                    </div>
+                    <p style="margin-top:0;">Esta opción crea una factura recibida sin PDF adjunto.</p>
+                    <p>Si necesitas adjuntar PDF, usa el flujo de subida/OCR (cuando esté disponible) o edita posteriormente.</p>
+                    <hr style="margin: 12px 0; opacity: 0.3;" />
+                    <p style="margin:0; font-size: 12px; opacity: 0.9;">Consejo: adjunta el archivo y pulsa <strong>Escanear con IA</strong> para rellenar automáticamente todos los campos posibles.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="padding: 15px 20px;">
+            <button class="btn btn-modal-cancel" onclick="cerrarModal('modalNuevaFactura')">Cancelar</button>
+            <button class="btn btn-modal-save" onclick="guardarNuevaFactura()">
+                Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Subir Factura Manual -->
 <div id="modalSubir" class="modal">
     <div class="modal-content">

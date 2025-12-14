@@ -237,16 +237,28 @@ def obtener_plantillas_disponibles():
                             if 'semantic' in data:
                                 semantic = data['semantic']
                                 colores_preview['background'] = resolver_referencia(semantic.get('bg', '#ffffff'), data)
+                                colores_preview['surface'] = resolver_referencia(semantic.get('bg-elevated', colores_preview['background']), data)
                                 colores_preview['text'] = resolver_referencia(semantic.get('text', '#000000'), data)
                                 colores_preview['primary'] = resolver_referencia(semantic.get('primary', '#3498db'), data)
                                 colores_preview['border'] = resolver_referencia(semantic.get('border', '#ddd'), data)
+
+                                # Componentes (si existen) para diferenciar mejor la preview
+                                components = data.get('components', {})
+                                menu = components.get('menu', {}) if isinstance(components, dict) else {}
+                                button = components.get('button', {}) if isinstance(components, dict) else {}
+
+                                colores_preview['menu'] = resolver_referencia(menu.get('bg', colores_preview['primary']), data)
+                                colores_preview['button'] = resolver_referencia(button.get('bg', colores_preview['primary']), data)
                             else:
                                 # Valores por defecto para plantillas sin estructura semantic
                                 colores_preview = {
                                     'background': '#ffffff',
+                                    'surface': '#ffffff',
                                     'text': '#000000',
                                     'primary': '#3498db',
-                                    'border': '#ddd'
+                                    'border': '#ddd',
+                                    'menu': '#3498db',
+                                    'button': '#3498db'
                                 }
                             
                             plantillas.append({

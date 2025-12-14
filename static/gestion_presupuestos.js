@@ -79,11 +79,11 @@ const CONTACTO_CANDIDATO_KEYS = [
 ];
 
 function limpiarFormularioContacto() {
-  document.getElementById('razonSocial').value = '';
-  document.getElementById('identificador').value = '';
-  document.getElementById('direccion').value = '';
+  document.getElementById('razonSocial').textContent = '';
+  document.getElementById('identificador').textContent = '';
+  document.getElementById('direccion').textContent = '';
   document.getElementById('cp-localidad').textContent = '';
-  document.getElementById('provincia').value = '';
+  document.getElementById('provincia').textContent = '';
 }
 
 function aplicarContactoEnFormulario(contacto = {}) {
@@ -91,13 +91,13 @@ function aplicarContactoEnFormulario(contacto = {}) {
     limpiarFormularioContacto();
     return;
   }
-  document.getElementById('razonSocial').value = contacto.razonsocial || '';
-  document.getElementById('identificador').value = contacto.identificador || '';
-  document.getElementById('direccion').value = contacto.direccion || '';
+  document.getElementById('razonSocial').textContent = contacto.razonsocial || '';
+  document.getElementById('identificador').textContent = contacto.identificador || '';
+  document.getElementById('direccion').textContent = contacto.direccion || '';
   const cp = contacto.cp || '';
   const localidad = contacto.localidad || '';
   document.getElementById('cp-localidad').textContent = cp && localidad ? `${cp} ${localidad}` : (cp || localidad);
-  document.getElementById('provincia').value = contacto.provincia || '';
+  document.getElementById('provincia').textContent = contacto.provincia || '';
 }
 
 function extraerCandidatosContacto(datos = {}) {
@@ -691,7 +691,7 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='B') {
       numero: numeroPresupuesto,
       fecha: fechaAPI,
       idcontacto: idContactoNumerico,
-      nif: document.getElementById('identificador').value,
+      nif: document.getElementById('identificador').textContent,
       total: totalPresupuesto,
       formaPago: formaPago || 'E',
       importe_bruto: totalesDoc.subtotal_total || 0,
@@ -852,13 +852,13 @@ function seleccionarContactoModal(contactoData) {
   idContacto = parseInt(contactoData.id, 10) || null;
   
   // Actualizar campos del contacto
-  document.getElementById('razonSocial').value = contactoData.razon || '';
-  document.getElementById('identificador').value = contactoData.nif || '';
-  document.getElementById('direccion').value = contactoData.direccion || '';
+  document.getElementById('razonSocial').textContent = contactoData.razon || '';
+  document.getElementById('identificador').textContent = contactoData.nif || '';
+  document.getElementById('direccion').textContent = contactoData.direccion || '';
   const cp = contactoData.cp || '';
   const localidad = contactoData.localidad || '';
   document.getElementById('cp-localidad').textContent = cp && localidad ? `${cp} ${localidad}` : (cp || localidad);
-  document.getElementById('provincia').value = contactoData.provincia || '';
+  document.getElementById('provincia').textContent = contactoData.provincia || '';
   
   cerrarModalContactos();
   mostrarNotificacion('Contacto asignado correctamente', 'success');

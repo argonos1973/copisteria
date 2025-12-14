@@ -42,6 +42,14 @@ const icons = {
   telf2: document.getElementById('icon-telf2')
 };
 
+let nifCifRunner = null;
+if (window.NifCifValidator && fields.identificador) {
+  nifCifRunner = window.NifCifValidator.attachToInput(fields.identificador, {
+    required: true,
+    iconEl: document.getElementById('icon-identificador')
+  });
+}
+
 const btnGuardar = document.getElementById('btnGuardar');
 
 // Funciones de validación
@@ -73,6 +81,9 @@ function validateRequired() {
 }
 
 function validateIdentificador() {
+  if (!fields.identificador) return true;
+  if (nifCifRunner) return nifCifRunner();
+  if (window.NifCifValidator) return window.NifCifValidator.isValid(fields.identificador.value);
   return true;
 }
 
@@ -452,6 +463,12 @@ inicializarDeteccionCambios(async () => {
     
     if (!razonsocial || !identificador) {
       mostrarNotificacion('Razón Social y NIF/CIF son obligatorios', 'error');
+      window.__guardandoDesdeMenu = false;
+      throw new Error('Usuario canceló');
+    }
+
+    if (!validateIdentificador()) {
+      mostrarNotificacion('El NIF/NIE/CIF introducido no es válido', 'error');
       window.__guardandoDesdeMenu = false;
       throw new Error('Usuario canceló');
     }

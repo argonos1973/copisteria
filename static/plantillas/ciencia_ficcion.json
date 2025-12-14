@@ -1,0 +1,143 @@
+{
+  "name": "Ciencia Ficción",
+  "version": 1,
+  "meta": {
+    "author": "aleph70",
+    "icon": "👾",
+    "dark": true,
+    "description": "Sci‑Fi: neón cian/magenta sobre base espacial, alto contraste y estética futurista"
+  },
+  "palette": {
+    "space950": "#060713",
+    "space900": "#0a0c1f",
+    "space850": "#10132a",
+    "space800": "#141a33",
+    "space700": "#1b2342",
+    "space650": "#23305a",
+    "space600": "#2e3a6b",
+    "fog200": "#cfd6ff",
+    "fog150": "#b9c2ff",
+    "fog120": "#a3adff",
+    "neonCyan500": "#19d3ff",
+    "neonCyan600": "#00c2f2",
+    "neonMagenta500": "#ff3df2",
+    "neonMagenta600": "#ff1fe8",
+    "neonGreen500": "#2dff9d",
+    "neonAmber500": "#ffcc4d",
+    "neonRed500": "#ff4d6d"
+  },
+  "semantic": {
+    "bg": "{palette.space900}",
+    "bg-elevated": "{palette.space850}",
+    "text": "{palette.fog200}",
+    "text-muted": "{palette.fog150}",
+    "primary": "{palette.neonCyan500}",
+    "secondary": "{palette.space650}",
+    "accent": "{palette.neonMagenta500}",
+    "success": "{palette.neonGreen500}",
+    "warning": "{palette.neonAmber500}",
+    "danger": "{palette.neonRed500}",
+    "info": "{palette.neonCyan600}",
+    "border": "{palette.space600}",
+    "hover": "{palette.space800}"
+  },
+  "components": {
+    "button": {
+      "bg": "{semantic.primary}",
+      "text": "{palette.space950}",
+      "hover-bg": "{palette.neonCyan600}",
+      "border": "{semantic.primary}"
+    },
+    "button-secondary": {
+      "bg": "{palette.space700}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.space650}",
+      "border": "{semantic.border}"
+    },
+    "button-card": {
+      "bg": "{palette.space700}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.space650}",
+      "border": "{semantic.border}"
+    },
+    "button-table": {
+      "bg": "{palette.space950}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.space850}",
+      "border": "{semantic.border}"
+    },
+    "input": {
+      "bg": "{palette.space800}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "placeholder": "{palette.fog120}",
+      "readonly-bg": "{palette.space850}",
+      "readonly-text": "{palette.fog150}",
+      "focus-border": "{semantic.primary}"
+    },
+    "select": {
+      "bg": "{palette.space800}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "focus-border": "{semantic.primary}"
+    },
+    "modal": {
+      "bg": "{palette.space850}",
+      "text": "{semantic.text}",
+      "overlay": "transparent",
+      "border": "transparent",
+      "border-width": "0",
+      "border-radius": "10px",
+      "shadow": "0 10px 26px rgba(0,0,0,0.65)",
+      "header-bg": "transparent",
+      "header-text": "{semantic.text}",
+      "body-bg": "transparent",
+      "body-text": "{semantic.text}",
+      "label-color": "{semantic.text}",
+      "input-bg": "{palette.space800}",
+      "input-text": "{semantic.text}",
+      "input-border": "{semantic.border}"
+    },
+    "table": {
+      "bg": "{palette.space850}",
+      "text": "{semantic.text}",
+      "header-bg": "{palette.space950}",
+      "header-text": "{semantic.text}",
+      "row-hover": "{palette.space800}"
+    },
+    "menu": {
+      "bg": "{semantic.bg}",
+      "text": "{semantic.text}",
+      "hover": "{palette.space800}",
+      "active-bg": "{semantic.primary}",
+      "active-text": "{palette.space950}",
+      "border": "{semantic.border}",
+      "icon": "{semantic.text}"
+    },
+    "header": {
+      "bg": "{palette.space950}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}"
+    },
+    "icon": {
+      "color": "{semantic.text}"
+    },
+    "spinner": {
+      "border": "{semantic.primary}"
+    },
+    "tab": {
+      "active-bg": "{semantic.primary}",
+      "active-text": "{palette.space950}",
+      "inactive-text": "{palette.fog150}",
+      "border": "{semantic.primary}"
+    },
+    "disabled": {
+      "bg": "{palette.space850}",
+      "text": "{palette.fog120}"
+    },
+    "amount": {
+      "positive": "{palette.neonGreen500}",
+      "negative": "{palette.neonRed500}"
+    }
+  }
+}

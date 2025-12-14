@@ -52,13 +52,20 @@ function tienePermiso(modulo, accion) {
     // Helper para verificar booleano o entero 1
     const isTrue = (val) => val === true || val === 1 || val === '1';
 
+    // Si sesión no está cargada aún, ser optimista para evitar race conditions
+    // Los permisos se verificarán de nuevo cuando la sesión cargue
+    if (!sesionUsuario) {
+        // console.log(`[PERMISOS] Sesión no cargada, permitiendo ${modulo}.${accion} temporalmente`);
+        return true;
+    }
+
     // Superadmin tiene todos los permisos
-    if (sesionUsuario && isTrue(sesionUsuario.es_superadmin)) {
+    if (isTrue(sesionUsuario.es_superadmin)) {
         return true;
     }
     
     // Admin de empresa tiene todos los permisos
-    if (sesionUsuario && isTrue(sesionUsuario.es_admin_empresa)) {
+    if (isTrue(sesionUsuario.es_admin_empresa)) {
         return true;
     }
     

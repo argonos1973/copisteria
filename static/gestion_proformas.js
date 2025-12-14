@@ -717,13 +717,13 @@ async function cargarProforma(id) {
     }
     
     const contacto = data.contacto || {};
-    document.getElementById('razonSocial').value = contacto.razonsocial || '';
-    document.getElementById('identificador').value = contacto.identificador || '';
-    document.getElementById('direccion').value = contacto.direccion || '';
+    document.getElementById('razonSocial').textContent = contacto.razonsocial || '';
+    document.getElementById('identificador').textContent = contacto.identificador || '';
+    document.getElementById('direccion').textContent = contacto.direccion || '';
     const cp = contacto.cp || '';
     const localidad = contacto.localidad || '';
     document.getElementById('cp-localidad').textContent = cp && localidad ? `${cp} ${localidad}` : (cp || localidad);
-    document.getElementById('provincia').value = contacto.provincia || '';
+    document.getElementById('provincia').textContent = contacto.provincia || '';
 
     document.getElementById('total-proforma').value = formatearImporte(importes.total || 0);
 
@@ -769,13 +769,13 @@ async function buscarProformaAbierta(idContacto) {
 
         // Siempre tendremos los datos del contacto
         const contacto = data.contacto || {};
-        document.getElementById('identificador').value = contacto.identificador || '';
-        document.getElementById('razonSocial').value = contacto.razonsocial || '';
-        document.getElementById('direccion').value = contacto.direccion || '';
+        document.getElementById('identificador').textContent = contacto.identificador || '';
+        document.getElementById('razonSocial').textContent = contacto.razonsocial || '';
+        document.getElementById('direccion').textContent = contacto.direccion || '';
         const cp = contacto.cp || '';
         const localidad = contacto.localidad || '';
         document.getElementById('cp-localidad').textContent = cp && localidad ? `${cp} ${localidad}` : (cp || localidad);
-        document.getElementById('provincia').value = contacto.provincia || '';
+        document.getElementById('provincia').textContent = contacto.provincia || '';
 
         if (data.modo === 'edicion') {
             console.log("Entrando en modo edición - Proforma existente");
@@ -912,13 +912,13 @@ async function cargarDatosContacto(id) {
   try {
     const response = await fetch(`/api/contactos/get_contacto/${id}`);
     const contacto = await response.json();
-    document.getElementById('razonSocial').value = contacto.razonsocial;
-    document.getElementById('identificador').value = contacto.identificador;
-    document.getElementById('direccion').value = contacto.direccion || '';
+    document.getElementById('razonSocial').textContent = contacto.razonsocial;
+    document.getElementById('identificador').textContent = contacto.identificador;
+    document.getElementById('direccion').textContent = contacto.direccion || '';
     const cp = contacto.cp || '';
     const poblacion = contacto.poblacion || contacto.localidad || '';
     document.getElementById('cp-localidad').textContent = cp && poblacion ? `${cp} ${poblacion}` : (cp || poblacion);
-    document.getElementById('provincia').value = contacto.provincia || '';
+    document.getElementById('provincia').textContent = contacto.provincia || '';
   } catch (error) {
     console.error('Error al cargar datos del contacto:', error);
     mostrarNotificacion('Error al cargar datos del contacto', "error");
@@ -1089,7 +1089,7 @@ async function guardarProforma(formaPago = 'E', totalPago = 0, estado = 'A') {
             numero: numeroProforma,
             fecha: fechaAPI,
             idContacto: idContacto,
-            nif: document.getElementById('identificador').value,
+            nif: document.getElementById('identificador').textContent,
             detalles: detallesBase,
             total: total,
             formaPago: formaPago,

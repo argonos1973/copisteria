@@ -910,7 +910,7 @@ function mostrarModalNuevaEmpresa() {
                         <div class="form-group">
                             <label for="cp_empresa">Código Postal *</label>
                             <input type="text" id="cp_empresa" name="codigo_postal" required 
-                                   placeholder="Ej: 28001">
+                                   placeholder="Ej: 28001" data-validate-cp="1" data-cp-locality-id="ciudad_empresa" data-cp-province-id="provincia_empresa" data-cp-no-submit-block="1">
                         </div>
                         
                         <div class="form-group">
@@ -1004,8 +1004,32 @@ async function crearEmpresa(form) {
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
     
     try {
-        const response = await fetch('/api/empresas', { credentials: 'include' }, {
+        const cpInput = form.querySelector('#cp_empresa');
+        if (cpInput && cpInput.value.trim() && window.CpValidator) {
+            const cp = window.CpValidator.normalizeCp(cpInput.value);
+            cpInput.value = cp;
+
+            if (!window.CpValidator.isValidFormat(cp)) {
+                mostrarNotificacion('El Código Postal debe tener 5 dígitos', 'error');
+                return;
+            }
+
+            const dataCp = await window.CpValidator.getCpData(cp);
+            if (!Array.isArray(dataCp) || !dataCp.length) {
+                mostrarNotificacion('El Código Postal introducido no existe', 'error');
+                return;
+            }
+
+            const row = dataCp[0] || {};
+            const ciudadInput = form.querySelector('#ciudad_empresa');
+            const provinciaInput = form.querySelector('#provincia_empresa');
+            if (ciudadInput && !ciudadInput.value.trim()) ciudadInput.value = row.poblacio || '';
+            if (provinciaInput && !provinciaInput.value.trim()) provinciaInput.value = row.provincia || '';
+        }
+
+        const response = await fetch('/api/empresas', {
             method: 'POST',
+            credentials: 'include',
             body: formData
         });
         
@@ -3571,6 +3595,17 @@ function previsualizarLogoEmpresa(event) {
 
 async function guardarDatosEmpresa(empresaId) {
     try {
+        const cifInput = document.getElementById('empresa-cif');
+        const cifValue = cifInput ? (cifInput.value || '').trim() : '';
+        if (cifInput) {
+            cifInput.value = (window.NifCifValidator && window.NifCifValidator.normalize) ? window.NifCifValidator.normalize(cifInput.value) : cifInput.value;
+        }
+        if (cifValue && window.NifCifValidator && !window.NifCifValidator.isValid(cifValue)) {
+            mostrarAlerta('❌ El NIF/NIE/CIF introducido no es válido', 'error');
+            if (cifInput) cifInput.focus();
+            return;
+        }
+
         // Usar FormData para enviar archivos
         const formData = new FormData();
         formData.append('nombre', document.getElementById('empresa-nombre').value);

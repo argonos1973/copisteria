@@ -1,6 +1,6 @@
 import { IP_SERVER, PORT, API_URL } from './constantes.js?v=1762757322';
 import { mostrarNotificacion, mostrarConfirmacion } from './notificaciones.js';
-import { mostrarCargando, ocultarCargando, inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar } from './scripts_utils.js';
+import { mostrarCargando, ocultarCargando, inicializarDeteccionCambios, marcarCambiosSinGuardar, resetearCambiosSinGuardar, limpiarCacheFranjasFrontend } from './scripts_utils.js';
 
 // Utilidades de redondeo
 const round5 = (v) => Number(v ?? 0).toFixed(5);
@@ -485,6 +485,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (resp.data?.success) {
         // Resetear flag de cambios sin guardar
         resetearCambiosSinGuardar();
+        
+        // Invalidar caché de franjas para este producto (por si cambiaron parámetros auto)
+        if (state.id) {
+            limpiarCacheFranjasFrontend(state.id);
+        }
         
         if (state.modoEdicion) {
           mostrarNotificacion('Producto actualizado correctamente', 'success');

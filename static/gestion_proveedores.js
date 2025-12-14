@@ -242,11 +242,27 @@ function abrirModalEdicion(proveedor = null) {
         document.getElementById('proveedorId').value = '';
     }
     
-    modal.style.display = 'block';
+    modal.classList.add('show');
+    modal.style.display = '';
+
+    try {
+        if (window.CpValidator && typeof window.CpValidator.attachToInput === 'function') {
+            const cpEl = document.getElementById('cp');
+            if (cpEl) {
+                window.CpValidator.attachToInput(cpEl, {
+                    localityId: 'poblacion',
+                    provinceId: 'provincia',
+                    noSubmitBlock: true
+                });
+            }
+        }
+    } catch (_) {}
 }
 
 function cerrarModalEdicion() {
-    document.getElementById('modalProveedor').style.display = 'none';
+    const modal = document.getElementById('modalProveedor');
+    modal.classList.remove('show');
+    modal.style.display = '';
     proveedorEditando = null;
 }
 
@@ -330,7 +346,8 @@ function abrirModalDetalle(proveedor) {
         </div>
     `;
     
-    modal.style.display = 'block';
+    modal.classList.add('show');
+    modal.style.display = '';
     
     // Asegurar estado inicial de botones
     restaurarBotonesDetalle();
@@ -412,6 +429,19 @@ function activarEdicionEnDetalle(proveedor) {
             Guardar
         </button>
     `;
+
+    try {
+        if (window.CpValidator && typeof window.CpValidator.attachToInput === 'function') {
+            const cpEl = document.getElementById('edit_cp');
+            if (cpEl) {
+                window.CpValidator.attachToInput(cpEl, {
+                    localityId: 'edit_poblacion',
+                    provinceId: 'edit_provincia',
+                    noSubmitBlock: true
+                });
+            }
+        }
+    } catch (_) {}
 }
 
 window.cancelarEdicionDetalle = function() {
@@ -427,6 +457,32 @@ window.guardarEdicionDetalle = async function() {
     if (!nombre || !nif) {
         mostrarNotificacion('Nombre y NIF son obligatorios', 'error');
         return;
+    }
+
+    if (window.NifCifValidator && !window.NifCifValidator.isValid(nif)) {
+        mostrarNotificacion('El NIF/NIE/CIF introducido no es válido', 'error');
+        return;
+    }
+
+    const cpEl = document.getElementById('edit_cp');
+    if (cpEl && cpEl.value.trim() && window.CpValidator) {
+        const cp = window.CpValidator.normalizeCp(cpEl.value);
+        cpEl.value = cp;
+        if (!window.CpValidator.isValidFormat(cp)) {
+            mostrarNotificacion('El CP debe tener 5 dígitos', 'error');
+            return;
+        }
+        const data = await window.CpValidator.getCpData(cp);
+        if (!Array.isArray(data) || !data.length) {
+            mostrarNotificacion('El CP introducido no existe', 'error');
+            return;
+        }
+
+        const row = data[0] || {};
+        const pobEl = document.getElementById('edit_poblacion');
+        const provEl = document.getElementById('edit_provincia');
+        if (pobEl && !pobEl.value.trim()) pobEl.value = row.poblacio || '';
+        if (provEl && !provEl.value.trim()) provEl.value = row.provincia || '';
     }
     
     const datos = {
@@ -494,7 +550,9 @@ function restaurarBotonesDetalle() {
 }
 
 function cerrarModalDetalle() {
-    document.getElementById('modalDetalleProveedor').style.display = 'none';
+    const modal = document.getElementById('modalDetalleProveedor');
+    modal.classList.remove('show');
+    modal.style.display = '';
     proveedorSeleccionado = null;
 }
 
@@ -514,6 +572,32 @@ async function guardarProveedor() {
     if (!nif) {
         mostrarNotificacion('Ingresa el NIF/CIF del proveedor', 'error');
         return;
+    }
+
+    if (window.NifCifValidator && !window.NifCifValidator.isValid(nif)) {
+        mostrarNotificacion('El NIF/NIE/CIF introducido no es válido', 'error');
+        return;
+    }
+
+    const cpEl = document.getElementById('cp');
+    if (cpEl && cpEl.value.trim() && window.CpValidator) {
+        const cp = window.CpValidator.normalizeCp(cpEl.value);
+        cpEl.value = cp;
+        if (!window.CpValidator.isValidFormat(cp)) {
+            mostrarNotificacion('El CP debe tener 5 dígitos', 'error');
+            return;
+        }
+        const data = await window.CpValidator.getCpData(cp);
+        if (!Array.isArray(data) || !data.length) {
+            mostrarNotificacion('El CP introducido no existe', 'error');
+            return;
+        }
+
+        const row = data[0] || {};
+        const pobEl = document.getElementById('poblacion');
+        const provEl = document.getElementById('provincia');
+        if (pobEl && !pobEl.value.trim()) pobEl.value = row.poblacio || '';
+        if (provEl && !provEl.value.trim()) provEl.value = row.provincia || '';
     }
     
     const datos = {

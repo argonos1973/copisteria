@@ -20,6 +20,127 @@ logger = get_logger(__name__)
 
 FACTURAS_DIR = '/var/www/html/facturas_proveedores'
 
+# Flag para evitar verificar tablas múltiples veces
+_TABLAS_VERIFICADAS = {}
+
+
+def ensure_facturas_proveedores_tables(conn=None):
+    """
+    Crea las tablas necesarias para facturas de proveedores si no existen.
+    Usa un flag interno para evitar verificar múltiples veces por sesión.
+    """
+    debe_cerrar = False
+    try:
+        if conn is None:
+            conn = get_db_connection()
+            debe_cerrar = True
+        
+        # Usar el path de la BD como clave para el flag
+        db_path = str(conn.execute("PRAGMA database_list").fetchone()[2])
+        
+        if db_path in _TABLAS_VERIFICADAS:
+            return  # Ya verificamos esta BD
+        
+        cursor = conn.cursor()
+        
+        # Tabla de proveedores
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS proveedores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                empresa_id INTEGER NOT NULL,
+                nombre TEXT NOT NULL,
+                nif TEXT,
+                direccion TEXT,
+                cp TEXT,
+                poblacion TEXT,
+                provincia TEXT,
+                email TEXT,
+                email_facturacion TEXT,
+                telefono TEXT,
+                iban TEXT,
+                forma_pago TEXT DEFAULT 'transferencia',
+                dias_pago INTEGER DEFAULT 30,
+                activo INTEGER DEFAULT 1,
+                creado_automaticamente INTEGER DEFAULT 0,
+                requiere_revision INTEGER DEFAULT 0,
+                fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                notas TEXT
+            )
+        """)
+        
+        # Tabla de facturas de proveedores
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS facturas_proveedores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                empresa_id INTEGER NOT NULL,
+                proveedor_id INTEGER NOT NULL,
+                numero_factura TEXT,
+                fecha_emision DATE,
+                fecha_vencimiento DATE,
+                base_imponible REAL DEFAULT 0,
+                iva_porcentaje REAL DEFAULT 21,
+                iva_importe REAL DEFAULT 0,
+                total REAL DEFAULT 0,
+                estado TEXT DEFAULT 'pendiente',
+                fecha_pago DATE,
+                metodo_pago TEXT,
+                referencia_pago TEXT,
+                ruta_archivo TEXT,
+                pdf_hash TEXT,
+                email_origen TEXT,
+                trimestre TEXT,
+                año INTEGER,
+                metodo_extraccion TEXT,
+                confianza_extraccion REAL,
+                revisado INTEGER DEFAULT 0,
+                fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                usuario_alta TEXT,
+                concepto TEXT,
+                notas TEXT,
+                FOREIGN KEY (proveedor_id) REFERENCES proveedores(id)
+            )
+        """)
+        
+        # Tabla de líneas de factura
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS lineas_factura_proveedor (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                factura_id INTEGER NOT NULL,
+                descripcion TEXT,
+                cantidad REAL DEFAULT 1,
+                precio_unitario REAL DEFAULT 0,
+                subtotal REAL DEFAULT 0,
+                iva_porcentaje REAL DEFAULT 21,
+                iva_importe REAL DEFAULT 0,
+                total REAL DEFAULT 0,
+                FOREIGN KEY (factura_id) REFERENCES facturas_proveedores(id) ON DELETE CASCADE
+            )
+        """)
+        
+        # Tabla de historial
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS historial_facturas_proveedores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                factura_id INTEGER NOT NULL,
+                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                accion TEXT,
+                usuario TEXT,
+                datos_anteriores TEXT,
+                datos_nuevos TEXT,
+                FOREIGN KEY (factura_id) REFERENCES facturas_proveedores(id) ON DELETE CASCADE
+            )
+        """)
+        
+        conn.commit()
+        _TABLAS_VERIFICADAS[db_path] = True
+        logger.info(f"[FACTURAS_PROVEEDORES] Tablas verificadas/creadas en {db_path}")
+        
+    except Exception as e:
+        logger.error(f"Error verificando/creando tablas facturas_proveedores: {e}")
+    finally:
+        if debe_cerrar and conn:
+            conn.close()
+
 
 # ============================================================================
 # FUNCIONES DE UTILIDAD
@@ -124,6 +245,10 @@ def obtener_proveedores(empresa_id, activos_solo=True):
     """
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
+    
+    # Asegurar que las tablas existen
+    ensure_facturas_proveedores_tables(conn)
+    
     cursor = conn.cursor()
     
     query = """
@@ -918,6 +1043,10 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
     """
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
+    
+    # Asegurar que las tablas existen
+    ensure_facturas_proveedores_tables(conn)
+    
     cursor = conn.cursor()
     
     filtros = filtros or {}
@@ -1302,8 +1431,13 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
             iva_pct = datos_factura.get('iva_porcentaje', 21)
             iva_importe = round(base * iva_pct / 100, 2)
         
-        # Marcar como pagada automáticamente con fecha de emisión como fecha de pago
-        fecha_pago = fecha_emision if fecha_emision else datetime.now().strftime('%Y-%m-%d')
+        estado = (datos_factura.get('estado') or 'pagada')
+        if estado == 'pagada':
+            fecha_pago = datos_factura.get('fecha_pago') or (fecha_emision if fecha_emision else datetime.now().strftime('%Y-%m-%d'))
+            metodo_pago = datos_factura.get('metodo_pago') or 'transferencia'
+        else:
+            fecha_pago = None
+            metodo_pago = None
         
         # Lógica inteligente para determinar número de factura si falta
         numero_factura_final = datos_factura.get('numero_factura')
@@ -1342,9 +1476,9 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
             datos_factura.get('iva_porcentaje', 21),
             abs(float(iva_importe or 0)), # Siempre positivo
             abs(float(datos_factura.get('total') or 0)), # Siempre positivo
-            'pagada',  # Marcar como pagada automáticamente
-            fecha_pago,  # Fecha de pago = fecha de emisión
-            'transferencia',  # Método de pago por defecto
+            estado,
+            fecha_pago,
+            metodo_pago,
             ruta_pdf,
             pdf_hash,
             email_origen,
@@ -1403,6 +1537,10 @@ def obtener_factura_por_id(factura_id, empresa_id):
     """Obtiene una factura por su ID"""
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
+    
+    # Asegurar que las tablas existen
+    ensure_facturas_proveedores_tables(conn)
+    
     cursor = conn.cursor()
     
     # Obtener datos principales

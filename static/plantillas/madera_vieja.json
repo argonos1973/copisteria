@@ -1,0 +1,139 @@
+{
+  "name": "Madera Vieja",
+  "version": 2,
+  "meta": {
+    "author": "aleph70",
+    "icon": "🪵",
+    "dark": true,
+    "description": "Madera vieja y desgastada: tonos apagados, madera envejecida y acento patinado"
+  },
+  "palette": {
+    "wood950": "#171310",
+    "wood900": "#1f1a16",
+    "wood850": "#27211c",
+    "wood800": "#2f2822",
+    "wood700": "#3a312a",
+    "wood650": "#463b33",
+    "wood600": "#56483f",
+    "wood500": "#6f5c51",
+    "laton500": "#8e7a45",
+    "laton600": "#7c6a3b",
+    "perg120": "#e7ddcf",
+    "perg100": "#d7cbbb",
+    "ink900": "#16120f",
+    "green500": "#4f6b3a",
+    "yellow500": "#e0b84a",
+    "red500": "#a6452d"
+  },
+  "semantic": {
+    "bg": "{palette.wood850}",
+    "bg-elevated": "{palette.wood800}",
+    "text": "{palette.perg120}",
+    "text-muted": "{palette.perg100}",
+    "primary": "{palette.laton500}",
+    "secondary": "{palette.wood650}",
+    "success": "{palette.green500}",
+    "warning": "{palette.yellow500}",
+    "danger": "{palette.red500}",
+    "info": "{palette.laton500}",
+    "border": "{palette.wood600}",
+    "hover": "{palette.wood700}"
+  },
+  "components": {
+    "button": {
+      "bg": "{semantic.primary}",
+      "text": "{palette.ink900}",
+      "hover-bg": "{palette.laton600}",
+      "border": "{semantic.primary}"
+    },
+    "button-secondary": {
+      "bg": "{palette.wood700}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.wood650}",
+      "border": "{semantic.border}"
+    },
+    "button-card": {
+      "bg": "{palette.wood700}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.wood650}",
+      "border": "{semantic.border}"
+    },
+    "button-table": {
+      "bg": "{palette.wood900}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.wood800}",
+      "border": "{semantic.border}"
+    },
+    "input": {
+      "bg": "{palette.wood700}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "placeholder": "{palette.perg100}",
+      "readonly-bg": "{palette.wood800}",
+      "readonly-text": "{palette.perg100}",
+      "focus-border": "{semantic.primary}"
+    },
+    "select": {
+      "bg": "{palette.wood700}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "focus-border": "{semantic.primary}"
+    },
+    "modal": {
+      "bg": "{palette.wood850}",
+      "text": "{semantic.text}",
+      "overlay": "transparent",
+      "border": "transparent",
+      "border-width": "0",
+      "border-radius": "8px",
+      "shadow": "0 8px 24px rgba(0,0,0,0.55)",
+      "header-bg": "transparent",
+      "header-text": "{semantic.text}",
+      "body-bg": "transparent",
+      "body-text": "{semantic.text}",
+      "label-color": "{semantic.text}",
+      "input-bg": "{palette.wood700}",
+      "input-text": "{semantic.text}",
+      "input-border": "{semantic.border}"
+    },
+    "table": {
+      "bg": "{palette.wood850}",
+      "text": "{semantic.text}",
+      "header-bg": "{palette.wood900}",
+      "header-text": "{semantic.text}",
+      "row-hover": "{palette.wood800}"
+    },
+    "menu": {
+      "bg": "{palette.wood900}",
+      "text": "{semantic.text}",
+      "hover": "{palette.wood700}",
+      "border": "{semantic.border}",
+      "icon": "{semantic.text}"
+    },
+    "header": {
+      "bg": "{palette.wood900}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}"
+    },
+    "icon": {
+      "color": "{semantic.text}"
+    },
+    "spinner": {
+      "border": "{semantic.primary}"
+    },
+    "tab": {
+      "active-bg": "{semantic.primary}",
+      "active-text": "{palette.ink900}",
+      "inactive-text": "{palette.perg100}",
+      "border": "{semantic.primary}"
+    },
+    "disabled": {
+      "bg": "{palette.wood800}",
+      "text": "{palette.perg100}"
+    },
+    "amount": {
+      "positive": "{palette.green500}",
+      "negative": "{palette.red500}"
+    }
+  }
+}

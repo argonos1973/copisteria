@@ -78,7 +78,6 @@
   </style>
 
   <!-- Vue.js y Axios (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   
   <!-- Sistema de permisos UI -->
@@ -97,9 +96,9 @@
         <input
           type="text"
           id="razonSocialInput"
-          v-model="filters.razonSocial"
+          
           placeholder="Nombre del contacto..."
-          @input="handleSearch"
+          
         />
       </div>
       <div class="form-group">
@@ -107,9 +106,9 @@
         <input
           type="text"
           id="nifInput"
-          v-model="filters.nif"
+          
           placeholder="Identificador del contacto..."
-          @input="handleSearch"
+          
         />
       </div>
       <div class="form-group">
@@ -118,25 +117,24 @@
           id="btn-nuevo-contacto"
           data-modulo="contactos"
           data-accion="crear"
-          @click="nuevoContacto"
           title="Nuevo Contacto"><i class="fas fa-plus"></i></button>
       </div>
     </div>
 
     <!-- Controles de paginación (debajo de filtros, compacto) -->
-    <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa">
+    <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;">
       <div style="display:flex;align-items:center;gap:12px;">
-        <button @click="prevPage" :disabled="loading || pagination.page<=1" style="padding:4px 8px;font-size:12px;">⟨</button>
-        <span>Página {{ pagination.page }} de {{ pagination.totalPages }}</span>
-        <button @click="nextPage" :disabled="loading || pagination.page>=pagination.totalPages" style="padding:4px 8px;font-size:12px;">⟩</button>
+        <button id="prevPageContactos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟨</button>
+        <span id="pageInfoContactos" style="font-size:12px;">Página 1 de 1</span>
+        <button id="nextPageContactos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟩</button>
       </div>
       <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
         <label>Por página:
-          <select :value="pagination.pageSize" @change="changePageSize($event.target.value)" style="padding:2px 6px;font-size:12px;">
-            <option :selected="pagination.pageSize===10" value="10">10</option>
-            <option :selected="pagination.pageSize===20" value="20" selected>20</option>
-            <option :selected="pagination.pageSize===50" value="50">50</option>
-            <option :selected="pagination.pageSize===100" value="100">100</option>
+          <select id="pageSizeSelectContactos" style="padding:2px 6px;font-size:12px;" onchange="window.handlePageSizeChangeContactos && window.handlePageSizeChangeContactos()" oninput="window.handlePageSizeChangeContactos && window.handlePageSizeChangeContactos()">
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
           </select>
         </label>
       </div>
@@ -155,70 +153,7 @@
               <th class="acciones-col" style="width: 15%; text-align: center;">Acciones</th>
             </tr>
           </thead>
-          <tbody>
-            <!-- Mensaje de carga -->
-            <tr v-if="loading">
-              <td colspan="5" style="text-align: center;">Cargando contactos...</td>
-            </tr>
-
-            <!-- Mensaje de sin resultados -->
-            <tr v-if="!loading && contactos.length === 0">
-              <td colspan="5" style="text-align: left;">No se encontraron contactos.</td>
-            </tr>
-
-            <!-- Filas de contactos -->
-            <tr
-              v-for="contacto in contactos"
-              :key="contacto.idContacto"
-              @click="verContacto(contacto.idContacto)"
-            >
-              <td class="razon-social" :title="contacto.razonsocial">
-                {{ contacto.razonsocial }}
-              </td>
-              <td class="nif-col" :title="contacto.identificador">
-                {{ contacto.identificador }}
-              </td>
-              <td class="email-col" :title="contacto.mail">
-                {{ contacto.mail }}
-              </td>
-              <td class="proforma-col" :title="contacto.numero_proforma_abierta">
-                {{ contacto.numero_proforma_abierta }}
-              </td>
-              <td class="acciones-col" style="text-align: center; white-space: nowrap;">
-                <button
-                  v-if="contacto.identificador"
-                  data-modulo="proformas"
-                  data-accion="crear"
-                  class="btn-icon"
-                  :title="contacto.numero_proforma_abierta ? 'Modificar Proforma' : 'Crear Proforma'"
-                  @click.stop="crearProforma(contacto.idContacto)"
-                  style="margin-right: 5px;"
-                >
-                  ✎
-                </button>
-                <button
-                  v-if="contacto.identificador"
-                  data-modulo="facturas"
-                  data-accion="crear"
-                  class="btn-icon"
-                  title="Crear Factura"
-                  @click.stop="crearFactura(contacto.idContacto)"
-                  style="margin-right: 5px;"
-                >
-                  ⚡
-                </button>
-                <button
-                  data-modulo="contactos"
-                  data-accion="eliminar"
-                  class="btn-icon"
-                  title="Eliminar"
-                  @click.stop="deleteContacto(contacto.idContacto)"
-                >
-                  ✕
-                </button>
-              </td>
-            </tr>
-          </tbody>
+          <tbody id="contactosTbody"></tbody>
         </table>
       </div>
 
@@ -230,280 +165,366 @@
     import { IP_SERVER, PORT, API_URL as API_URL_BASE } from '../static/constantes.js?v=1763897790';
     import { mostrarNotificacion, mostrarConfirmacion } from '../static/notificaciones.js';
 
-    const { createApp, ref, reactive, onMounted, watch, nextTick } = Vue;
+    // Usar API_URL de constantes.js que detecta automáticamente el protocolo
+    const API_URL = `${API_URL_BASE}/api`;
 
-    createApp({
-      setup() {
-        // Usar API_URL de constantes.js que detecta automáticamente el protocolo
-        const API_URL = `${API_URL_BASE}/api`;
+    // Reactive data
+    const filters = {
+      razonSocial: '',
+      nif: ''
+    };
 
-        // Reactive data
-        const filters = reactive({
-          razonSocial: '',
-          nif: ''
-        });
+    let contactos = [];
+    let loading = false;
+    const pagination = {
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+      sort: 'razonsocial',
+      order: 'ASC'
+    };
 
-        const contactos = ref([]);
-        const loading = ref(false);
-        const pagination = reactive({
-          page: 1,
-          pageSize: 10,
-          totalPages: 1,
-          sort: 'razonsocial',
-          order: 'ASC'
-        });
+    const razonSocialInput = document.getElementById('razonSocialInput');
+    const nifInput = document.getElementById('nifInput');
+    const btnNuevoContacto = document.getElementById('btn-nuevo-contacto');
+    const prevBtn = document.getElementById('prevPageContactos');
+    const nextBtn = document.getElementById('nextPageContactos');
+    const pageInfo = document.getElementById('pageInfoContactos');
+    const pageSizeSelect = document.getElementById('pageSizeSelectContactos');
+    const tbody = document.getElementById('contactosTbody');
 
-        // Función para guardar filtros en sessionStorage
-        const guardarFiltros = () => {
-          sessionStorage.setItem('filtrosContactos', JSON.stringify({
-            razonSocial: filters.razonSocial,
-            nif: filters.nif,
-            page: pagination.page,
-            pageSize: pagination.pageSize
-          }));
-        };
+    const setLoading = (isLoading) => {
+      loading = !!isLoading;
+      if (prevBtn) prevBtn.disabled = loading || pagination.page <= 1;
+      if (nextBtn) nextBtn.disabled = loading || pagination.page >= pagination.totalPages;
+    };
 
-        // Función para restaurar filtros desde sessionStorage
-        const restaurarFiltros = () => {
-          const filtrosGuardados = sessionStorage.getItem('filtrosContactos');
-          if (filtrosGuardados) {
-            const f = JSON.parse(filtrosGuardados);
-            filters.razonSocial = f.razonSocial || '';
-            filters.nif = f.nif || '';
-            pagination.page = Number(f.page) > 0 ? Number(f.page) : 1;
-            pagination.pageSize = [10,20,50,100].includes(Number(f.pageSize)) ? Number(f.pageSize) : 20;
-          } else {
-            filters.razonSocial = '';
-            filters.nif = '';
-            pagination.page = 1;
-            pagination.pageSize = 20;
-            guardarFiltros();
-          }
-          fetchContactos();
-        };
+    const updatePaginationUI = () => {
+      if (pageInfo) pageInfo.textContent = `Página ${pagination.page} de ${pagination.totalPages}`;
+      if (prevBtn) prevBtn.disabled = loading || pagination.page <= 1;
+      if (nextBtn) nextBtn.disabled = loading || pagination.page >= pagination.totalPages;
+      if (pageSizeSelect) pageSizeSelect.value = String(pagination.pageSize);
+    };
 
-        // Llamada a la API de contactos (paginado)
-        const fetchContactos = async () => {
-          try {
-            loading.value = true;
-            const queryParams = new URLSearchParams({
-              razonSocial: filters.razonSocial,
-              nif: filters.nif,
-              page: String(pagination.page),
-              page_size: String(pagination.pageSize),
-              sort: pagination.sort,
-              order: pagination.order
-            });
+    // Función para guardar filtros en sessionStorage
+    const guardarFiltros = () => {
+      sessionStorage.setItem('filtrosContactos', JSON.stringify({
+        razonSocial: filters.razonSocial,
+        nif: filters.nif,
+        page: pagination.page,
+        pageSize: pagination.pageSize
+      }));
+    };
 
-            const response = await fetch(`${API_URL}/contactos/paginado?${queryParams}`);
-            if (!response.ok) throw new Error('Error en la búsqueda');
-            
-            const data = await response.json();
-            contactos.value = data.items || [];
-            pagination.totalPages = data.total_pages || 1;
-          } catch (error) {
-            // console.error('Error:', error);
-            contactos.value = [];
-            pagination.totalPages = 1;
-          } finally {
-            loading.value = false;
-          }
-        };
-
-        // Eliminar contacto
-        const deleteContacto = async (id) => {
-          // Verificar permiso
-          if (typeof verificarPermisoConAlerta !== 'undefined') {
-            if (!verificarPermisoConAlerta('contactos', 'eliminar')) {
-              return;
-            }
-          }
-          
-          try {
-            const confirmado = await mostrarConfirmacion('¿Está seguro de eliminar este contacto?');
-            if (confirmado) {
-              await axios.delete(`${API_URL}/contactos/eliminar_contacto/${id}`);
-              mostrarNotificacion('Contacto eliminado correctamente', 'success');
-              fetchContactos(); // Refresca la lista
-            }
-          } catch (error) {
-            // console.error('Error al eliminar el contacto:', error);
-            mostrarNotificacion(error.response?.data?.error || 'No se pudo eliminar el contacto. Inténtalo de nuevo.', 'error');
-          }
-        };
-
-        // Crear Proforma y Factura
-        const crearProforma = (id) => {
-          // Verificar permiso
-          if (typeof verificarPermisoConAlerta !== 'undefined') {
-            if (!verificarPermisoConAlerta('proformas', 'crear')) {
-              return;
-            }
-          }
-          
-          // Guardar filtros antes de navegar
-          guardarFiltros();
-          // Asegurarnos de que el origen se guarda en sessionStorage
-          sessionStorage.setItem('origenProforma', 'contactos');
-          window.location.href = `GESTION_PROFORMAS.html?idContacto=${id}&origen=contactos`;
-        };
-
-        const crearFactura = (id) => {
-          // Verificar permiso
-          if (typeof verificarPermisoConAlerta !== 'undefined') {
-            if (!verificarPermisoConAlerta('facturas', 'crear')) {
-              return;
-            }
-          }
-          
-          // console.log(`Crear Factura para el contacto ID:&& ${id}`);
-          guardarFiltros();
-          // Guardar origen para volver a la lista de facturas
-          sessionStorage.setItem('origenFactura', 'facturas');
-          window.location.href = `GESTION_FACTURAS.html?idContacto=${id}`;
-          // TODO: Implementar la creación de factura
-        };
-
-        // Función para mostrar errores
-        const mostrarError = (mensaje) => {
-          const errorDiv = document.createElement('div');
-          errorDiv.className = 'error-message';
-          errorDiv.textContent = mensaje;
-          errorDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background-
-            
-            padding: 15px;
-            border-radius: 5px;
-            z-index: 1000;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-          `;
-          document.body.appendChild(errorDiv);
-          setTimeout(() => {
-            errorDiv.remove();
-          }, 3000);
-        };
-
-        // Manejo de la búsqueda (con debounce)
-        let debounceTimer = null;
-        const handleSearch = () => {
-          clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => {
-            pagination.page = 1; // Reiniciar a primera página al cambiar filtros
-            guardarFiltros();
-            fetchContactos();
-          }, 800);
-        };
-
-        const nextPage = () => {
-          if (pagination.page < pagination.totalPages) {
-            pagination.page += 1;
-            guardarFiltros();
-            fetchContactos();
-          }
-        };
-
-        const prevPage = () => {
-          if (pagination.page > 1) {
-            pagination.page -= 1;
-            guardarFiltros();
-            fetchContactos();
-          }
-        };
-
-        const handlePageSizeChange = () => {
-          if (![10,20,50,100].includes(pagination.pageSize)) {
-            pagination.pageSize = 10;
-          }
-          pagination.page = 1; // Volver a primera página al cambiar tamaño
-          guardarFiltros();
-          fetchContactos();
-        };
-
-        const changePageSize = (value) => {
-          pagination.pageSize = Number(value);
-          handlePageSizeChange();
-        };
-
-        // Ver contacto existente
-        const verContacto = (id) => {
-          // Guardar filtros antes de navegar
-          guardarFiltros();
-          window.location.href = `GESTION_CONTACTOS.html?id=${id}`;
-        };
-
-        // Nuevo contacto
-        const nuevoContacto = () => {
-          // Verificar permiso
-          if (typeof verificarPermisoConAlerta !== 'undefined') {
-            if (!verificarPermisoConAlerta('contactos', 'crear')) {
-              return;
-            }
-          }
-          
-          // Guardar filtros antes de navegar
-          guardarFiltros();
-          window.location.href = 'GESTION_CONTACTOS.html';
-        };
-
-        // Cargar datos al montar el componente
-        onMounted(async () => {
-          // Restaurar filtros guardados
-          restaurarFiltros();
-          // Cargar contactos
-          await fetchContactos();
-          // Aplicar permisos a los elementos después de que Vue renderice
-          await nextTick();
-          // console.log('[CONTACTOS] Aplicando permisos...');
-          // console.log('[CONTACTOS] window.usuarioPermisos:', window.usuarioPermisos);
-          // console.log('[CONTACTOS] window.parent.usuarioPermisos:', window.parent?.usuarioPermisos);
-          if (typeof aplicarPermisosAElementos !== 'undefined') {
-            // console.log('[CONTACTOS] Función aplicarPermisosAElementos existe, ejecutando...');
-            aplicarPermisosAElementos();
-          } else {
-            // console.error('[CONTACTOS] Función aplicarPermisosAElementos NO está definida');
-          }
-          // Poner el foco en el campo de razón social
-          const razonSocialInput = document.getElementById('razonSocial');
-          if (razonSocialInput) {
-            razonSocialInput.focus();
-          }
-        });
-
-        // Re-aplicar permisos cuando cambian los contactos
-        watch(contactos, async () => {
-          await nextTick();
-          if (typeof aplicarPermisosAElementos !== 'undefined') {
-            aplicarPermisosAElementos();
-          }
-        });
-
-        // Función para validar el formulario
-        const validateForm = () => {
-          return true; // En la consulta no necesitamos validación
-        };
-
-        return {
-          filters,
-          contactos,
-          loading,
-          deleteContacto,
-          crearProforma,
-          crearFactura,
-          handleSearch,
-          verContacto,
-          nuevoContacto,
-          validateForm,
-          pagination,
-          nextPage,
-          prevPage,
-          handlePageSizeChange
-          ,changePageSize
-        };
+    // Función para restaurar filtros desde sessionStorage
+    const restaurarFiltros = () => {
+      const filtrosGuardados = sessionStorage.getItem('filtrosContactos');
+      if (filtrosGuardados) {
+        const f = JSON.parse(filtrosGuardados);
+        filters.razonSocial = f.razonSocial || '';
+        filters.nif = f.nif || '';
+        pagination.page = Number(f.page) > 0 ? Number(f.page) : 1;
+        pagination.pageSize = [10,20,50,100].includes(Number(f.pageSize)) ? Number(f.pageSize) : 10;
+      } else {
+        filters.razonSocial = '';
+        filters.nif = '';
+        pagination.page = 1;
+        pagination.pageSize = 10;
+        guardarFiltros();
       }
-    }).mount('#app');
+
+      if (razonSocialInput) razonSocialInput.value = filters.razonSocial;
+      if (nifInput) nifInput.value = filters.nif;
+      if (pageSizeSelect) pageSizeSelect.value = String(pagination.pageSize);
+      updatePaginationUI();
+    };
+
+    const renderRows = () => {
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (loading) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.style.textAlign = 'center';
+        td.textContent = 'Cargando contactos...';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      if (!contactos || contactos.length === 0) {
+        const tr = document.createElement('tr');
+        const td = document.createElement('td');
+        td.colSpan = 5;
+        td.style.textAlign = 'left';
+        td.textContent = 'No se encontraron contactos.';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+      }
+
+      contactos.forEach((contacto) => {
+        if (!contacto) return;
+
+        const tr = document.createElement('tr');
+        tr.addEventListener('click', () => verContacto(contacto.idContacto));
+
+        const tdRazon = document.createElement('td');
+        tdRazon.className = 'razon-social';
+        tdRazon.title = contacto.razonsocial || '';
+        tdRazon.textContent = contacto.razonsocial || '';
+
+        const tdNif = document.createElement('td');
+        tdNif.className = 'nif-col';
+        tdNif.title = contacto.identificador || '';
+        tdNif.textContent = contacto.identificador || '';
+
+        const tdEmail = document.createElement('td');
+        tdEmail.className = 'email-col';
+        tdEmail.title = contacto.mail || '';
+        tdEmail.textContent = contacto.mail || '';
+
+        const tdProformaNum = document.createElement('td');
+        tdProformaNum.className = 'proforma-col';
+        tdProformaNum.title = contacto.numero_proforma_abierta || '';
+        tdProformaNum.textContent = contacto.numero_proforma_abierta || '';
+
+        const tdAcciones = document.createElement('td');
+        tdAcciones.className = 'acciones-col';
+        tdAcciones.style.textAlign = 'center';
+        tdAcciones.style.whiteSpace = 'nowrap';
+
+        if (contacto.identificador) {
+          const btnProforma = document.createElement('button');
+          btnProforma.className = 'btn-icon';
+          btnProforma.dataset.modulo = 'proformas';
+          btnProforma.dataset.accion = 'crear';
+          btnProforma.title = contacto.numero_proforma_abierta ? 'Modificar Proforma' : 'Crear Proforma';
+          btnProforma.style.marginRight = '5px';
+          btnProforma.textContent = '✎';
+          btnProforma.addEventListener('click', (e) => {
+            e.stopPropagation();
+            crearProforma(contacto.idContacto);
+          });
+
+          const btnFactura = document.createElement('button');
+          btnFactura.className = 'btn-icon';
+          btnFactura.dataset.modulo = 'facturas';
+          btnFactura.dataset.accion = 'crear';
+          btnFactura.title = 'Crear Factura';
+          btnFactura.style.marginRight = '5px';
+          btnFactura.textContent = '⚡';
+          btnFactura.addEventListener('click', (e) => {
+            e.stopPropagation();
+            crearFactura(contacto.idContacto);
+          });
+
+          tdAcciones.appendChild(btnProforma);
+          tdAcciones.appendChild(btnFactura);
+        }
+
+        const btnEliminar = document.createElement('button');
+        btnEliminar.className = 'btn-icon';
+        btnEliminar.dataset.modulo = 'contactos';
+        btnEliminar.dataset.accion = 'eliminar';
+        btnEliminar.title = 'Eliminar';
+        btnEliminar.textContent = '✕';
+        btnEliminar.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteContacto(contacto.idContacto);
+        });
+        tdAcciones.appendChild(btnEliminar);
+
+        tr.appendChild(tdRazon);
+        tr.appendChild(tdNif);
+        tr.appendChild(tdEmail);
+        tr.appendChild(tdProformaNum);
+        tr.appendChild(tdAcciones);
+        tbody.appendChild(tr);
+      });
+
+      if (typeof aplicarPermisosAElementos !== 'undefined') {
+        aplicarPermisosAElementos();
+      }
+    };
+
+    // Llamada a la API de contactos (paginado)
+    const fetchContactos = async () => {
+      try {
+        setLoading(true);
+        renderRows();
+        updatePaginationUI();
+
+        const queryParams = new URLSearchParams({
+          razonSocial: filters.razonSocial,
+          nif: filters.nif,
+          page: String(pagination.page),
+          pageSize: String(pagination.pageSize),
+          sort: pagination.sort,
+          order: pagination.order,
+          _ts: String(Date.now())
+        });
+
+        const response = await fetch(`${API_URL}/contactos/paginado?${queryParams}`, { cache: 'no-store' });
+        if (!response.ok) throw new Error('Error en la búsqueda');
+
+        const data = await response.json();
+        contactos = (data.items || []).filter(Boolean);
+        pagination.totalPages = data.total_pages || 1;
+      } catch (error) {
+        contactos = [];
+        pagination.totalPages = 1;
+      } finally {
+        setLoading(false);
+        updatePaginationUI();
+        renderRows();
+      }
+    };
+
+    // Eliminar contacto
+    const deleteContacto = async (id) => {
+      // Verificar permiso
+      if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('contactos', 'eliminar')) {
+          return;
+        }
+      }
+
+      try {
+        const confirmado = await mostrarConfirmacion('¿Está seguro de eliminar este contacto?');
+        if (!confirmado) return;
+
+        const res = await fetch(`${API_URL}/contactos/eliminar_contacto/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          let msg = 'No se pudo eliminar el contacto. Inténtalo de nuevo.';
+          try {
+            const body = await res.json();
+            msg = body?.error || msg;
+          } catch (_) {}
+          throw new Error(msg);
+        }
+
+        mostrarNotificacion('Contacto eliminado correctamente', 'success');
+        fetchContactos();
+      } catch (error) {
+        mostrarNotificacion(error?.message || 'No se pudo eliminar el contacto. Inténtalo de nuevo.', 'error');
+      }
+    };
+
+    // Crear Proforma y Factura
+    const crearProforma = (id) => {
+      // Verificar permiso
+      if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('proformas', 'crear')) {
+          return;
+        }
+      }
+
+      // Guardar filtros antes de navegar
+      guardarFiltros();
+      // Asegurarnos de que el origen se guarda en sessionStorage
+      sessionStorage.setItem('origenProforma', 'contactos');
+      window.location.href = `GESTION_PROFORMAS.html?idContacto=${id}&origen=contactos`;
+    };
+
+    const crearFactura = (id) => {
+      // Verificar permiso
+      if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('facturas', 'crear')) {
+          return;
+        }
+      }
+
+      guardarFiltros();
+      // Guardar origen para volver a la lista de facturas
+      sessionStorage.setItem('origenFactura', 'facturas');
+      window.location.href = `GESTION_FACTURAS.html?idContacto=${id}`;
+      // TODO: Implementar la creación de factura
+    };
+
+    // Manejo de la búsqueda (con debounce)
+    let debounceTimer = null;
+    const handleSearch = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        filters.razonSocial = razonSocialInput ? razonSocialInput.value : '';
+        filters.nif = nifInput ? nifInput.value : '';
+        pagination.page = 1; // Reiniciar a primera página al cambiar filtros
+        guardarFiltros();
+        fetchContactos();
+      }, 800);
+    };
+
+    const nextPage = () => {
+      if (pagination.page < pagination.totalPages) {
+        pagination.page += 1;
+        guardarFiltros();
+        fetchContactos();
+      }
+    };
+
+    const prevPage = () => {
+      if (pagination.page > 1) {
+        pagination.page -= 1;
+        guardarFiltros();
+        fetchContactos();
+      }
+    };
+
+    const handlePageSizeChange = () => {
+      const newSize = parseInt(pageSizeSelect ? pageSizeSelect.value : '10', 10);
+      pagination.pageSize = [10,20,50,100].includes(newSize) ? newSize : 10;
+      pagination.page = 1; // Volver a primera página al cambiar tamaño
+      guardarFiltros();
+      fetchContactos();
+    };
+
+    window.handlePageSizeChangeContactos = handlePageSizeChange;
+
+    // Ver contacto existente
+    const verContacto = (id) => {
+      // Guardar filtros antes de navegar
+      guardarFiltros();
+      window.location.href = `GESTION_CONTACTOS.html?id=${id}`;
+    };
+
+    // Nuevo contacto
+    const nuevoContacto = () => {
+      // Verificar permiso
+      if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('contactos', 'crear')) {
+          return;
+        }
+      }
+
+      // Guardar filtros antes de navegar
+      guardarFiltros();
+      window.location.href = 'GESTION_CONTACTOS.html';
+    };
+
+    // Cargar datos al montar el componente
+    document.addEventListener('DOMContentLoaded', async () => {
+      restaurarFiltros();
+      await fetchContactos();
+
+      if (typeof aplicarPermisosAElementos !== 'undefined') {
+        aplicarPermisosAElementos();
+      }
+
+      if (razonSocialInput) {
+        razonSocialInput.focus();
+      }
+    });
+
+    if (razonSocialInput) razonSocialInput.addEventListener('input', handleSearch);
+    if (nifInput) nifInput.addEventListener('input', handleSearch);
+    if (btnNuevoContacto) btnNuevoContacto.addEventListener('click', nuevoContacto);
+    if (prevBtn) prevBtn.addEventListener('click', prevPage);
+    if (nextBtn) nextBtn.addEventListener('click', nextPage);
+    if (pageSizeSelect) pageSizeSelect.addEventListener('change', handlePageSizeChange);
+    if (pageSizeSelect) pageSizeSelect.addEventListener('input', handlePageSizeChange);
   </script>
   
   <!-- Contenedor para notificaciones -->

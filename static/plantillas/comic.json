@@ -1,0 +1,141 @@
+{
+  "name": "Cómic",
+  "version": 1,
+  "meta": {
+    "author": "aleph70",
+    "icon": "💥",
+    "dark": false,
+    "description": "Estilo cómic: alto contraste, colores vivos y estética pop (amarillo/rojo/azul)"
+  },
+  "palette": {
+    "paper": "#fffdf6",
+    "ink": "#111111",
+    "inkSoft": "#1a1a1a",
+    "panel": "#ffffff",
+    "shadow": "#00000020",
+    "gray200": "#e6e6e6",
+    "gray300": "#d0d0d0",
+    "yellow": "#ffe24a",
+    "yellowHover": "#ffd42a",
+    "red": "#ff3b30",
+    "redHover": "#e63027",
+    "blue": "#2d7cff",
+    "blueHover": "#1f66e6",
+    "green": "#22c55e",
+    "orange": "#ff8a00"
+  },
+  "semantic": {
+    "bg": "{palette.paper}",
+    "bg-elevated": "{palette.panel}",
+    "text": "{palette.ink}",
+    "text-muted": "{palette.inkSoft}",
+    "primary": "{palette.yellow}",
+    "secondary": "{palette.blue}",
+    "accent": "{palette.red}",
+    "success": "{palette.green}",
+    "warning": "{palette.orange}",
+    "danger": "{palette.red}",
+    "info": "{palette.blue}",
+    "border": "{palette.ink}",
+    "hover": "{palette.gray200}"
+  },
+  "components": {
+    "button": {
+      "bg": "{semantic.primary}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.yellowHover}",
+      "border": "{semantic.border}"
+    },
+    "button-secondary": {
+      "bg": "{palette.panel}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.gray200}",
+      "border": "{semantic.border}"
+    },
+    "button-card": {
+      "bg": "{palette.panel}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.gray200}",
+      "border": "{semantic.border}"
+    },
+    "button-table": {
+      "bg": "{palette.panel}",
+      "text": "{semantic.text}",
+      "hover-bg": "{palette.gray200}",
+      "border": "{semantic.border}"
+    },
+    "input": {
+      "bg": "{palette.panel}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "placeholder": "{palette.inkSoft}",
+      "readonly-bg": "{palette.gray200}",
+      "readonly-text": "{semantic.text}",
+      "focus-border": "{semantic.border}"
+    },
+    "select": {
+      "bg": "{palette.panel}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}",
+      "focus-border": "{semantic.border}"
+    },
+    "modal": {
+      "bg": "{palette.panel}",
+      "text": "{semantic.text}",
+      "overlay": "transparent",
+      "border": "transparent",
+      "border-width": "0",
+      "border-radius": "10px",
+      "shadow": "0 10px 26px rgba(0,0,0,0.18)",
+      "header-bg": "transparent",
+      "header-text": "{semantic.text}",
+      "body-bg": "transparent",
+      "body-text": "{semantic.text}",
+      "label-color": "{semantic.text}",
+      "input-bg": "{palette.panel}",
+      "input-text": "{semantic.text}",
+      "input-border": "{semantic.border}"
+    },
+    "table": {
+      "bg": "{palette.panel}",
+      "text": "{semantic.text}",
+      "header-bg": "{palette.yellow}",
+      "header-text": "{semantic.text}",
+      "row-hover": "{palette.gray200}"
+    },
+    "menu": {
+      "bg": "{semantic.bg}",
+      "text": "{semantic.text}",
+      "hover": "{palette.gray200}",
+      "active-bg": "{palette.red}",
+      "active-text": "{palette.panel}",
+      "border": "{semantic.border}",
+      "icon": "{semantic.text}"
+    },
+    "header": {
+      "bg": "{palette.blue}",
+      "text": "{palette.panel}",
+      "border": "{semantic.border}"
+    },
+    "icon": {
+      "color": "{semantic.text}"
+    },
+    "spinner": {
+      "border": "{palette.red}"
+    },
+    "tab": {
+      "active-bg": "{palette.yellow}",
+      "active-text": "{semantic.text}",
+      "inactive-text": "{palette.inkSoft}",
+      "border": "{semantic.border}"
+    },
+    "disabled": {
+      "bg": "{palette.gray200}",
+      "text": "{palette.inkSoft}"
+    },
+    "amount": {
+      "positive": "{palette.green}",
+      "negative": "{palette.red}"
+    }
+  }
+}

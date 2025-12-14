@@ -63,6 +63,52 @@ async function applyTheme(themeJson) {
         }
     };
     walk({ semantic: flat.semantic, components: flat.components });
+
+    // 1.1) Corregir contraste de texto en botones (evita casos donde el tema define un button-text ilegible)
+    const parseRgb = (c) => {
+        if (typeof c !== 'string') return null;
+        if (c.startsWith('#')) {
+            const hex = c.replace('#', '').trim();
+            if (hex.length !== 6) return null;
+            return {
+                r: parseInt(hex.substring(0, 2), 16),
+                g: parseInt(hex.substring(2, 4), 16),
+                b: parseInt(hex.substring(4, 6), 16)
+            };
+        }
+        if (c.startsWith('rgb')) {
+            const m = c.match(/\d+/g);
+            if (!m || m.length < 3) return null;
+            return { r: parseInt(m[0]), g: parseInt(m[1]), b: parseInt(m[2]) };
+        }
+        return null;
+    };
+
+    const relativeLuminance = ({ r, g, b }) => {
+        const srgb = [r, g, b].map(v => v / 255).map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+        return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+    };
+
+    const contrastRatio = (fg, bg) => {
+        const fgRgb = parseRgb(fg);
+        const bgRgb = parseRgb(bg);
+        if (!fgRgb || !bgRgb) return null;
+        const l1 = relativeLuminance(fgRgb);
+        const l2 = relativeLuminance(bgRgb);
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    };
+
+    const buttonBg = vars['button-bg'];
+    if (buttonBg) {
+        const recommended = getTextColorForBackground(buttonBg);
+        const current = vars['button-text'];
+        const ratio = contrastRatio(current, buttonBg);
+
+        // Si no es un color parseable o el contraste es bajo, forzar a un valor seguro
+        if (!current || ratio === null || ratio < 4.5) {
+            vars['button-text'] = recommended;
+        }
+    }
     
     // 2) Construir CSS - Inyectar en :root global para que theme-consumer.css pueda usarlas
     const toVar = (k) => '--' + k.replace(/[^a-z0-9\-]/gi, '').toLowerCase();
@@ -443,8 +489,48 @@ function aplicarColores(colores) {
     const textForCards = colores.grid_text;
     
     // Color de texto para botones: SOLO el definido en plantilla
-    const textForButton = colores.button_text;
-    const textForButtonHover = colores.button_text;
+    const parseRgb = (c) => {
+        if (typeof c !== 'string') return null;
+        if (c.startsWith('#')) {
+            const hex = c.replace('#', '').trim();
+            if (hex.length !== 6) return null;
+            return {
+                r: parseInt(hex.substring(0, 2), 16),
+                g: parseInt(hex.substring(2, 4), 16),
+                b: parseInt(hex.substring(4, 6), 16)
+            };
+        }
+        if (c.startsWith('rgb')) {
+            const m = c.match(/\d+/g);
+            if (!m || m.length < 3) return null;
+            return { r: parseInt(m[0]), g: parseInt(m[1]), b: parseInt(m[2]) };
+        }
+        return null;
+    };
+
+    const relativeLuminance = ({ r, g, b }) => {
+        const srgb = [r, g, b].map(v => v / 255).map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+        return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+    };
+
+    const contrastRatio = (fg, bg) => {
+        const fgRgb = parseRgb(fg);
+        const bgRgb = parseRgb(bg);
+        if (!fgRgb || !bgRgb) return null;
+        const l1 = relativeLuminance(fgRgb);
+        const l2 = relativeLuminance(bgRgb);
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    };
+
+    const buttonBg = colores.button || '#2c3e50';
+    const recommendedButtonText = getTextColorForBackground(buttonBg);
+    let textForButton = colores.button_text || recommendedButtonText;
+    const ratio = contrastRatio(textForButton, buttonBg);
+    if (ratio === null || ratio < 4.5) {
+        textForButton = recommendedButtonText;
+    }
+
+    const textForButtonHover = textForButton;
     
     console.log('[BRANDING] Color botón:', colores.button, '→ Texto:', textForButton, '(definido en plantilla)');
     
@@ -479,8 +565,10 @@ function aplicarColores(colores) {
             --color-app-bg: ${colores.app_bg} !important;
             --color-header-bg: ${colores.header_bg} !important;
             --color-header-text: ${colores.header_text} !important;
-            --color-button: ${colores.button} !important;
+            --color-button: ${buttonBg} !important;
             --color-button-text: ${textForButton} !important;
+            --button-bg: ${buttonBg} !important;
+            --button-text: ${textForButton} !important;
         }
         
         /* Fondo y texto */
@@ -1097,7 +1185,46 @@ function aplicarEstilosAlIframeDirectos(colores) {
     });
     
     // USAR SOLO VALORES DIRECTOS DEL JSON - SIN CALCULOS
-    const textForButton = colores.button_text;
+    const parseRgb = (c) => {
+        if (typeof c !== 'string') return null;
+        if (c.startsWith('#')) {
+            const hex = c.replace('#', '').trim();
+            if (hex.length !== 6) return null;
+            return {
+                r: parseInt(hex.substring(0, 2), 16),
+                g: parseInt(hex.substring(2, 4), 16),
+                b: parseInt(hex.substring(4, 6), 16)
+            };
+        }
+        if (c.startsWith('rgb')) {
+            const m = c.match(/\d+/g);
+            if (!m || m.length < 3) return null;
+            return { r: parseInt(m[0]), g: parseInt(m[1]), b: parseInt(m[2]) };
+        }
+        return null;
+    };
+
+    const relativeLuminance = ({ r, g, b }) => {
+        const srgb = [r, g, b].map(v => v / 255).map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+        return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+    };
+
+    const contrastRatio = (fg, bg) => {
+        const fgRgb = parseRgb(fg);
+        const bgRgb = parseRgb(bg);
+        if (!fgRgb || !bgRgb) return null;
+        const l1 = relativeLuminance(fgRgb);
+        const l2 = relativeLuminance(bgRgb);
+        return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    };
+
+    const buttonBg = colores.button || '#2c3e50';
+    const recommendedButtonText = getTextColorForBackground(buttonBg);
+    let textForButton = colores.button_text || recommendedButtonText;
+    const ratio = contrastRatio(textForButton, buttonBg);
+    if (ratio === null || ratio < 4.5) {
+        textForButton = recommendedButtonText;
+    }
     const textForBody = colores.grid_text;
     
     try {

@@ -76,19 +76,19 @@
 
    :root {
     /* Colores principales basados en el menú lateral */
-    --color-primario: #2c3e50;
-    --color-secundario: #34495e;
-    --color-texto: #ecf0f1;
-    --color-texto-secundario: #bdc3c7;
-    --color-fondo: #ffffff;
-    --color-hover: #34495e;
-    --color-boton-hover: #34495e;
-    --color-boton-active: #2c3e50;
-    --color-shadow: rgba(0, 0, 0, 0.2);
-    --color-verde: #27ae60;
-    --color-rojo: #e74c3c;
+    --color-primario: var(--primary, #2c3e50);
+    --color-secundario: var(--secondary, #34495e);
+    --color-texto: var(--text, #ecf0f1);
+    --color-texto-secundario: var(--text-muted, #bdc3c7);
+    --color-fondo: var(--bg, #ffffff);
+    --color-hover: var(--menu-hover, #34495e);
+    --color-boton-hover: var(--button-hover, #34495e);
+    --color-boton-active: var(--button-bg, #2c3e50);
+    --color-shadow: var(--shadow, rgba(0, 0, 0, 0.2));
+    --color-verde: var(--amount-positive, #27ae60);
+    --color-rojo: var(--amount-negative, #e74c3c);
     
-    --color-borde: #34495e;
+    --color-borde: var(--border, #34495e);
     
     /* Fuentes */
     --font-size-normal: 16px;
@@ -137,7 +137,7 @@
         background: #243342;
         color: #ecf0f1;
         transition: all 0.3s ease;
-        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        box-shadow: none;
         z-index: 1000;
     }
 
@@ -439,9 +439,9 @@
   }
   
   .btn-secondary {
-    background-color: #6c757d !important;
-    color: #ffffff !important;
-    border: 1px solid #6c757d !important;
+    background-color: var(--button-secondary-bg, var(--color-button, var(--button-bg))) !important;
+    color: var(--button-secondary-text, var(--color-button-text, var(--button-text))) !important;
+    border: 1px solid var(--button-secondary-border, var(--button-border, var(--color-borde))) !important;
   }
   
   .btn:hover, .btn-primary:hover {
@@ -449,8 +449,8 @@
   }
   
   .btn-secondary:hover {
-    background-color: #5a6268 !important;
-    border-color: #545b62 !important;
+    background-color: var(--button-secondary-hover-bg, var(--color-button-hover, var(--button-hover, var(--button-secondary-bg, var(--button-bg))))) !important;
+    border-color: var(--button-secondary-border, var(--button-border, var(--color-borde))) !important;
   }
   
   /* Form actions (alineación) */
@@ -507,7 +507,7 @@
     padding: 6px 8px;
     text-align: left;
     border: none;
-    border-bottom: 1px solid #f5f5f5;
+    border-bottom: 1px solid var(--border);
     font-size: 13px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -517,7 +517,7 @@
     font-weight: 700;
   }
   tbody tr:nth-child(even) {
-    background-color: #f9f9f9;
+    background-color: var(--color-grid-bg, var(--bg-elevated, var(--bg))) !important;
   }
   tbody tr:hover {
      background-color: var(--color-grid-hover, var(--color-hover, rgba(52,152,219,0.1))) !important;
@@ -1199,7 +1199,7 @@
 /* Asegurar que los iconos de Font Awesome dentro de las celdas se alineen correctamente */
 td .fas {
   display: inline-block;
-  color: #000000;
+  color: var(--text, inherit);
 }
 
 /* Estilos para la Tabla */
@@ -3926,4 +3926,136 @@ table input[type="number"] {
   margin: 0;
   font-style: italic;
 }
+}
+
+/* ==========================================================================
+   OVERRIDES USER REQUEST - CLEAN UI
+   ========================================================================== */
+
+/* 1. Eliminar fondo gris y bordes de inputs readonly (Cabecera, Contacto, Grids) */
+.contact-info input[readonly],
+.cabecera-ticket-item input[readonly],
+.detalle-ticket-item input[readonly],
+.detalle-proforma-item-importe input[readonly],
+.grid input[readonly],
+.table-container input[readonly],
+input.readonly-field,
+input[readonly]:not(.hidden-field) {
+    background-color: transparent !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    cursor: default !important;
+}
+
+/* 2. Eliminar bordes de las tablas/grids */
+table, th, td,
+.grid, .grid th, .grid td {
+    border: none !important;
+    border-bottom: none !important;
+}
+
+/* 3. Eliminar bordes y fondos en el footer de totales */
+.fixed-footer {
+    border-top: none !important;
+    box-shadow: none !important; /* El usuario pidió "ni en footer", quitamos sombra también */
+    background-color: transparent !important; /* O mantener gris claro? Mejor transparente para "clean" */
+}
+
+.fixed-footer input {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-align: right;
+}
+
+/* Asegurar que los totales se vean bien alineados sin cajas */
+.total-item .numero,
+.fixed-footer td.total-data input {
+    font-weight: bold;
+}
+
+/* ==========================================================================
+   FIXES UI - BOTONES PAGINACIÓN Y FOOTER TRANSPARENTE
+   ========================================================================== */
+
+/* 1. Estilos consistentes para botones de paginación en Consultas */
+.pagination button.btn.btn-secondary,
+.pagination button {
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6 !important;
+    color: #343a40 !important;
+    padding: 4px 10px !important;
+    font-size: 13px !important;
+    line-height: 1.5;
+    border-radius: 4px !important;
+    margin: 0 2px !important;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: normal !important;
+    box-shadow: none !important;
+    height: auto !important;
+}
+
+.pagination button:hover:not(:disabled) {
+    background-color: #e2e6ea !important;
+    border-color: #dae0e5 !important;
+    color: #212529 !important;
+}
+
+.pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #f8f9fa !important;
+}
+
+.pagination select {
+    padding: 2px 6px !important;
+    font-size: 13px !important;
+    height: 28px !important;
+    border: 1px solid var(--input-border, #ced4da) !important;
+    border-radius: 4px !important;
+    background-color: var(--input-bg, #fff) !important;
+    color: var(--input-text, #333) !important;
+}
+
+/* 2. Footer de totales semi-transparente */
+.fixed-footer, .fixed-footer-factura, .fixed-footer-ticket, .fixed-footer-gastos {
+    /* Fallback color sólido primero */
+    background-color: transparent !important;
+    /* Color semitransparente usando variable del tema si existe */
+    background-color: var(--footer-bg-transparente, rgba(30, 30, 30, 0.25)) !important;
+    backdrop-filter: none !important;
+    border-top: none !important;
+    box-shadow: none !important;
+ }
+
+/* Asegurar que los inputs/textos dentro del footer se vean bien */
+.fixed-footer td, 
+.fixed-footer span,
+.fixed-footer input {
+    color: var(--text, #333333) !important;
+    font-weight: 600 !important;
+}
+
+.fixed-footer i {
+    color: var(--text, #333333) !important;
+}
+
+/* Ajuste específico para gastos */
+.fixed-footer-gastos {
+    padding: 5px 20px !important;
+}
+
+.fixed-footer-gastos .content-cell {
+    font-size: 1.1em !important;
+}
+
+.label-totales-small {
+    color: #666 !important;
+    font-weight: normal !important;
+    font-size: 0.8em !important;
+    display: block;
+    line-height: 1;
+    margin-top: 2px;
 }

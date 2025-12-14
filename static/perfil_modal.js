@@ -81,14 +81,21 @@ function cerrarModalPerfil() {
     document.getElementById('form-password').reset();
 }
 
-function cambiarTab(tab) {
+function cambiarTab(tab, tabButtonEl) {
     // Desactivar todos los tabs
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    
+
     // Activar tab seleccionado
-    event.target.classList.add('active');
-    document.getElementById(`tab-${tab}`).classList.add('active');
+    const btn = tabButtonEl || event?.currentTarget || event?.target?.closest?.('.tab-btn');
+    if (btn) {
+        btn.classList.add('active');
+    }
+
+    const tabContent = document.getElementById(`tab-${tab}`);
+    if (tabContent) {
+        tabContent.classList.add('active');
+    }
 }
 
 function previsualizarAvatar(event) {
@@ -239,6 +246,58 @@ async function cargarPlantillasModal() {
         const plantillas = plantillasData.plantillas;
         
         const grid = document.getElementById('plantillas-grid');
+
+        const getTextOnBg = (bgColor) => {
+            const parseRgb = (c) => {
+                if (!c || typeof c !== 'string') return null;
+                const s = c.trim();
+
+                if (s.startsWith('#')) {
+                    const hex = s.replace('#', '');
+                    if (hex.length !== 6) return null;
+                    return {
+                        r: parseInt(hex.substring(0, 2), 16),
+                        g: parseInt(hex.substring(2, 4), 16),
+                        b: parseInt(hex.substring(4, 6), 16)
+                    };
+                }
+
+                if (s.startsWith('rgb')) {
+                    const m = s.match(/\d+/g);
+                    if (!m || m.length < 3) return null;
+                    return { r: parseInt(m[0]), g: parseInt(m[1]), b: parseInt(m[2]) };
+                }
+
+                return null;
+            };
+
+            const relativeLuminance = ({ r, g, b }) => {
+                const srgb = [r, g, b]
+                    .map(v => v / 255)
+                    .map(v => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+                return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+            };
+
+            const contrastRatio = (fgRgb, bgRgb) => {
+                const l1 = relativeLuminance(fgRgb);
+                const l2 = relativeLuminance(bgRgb);
+                return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+            };
+
+            const bg = parseRgb(bgColor);
+            if (!bg) return '#ffffff';
+
+            const white = { r: 255, g: 255, b: 255 };
+            const black = { r: 0, g: 0, b: 0 };
+            const cw = contrastRatio(white, bg);
+            const cb = contrastRatio(black, bg);
+
+            return cb >= cw ? '#000000' : '#ffffff';
+        };
+
+        const cssEscapeAttr = (v) => String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+
+        let cssRules = '';
         
         // Función helper para resolver colores
         const resolveColor = (val, theme) => {
@@ -259,52 +318,76 @@ async function cargarPlantillasModal() {
             const isActive = p.id === plantillaActual;
             
             // Extraer colores reales usando la estructura semántica
-            let bg, text, border, primary;
+            let bg, surface, text, border, primary, menuBg, buttonBg;
             
             if (p.semantic && p.palette) {
                 // Estructura nueva
-                bg = resolveColor(p.semantic['bg-elevated'] || p.semantic.bg, p) || '#ffffff';
+                bg = resolveColor(p.semantic.bg, p) || '#ffffff';
+                surface = resolveColor(p.semantic['bg-elevated'], p) || bg;
                 text = resolveColor(p.semantic.text, p) || '#333333';
                 border = resolveColor(p.semantic.border, p) || '#dddddd';
                 primary = resolveColor(p.semantic.primary, p) || '#007bff';
+
+                // Colores de componentes (si existen) para diferenciar previews
+                menuBg = resolveColor(p.components?.menu?.bg, p) || primary;
+                buttonBg = resolveColor(p.components?.button?.bg, p) || primary;
             } else {
                 // Fallback estructura antigua o colores directos
                 const colores = p.colores || {};
                 bg = colores.background || '#ffffff';
+                surface = colores.surface || bg;
                 text = colores.text || '#333333';
                 border = colores.border || '#dddddd';
                 primary = colores.primary || '#007bff';
+
+                menuBg = colores.menu || primary;
+                buttonBg = colores.button || primary;
             }
             
-            // Estilos de la tarjeta: SIEMPRE usar los colores de la plantilla
-            // El estado active se indicará por clase CSS (borde/sombra) no cambiando el inline style del fondo
-            // Añadimos border-top con el color primario para distinguir temas claros
-            const estilosCard = `background: ${bg}; border: 1px solid ${border}; border-top: 5px solid ${primary}; color: ${text};`;
+            // Variables CSS por tarjeta (evita hardcode y permite que el CSS dibuje una mini-preview)
+            const buttonText = getTextOnBg(buttonBg);
+            const menuText = getTextOnBg(menuBg);
+            const estilosCard = `--pv-bg: ${bg}; --pv-surface: ${surface}; --pv-border: ${border}; --pv-primary: ${primary}; --pv-text: ${text}; --pv-menu: ${menuBg}; --pv-menu-text: ${menuText}; --pv-button: ${buttonBg}; --pv-button-text: ${buttonText};`;
+
+            cssRules += `\n.plantilla-card-perfil[data-plantilla="${cssEscapeAttr(p.id)}"]{${estilosCard}}`;
             
             // Si está activa, sobreescribimos el border-color (excepto el top) mediante clase CSS, 
             // pero aquí definimos la base.
             
-            // Puntos de previsualización
-            const dot1 = primary;
-            const dot2 = bg;
-            const dot3 = text;
-            
             return `
                 <div class="plantilla-card-perfil ${isActive ? 'active' : ''}" 
                      data-plantilla="${p.id}"
-                     style="${estilosCard}"
                      onclick="cambiarPlantillaUsuario('${p.id}', this)">
-                    <div class="plantilla-preview-colors">
-                        <span class="preview-dot" style="background: ${dot1}"></span>
-                        <span class="preview-dot" style="background: ${dot2}; border: 1px solid ${border}"></span>
-                        <span class="preview-dot" style="background: ${dot3}"></span>
+                    <div class="plantilla-mini-ui" aria-hidden="true">
+                        <div class="plantilla-mini-header"></div>
+                        <div class="plantilla-mini-body">
+                            <div class="plantilla-mini-line"></div>
+                            <div class="plantilla-mini-line"></div>
+                            <div class="plantilla-mini-chip"></div>
+                        </div>
                     </div>
-                    <div class="plantilla-icon" style="color: ${primary}">${p.icono}</div>
-                    <div class="plantilla-nombre" style="color: #ffffff; background: rgba(0,0,0,0.7); padding: 3px 8px; border-radius: 12px; font-size: 11px; margin-top: 5px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); display: inline-block;">${p.nombre}</div>
-                    <div class="plantilla-check" style="color: ${primary}"><i class="fas fa-check-circle"></i></div>
+                    <div class="plantilla-preview-colors">
+                        <span class="preview-dot preview-menu"></span>
+                        <span class="preview-dot preview-primary"></span>
+                        <span class="preview-dot preview-surface"></span>
+                        <span class="preview-dot preview-bg"></span>
+                        <span class="preview-dot preview-text"></span>
+                    </div>
+                    <div class="plantilla-icon">${p.icono}</div>
+                    <div class="plantilla-nombre plantilla-nombre-badge">${p.nombre}</div>
+                    <div class="plantilla-check"><i class="fas fa-check-circle"></i></div>
                 </div>
             `;
         }).join('');
+
+        const styleId = 'plantillas-preview-style';
+        let styleEl = document.getElementById(styleId);
+        if (!styleEl) {
+            styleEl = document.createElement('style');
+            styleEl.id = styleId;
+            document.head.appendChild(styleEl);
+        }
+        styleEl.textContent = cssRules;
         
         console.log(`✅ ${plantillas.length} plantillas cargadas dinámicamente`);
     } catch (error) {

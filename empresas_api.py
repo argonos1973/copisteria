@@ -13,6 +13,7 @@ import uuid
 from werkzeug.utils import secure_filename
 from logger_config import get_logger
 from email_utils import enviar_email_bienvenida_empresa
+from utils_emisor import resetear_cache_emisor
 
 logger = get_logger(__name__)
 
@@ -696,6 +697,9 @@ def crear_empresa():
         with open(emisor_path, 'w', encoding='utf-8') as f:
             json.dump(emisor_data, f, ensure_ascii=False, indent=4)
         
+        # Resetear caché de emisor
+        resetear_cache_emisor(codigo)
+        
         logger.info(f"Emisor JSON creado: {emisor_path}")
         
         # Asignar empresa al usuario actual (no crear nuevo usuario)
@@ -900,6 +904,10 @@ def actualizar_empresa(empresa_id):
         try:
             with open(emisor_json_path, 'w', encoding='utf-8') as f:
                 json.dump(emisor_data, f, indent=4, ensure_ascii=False)
+            
+            # Resetear caché de emisor
+            resetear_cache_emisor(codigo_empresa)
+            
             logger.info(f"Datos de emisor guardados en {emisor_json_path}")
         except Exception as e:
             logger.error(f"Error guardando JSON de emisor: {e}")
@@ -1092,6 +1100,9 @@ def actualizar_emisor(empresa_id):
         
         with open(emisor_path, 'w', encoding='utf-8') as f:
             json.dump(emisor_data, f, ensure_ascii=False, indent=4)
+        
+        # Resetear caché de emisor
+        resetear_cache_emisor(codigo)
         
         logger.info(f"Emisor JSON actualizado: {emisor_path}")
         

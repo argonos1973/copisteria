@@ -9,7 +9,7 @@
   <title>Tickets</title>
     <script src="/static/branding.js?v=1764787007"></script>
     <script src="/static/auto_branding.js?v=1764787007"></script>
-    <link rel="stylesheet" href="/static/css/theme-consumer.css?v=1763897790">
+    <link rel="stylesheet" href="/static/css/theme-consumer.css?v=TICKETS_THEME_FALLBACK_20251214A">
     <script src="/static/auto_branding.js?v=1764787007"></script>
 
   <!-- Incluir Font Awesome para iconos -->
@@ -20,8 +20,8 @@
   <link rel="stylesheet" href="../static/css/page_header.css">
 
   <!-- Cargar tu archivo de estilos externo -->
-  <link rel="stylesheet" href="../static/css/styles.css?v=1763897790" />
-  <link rel="stylesheet" href="/static/css/modales.css?v=1763897790" />
+  <link rel="stylesheet" href="../static/css/styles.css?v=TICKETS_THEME_FIX_20251214A" />
+  <link rel="stylesheet" href="/static/css/modales.css?v=THEME_MODAL_FIX_20251214A" />
   <link rel="stylesheet" href="../static/css/notificaciones.css" />
   <link rel="stylesheet" href="../static/css/footer.css" />
   <style>
@@ -109,7 +109,7 @@
     </div>
 
     <!-- Controles de paginación (debajo de filtros, compactos) -->
-    <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;">
+    <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;">
       <div style="display:flex;align-items:center;gap:12px;">
         <button id="prevPageTickets" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟨</button>
         <span id="pageInfoTickets">Página 1 de 1</span>
@@ -118,8 +118,8 @@
       <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
         <label>Por página:
           <select id="pageSizeSelectTickets" style="padding:2px 6px;font-size:12px;">
-            <option value="10">10</option>
-            <option value="20" selected>20</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
             <option value="50">50</option>
             <option value="100">100</option>
           </select>

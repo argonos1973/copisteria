@@ -48,6 +48,53 @@ import {
 let totalInicial = 0;
 
 /**
+ * Verifica si el usuario tiene permiso para anular
+ * Retorna true si es admin o tiene permiso específico
+ */
+function verificarPermisoAnular(modulo) {
+    // 1. Verificar si es admin (buscar en sessionStorage o window)
+    try {
+        let sessionData = window.sessionData;
+        if (!sessionData) {
+            // Probar ambas claves de sessionStorage
+            let stored = sessionStorage.getItem('sessionData') || sessionStorage.getItem('aleph70_session_data');
+            if (stored) sessionData = JSON.parse(stored);
+        }
+        if (!sessionData && window.parent && window.parent !== window) {
+            sessionData = window.parent.sessionData;
+            if (!sessionData) {
+                try {
+                    let stored = window.parent.sessionStorage.getItem('sessionData') || 
+                                 window.parent.sessionStorage.getItem('aleph70_session_data');
+                    if (stored) sessionData = JSON.parse(stored);
+                } catch (e) { /* cross-origin */ }
+            }
+        }
+        
+        // Admin tiene todos los permisos
+        if (sessionData && (sessionData.es_admin_empresa === true || sessionData.es_admin_empresa === 1 ||
+            sessionData.es_superadmin === true || sessionData.es_superadmin === 1)) {
+            console.log('[PERMISOS] Usuario es admin, permiso anular concedido');
+            return true;
+        }
+    } catch (e) {
+        console.warn('[PERMISOS] Error verificando admin:', e);
+    }
+    
+    // 2. Verificar permiso específico via función tienePermiso
+    const fnTienePermiso = window.tienePermiso || window.parent?.tienePermiso;
+    if (fnTienePermiso) {
+        const tiene = fnTienePermiso(modulo, 'anular');
+        console.log(`[PERMISOS] tienePermiso(${modulo}, anular) = ${tiene}`);
+        return tiene;
+    }
+    
+    // 3. Si no hay sistema de permisos, permitir por defecto
+    console.log('[PERMISOS] No hay sistema de permisos, permitiendo por defecto');
+    return true;
+}
+
+/**
  * Obtiene el total actual del ticket
  */
 function obtenerTotalActual() {
@@ -84,7 +131,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // 6. Ajustes: mostrar botones "Volver" e "Imprimir", etc.
-    const estadoTicket = document.getElementById("estado-ticket").value.toUpperCase();
+    let estadoTicket = document.getElementById("estado-ticket").value.toUpperCase();
+    
+    // Normalizar estado si viene como texto completo
+    if (estadoTicket === 'PENDIENTE') estadoTicket = 'P';
+    if (estadoTicket === 'COBRADO') estadoTicket = 'C';
+    if (estadoTicket === 'ANULADO') estadoTicket = 'A';
+    
     const btnGuardar   = document.getElementById("btn-guardar-ticket");
     const btnVolver    = document.getElementById("btnCancelar");
     const btnImprimir  = document.getElementById("btn-imprimir-ticket");
@@ -129,9 +182,31 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.log('[TICKETS] → Botón Añadir OCULTADO con !important');
       }
       if (btnAnular) {
-        btnAnular.classList.add('hidden');
-        btnAnular.style.setProperty('display', 'none', 'important');
-        console.log('[TICKETS] → Botón Anular OCULTADO con !important');
+        if (estadoTicket === 'A') {
+            // Ticket anulado: ocultar botón
+            btnAnular.classList.add('hidden');
+            btnAnular.style.setProperty('display', 'none', 'important');
+            console.log('[TICKETS] → Botón Anular OCULTADO (Ticket ya anulado)');
+        } else if (estadoTicket === 'C') {
+            // Ticket cobrado: verificar permiso para mostrar
+            const tienePermiso = verificarPermisoAnular('tickets');
+            if (tienePermiso) {
+                btnAnular.removeAttribute('data-permiso-oculto');
+                btnAnular.classList.remove('hidden');
+                btnAnular.style.removeProperty('display');
+                btnAnular.style.setProperty('display', 'inline-block', 'important');
+                console.log('[TICKETS] → Botón Anular VISIBLE (cobrado + permiso)');
+            } else {
+                btnAnular.classList.add('hidden');
+                btnAnular.style.setProperty('display', 'none', 'important');
+                console.log('[TICKETS] → Botón Anular OCULTADO (sin permiso anular)');
+            }
+        } else {
+            // Ticket pendiente: ocultar botón anular (solo se anula si está cobrado)
+            btnAnular.classList.add('hidden');
+            btnAnular.style.setProperty('display', 'none', 'important');
+            console.log('[TICKETS] → Botón Anular OCULTADO (ticket pendiente)');
+        }
       }
       if (btnVolver)  btnVolver.classList.remove('hidden');
       if (btnImprimir) btnImprimir.classList.remove('hidden');
@@ -146,34 +221,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         gridBody.style.cursor = 'not-allowed';
         gridBody.classList.add('grid-bloqueada');
       }
-    }
-
-    // Configurar evento del botón "Anular" (solo si es visible)
-    if (btnAnular && idTicket && estadoTicket === 'P') {
-      btnAnular.classList.remove('hidden');
-      btnAnular.addEventListener('click', async () => {
-        // Verificar permiso de anular tickets
-        if (typeof verificarPermisoConAlerta !== 'undefined') {
-          if (!verificarPermisoConAlerta('tickets', 'anular')) {
-            return;
-          }
-        }
-        
-        const confirmado = await mostrarConfirmacion('¿Está seguro de anular este ticket? Se creará un ticket rectificativo.');
-        if (!confirmado) return;
-        try {
-          const resp = await fetch(`${API_URL}/api/tickets/anular/${idTicket}`, { method: 'POST' });
-          const data = await resp.json();
-          if (!resp.ok || !data.exito) {
-            throw new Error(data.error || 'Error al anular el ticket');
-          }
-          mostrarNotificacion('Ticket anulado correctamente', 'exito');
-          setTimeout(() => volverAConsulta(), 1000);
-        } catch (error) {
-          console.error(error);
-          mostrarNotificacion('Error al anular el ticket', 'error');
-        }
-      });
     }
 
     // Foco inicial en el campo de búsqueda de producto
@@ -1174,21 +1221,43 @@ export function mostrarDatosTicket(ticket) {
     }
   }
   
-  // Solo mostrar botón anular si el ticket está cobrado
+  // Solo mostrar botón anular si el ticket está cobrado o pendiente (y no es nuevo)
   const btnAnular = document.getElementById('btn-anular-ticket');
   if (btnAnular) {
-    if (ticket.id && ticket.estado === "C") {
-      // Verificar permisos antes de mostrar
-      if (typeof tienePermiso === 'function' && tienePermiso('tickets', 'anular')) {
-        btnAnular.classList.remove('hidden');
-        console.log('[TICKETS] Botón anular mostrado para ticket cobrado');
-      } else {
-        btnAnular.classList.add('hidden');
-        console.log('[TICKETS] Botón anular oculto: sin permisos');
-      }
+    if (ticket.id) {
+        if (ticket.estado === "C" || ticket.estado === "P") {
+            // Verificar permisos antes de mostrar (permisivo si no está cargado el sistema)
+            const permisosData = window.usuarioPermisos || window.parent?.usuarioPermisos;
+            const permisosCargados = permisosData && Object.keys(permisosData).length > 0;
+            const fnTienePermiso = window.tienePermiso || window.parent?.tienePermiso;
+            
+            let tienePermisoAnular = true;
+            if (fnTienePermiso && permisosCargados) {
+                tienePermisoAnular = fnTienePermiso('tickets', 'anular');
+            }
+
+            if (tienePermisoAnular) {
+                btnAnular.classList.remove('hidden');
+                btnAnular.style.removeProperty('display');
+                btnAnular.style.display = 'inline-block';
+                // Forzar visibilidad si es necesario
+                if (window.getComputedStyle(btnAnular).display === 'none') {
+                    btnAnular.style.setProperty('display', 'inline-block', 'important');
+                }
+                console.log('[TICKETS] Botón anular mostrado para ticket (estado ' + ticket.estado + ')');
+            } else {
+                btnAnular.classList.add('hidden');
+                btnAnular.style.setProperty('display', 'none', 'important');
+                console.log('[TICKETS] Botón anular oculto: sin permisos');
+            }
+        } else {
+            // Si está anulado (A) u otro estado, ocultar
+            btnAnular.classList.add('hidden');
+            btnAnular.style.setProperty('display', 'none', 'important');
+        }
     } else {
       btnAnular.classList.add('hidden');
-      console.log('[TICKETS] Botón anular oculto: ticket no cobrado o sin ID');
+      console.log('[TICKETS] Botón anular oculto: sin ID');
     }
   }
 }

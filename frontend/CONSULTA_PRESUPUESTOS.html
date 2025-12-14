@@ -83,7 +83,7 @@
                 </button>
             </div>
         </div>
-        <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;background:#fafafa">
+        <div class="pagination" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:6px;margin-bottom:4px;padding:6px 8px;border:1px solid #e0e0e0;border-radius:8px;">
           <div style="display:flex;align-items:center;gap:12px;">
             <button id="prevPagePresupuestos" class="btn btn-secondary" style="padding:4px 8px;font-size:12px;">⟨</button>
             <span id="pageInfoPresupuestos">Página 1 de 1</span>
@@ -92,8 +92,8 @@
           <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
             <label>Por página:
               <select id="pageSizeSelectPresupuestos" style="padding:2px 6px;font-size:12px;">
-                <option value="10">10</option>
-                <option value="20" selected>20</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
                 <option value="50">50</option>
                 <option value="100">100</option>
               </select>
@@ -164,7 +164,7 @@
         .fixed-footer td:last-child { position: relative; padding: 0; }
         .fixed-footer .toggle-totals { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; z-index: 2; }
         .fixed-footer .toggle-totals i { font-size: 16px;  transition: color 0.3s; }
-        .fixed-footer .toggle-totals i:hover {  }
+        .fixed-footer .toggle-totals i:hover { color: var(--text, #333); }
     </style>
 
     <script>

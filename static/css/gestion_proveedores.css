@@ -103,6 +103,125 @@ tbody tr:hover {
     backdrop-filter: blur(2px);
 }
 
+ #modalProveedor .modal-content {
+     width: min(92vw, 760px) !important;
+     max-width: 760px !important;
+     max-height: calc(100vh - 16px) !important;
+     height: auto !important;
+     overflow: hidden !important;
+     position: fixed !important;
+     top: 50% !important;
+     left: 50% !important;
+     transform: translate(-50%, -50%) !important;
+     margin: 0 !important;
+     display: flex !important;
+     flex-direction: column !important;
+     border-radius: 12px !important;
+     border: 2px solid color-mix(in srgb, var(--modal-border, var(--border, rgba(255, 255, 255, 0.22))) 55%, var(--text, #ffffff) 45%) !important;
+     outline: 2px solid color-mix(in srgb, var(--modal-border, var(--border, rgba(255, 255, 255, 0.22))) 35%, var(--text, #ffffff) 65%) !important;
+     outline-offset: -2px;
+     box-shadow:
+         0 10px 40px var(--modal-shadow, rgba(0, 0, 0, 0.5)),
+         0 0 0 2px rgba(255, 255, 255, 0.18),
+         0 0 0 1px rgba(255, 255, 255, 0.14) inset !important;
+ }
+
+ #modalProveedor .modal-content::before {
+     content: '';
+     position: absolute;
+     inset: 0;
+     pointer-events: none;
+     border-radius: 12px;
+     border: 2px solid color-mix(in srgb, var(--text, #ffffff) 55%, transparent);
+     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+ }
+
+ #modalDetalleProveedor .modal-content {
+     width: min(92vw, 860px) !important;
+     max-width: 860px !important;
+     max-height: calc(100vh - 40px) !important;
+     height: auto !important;
+     overflow: hidden !important;
+     position: fixed !important;
+     top: 50% !important;
+     left: 50% !important;
+     transform: translate(-50%, -50%) !important;
+     margin: 0 !important;
+     display: flex !important;
+     flex-direction: column !important;
+     border-radius: 12px !important;
+     border: 2px solid color-mix(in srgb, var(--modal-border, var(--border, rgba(255, 255, 255, 0.22))) 55%, var(--text, #ffffff) 45%) !important;
+     outline: 2px solid color-mix(in srgb, var(--modal-border, var(--border, rgba(255, 255, 255, 0.22))) 35%, var(--text, #ffffff) 65%) !important;
+     outline-offset: -2px;
+     box-shadow:
+         0 10px 40px var(--modal-shadow, rgba(0, 0, 0, 0.5)),
+         0 0 0 2px rgba(255, 255, 255, 0.18),
+         0 0 0 1px rgba(255, 255, 255, 0.14) inset !important;
+ }
+
+ #modalDetalleProveedor .modal-content::before {
+     content: '';
+     position: absolute;
+     inset: 0;
+     pointer-events: none;
+     border-radius: 12px;
+     border: 2px solid color-mix(in srgb, var(--text, #ffffff) 55%, transparent);
+     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+ }
+
+ #modalProveedor .modal-body {
+     padding: 10px 16px !important;
+     overflow-y: hidden !important;
+     flex: 1 1 auto;
+     min-height: 0;
+ }
+
+ #modalProveedor .modal-footer {
+     padding: 10px 16px !important;
+     flex-shrink: 0;
+ }
+
+ #modalDetalleProveedor .modal-body {
+     padding: 12px 18px !important;
+     overflow-y: auto !important;
+     flex: 1 1 auto;
+     min-height: 0;
+ }
+
+ #modalDetalleProveedor .modal-footer {
+     padding: 12px 18px !important;
+     flex-shrink: 0;
+ }
+
+ #modalProveedor #formProveedor {
+     display: grid;
+     grid-template-columns: repeat(2, minmax(0, 1fr));
+     gap: 8px 12px;
+ }
+
+ #modalProveedor #formProveedor .form-group {
+     margin-bottom: 0 !important;
+ }
+
+ #modalProveedor #formProveedor .prov-span-2 {
+     grid-column: 1 / -1;
+ }
+
+ #modalProveedor #formProveedor .grid-3-cols {
+     grid-column: 1 / -1;
+ }
+
+ #modalProveedor #formProveedor small.text-small {
+     margin-top: 2px;
+     display: block;
+ }
+
+ @media (max-width: 680px) {
+     #modalProveedor #formProveedor {
+         grid-template-columns: 1fr;
+     }
+ }
+
 /* Clases de utilidad */
 .w-100 { width: 100%; }
 .text-bold { font-weight: bold; }
@@ -163,8 +282,8 @@ tbody tr:hover {
     display: flex;
     align-items: center;
     gap: 15px;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
     border-bottom: 1px solid var(--border-color, #eee);
 }
 
@@ -190,8 +309,8 @@ tbody tr:hover {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-secondary, #666);
-    margin-top: 15px;
-    margin-bottom: 10px;
+    margin-top: 10px;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -202,8 +321,8 @@ tbody tr:hover {
 .modal-detail-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-    margin-bottom: 15px;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
 .detail-item label {

@@ -155,7 +155,7 @@
         // PARCHE: Forzar HTTPS en Cloudflare si API_URL viene mal
         let baseApi = API_URL;
         if (window.location.hostname.includes('cloudflare')) {
-            baseApi = baseApi.replace('http:', 'https:').replace(':5001', '');
+            baseApi = baseApi.replace('http:', 'https:');
         }
 
         const url = new URL(`${baseApi}/api/exportar`);

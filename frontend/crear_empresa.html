@@ -13,6 +13,9 @@
     <link rel="stylesheet" href="/static/css/crear_empresa.css?v=FIX_MINIMAL_V2">
     <link rel="stylesheet" href="/static/css/notificaciones.css?v=FIX_MINIMAL">
 
+    <script src="/static/nif_cif_validator.js?v=1763897790"></script>
+    <script src="/static/cp_validator.js?v=1763897790"></script>
+
     <!-- Notificaciones -->
     <script type="module" src="/static/notificaciones.js"></script>
     
@@ -51,7 +54,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label><i class="fas fa-id-card"></i> NIF/CIF</label>
-                        <input type="text" class="form-control" id="nif" 
+                        <input type="text" class="form-control" id="nif" data-validate-nifcif="1" data-nifcif-required="1"
                                placeholder="Ej: B12345678">
                     </div>
                 </div>
@@ -108,7 +111,7 @@
                     <div class="form-group">
                         <label><i class="fas fa-mail-bulk"></i> Código Postal</label>
                         <input type="text" class="form-control" id="codigoPostal" 
-                               placeholder="28001" maxlength="5">
+                               placeholder="28001" maxlength="5" data-validate-cp="1" data-cp-locality-id="ciudad" data-cp-province-id="provincia" data-cp-no-submit-block="1">
                     </div>
                 </div>
 
