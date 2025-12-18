@@ -405,7 +405,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 const left = (window.screen.width - width) / 2;
                 const top = (window.screen.height - height) / 2;
                 window.open(
-                    `IMPRIMIR_FACTURA.html?facturaId=${facturaId}`,
+                    `IMPRIMIR_FACTURA.html?facturaId=${facturaId}&v=${Date.now()}`,
                     'ImprimirFactura',
                     `width=${width},height=${height},left=${left},top=${top}`
                 );

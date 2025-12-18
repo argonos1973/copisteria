@@ -310,9 +310,21 @@ async function rellenarFactura(datos, emisor) {
         factura.detalles.forEach(detalle => {
             console.log('Procesando detalle:', detalle); // Debug
             const fila = document.createElement('tr');
-            const cantidadRaw = detalle.cantidad ?? '';
-            const precioRaw = detalle.precio ?? '';
-            const subtotalRaw = detalle.total ? `${detalle.total}€` : '';
+
+            const cantidadNum = Number.parseFloat(String(detalle.cantidad ?? '0').replace(',', '.')) || 0;
+            const precioNum = Number.parseFloat(String(detalle.precio ?? '0').replace(',', '.')) || 0;
+
+            // Subtotal SIN IVA (cantidad × precio). Si no podemos calcularlo, caemos a detalle.total.
+            let subtotalNum = cantidadNum * precioNum;
+            if (!Number.isFinite(subtotalNum) || subtotalNum === 0) {
+                const detTotal = Number.parseFloat(String(detalle.total ?? '0').replace(',', '.')) || 0;
+                subtotalNum = detTotal;
+            }
+
+            const cantidadTxt = cantidadNum ? String(detalle.cantidad ?? '').replace('.', ',') : (detalle.cantidad ?? '');
+            const precioTxt = `${formatNumberEsMax5(precioNum)}€`;
+            const subtotalTxt = `${formatTotalEsTwo(subtotalNum)}€`;
+
             fila.innerHTML = `
                 <td>
                     <div class="detalle-concepto">
@@ -320,9 +332,9 @@ async function rellenarFactura(datos, emisor) {
                         ${detalle.descripcion ? `<span class="detalle-descripcion">${detalle.descripcion}</span>` : ''}
                     </div>
                 </td>
-                <td class="cantidad">${cantidadRaw}</td>
-                <td class="precio">${precioRaw}</td>
-                <td class="total">${subtotalRaw}</td>
+                <td class="cantidad">${cantidadTxt}</td>
+                <td class="precio">${precioTxt}</td>
+                <td class="total">${subtotalTxt}</td>
             `;
             tbody.appendChild(fila);
         });
@@ -330,10 +342,16 @@ async function rellenarFactura(datos, emisor) {
         console.error('factura.detalles no es un array:', factura.detalles);
     }
 
-    // Totales documento: mostrar exactamente lo provisto por el backend
-    document.getElementById('base').textContent = factura.base ? `${factura.base}€` : '';
-    document.getElementById('iva').textContent = factura.iva ? `${factura.iva}€` : '';
-    document.getElementById('total').textContent = factura.total ? `${factura.total}€` : '';
+    // Totales documento: usar campos reales del backend
+    // - importe_bruto (base imponible)
+    // - importe_impuestos (IVA)
+    // - total
+    const baseNum = Number.parseFloat(String(factura.importe_bruto ?? '0').replace(',', '.')) || 0;
+    const ivaNum = Number.parseFloat(String(factura.importe_impuestos ?? '0').replace(',', '.')) || 0;
+    const totalNum = Number.parseFloat(String(factura.total ?? '0').replace(',', '.')) || 0;
+    document.getElementById('base').textContent = `${formatTotalEsTwo(baseNum)}€`;
+    document.getElementById('iva').textContent = `${formatTotalEsTwo(ivaNum)}€`;
+    document.getElementById('total').textContent = `${formatTotalEsTwo(totalNum)}€`;
     
     // Sección FACTURA RECTIFICATIVA
     const rectInfoDiv = document.getElementById('rectificativa-info');
@@ -391,7 +409,7 @@ async function rellenarFactura(datos, emisor) {
     if (!verifactuHabilitado) {
         console.log('[VERIFACTU] Desactivado - ocultando secciones');
         // 1. Ocultar etiqueta VERI*FACTU del título
-        const labelVerifactu = document.querySelector('.header h1 span');
+        const labelVerifactu = document.querySelector('.factura-header h1 span');
         if (labelVerifactu) labelVerifactu.style.display = 'none';
         // 2. Ocultar bloque de información y QR VERI*FACTU
         try {
