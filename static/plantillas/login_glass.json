@@ -1,0 +1,137 @@
+{
+  "name": "Login Glass",
+  "version": 4,
+  "meta": {
+    "author": "aleph70",
+    "icon": "🪟",
+    "dark": true,
+    "description": "Tema inspirado en el login glassmorphism: fondos slate oscuros y acento índigo"
+  },
+  "palette": {
+    "slate950": "#020617",
+    "slate900": "#0b1220",
+    "slate800": "#111827",
+    "slate700": "#1f2937",
+    "slate600": "#334155",
+    "slate400": "#94a3b8",
+    "slate200": "#e2e8f0",
+    "white": "#ffffff",
+
+    "indigo500": "#4f46e5",
+    "indigo600": "#4338ca",
+
+    "green500": "#57e389",
+    "yellow500": "#f8e45c",
+    "red500": "#ff7b63",
+    "blue400": "#38bdf8"
+  },
+  "semantic": {
+    "bg": "{palette.slate900}",
+    "bg-elevated": "{palette.slate800}",
+    "text": "{palette.white}",
+    "text-muted": "{palette.slate400}",
+    "primary": "{palette.indigo500}",
+    "success": "{palette.green500}",
+    "warning": "{palette.yellow500}",
+    "danger": "{palette.red500}",
+    "info": "{palette.blue400}",
+    "border": "{palette.slate600}",
+    "focus-ring": "rgba(79, 70, 229, 0.30)"
+  },
+  "components": {
+    "button": {
+      "bg": "{semantic.primary}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.indigo600}",
+      "border": "transparent"
+    },
+    "button-secondary": {
+      "bg": "{palette.slate700}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.slate600}",
+      "border": "{semantic.border}"
+    },
+    "button-card": {
+      "bg": "{palette.slate700}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.slate600}",
+      "border": "{semantic.border}"
+    },
+    "button-table": {
+      "bg": "{palette.slate900}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.slate800}",
+      "border": "{semantic.border}"
+    },
+    "input": {
+      "bg": "rgba(255, 255, 255, 0.08)",
+      "text": "{palette.white}",
+      "border": "rgba(255, 255, 255, 0.14)",
+      "placeholder": "rgba(226, 232, 240, 0.65)",
+      "readonly-bg": "rgba(255, 255, 255, 0.06)",
+      "readonly-text": "{palette.slate400}",
+      "focus-ring": "{semantic.focus-ring}"
+    },
+    "select": {
+      "bg": "rgba(255, 255, 255, 0.08)",
+      "text": "{palette.white}",
+      "border": "rgba(255, 255, 255, 0.14)",
+      "focus-ring": "{semantic.focus-ring}"
+    },
+    "modal": {
+      "bg": "rgba(17, 24, 39, 0.88)",
+      "text": "{semantic.text}",
+      "overlay": "transparent",
+      "border": "rgba(255, 255, 255, 0.10)",
+      "border-width": "1px",
+      "border-radius": "14px",
+      "shadow": "0 18px 50px rgba(0, 0, 0, 0.45)",
+      "header-bg": "transparent",
+      "header-text": "{palette.white}",
+      "body-bg": "transparent",
+      "body-text": "{semantic.text}",
+      "label-color": "{palette.slate200}",
+      "input-bg": "rgba(255, 255, 255, 0.08)",
+      "input-text": "{palette.white}",
+      "input-border": "rgba(255, 255, 255, 0.14)"
+    },
+    "table": {
+      "bg": "rgba(17, 24, 39, 0.72)",
+      "text": "{palette.white}",
+      "header-bg": "rgba(31, 41, 55, 0.85)",
+      "header-text": "{palette.white}",
+      "row-hover": "rgba(255, 255, 255, 0.06)"
+    },
+    "menu": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}",
+      "hover": "rgba(255, 255, 255, 0.06)",
+      "border": "{semantic.border}"
+    },
+    "header": {
+      "bg": "{semantic.bg-elevated}",
+      "text": "{semantic.text}",
+      "border": "{semantic.border}"
+    },
+    "icon": {
+      "color": "{semantic.text}"
+    },
+    "spinner": {
+      "border": "{semantic.primary}"
+    },
+    "tab": {
+      "active-bg": "rgba(79, 70, 229, 0.22)",
+      "active-text": "{palette.white}",
+      "inactive-text": "{semantic.text-muted}",
+      "border": "{semantic.primary}"
+    },
+    "disabled": {
+      "bg": "rgba(255, 255, 255, 0.06)",
+      "text": "{semantic.text-muted}"
+    },
+    "amount": {
+      "positive": "{palette.green500}",
+      "negative": "{palette.red500}"
+    }
+  }
+}
