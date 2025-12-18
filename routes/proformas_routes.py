@@ -13,6 +13,12 @@ proformas_bp = Blueprint('proformas', __name__)
 def consultar_proformas():
     return proforma.consultar_proformas()
 
+
+@proformas_bp.route('/api/proformas/paginado', methods=['GET'])
+@login_required
+def consultar_proformas_paginado():
+    return proforma.consultar_proformas()
+
 @proformas_bp.route('/api/proformas/consulta', methods=['GET'])
 @login_required
 def consultar_proformas_alias():
