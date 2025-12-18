@@ -95,7 +95,7 @@ async function cargarEstadisticasGastos() {
         const elementos = {
             'gastos-total-mes': formatearImporte(data.total_gastos_mes),
             'gastos-pct-mes': formatearPorcentaje(data.porcentaje_mes),
-            'gastos-mes-anterior': `Mismo mes año anterior: ${formatearImporte(data.total_gastos_mes_anterior)}`,
+            'gastos-mes-anterior': `Mismo trimestre año anterior: ${formatearImporte(data.total_gastos_mes_anterior)}`,
             'gastos-cantidad-mes': data.cantidad_gastos_mes,
             'gastos-total-anio': formatearImporte(data.total_gastos_anio),
             'gastos-pct-anio': formatearPorcentaje(data.porcentaje_anio),

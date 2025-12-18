@@ -281,6 +281,9 @@ def obtener_proveedor_por_id(proveedor_id, empresa_id):
     """Obtiene un proveedor por su ID"""
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
+    
+    ensure_facturas_proveedores_tables(conn)
+    
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -327,6 +330,7 @@ def obtener_proveedor_por_nif(nif, empresa_id):
     
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
+    ensure_facturas_proveedores_tables(conn)
     cursor = conn.cursor()
     
     # Normalizar el NIF de búsqueda
@@ -388,6 +392,7 @@ def obtener_proveedor_por_nombre(nombre, empresa_id):
     
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
+    ensure_facturas_proveedores_tables(conn)
     cursor = conn.cursor()
     
     # Función local para limpiar nombre legal
@@ -458,6 +463,7 @@ def crear_proveedor(empresa_id, datos, usuario='sistema'):
         int: ID del proveedor creado
     """
     conn = get_db_connection()
+    ensure_facturas_proveedores_tables(conn)
     cursor = conn.cursor()
     
     try:
@@ -601,6 +607,7 @@ def actualizar_proveedor(proveedor_id, empresa_id, datos, usuario='sistema'):
         bool: True si se actualizó correctamente
     """
     conn = get_db_connection()
+    ensure_facturas_proveedores_tables(conn)
     cursor = conn.cursor()
     
     try:
@@ -689,6 +696,7 @@ def eliminar_proveedor(proveedor_id, empresa_id, usuario='sistema'):
         Exception: Si el proveedor tiene facturas asociadas
     """
     conn = get_db_connection()
+    ensure_facturas_proveedores_tables(conn)
     cursor = conn.cursor()
     
     try:
@@ -776,16 +784,17 @@ def buscar_proveedor_similar(empresa_id, nombre, nif, telefono=None, direccion=N
                 return (dict(p), motivo)
 
         # 2. COINCIDENCIA POR DIRECCIÓN (Fuerte)
-        # Si la dirección es muy parecida y el nombre tiene algo de sentido
+        # IMPORTANTE: la dirección puede venir mal del OCR (p.ej. la del CLIENTE),
+        # así que NO debe unificar proveedores si el nombre/NIF no se parece.
+        direccion_coincidente = False
         if direccion and p_dir and len(direccion) > 10:
             # Tokenizar direcciones
             dir_tokens = set(direccion.upper().replace(',', '').split())
             p_dir_tokens = set(p_dir.replace(',', '').split())
             # Intersección de palabras clave
             common = dir_tokens.intersection(p_dir_tokens)
-            if len(common) > 3: # Al menos 3 palabras coinciden (calle, numero, ciudad)
-                 match_encontrado = True
-                 motivo = "Dirección coincidente"
+            if len(common) > 3:  # calle/numero/ciudad
+                direccion_coincidente = True
         
         # Similitud de Nombre
         if nombre_norm and p_nombre:
@@ -794,7 +803,14 @@ def buscar_proveedor_similar(empresa_id, nombre, nif, telefono=None, direccion=N
         # Similitud de NIF
         if nif_norm and p_nif:
             score_nif = SequenceMatcher(None, nif_norm, p_nif).ratio()
-            
+
+        # Si SOLO coincide dirección, exigir también algo de similitud en nombre o NIF.
+        # Esto evita falsos positivos como IONOS -> CANON por dirección del receptor.
+        if direccion_coincidente:
+            if score_nombre >= 0.55 or score_nif >= 0.85:
+                match_encontrado = True
+                motivo = "Dirección coincidente"
+
         # 3. Nombre MUY similar (> 80%)
         if score_nombre > 0.80:
             match_encontrado = True
@@ -1276,7 +1292,11 @@ def _registrar_gasto_desde_factura(cursor, factura_id, datos_factura, proveedor_
         cursor.execute("PRAGMA table_info(gastos)")
         columnas_info = cursor.fetchall()
         columnas = [col[1] for col in columnas_info]
-        es_compleja = 'fecha_operacion_iso' in columnas
+        
+        # Detectar qué tipo de esquema tenemos
+        tiene_fecha_iso = 'fecha_operacion_iso' in columnas
+        tiene_importe_eur = 'importe_eur' in columnas
+        tiene_fecha_simple = 'fecha' in columnas
         
         # Asegurar que existe razon_social
         if 'razon_social' not in columnas:
@@ -1285,6 +1305,13 @@ def _registrar_gasto_desde_factura(cursor, factura_id, datos_factura, proveedor_
                 cursor.execute("ALTER TABLE gastos ADD COLUMN razon_social TEXT")
             except Exception as e:
                 logger.error(f"No se pudo añadir columna razon_social: {e}")
+
+        if 'factura_proveedor_id' not in columnas:
+            try:
+                cursor.execute("ALTER TABLE gastos ADD COLUMN factura_proveedor_id INTEGER")
+                columnas.append('factura_proveedor_id')
+            except Exception as e:
+                logger.error(f"No se pudo añadir columna factura_proveedor_id: {e}")
 
         # 3. Preparar datos comunes
         fecha = datos_factura.get('fecha_emision') or datetime.now().strftime('%Y-%m-%d')
@@ -1302,25 +1329,37 @@ def _registrar_gasto_desde_factura(cursor, factura_id, datos_factura, proveedor_
         # Gastos SIEMPRE en negativo
         importe_neg = -abs(importe)
 
-        # 4. Insertar según estructura
-        if es_compleja:
-            # Estructura bancaria compleja (caca.db)
+        # 4. Insertar según estructura detectada
+        if tiene_importe_eur:
+            # Estructura bancaria (compleja o semi-compleja)
             
-            # MEJORA: Verificar duplicados de forma más laxa (Importe + Fecha es suficiente indicio)
-            # A veces el concepto varía ("Recibo..." vs "Factura...") pero es el mismo cargo
-            # MODIFICACION: Usar rango de fechas para conciliación automática (+/- 4 días)
-            # IMPORTANTE: Ignorar razon_social porque el OCR a veces falla y coge el concepto en lugar del proveedor
-            cursor.execute("""
-                SELECT id, concepto, fecha_operacion_iso FROM gastos 
-                WHERE ABS(importe_eur - ?) < 0.01
-                AND fecha_operacion_iso >= date(?, '-4 days') 
-                AND fecha_operacion_iso <= date(?, '+4 days')
-            """, (importe_neg, fecha, fecha))
+            # Verificar duplicados
+            if tiene_fecha_iso:
+                query_check = """
+                    SELECT id FROM gastos 
+                    WHERE ABS(importe_eur - ?) < 0.01
+                    AND fecha_operacion_iso >= date(?, '-4 days') 
+                    AND fecha_operacion_iso <= date(?, '+4 days')
+                """
+                params_check = (importe_neg, fecha, fecha)
+            else:
+                # Si no hay ISO, usamos fecha_operacion (texto dd/mm/yyyy) para buscar
+                # Esto es menos preciso, pero evita duplicados exactos
+                try:
+                    fecha_es = datetime.strptime(fecha, '%Y-%m-%d').strftime('%d/%m/%Y')
+                except:
+                    fecha_es = fecha
+                query_check = """
+                    SELECT id FROM gastos 
+                    WHERE ABS(importe_eur - ?) < 0.01
+                    AND fecha_operacion = ?
+                    AND (concepto = ? OR razon_social = ?)
+                """
+                params_check = (importe_neg, fecha_es, concepto, nombre_proveedor)
+
+            cursor.execute(query_check, params_check)
             
-            duplicado = cursor.fetchone()
-            
-            if duplicado:
-                logger.info(f"Gasto ya existe (conciliación por fecha aprox {duplicado[2]} vs {fecha}) para factura {datos_factura.get('numero_factura')} (ID Gasto: {duplicado[0]}), omitiendo registro duplicado")
+            if cursor.fetchone():
                 return
 
             # Calcular campos extra
@@ -1334,20 +1373,23 @@ def _registrar_gasto_desde_factura(cursor, factura_id, datos_factura, proveedor_
             
             ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-            cursor.execute("""
-                INSERT INTO gastos (
-                    fecha_operacion, fecha_valor, concepto, importe_eur, saldo, 
-                    ejercicio, TS, puntual, fecha_operacion_iso, fecha_valor_iso,
-                    razon_social
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                fecha_es, fecha_es, concepto, importe_neg, 0,
-                ejercicio, ts, 0, fecha, fecha,
-                nombre_proveedor
-            ))
+            campos_insert = ['fecha_operacion', 'fecha_valor', 'concepto', 'importe_eur', 'saldo', 'ejercicio', 'TS', 'puntual', 'razon_social']
+            vals_insert = [fecha_es, fecha_es, concepto, importe_neg, 0, ejercicio, ts, 0, nombre_proveedor]
+
+            if 'factura_proveedor_id' in columnas:
+                campos_insert.append('factura_proveedor_id')
+                vals_insert.append(factura_id)
+
+            if tiene_fecha_iso:
+                campos_insert.extend(['fecha_operacion_iso', 'fecha_valor_iso'])
+                vals_insert.extend([fecha, fecha])
+
+            placeholders = ', '.join(['?'] * len(campos_insert))
+            query_insert = f"INSERT INTO gastos ({', '.join(campos_insert)}) VALUES ({placeholders})"
             
-        else:
+            cursor.execute(query_insert, vals_insert)
+            
+        elif tiene_fecha_simple:
             # Estructura simple (init_database.sql)
             
             # Verificar duplicados
@@ -1359,12 +1401,23 @@ def _registrar_gasto_desde_factura(cursor, factura_id, datos_factura, proveedor_
             if cursor.fetchone():
                 return
 
-            cursor.execute("""
-                INSERT INTO gastos (fecha, concepto, importe, proveedor, categoria, pagado, razon_social)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                fecha, concepto, importe_neg, nombre_proveedor, 'Compras', 1, nombre_proveedor
-            ))
+            if 'factura_proveedor_id' in columnas:
+                cursor.execute("""
+                    INSERT INTO gastos (fecha, concepto, importe, proveedor, categoria, pagado, razon_social, factura_proveedor_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    fecha, concepto, importe_neg, nombre_proveedor, 'Compras', 1, nombre_proveedor, factura_id
+                ))
+            else:
+                cursor.execute("""
+                    INSERT INTO gastos (fecha, concepto, importe, proveedor, categoria, pagado, razon_social)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    fecha, concepto, importe_neg, nombre_proveedor, 'Compras', 1, nombre_proveedor
+                ))
+        else:
+            logger.error("No se reconoce la estructura de la tabla gastos (ni importe_eur ni fecha/importe)")
+            return
             
         logger.info(f"✓ Gasto registrado automáticamente para factura {datos_factura.get('numero_factura')}")
 
@@ -1519,6 +1572,7 @@ def factura_ya_procesada(pdf_hash, empresa_id):
     """Verifica si una factura ya fue procesada por su hash"""
     conn = get_db_connection()
     conn.row_factory = sqlite3.Row
+    ensure_facturas_proveedores_tables(conn)
     cursor = conn.cursor()
     
     cursor.execute("""
@@ -1593,6 +1647,7 @@ def obtener_factura_por_id(factura_id, empresa_id):
 def actualizar_factura_proveedor(factura_id, empresa_id, datos, usuario='sistema'):
     """Actualiza una factura existente"""
     conn = get_db_connection()
+    ensure_facturas_proveedores_tables(conn)
     cursor = conn.cursor()
     
     try:
@@ -1606,6 +1661,7 @@ def actualizar_factura_proveedor(factura_id, empresa_id, datos, usuario='sistema
             
         # Campos permitidos para actualizar
         campos_permitidos = [
+            'proveedor_id',
             'numero_factura', 'fecha_emision', 'fecha_vencimiento',
             'base_imponible', 'iva_porcentaje', 'iva_importe', 'total',
             'concepto', 'notas', 'revisado', 'estado'
@@ -1659,6 +1715,7 @@ def actualizar_factura_proveedor(factura_id, empresa_id, datos, usuario='sistema
 def eliminar_factura(factura_id, empresa_id, usuario='sistema'):
     """Elimina una factura y sus archivos asociados"""
     conn = get_db_connection()
+    ensure_facturas_proveedores_tables(conn)
     cursor = conn.cursor()
     
     try:
@@ -1672,6 +1729,24 @@ def eliminar_factura(factura_id, empresa_id, usuario='sistema'):
             
         # Intentar eliminar el gasto asociado antes de borrar la factura
         try:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='gastos'")
+            existe_gastos = bool(cursor.fetchone())
+
+            if existe_gastos:
+                cursor.execute("PRAGMA table_info(gastos)")
+                columnas_gastos = [col['name'] for col in cursor.fetchall()]
+                if 'factura_proveedor_id' in columnas_gastos:
+                    cursor.execute(
+                        "DELETE FROM gastos WHERE factura_proveedor_id = ?",
+                        (factura_id,),
+                    )
+                    if cursor.rowcount > 0:
+                        logger.info(f"✓ Gasto asociado eliminado (por factura_proveedor_id) para factura {factura_id}")
+                        existe_gastos = False
+
+            if not existe_gastos:
+                raise Exception("skip_heuristics")
+
             # Obtener datos detallados para localizar el gasto
             cursor.execute("""
                 SELECT f.fecha_emision, f.total, f.concepto, p.nombre as proveedor_nombre 
@@ -1748,7 +1823,10 @@ def eliminar_factura(factura_id, empresa_id, usuario='sistema'):
                         logger.warning(f"No se encontró gasto asociado para eliminar (Factura {factura_id})")
 
         except Exception as ex_gasto:
-            logger.error(f"Error no crítico intentando eliminar gasto asociado: {ex_gasto}")
+            if str(ex_gasto) == 'skip_heuristics':
+                pass
+            else:
+                logger.error(f"Error no crítico intentando eliminar gasto asociado: {ex_gasto}")
 
         # Eliminar de BD (cascade eliminará líneas e historial si está configurado, sino hacerlo manual)
         cursor.execute("DELETE FROM facturas_proveedores WHERE id = ?", (factura_id,))
@@ -1777,6 +1855,7 @@ def eliminar_factura(factura_id, empresa_id, usuario='sistema'):
 def registrar_pago_factura(factura_id, empresa_id, datos_pago, usuario='sistema'):
     """Registra el pago de una factura"""
     conn = get_db_connection()
+    ensure_facturas_proveedores_tables(conn)
     cursor = conn.cursor()
     
     try:

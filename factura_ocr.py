@@ -9,6 +9,11 @@ import json
 import io
 import re
 from PIL import Image, ImageEnhance
+from dotenv import load_dotenv
+
+# Cargar variables de entorno explícitamente
+load_dotenv('/var/www/html/.env')
+
 from logger_config import get_logger
 
 logger = get_logger(__name__)
@@ -21,8 +26,8 @@ try:
     if OPENAI_API_KEY:
         logger.info("OpenAI GPT-4 Vision disponible para facturas")
     else:
-        OPENAI_DISPONIBLE = False
-        logger.warning("OpenAI API Key no configurada - OCR de facturas deshabilitado")
+        # OPENAI_DISPONIBLE se mantiene True si se puede importar, pero la key puede venir luego
+        logger.warning("OpenAI API Key no configurada al importar modulo - OCR de facturas deshabilitado momentaneamente")
 except ImportError:
     OPENAI_DISPONIBLE = False
     OPENAI_API_KEY = None
@@ -49,7 +54,10 @@ def extraer_datos_factura_gpt4(imagen_bytes, nif_cliente=None):
     Returns:
         dict: Datos estructurados de la factura
     """
-    if not OPENAI_DISPONIBLE or not OPENAI_API_KEY:
+    # Recuperar API Key dinámicamente si no estaba al importar
+    api_key = OPENAI_API_KEY or os.getenv('OPENAI_API_KEY')
+    
+    if not OPENAI_DISPONIBLE or not api_key:
         raise ValueError("OpenAI API Key no configurada. Configure OPENAI_API_KEY en .env")
     
     try:
@@ -325,7 +333,10 @@ def procesar_imagen_factura(imagen_bytes, nif_cliente=None):
         dict: Datos de la factura extraídos
     """
     try:
-        if not OPENAI_DISPONIBLE or not OPENAI_API_KEY:
+        # Recuperar API Key dinámicamente
+        api_key = OPENAI_API_KEY or os.getenv('OPENAI_API_KEY')
+        
+        if not OPENAI_DISPONIBLE or not api_key:
             raise ValueError("OpenAI API Key no configurada. Configure OPENAI_API_KEY en .env para usar OCR de facturas")
         
         logger.info("🔍 Procesando factura con GPT-4 Vision...")

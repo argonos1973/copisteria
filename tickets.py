@@ -19,12 +19,10 @@ from logger_config import get_tickets_logger
 logger = get_tickets_logger()
 from utilities import calcular_importes
 
-# Cargar configuración de Verifactu
 try:
-    from config_loader import get as get_config
-    VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", False))
+    from utils_emisor import verifactu_habilitado
 except Exception:
-    VERIFACTU_HABILITADO = False
+    verifactu_habilitado = None
 
 def D(x):
     """Conversión segura a Decimal"""
@@ -390,7 +388,8 @@ def guardar_ticket(data=None):
             conn = None
 
             # Generar datos VERI*FACTU para el ticket de forma síncrona (pero con conexión BD ya liberada)
-            if VERIFACTU_HABILITADO:
+            vf_on = bool(verifactu_habilitado(default=False)) if verifactu_habilitado else False
+            if vf_on:
                 logger.info(f"[VERIFACTU] Iniciando proceso síncrono para ticket {id_ticket}")
                 try:
                     import os
@@ -426,7 +425,7 @@ def guardar_ticket(data=None):
                     if 'EMPRESA_DB_PATH' in os.environ:
                         del os.environ['EMPRESA_DB_PATH']
             else:
-                logger.info("[VERIFACTU] VERIFACTU_HABILITADO=False, omitiendo generación")
+                logger.info("[VERIFACTU] verifactu_enabled=False (empresa), omitiendo generación")
 
             return jsonify({"mensaje": "Ticket guardado correctamente", "id": id_ticket})
 
@@ -499,6 +498,7 @@ def obtener_ticket_con_detalles(id_ticket):
             formatted_detalles.append(detalle_fmt)
 
         # Combinar ticket, detalles y datos VERI*FACTU
+        vf_on = bool(verifactu_habilitado(default=False)) if verifactu_habilitado else False
         resultado = {
             'ticket': ticket_dict,
             'detalles': formatted_detalles,
@@ -506,11 +506,11 @@ def obtener_ticket_con_detalles(id_ticket):
             'csv': csv,
             'estado_envio': estado_envio,
             'errores_aeat': errores_aeat,
-            'verifactu_enabled': VERIFACTU_HABILITADO
+            'verifactu_enabled': vf_on
         }
         
         # Log de debug para verificar datos VERIFACTU
-        logger.info(f"[API] Ticket {id_ticket}: verifactu_enabled={VERIFACTU_HABILITADO}, "
+        logger.info(f"[API] Ticket {id_ticket}: verifactu_enabled={vf_on}, "
                    f"tiene_qr={bool(codigo_qr)}, qr_len={len(codigo_qr) if codigo_qr else 0}, "
                    f"csv={csv}, estado={estado_envio}")
 
@@ -830,7 +830,8 @@ def anular_ticket(id_ticket):
         
         # 5. VERI*FACTU (opcional)
         resultado_envio = None
-        if VERIFACTU_HABILITADO:
+        vf_on = bool(verifactu_habilitado(default=False)) if verifactu_habilitado else False
+        if vf_on:
             try:
                 import re
                 import os

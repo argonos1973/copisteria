@@ -1,0 +1,242 @@
+body {
+    background: var(--bg, var(--color-app-bg, #0b1220));
+    color: var(--text, var(--color-texto, #e6edf7));
+}
+
+.batch-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+@media (min-width: 1100px) {
+    .batch-grid {
+        grid-template-columns: 1fr 1fr;
+        align-items: start;
+    }
+}
+
+.batch-form {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.batch-schedule-builder {
+    border: 1px solid color-mix(in srgb, var(--border, rgba(255,255,255,0.15)) 70%, transparent);
+    border-radius: 10px;
+    padding: 10px;
+    background: color-mix(in srgb, var(--modal-bg, rgba(20, 28, 45, 0.95)) 70%, transparent);
+}
+
+.batch-sub-label {
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+.batch-inline {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.batch-check {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.batch-table-wrap {
+    overflow-x: auto;
+}
+
+.batch-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+    min-width: 100px;
+}
+
+.batch-actions .btn-icon-compact {
+    padding: 0 !important;
+    font-size: 14px !important;
+    line-height: 1 !important;
+    height: 28px !important;
+    width: 28px !important;
+    min-width: 28px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 2px !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    cursor: pointer !important;
+    transition: all 0.2s !important;
+}
+
+.batch-actions .btn-icon-compact:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    transform: scale(1.1);
+}
+
+#batch-schedules-table th:last-child,
+#batch-schedules-table td:last-child {
+    width: 140px;
+    min-width: 140px;
+    white-space: nowrap;
+}
+
+.batch-controls {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+}
+
+.batch-controls .file-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 520px;
+    min-width: 320px;
+}
+
+.batch-controls .file-upload-row input[type="file"] {
+    flex: 1 1 auto;
+    min-width: 240px;
+}
+
+.batch-controls .file-upload-row #batch-scan-zip-status {
+    flex: 0 0 auto;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.batch-controls .btn {
+    width: auto !important;
+    flex: 0 0 auto !important;
+}
+
+.batch-controls .batch-check {
+    flex: 0 0 auto !important;
+}
+
+@media (max-width: 700px) {
+    .batch-controls {
+        flex-wrap: wrap;
+    }
+}
+
+.batch-controls .btn,
+.batch-controls .form-control {
+    height: 34px;
+}
+
+.batch-controls .btn {
+    display: inline-flex;
+    align-items: center;
+}
+
+.batch-controls .batch-check {
+    height: 34px;
+}
+
+.btn-small {
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.batch-logs {
+    margin-top: 12px;
+    border: 1px solid color-mix(in srgb, var(--border, rgba(255,255,255,0.15)) 70%, transparent);
+    border-radius: 10px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--modal-bg, rgba(20, 28, 45, 0.95)) 70%, transparent);
+}
+
+.batch-logs-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: color-mix(in srgb, var(--modal-bg, rgba(20, 28, 45, 0.95)) 85%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, var(--border, rgba(255,255,255,0.15)) 70%, transparent);
+}
+
+.batch-logs-pre {
+    margin: 0;
+    padding: 12px;
+    max-height: 320px;
+    overflow: auto;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text, var(--color-texto, #e6edf7));
+}
+
+.batch-alert {
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border: 1px solid color-mix(in srgb, var(--border, rgba(255,255,255,0.15)) 70%, transparent);
+    background: color-mix(in srgb, var(--modal-bg, rgba(20, 28, 45, 0.95)) 80%, transparent);
+}
+
+.batch-alert-success {
+    border-color: color-mix(in srgb, var(--success, #2ecc71) 65%, transparent);
+}
+
+.batch-alert-error {
+    border-color: color-mix(in srgb, var(--danger, #e74c3c) 65%, transparent);
+}
+
+.batch-alert-info {
+    border-color: color-mix(in srgb, var(--info, #3498db) 65%, transparent);
+}
+
+.batch-run-success {
+    border-left: 4px solid #2ecc71 !important;
+    background-color: rgba(46, 204, 113, 0.15) !important;
+}
+
+.batch-run-success td {
+    background-color: rgba(46, 204, 113, 0.15) !important;
+}
+
+.batch-run-error {
+    border-left: 4px solid #e74c3c !important;
+    background-color: rgba(231, 76, 60, 0.15) !important;
+}
+
+.batch-run-error td {
+    background-color: rgba(231, 76, 60, 0.15) !important;
+}
+
+.batch-run-running {
+    border-left: 4px solid #3498db !important;
+    background-color: rgba(52, 152, 219, 0.10) !important;
+}
+
+.batch-run-running td {
+    background-color: rgba(52, 152, 219, 0.10) !important;
+}
+
+.batch-run-queued {
+    border-left: 4px solid rgba(255,255,255,0.3) !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+.batch-run-queued td {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+#batch-runs-table tbody tr:hover td {
+    filter: brightness(1.08);
+}

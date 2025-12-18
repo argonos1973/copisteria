@@ -11,15 +11,15 @@ from verifactu_logger import logger  # Ajusta según tu sistema
 from verifactu.config import VERIFACTU_CONSTANTS  # Ruta corregida al módulo
 from format_utils import format_currency_es_two, format_total_es_two, format_number_es_max5, format_percentage
 from logger_config import get_logger
+from utils_emisor import verifactu_habilitado
 
 # Inicializar logger
 logger = get_logger(__name__)
 
 try:
-    from config_loader import get as get_config
-    VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", True))
+    VERIFACTU_HABILITADO = bool(verifactu_habilitado(default=True))
 except Exception as _e:
-    logger.info(f"[PDF] No se pudo cargar config.json: {_e}")
+    logger.info(f"[PDF] No se pudo cargar verifactu_enabled (empresa): {_e}")
     VERIFACTU_HABILITADO = True
 
 def extraer_huella_desde_xml(xml: str) -> str | None:

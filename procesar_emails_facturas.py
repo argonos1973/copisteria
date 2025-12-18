@@ -31,6 +31,7 @@ sys.path.insert(0, '/var/www/html')
 
 from logger_config import get_logger
 import facturas_proveedores
+from factura_ocr import procesar_imagen_factura
 
 logger = get_logger(__name__)
 
@@ -42,6 +43,24 @@ EMAIL_PASSWORD = os.getenv('SMTP_PASSWORD')
 
 # Base de datos
 DB_PATH = '/var/www/html/copisteria.db'
+
+
+def _obtener_nif_cliente_empresa(empresa_id):
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT cif FROM empresas WHERE id = ?", (empresa_id,))
+        row = cursor.fetchone()
+        conn.close()
+        if row and row['cif']:
+            return str(row['cif']).upper().strip()
+    except Exception:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    return None
 
 
 def conectar_email():
@@ -139,100 +158,41 @@ def extraer_pdf_email(msg):
 
 def extraer_datos_factura_gpt4(pdf_bytes):
     """
-    Extrae datos de la factura usando GPT-4 Vision
-    Convierte primera página del PDF a imagen y la procesa
+    Extrae datos de la factura usando el mismo OCR/prompt que la subida manual.
+    Devuelve un dict plano compatible con el flujo existente de este script.
     """
     try:
-        from pdf2image import convert_from_bytes
-        from openai import OpenAI
-        
-        logger.info("🤖 Procesando PDF con GPT-4 Vision...")
-        
-        # Convertir primera página del PDF a imagen
-        imagenes = convert_from_bytes(pdf_bytes, first_page=1, last_page=1, dpi=200)
-        
-        if not imagenes:
-            raise Exception("No se pudo convertir PDF a imagen")
-        
-        imagen = imagenes[0]
-        
-        # Convertir imagen a base64
-        buffer = io.BytesIO()
-        imagen.save(buffer, format='JPEG', quality=95)
-        imagen_base64 = base64.b64encode(buffer.getvalue()).decode()
-        
-        # Llamar a GPT-4 Vision
-        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        
-        prompt = """
-Analiza esta factura y extrae los siguientes datos en formato JSON:
+        # NOTA: nif_cliente se resuelve en procesar_email_factura y se deja en un global temporal
+        nif_cliente = globals().get('_NIF_CLIENTE_OCR')
 
-{
-    "numero_factura": "número de factura",
-    "fecha_emision": "fecha en formato YYYY-MM-DD",
-    "fecha_vencimiento": "fecha en formato YYYY-MM-DD o null",
-    "proveedor_nombre": "nombre del proveedor/emisor",
-    "proveedor_nif": "NIF/CIF del proveedor",
-    "proveedor_direccion": "dirección completa",
-    "base_imponible": número decimal,
-    "iva_porcentaje": número decimal (ej: 21),
-    "iva_importe": número decimal,
-    "total": número decimal,
-    "concepto": "descripción breve de la factura"
-}
+        datos_ocr = procesar_imagen_factura(pdf_bytes, nif_cliente)
+        proveedor = datos_ocr.get('proveedor') or {}
+        factura = datos_ocr.get('factura') or {}
 
-IMPORTANTE:
-- Si algún campo no está disponible, usa null
-- Los números deben ser decimales sin símbolos (ej: 1234.56)
-- Las fechas en formato YYYY-MM-DD
-- Retorna SOLO el JSON, sin texto adicional
-"""
-        
-        response = client.chat.completions.create(
-            model="gpt-4-vision-preview",
-            messages=[{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{imagen_base64}",
-                            "detail": "high"
-                        }
-                    }
-                ]
-            }],
-            max_tokens=1000,
-            temperature=0
-        )
-        
-        # Parsear respuesta JSON
-        import json
-        texto_respuesta = response.choices[0].message.content
-        
-        # Limpiar respuesta (a veces viene con ```json ... ```)
-        texto_respuesta = texto_respuesta.strip()
-        if texto_respuesta.startswith('```json'):
-            texto_respuesta = texto_respuesta[7:]
-        if texto_respuesta.startswith('```'):
-            texto_respuesta = texto_respuesta[3:]
-        if texto_respuesta.endswith('```'):
-            texto_respuesta = texto_respuesta[:-3]
-        texto_respuesta = texto_respuesta.strip()
-        
-        datos = json.loads(texto_respuesta)
-        
-        # Agregar metadata
-        datos['metodo_extraccion'] = 'GPT-4 Vision'
-        datos['confianza_extraccion'] = 90.0  # Alta confianza con GPT-4
-        
+        datos = {
+            'numero_factura': factura.get('numero'),
+            'fecha_emision': factura.get('fecha_emision'),
+            'fecha_vencimiento': factura.get('fecha_vencimiento'),
+            'base_imponible': factura.get('base_imponible'),
+            'iva_importe': factura.get('iva'),
+            'total': factura.get('total'),
+            'concepto': factura.get('concepto'),
+            'proveedor_nombre': proveedor.get('nombre'),
+            'proveedor_nif': proveedor.get('nif'),
+            'proveedor_direccion': proveedor.get('direccion'),
+            'proveedor_telefono': proveedor.get('telefono'),
+            'proveedor_email': proveedor.get('email'),
+            'proveedor_website': proveedor.get('website'),
+            'metodo_extraccion': datos_ocr.get('_metodo_ocr') or 'GPT-4 Vision',
+            'confianza_extraccion': 90.0,
+        }
+
         logger.info("✓ Datos extraídos correctamente")
         logger.info(f"  - Proveedor: {datos.get('proveedor_nombre')}")
         logger.info(f"  - NIF: {datos.get('proveedor_nif')}")
         logger.info(f"  - Factura: {datos.get('numero_factura')}")
         logger.info(f"  - Total: {datos.get('total')}€")
-        
+
         return datos
         
     except Exception as e:
@@ -273,19 +233,23 @@ def procesar_email_factura(mail, email_id, empresa_id, empresa_codigo):
         if facturas_proveedores.factura_ya_procesada(pdf_hash, empresa_id):
             logger.info("⏭️ Factura ya procesada anteriormente (hash duplicado)")
             return False
+
+        # NIF/CIF del cliente para evitar confusiones en OCR (mismo criterio que subida manual)
+        globals()['_NIF_CLIENTE_OCR'] = _obtener_nif_cliente_empresa(empresa_id)
         
         # Extraer datos con GPT-4
         datos_factura = extraer_datos_factura_gpt4(pdf_bytes)
+        globals()['_NIF_CLIENTE_OCR'] = None
         
         if not datos_factura:
             logger.error("❌ No se pudieron extraer datos de la factura")
             return False
         
         # Validar datos mínimos
-        if not datos_factura.get('proveedor_nif') or not datos_factura.get('numero_factura'):
-            logger.error("❌ Faltan datos obligatorios (NIF o número de factura)")
+        if not (datos_factura.get('proveedor_nif') or datos_factura.get('proveedor_nombre')):
+            logger.error("❌ Falta proveedor (NIF y nombre vacíos)")
             return False
-        
+
         # Buscar o crear proveedor
         logger.info("🔍 Buscando proveedor...")
         proveedor_id = facturas_proveedores.obtener_o_crear_proveedor(

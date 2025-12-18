@@ -107,12 +107,11 @@ def obtener_factura_detalle_legacy(factura_id):
             }
             
             # Flag de configuración Veri*Factu
-            verifactu_enabled_val = False
             try:
-                from config_loader import get as get_config
-                verifactu_enabled_val = bool(get_config("verifactu_enabled", False))
-            except:
-                pass
+                from utils_emisor import verifactu_habilitado
+                verifactu_enabled_val = bool(verifactu_habilitado(default=False))
+            except Exception:
+                verifactu_enabled_val = False
             
             # También lo metemos dentro de factura por si acaso otro frontend lo busca ahí
             factura_data['verifactu_enabled'] = verifactu_enabled_val
@@ -252,7 +251,7 @@ def enviar_factura_email(factura_id):
             return jsonify({'error': 'Email de destino requerido'}), 400
         
         # Enviar email
-        resultado = factura.enviar_factura_email(factura_id, email_destino, data.get('mensaje', ''))
+        resultado = factura.enviar_factura_email(factura_id, email_destino, return_dict=True)
         
         if resultado['success']:
             return jsonify(resultado)

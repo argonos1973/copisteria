@@ -458,7 +458,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                     }, 1500);
                     
                 } catch (error) {
-                    mostrarNotificacion('Error', error.message, 'error');
+                    mostrarNotificacion(`Error: ${error.message}`, 'error');
                 } finally {
                     hideOverlay();
                 }

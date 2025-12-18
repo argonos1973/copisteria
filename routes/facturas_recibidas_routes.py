@@ -34,6 +34,71 @@ def _normalizar_estado_factura(valor):
     return v
 
 
+@facturas_recibidas_bp.route('/facturas-proveedores/inbox/upload-zip', methods=['POST'])
+@login_required
+def upload_zip_facturas_proveedores_inbox():
+    try:
+        empresa_id = session.get('empresa_id')
+        if not empresa_id:
+            return jsonify({'error': 'No hay empresa seleccionada'}), 400
+
+        files = request.files.getlist('archivo')
+        if not files:
+            files = request.files.getlist('archivos')
+        if not files:
+            return jsonify({'error': 'No se envió archivo ZIP'}), 400
+
+        empresa_codigo = session.get('empresa_codigo')
+        if not empresa_codigo:
+            try:
+                with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT codigo FROM empresas WHERE id = ?", (empresa_id,))
+                    res = cursor.fetchone()
+                    if res:
+                        empresa_codigo = res[0]
+            except Exception as e:
+                logger.error(f"Error obteniendo código empresa: {e}")
+
+        carpeta_empresa = empresa_codigo if empresa_codigo else str(empresa_id)
+        inbox_dir = os.path.join('/var/www/html/facturas_proveedores', str(carpeta_empresa), 'inbox')
+        os.makedirs(inbox_dir, exist_ok=True)
+
+        saved_files = []
+        for archivo in files:
+            if not archivo or not archivo.filename:
+                return jsonify({'error': 'Nombre de archivo vacío'}), 400
+
+            original_name = secure_filename(archivo.filename)
+            if not original_name or not original_name.lower().endswith('.zip'):
+                return jsonify({'error': 'El archivo debe ser .zip'}), 400
+
+            saved_name = original_name
+            dest_path = os.path.join(inbox_dir, saved_name)
+            if os.path.exists(dest_path):
+                base, ext = os.path.splitext(saved_name)
+                saved_name = f"{base}_{uuid.uuid4().hex}{ext}"
+                dest_path = os.path.join(inbox_dir, saved_name)
+
+            archivo.save(dest_path)
+            saved_files.append({
+                'saved_name': saved_name,
+                'original_name': original_name,
+            })
+
+        first = saved_files[0] if saved_files else {}
+        return jsonify({
+            'success': True,
+            'inbox_dir': inbox_dir,
+            'saved_name': first.get('saved_name'),
+            'original_name': first.get('original_name'),
+            'files': saved_files,
+        })
+    except Exception as e:
+        logger.error(f"Error subiendo ZIP a inbox: {e}", exc_info=True)
+        return jsonify({'error': str(e), 'success': False}), 500
+
+
 @facturas_recibidas_bp.route('/facturas-proveedores/crear', methods=['POST'])
 @login_required
 def crear_factura_manual():

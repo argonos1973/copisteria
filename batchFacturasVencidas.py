@@ -11,6 +11,7 @@ from weasyprint import HTML
 from constantes import *
 from db_utils import get_db_connection
 from notificaciones_utils import guardar_notificacion
+from batch_utils import load_batch_params
 
 # Configurar logging
 from logger_config import get_logger
@@ -43,6 +44,17 @@ def generar_carta_reclamacion(factura_data, dias_vencidos):
     try:
         # Obtener empresa_id de la factura
         empresa_id = factura_data.get('empresa_id', 'default')
+        if not empresa_id or empresa_id == 'default':
+            env_code = os.getenv('EMPRESA_CODE')
+            if env_code:
+                empresa_id = env_code
+            else:
+                env_db = os.getenv('EMPRESA_DB_PATH')
+                if env_db:
+                    try:
+                        empresa_id = os.path.basename(os.path.dirname(env_db)) or 'default'
+                    except Exception:
+                        empresa_id = 'default'
         
         # Obtener año y mes actual
         now = datetime.now()
@@ -199,8 +211,20 @@ def enviar_email_reclamacion(factura_id, cliente_email, factura_numero, carta_pd
         bool: True si se envía correctamente
     """
     try:
-        # MODO PRODUCCIÓN: Enviar al email real del cliente
-        email_destino = cliente_email
+        notif_db_path = os.getenv('EMPRESA_DB_PATH') or DB_NAME
+        params = load_batch_params()
+        email_override = (
+            os.getenv('BATCH_EMAIL_OVERRIDE')
+            or os.getenv('BATCH_EMAIL_TO')
+            or (params.get('email_override') if isinstance(params, dict) else None)
+            or (params.get('email_to') if isinstance(params, dict) else None)
+        )
+        disable_contact_emails = bool((params.get('disable_contact_emails') if isinstance(params, dict) else False))
+
+        email_destino = email_override or cliente_email
+        if disable_contact_emails and not email_override:
+            logger.info(f"Email NO enviado (disable_contact_emails=1) para factura {factura_numero}")
+            return False
         
         logger.info(f"Enviando email a {email_destino}")
         logger.info(f"  - Factura ID: {factura_id}")
@@ -219,14 +243,17 @@ def enviar_email_reclamacion(factura_id, cliente_email, factura_numero, carta_pd
         
         # Verificar si fue exitoso
         if resultado and resultado.get('success', False):
-            logger.info(f"Email de factura enviado exitosamente a {email_destino}")
+            if email_override:
+                logger.info(f"Email de factura enviado exitosamente (redirigido) a {email_destino}")
+            else:
+                logger.info(f"Email de factura enviado exitosamente a {email_destino}")
             
             # Generar notificación
             notif_mensaje = f"📧 Email enviado: Recordatorio factura {factura_numero} → {email_destino}"
             guardar_notificacion(
                 notif_mensaje,
                 tipo='success',
-                db_path=DB_NAME
+                db_path=notif_db_path
             )
             logger.info(f"Notificación de email generada para {factura_numero}")
             return True
@@ -235,7 +262,7 @@ def enviar_email_reclamacion(factura_id, cliente_email, factura_numero, carta_pd
             guardar_notificacion(
                 f"❌ Error al enviar email de factura {factura_numero}",
                 tipo='error',
-                db_path=DB_NAME
+                db_path=notif_db_path
             )
             return False
         
@@ -244,20 +271,29 @@ def enviar_email_reclamacion(factura_id, cliente_email, factura_numero, carta_pd
         guardar_notificacion(
             f"❌ Error al enviar email de factura {factura_numero}: {str(e)}",
             tipo='error',
-            db_path=DB_NAME
+            db_path=notif_db_path
         )
         return False
 
-def actualizar_facturas_vencidas():
+def actualizar_facturas_vencidas(dias_para_vencer: int = 15, dias_para_carta: int = 30):
     """
-    Busca facturas con fecha superior a 30 días y actualiza su estado a 'V' (Vencida)
+    Busca facturas con fecha superior a N días y actualiza su estado a 'V' (Vencida)
     """
     conn = None
     try:
+        params = load_batch_params()
+        email_override = (
+            os.getenv('BATCH_EMAIL_OVERRIDE')
+            or os.getenv('BATCH_EMAIL_TO')
+            or (params.get('email_override') if isinstance(params, dict) else None)
+            or (params.get('email_to') if isinstance(params, dict) else None)
+        )
         conn = get_db_connection()
         if not conn:
             logger.error("No se pudo establecer conexión con la base de datos")
             return
+
+        notif_db_path = os.getenv('EMPRESA_DB_PATH') or DB_NAME
         
         cursor = conn.cursor()
         
@@ -279,32 +315,38 @@ def actualizar_facturas_vencidas():
             # El campo ya existe
             pass
         
-        # Calcular la fecha límite: 15 días antes de hoy (facturas con más de 15 días vencidas)
-        fecha_limite_vencimiento = (datetime.now() - timedelta(days=15)).strftime('%Y-%m-%d')
-        fecha_limite_carta = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')  # Enviar recordatorio cada 30 días
-        logger.info(f"Buscando facturas con vencimiento anterior a {fecha_limite_vencimiento}")
+        dias_para_vencer = 15 if dias_para_vencer is None else int(dias_para_vencer)
+        dias_para_carta = 30 if dias_para_carta is None else int(dias_para_carta)
+        if dias_para_vencer < 0:
+            dias_para_vencer = 0
+        if dias_para_carta < 0:
+            dias_para_carta = 0
+
+        fecha_limite_vencimiento = (datetime.now() - timedelta(days=dias_para_vencer)).strftime('%Y-%m-%d')
+        fecha_limite_carta = (datetime.now() - timedelta(days=dias_para_carta)).strftime('%Y-%m-%d')
+        logger.info(f"Buscando facturas con fecha anterior a {fecha_limite_vencimiento} (dias_para_vencer={dias_para_vencer})")
         
-        # 1. Facturas PENDIENTES cuyo vencimiento fue hace más de 15 días
+        # 1. Facturas PENDIENTES cuya creación/emisión fue hace más de dias_para_vencer días
         cursor.execute('''
             SELECT id, numero, fecha, fvencimiento, estado, idContacto, total, fecha_ultima_carta, carta_enviada
             FROM factura
             WHERE estado = 'P'
-            AND fvencimiento < ?
+            AND fecha < ?
             AND total > 0
         ''', (fecha_limite_vencimiento,))
         
         facturas_pendientes = cursor.fetchall()
         
-        # 2. Facturas VENCIDAS que necesitan recordatorio (30 días desde última carta o primera vez)
-        # Solo facturas con más de 15 días vencidas
+        # 2. Facturas VENCIDAS que necesitan recordatorio (dias_para_carta desde última carta o primera vez)
+        # Solo facturas con antigüedad >= dias_para_carta (desde creación/emisión)
         cursor.execute('''
             SELECT id, numero, fecha, fvencimiento, estado, idContacto, total, fecha_ultima_carta, carta_enviada
             FROM factura
             WHERE estado = 'V'
-            AND fvencimiento < ?
+            AND fecha < ?
             AND (fecha_ultima_carta IS NULL OR fecha_ultima_carta < ?)
             AND total > 0
-        ''', (fecha_limite_vencimiento, fecha_limite_carta))
+        ''', (fecha_limite_carta, fecha_limite_carta))
         
         facturas_vencidas = cursor.fetchall()
         
@@ -327,14 +369,9 @@ def actualizar_facturas_vencidas():
             factura_numero = factura['numero']
             factura_fecha = factura['fecha']
             
-            # Calcular días transcurridos desde el vencimiento
-            if factura['fvencimiento']:
-                fecha_vencimiento = datetime.strptime(factura['fvencimiento'], '%Y-%m-%d')
-                dias_vencidos = (datetime.now() - fecha_vencimiento).days
-            else:
-                # Si no tiene fecha de vencimiento, usar fecha de emisión
-                fecha_emision = datetime.strptime(factura_fecha, '%Y-%m-%d')
-                dias_vencidos = (datetime.now() - fecha_emision).days
+            # Calcular días transcurridos desde la creación/emisión
+            fecha_emision = datetime.strptime(factura_fecha, '%Y-%m-%d')
+            dias_vencidos = (datetime.now() - fecha_emision).days
             
             try:
                 # Actualizar estado a Vencida solo si está en Pendiente
@@ -349,9 +386,15 @@ def actualizar_facturas_vencidas():
                 else:
                     logger.info(f"Factura {factura_numero} (ID: {factura_id}) ya está en estado {factura['estado']} - se envía carta de recordatorio")
                 
-                # Generar carta de reclamación
-                factura_dict = dict(factura)
-                carta_pdf = generar_carta_reclamacion(factura_dict, dias_vencidos)
+                debe_generar_carta = True
+                if factura['estado'] == 'P':
+                    # Si acaba de pasar a vencida, solo generar carta si ya supera dias_para_carta desde creación
+                    debe_generar_carta = factura_fecha < fecha_limite_carta
+
+                carta_pdf = None
+                if debe_generar_carta:
+                    factura_dict = dict(factura)
+                    carta_pdf = generar_carta_reclamacion(factura_dict, dias_vencidos)
                 
                 if carta_pdf:
                     cartas_generadas += 1
@@ -371,58 +414,54 @@ def actualizar_facturas_vencidas():
                     guardar_notificacion(
                         notif_mensaje,
                         tipo='warning',
-                        db_path=DB_NAME
+                        db_path=notif_db_path
                     )
                     logger.info(f"Notificación generada para carta {factura_numero}")
                     
                     # Actualizar fecha_ultima_carta SIEMPRE (aunque no se envíe email)
                     fecha_hoy = datetime.now().strftime('%Y-%m-%d')
-                    
-                    # Calcular nueva fecha de vencimiento (actual + 30 días)
-                    fvencimiento_actual = factura['fvencimiento']
-                    if fvencimiento_actual:
-                        try:
-                            fecha_venc_obj = datetime.strptime(fvencimiento_actual, '%Y-%m-%d')
-                            nueva_fvencimiento = (fecha_venc_obj + timedelta(days=30)).strftime('%Y-%m-%d')
-                        except Exception as e:
-                            logger.error(f"Error: {e}", exc_info=True)
-                            nueva_fvencimiento = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
-                    else:
-                        nueva_fvencimiento = (datetime.now() + timedelta(days=30)).strftime('%Y-%m-%d')
-                    
-                    # Actualizar fecha_ultima_carta y extender vencimiento
+
+                    # Actualizar fecha_ultima_carta
                     cursor.execute('''
                         UPDATE factura
-                        SET fecha_ultima_carta = ?,
-                            fvencimiento = ?
+                        SET fecha_ultima_carta = ?
                         WHERE id = ?
-                    ''', (fecha_hoy, nueva_fvencimiento, factura_id))
+                    ''', (fecha_hoy, factura_id))
                     conn.commit()
-                    logger.info(f"Factura {factura_numero}: fecha_ultima_carta actualizada a {fecha_hoy}, nueva fvencimiento={nueva_fvencimiento}")
+                    logger.info(f"Factura {factura_numero}: fecha_ultima_carta actualizada a {fecha_hoy}")
                     
-                    # Solo enviar email si el cliente tiene email Y facturación automática activada
-                    if cliente and cliente['email']:
-                        if cliente.get('facturacion_automatica', 0) == 1:
-                            logger.info(f"Cliente con facturación automática activada - Enviando email")
-                            # Enviar email usando la función de factura.py
-                            enviar_email_reclamacion(
-                                factura_id,
-                                cliente['email'],
-                                factura_numero,
-                                carta_pdf
-                            )
-                            
-                            # Marcar como enviada
-                            cursor.execute('''
-                                UPDATE factura
-                                SET carta_enviada = 1
-                                WHERE id = ?
-                            ''', (factura_id,))
-                            conn.commit()
-                        else:
-                            logger.info(f"Cliente sin facturación automática - Email NO enviado para factura {factura_numero}")
+                    enviado_email = False
+                    if email_override:
+                        logger.info("Modo pruebas: email_override activo - Enviando email aunque el cliente no tenga facturación automática")
+                        cliente_mail = (cliente.get('email') if cliente else None)
+                        enviado_email = bool(enviar_email_reclamacion(
+                            factura_id,
+                            cliente_mail,
+                            factura_numero,
+                            carta_pdf
+                        ))
                     else:
-                        logger.warning(f"Cliente sin email para factura {factura_numero}")
+                        if cliente and cliente['email']:
+                            if cliente.get('facturacion_automatica', 0) == 1:
+                                logger.info(f"Cliente con facturación automática activada - Enviando email")
+                                enviado_email = bool(enviar_email_reclamacion(
+                                    factura_id,
+                                    cliente['email'],
+                                    factura_numero,
+                                    carta_pdf
+                                ))
+                            else:
+                                logger.info(f"Cliente sin facturación automática - Email NO enviado para factura {factura_numero}")
+                        else:
+                            logger.warning(f"Cliente sin email para factura {factura_numero}")
+
+                    if enviado_email:
+                        cursor.execute('''
+                            UPDATE factura
+                            SET carta_enviada = 1
+                            WHERE id = ?
+                        ''', (factura_id,))
+                        conn.commit()
                 
             except sqlite3.Error as e:
                 logger.error(f"Error al actualizar la factura {factura_numero} (ID: {factura_id}): {e}")
@@ -445,7 +484,10 @@ def main():
     """
     try:
         logger.info("Iniciando búsqueda de facturas vencidas")
-        actualizar_facturas_vencidas()
+        params = load_batch_params()
+        dias_para_vencer = params.get('dias_para_vencer', 15)
+        dias_para_carta = params.get('dias_para_carta', 30)
+        actualizar_facturas_vencidas(dias_para_vencer=dias_para_vencer, dias_para_carta=dias_para_carta)
         logger.info("Proceso finalizado")
     except Exception as e:
         logger.error(f"Error en el proceso: {e}")

@@ -401,18 +401,21 @@ def obtener_estadisticas_gastos():
             datos_anio = cursor.fetchone()
             total_gastos_anio = float(datos_anio['total_gastos_anio'] or 0)
             cantidad_gastos_anio = int(datos_anio['cantidad_gastos_anio'] or 0)
-    
-            # Gastos del mes actual - TOTAL REAL (INCLUYE PUNTUALES)
+
+            # Gastos del TRIMESTRE actual (según el mes seleccionado) - TOTAL REAL (INCLUYE PUNTUALES)
+            trimestre = ((mes - 1) // 3) + 1
+            mes_inicio_trimestre = (trimestre - 1) * 3 + 1
+            mes_fin_trimestre = mes_inicio_trimestre + 2
             cursor.execute('''
                 SELECT
                     COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_mes,
                     COUNT(*) as cantidad_gastos_mes
                 FROM gastos
                 WHERE substr(fecha_valor, 7, 4) = ?
-                AND substr(fecha_valor, 4, 2) = ?
+                AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) BETWEEN ? AND ?
                 AND importe_eur < 0
-            ''', (str(anio), mes_str))
-    
+            ''', (str(anio), mes_inicio_trimestre, mes_fin_trimestre))
+
             datos_mes = cursor.fetchone()
             total_gastos_mes = float(datos_mes['total_gastos_mes'] or 0)
             cantidad_gastos_mes = int(datos_mes['cantidad_gastos_mes'] or 0)
@@ -428,16 +431,16 @@ def obtener_estadisticas_gastos():
             ''', (str(anio_anterior), mes))
     
             total_gastos_anio_anterior = float(cursor.fetchone()['total_gastos_anio_anterior'] or 0)
-    
-            # Gastos del mismo mes del año anterior - TOTAL REAL
+
+            # Gastos del mismo TRIMESTRE del año anterior - TOTAL REAL
             cursor.execute('''
                 SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos_mes_anterior
                 FROM gastos
                 WHERE substr(fecha_valor, 7, 4) = ?
-                AND substr(fecha_valor, 4, 2) = ?
+                AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) BETWEEN ? AND ?
                 AND importe_eur < 0
-            ''', (str(anio_anterior), mes_str))
-    
+            ''', (str(anio_anterior), mes_inicio_trimestre, mes_fin_trimestre))
+
             total_gastos_mes_anterior = float(cursor.fetchone()['total_gastos_mes_anterior'] or 0)
             
             # Media mensual de gastos (excluyendo gastos puntuales)
@@ -741,15 +744,19 @@ def obtener_gastos_por_categoria_mes():
             cols = [c['name'] for c in cursor.fetchall()]
             col_razon = "razon_social" if "razon_social" in cols else "NULL as razon_social"
 
+            trimestre = ((mes - 1) // 3) + 1
+            mes_inicio_trimestre = (trimestre - 1) * 3 + 1
+            mes_fin_trimestre = mes_inicio_trimestre + 2
+
             # Obtener TODOS los gastos del mes
             cursor.execute(f'''
                 SELECT 
                     concepto, ABS(importe_eur) as importe, puntual, {col_razon}
                 FROM gastos
-                WHERE substr(fecha_valor, 4, 2) = ?
-                AND substr(fecha_valor, 7, 4) = ?
+                WHERE substr(fecha_valor, 7, 4) = ?
+                AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) BETWEEN ? AND ?
                 AND importe_eur < 0
-            ''', (str(mes).zfill(2), str(anio)))
+            ''', (str(anio), mes_inicio_trimestre, mes_fin_trimestre))
             
             agrupados = {}
             total_general = 0.0

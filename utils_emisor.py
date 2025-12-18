@@ -1,7 +1,7 @@
 import json
 import os
 import sqlite3
-from flask import session
+from flask import session, has_request_context
 
 # Caché global para datos de emisores: {codigo_empresa: {'data': dict, 'mtime': float}}
 _EMISOR_CACHE = {}
@@ -35,11 +35,19 @@ def cargar_datos_emisor(codigo_empresa=None):
     """
     # Si no se proporciona código, intentar obtenerlo de la sesión
     if codigo_empresa is None:
-        codigo_empresa = session.get('codigo_empresa', '')
+        if has_request_context():
+            codigo_empresa = session.get('codigo_empresa', '')
+        else:
+            codigo_empresa = os.getenv('EMPRESA_CODE', '')
         
     if not codigo_empresa:
         # Fallback: intentar obtener de empresa_id
-        empresa_id = session.get('empresa_id')
+        empresa_id = None
+        if has_request_context():
+            empresa_id = session.get('empresa_id')
+        else:
+            empresa_id = os.getenv('EMPRESA_ID')
+
         if empresa_id:
             try:
                 from multiempresa_config import DB_USUARIOS_PATH
@@ -53,6 +61,14 @@ def cargar_datos_emisor(codigo_empresa=None):
                     codigo_empresa = row['codigo']
             except Exception:
                 pass
+
+    if not codigo_empresa:
+        env_db = os.getenv('EMPRESA_DB_PATH')
+        if env_db:
+            try:
+                codigo_empresa = os.path.basename(os.path.dirname(env_db))
+            except Exception:
+                codigo_empresa = ''
     
     # Construir ruta al archivo JSON del emisor
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -97,5 +113,28 @@ def cargar_datos_emisor(codigo_empresa=None):
         'provincia': '',
         'pais': 'ESP',
         'email': '',
-        'telefono': ''
+        'telefono': '',
+        'verifactu_enabled': False
     }
+
+
+def verifactu_habilitado(codigo_empresa=None, default: bool = False) -> bool:
+    try:
+        emisor = cargar_datos_emisor(codigo_empresa=codigo_empresa) or {}
+        if 'verifactu_enabled' in emisor:
+            v = emisor.get('verifactu_enabled')
+            if isinstance(v, bool):
+                return v
+            if v in (1, '1', 'true', 'True', 'on', 'ON', 'yes', 'YES'):
+                return True
+            if v in (0, '0', 'false', 'False', 'off', 'OFF', 'no', 'NO', None, ''):
+                return False
+            return bool(v)
+    except Exception:
+        pass
+
+    try:
+        from config_loader import get as get_config
+        return bool(get_config('verifactu_enabled', default))
+    except Exception:
+        return bool(default)

@@ -320,6 +320,167 @@ def verificar_y_actualizar_esquema():
             except Exception as e:
                 logger.error(f"Error agregando columna es_admin_empresa: {e}")
 
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS batch_job_definitions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT UNIQUE NOT NULL,
+                name TEXT NOT NULL,
+                handler TEXT NOT NULL,
+                schema_json TEXT,
+                timeout_sec INTEGER DEFAULT 600,
+                concurrency_mode TEXT DEFAULT 'per_empresa_single',
+                active INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS batch_job_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                empresa_id INTEGER NOT NULL,
+                job_definition_id INTEGER NOT NULL,
+                enabled INTEGER DEFAULT 1,
+                cron_expr TEXT NOT NULL,
+                timezone TEXT,
+                params_json TEXT,
+                created_by_usuario_id INTEGER,
+                updated_by_usuario_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_run_at DATETIME,
+                next_run_at DATETIME,
+                last_status TEXT,
+                FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+                FOREIGN KEY (job_definition_id) REFERENCES batch_job_definitions(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS batch_job_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                empresa_id INTEGER NOT NULL,
+                schedule_id INTEGER,
+                job_definition_id INTEGER NOT NULL,
+                trigger TEXT DEFAULT 'schedule',
+                status TEXT DEFAULT 'queued',
+                params_snapshot TEXT,
+                started_at DATETIME,
+                finished_at DATETIME,
+                duration_ms INTEGER,
+                worker_id TEXT,
+                host TEXT,
+                log_path TEXT,
+                error_summary TEXT,
+                result_summary TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE,
+                FOREIGN KEY (schedule_id) REFERENCES batch_job_schedules(id) ON DELETE SET NULL,
+                FOREIGN KEY (job_definition_id) REFERENCES batch_job_definitions(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS batch_job_run_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id INTEGER NOT NULL,
+                ts DATETIME DEFAULT CURRENT_TIMESTAMP,
+                level TEXT DEFAULT 'info',
+                message TEXT NOT NULL,
+                FOREIGN KEY (run_id) REFERENCES batch_job_runs(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS batch_job_run_actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id INTEGER NOT NULL,
+                empresa_id INTEGER NOT NULL,
+                entity_type TEXT,
+                entity_id TEXT,
+                action_type TEXT,
+                stage TEXT,
+                template_id TEXT,
+                status TEXT,
+                detail_json TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (run_id) REFERENCES batch_job_runs(id) ON DELETE CASCADE,
+                FOREIGN KEY (empresa_id) REFERENCES empresas(id) ON DELETE CASCADE
+            )
+        """)
+
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_batch_schedules_empresa ON batch_job_schedules(empresa_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_batch_runs_empresa_status ON batch_job_runs(empresa_id, status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_batch_runs_schedule ON batch_job_runs(schedule_id)")
+
+        cursor.execute(
+            """
+            INSERT INTO batch_job_definitions (code, name, handler, schema_json, timeout_sec, concurrency_mode, active)
+            SELECT ?, ?, ?, ?, ?, ?, 1
+            WHERE NOT EXISTS (SELECT 1 FROM batch_job_definitions WHERE code = ?)
+            """,
+            (
+                'batchfacturasVencidas',
+                'Batch Facturas Vencidas (Emitidas)',
+                'batchFacturasVencidas',
+                None,
+                900,
+                'per_empresa_single',
+                'batchfacturasVencidas',
+            )
+        )
+
+        cursor.execute(
+            """
+            INSERT INTO batch_job_definitions (code, name, handler, schema_json, timeout_sec, concurrency_mode, active)
+            SELECT ?, ?, ?, ?, ?, ?, 1
+            WHERE NOT EXISTS (SELECT 1 FROM batch_job_definitions WHERE code = ?)
+            """,
+            (
+                'batchPol',
+                'Batch POL (Proformas)',
+                'batchPol',
+                None,
+                900,
+                'per_empresa_single',
+                'batchPol',
+            )
+        )
+
+        cursor.execute(
+            """
+            INSERT INTO batch_job_definitions (code, name, handler, schema_json, timeout_sec, concurrency_mode, active)
+            SELECT ?, ?, ?, ?, ?, ?, 1
+            WHERE NOT EXISTS (SELECT 1 FROM batch_job_definitions WHERE code = ?)
+            """,
+            (
+                'batchOptimizar',
+                'Optimizar BD (VACUUM/ANALYZE)',
+                'batchOptimizar',
+                None,
+                1800,
+                'per_empresa_single',
+                'batchOptimizar',
+            )
+        )
+
+        cursor.execute(
+            """
+            INSERT INTO batch_job_definitions (code, name, handler, schema_json, timeout_sec, concurrency_mode, active)
+            SELECT ?, ?, ?, ?, ?, ?, 1
+            WHERE NOT EXISTS (SELECT 1 FROM batch_job_definitions WHERE code = ?)
+            """,
+            (
+                'batchReindex',
+                'Reindexar BD (REINDEX)',
+                'batchOptimizar',
+                None,
+                1800,
+                'per_empresa_single',
+                'batchReindex',
+            )
+        )
+
         conn.commit()
         conn.close()
         

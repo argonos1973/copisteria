@@ -151,7 +151,7 @@
     };
     </script>
     
-    <script src="/static/estadisticas_facturas.js?v=1764840001" type="module"></script>
+    <script src="/static/estadisticas_facturas.js?v=1766141400" type="module"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css?v=1763897790_1052">
     <link rel="stylesheet" href="/static/css/page_header.css">
     <link rel="stylesheet" href="/static/css/styles.css?v=1763897790?v=1763897790_1052">
@@ -746,14 +746,14 @@
             <div class="stats-container">
                 <!-- Gastos Mes Actual -->
                 <div class="stats-card" id="card-gastos-mes">
-                    <h3>Gastos Mes Actual <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
+                    <h3>Gastos Trimestre Actual <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
                     <div class="stats-content">
                         <div class="stats-row">
-                            <div class="stats-label">Total Mes Actual</div>
+                            <div class="stats-label">Total Trimestre Actual</div>
                             <div class="stats-value importe-negativo" id="gastos-total-mes">0,00 €</div>
                             <div class="stats-comparison">
                                 <span class="stats-percentage" id="gastos-pct-mes">0%</span>
-                                <span class="stats-previous" id="gastos-mes-anterior">Mismo mes año anterior: 0,00 €</span>
+                                <span class="stats-previous" id="gastos-mes-anterior">Mismo trimestre año anterior: 0,00 €</span>
                             </div>
                         </div>
                         <div class="stats-row">
@@ -1258,7 +1258,7 @@ window.cargarDatosGastos = async function() {
         const elementos = [
             { id: 'gastos-total-mes', valor: formatearImporte(Math.abs(datos.total_gastos_mes)) },
             { id: 'gastos-pct-mes', valor: formatearPorcentaje(datos.porcentaje_mes) },
-            { id: 'gastos-mes-anterior', valor: `Mismo mes año anterior: ${formatearImporte(Math.abs(datos.total_gastos_mes_anterior))}` },
+            { id: 'gastos-mes-anterior', valor: `Mismo trimestre año anterior: ${formatearImporte(Math.abs(datos.total_gastos_mes_anterior))}` },
             { id: 'gastos-cantidad-mes', valor: datos.cantidad_gastos_mes },
             { id: 'gastos-total-anio', valor: formatearImporte(Math.abs(datos.total_gastos_anio)) },
             { id: 'gastos-pct-anio', valor: formatearPorcentaje(datos.porcentaje_anio) },
@@ -1519,6 +1519,7 @@ async function abrirModalDetallesGasto(concepto, anio) {
 function cerrarModalDetallesGasto() {
     const modal = document.getElementById('modal-detalles-gasto');
     if (modal) {
+        modal.classList.remove('show');
         modal.style.display = 'none';
     }
 }
@@ -1541,7 +1542,8 @@ async function abrirModalDetallesGastoMes(categoria) {
         return;
     }
     
-    modal.style.display = 'block';
+    modal.classList.add('show');
+    modal.style.display = 'flex';
     document.getElementById('modal-concepto-titulo').textContent = `${categoria} - ${mes}/${anio}`;
     document.getElementById('modal-detalles-body').innerHTML = 
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
@@ -1640,7 +1642,8 @@ async function abrirModalDetallesGastoAnio(categoria) {
         return;
     }
     
-    modal.style.display = 'block';
+    modal.classList.add('show');
+    modal.style.display = 'flex';
     document.getElementById('modal-concepto-titulo').textContent = `${categoria} - Año ${anio}`;
     document.getElementById('modal-detalles-body').innerHTML = 
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
@@ -1801,6 +1804,14 @@ async function cargarGraficoGastosMes() {
                         const categoria = labels[index];
                         // console.log('[GRAFICO MES] Click en:', categoria);
                         abrirModalDetallesGastoMes(categoria);
+                    } else {
+                        try {
+                            if (typeof window.mostrarNotificacion === 'function') {
+                                window.mostrarNotificacion('Selecciona una categoría del gráfico', 'info');
+                            }
+                        } catch (e) {
+                            // noop
+                        }
                     }
                 },
                 plugins: {

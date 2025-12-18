@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración - Procesos</title>
+    <script src="/static/branding.js?v=1764787007"></script>
+    <script src="/static/auto_branding.js?v=1764787007"></script>
+    <link rel="stylesheet" href="/static/css/theme-consumer.css?v=FIX_FINAL_5">
+    <link rel="stylesheet" href="/static/css/modales.css?v=FIX_FINAL_6">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="shortcut icon" type="image/png" href="/static/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css?v=FIX_FINAL_4">
+    <link rel="stylesheet" href="/static/css/notificaciones.css">
+    <link rel="stylesheet" href="/static/css/iframe-adapter.css?v=FIX_FINAL_4">
+    <link rel="stylesheet" href="/static/css/modal-theme-fix.css?v=FIX_FINAL_4">
+    <link rel="stylesheet" href="/static/css/admin_batch.css?v=UI_LOGCLICK_1">
+    <style>
+        /* Force compact buttons directly in HTML to avoid CSS cache issues */
+        .batch-actions {
+            display: flex;
+            gap: 4px;
+            justify-content: flex-end;
+            white-space: nowrap;
+            min-width: 120px;
+        }
+        .batch-actions button.btn-icon-compact {
+            padding: 0 !important;
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 32px !important;
+            font-size: 14px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 4px !important;
+            border: 1px solid rgba(255,255,255,0.1) !important;
+            background: rgba(255,255,255,0.05) !important;
+            margin-left: 4px !important;
+            cursor: pointer !important;
+            transition: all 0.2s;
+        }
+        .batch-actions button.btn-icon-compact:hover {
+            background: rgba(255,255,255,0.2) !important;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-clock"></i> Procesos (Batch) [v8]</h1>
+    </div>
+
+    <div class="container">
+        <div id="batch-alert" class="batch-alert" style="display:none;"></div>
+
+        <div class="batch-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-sliders-h"></i> Programaciones</h2>
+                </div>
+
+                <div class="batch-form">
+                    <div class="form-group">
+                        <label for="batch-job">Proceso</label>
+                        <select id="batch-job" class="form-control"></select>
+                        <div id="batch-job-description" class="text-muted" style="margin-top: 4px; font-size: 0.9em; font-style: italic;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Horario</label>
+                        <div class="batch-schedule-builder">
+                            <div class="batch-inline">
+                                <div class="form-group" style="flex:1; min-width: 220px; margin:0;">
+                                    <label for="batch-schedule-mode" class="batch-sub-label">Tipo</label>
+                                    <select id="batch-schedule-mode" class="form-control">
+                                        <option value="interval">Cada X minutos</option>
+                                        <option value="daily">Diario a una hora</option>
+                                    </select>
+                                </div>
+
+                                <div id="batch-interval-wrap" class="form-group" style="flex:1; min-width: 220px; margin:0;">
+                                    <label for="batch-interval-min" class="batch-sub-label">Intervalo</label>
+                                    <select id="batch-interval-min" class="form-control">
+                                        <option value="5">Cada 5 min</option>
+                                        <option value="10">Cada 10 min</option>
+                                        <option value="15" selected>Cada 15 min</option>
+                                        <option value="30">Cada 30 min</option>
+                                        <option value="60">Cada 60 min</option>
+                                    </select>
+                                </div>
+
+                                <div id="batch-daily-wrap" class="form-group" style="flex:1; min-width: 220px; margin:0; display:none;">
+                                    <label for="batch-daily-time" class="batch-sub-label">Hora</label>
+                                    <input id="batch-daily-time" type="time" class="form-control" value="02:00" />
+                                </div>
+                            </div>
+
+                            <div class="batch-inline" style="margin-top: 8px;">
+                                <label class="batch-check" style="margin-right: 10px;">
+                                    <input type="checkbox" id="batch-window-enabled" />
+                                    Solo en franja horaria
+                                </label>
+
+                                <div id="batch-window-wrap" class="batch-inline" style="display:none; gap: 8px;">
+                                    <div class="form-group" style="margin:0;">
+                                        <label for="batch-window-start" class="batch-sub-label">Desde (hora)</label>
+                                        <select id="batch-window-start" class="form-control">
+                                            <option value="0">00</option><option value="1">01</option><option value="2">02</option><option value="3">03</option>
+                                            <option value="4">04</option><option value="5">05</option><option value="6">06</option><option value="7">07</option>
+                                            <option value="8">08</option><option value="9" selected>09</option><option value="10">10</option><option value="11">11</option>
+                                            <option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option>
+                                            <option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option>
+                                            <option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group" style="margin:0;">
+                                        <label for="batch-window-end" class="batch-sub-label">Hasta (hora)</label>
+                                        <select id="batch-window-end" class="form-control">
+                                            <option value="0">00</option><option value="1">01</option><option value="2">02</option><option value="3">03</option>
+                                            <option value="4">04</option><option value="5">05</option><option value="6">06</option><option value="7">07</option>
+                                            <option value="8">08</option><option value="9">09</option><option value="10">10</option><option value="11">11</option>
+                                            <option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option>
+                                            <option value="16">16</option><option value="17">17</option><option value="18" selected>18</option><option value="19">19</option>
+                                            <option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="batch-inline" style="margin-top: 8px;">
+                                <div class="text-muted" id="batch-cron-human">—</div>
+                                <div class="text-muted" id="batch-cron-times" style="margin-left: 10px;"></div>
+                                <input type="hidden" id="batch-cron" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group batch-inline batch-controls">
+                        <button class="btn btn-primary" id="batch-run-now">
+                            <i class="fas fa-play"></i> Ejecutar ahora
+                        </button>
+                        <button class="btn btn-primary" id="batch-create">
+                            <i class="fas fa-plus"></i> Crear
+                        </button>
+                        <div class="file-upload-row" id="batch-scan-zip-wrap" style="display:none;">
+                            <input type="file" id="batch-scan-zip-file" accept=".zip" multiple />
+                            <button id="batch-scan-zip-upload" class="btn btn-small">
+                                <i class="fas fa-upload"></i> Subir ZIP
+                            </button>
+                            <div class="text-muted" id="batch-scan-zip-status"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="batch-vencidas-params-wrap" style="display:none;">
+                        <label>Parámetros: Facturas vencidas</label>
+                        <div class="batch-inline">
+                            <div class="form-group" style="margin:0; min-width: 220px;">
+                                <label for="batch-vencidas-dias-vencer" class="batch-sub-label">Días desde creación para pasar a vencida</label>
+                                <input id="batch-vencidas-dias-vencer" type="number" class="form-control" value="15" min="0" step="1" />
+                            </div>
+                            <div class="form-group" style="margin:0; min-width: 220px;">
+                                <label for="batch-vencidas-dias-carta" class="batch-sub-label">Días desde creación para enviar carta</label>
+                                <input id="batch-vencidas-dias-carta" type="number" class="form-control" value="30" min="0" step="1" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="batch-pol-params-wrap" style="display:none;">
+                        <label>Parámetros: Batch POL</label>
+                        <div class="batch-inline" style="flex-wrap: wrap; gap: 12px;">
+                            <div class="form-group" style="margin:0; min-width: 320px; flex: 1;">
+                                <label for="batch-pol-csv-base" class="batch-sub-label">Ruta base CSV</label>
+                                <input id="batch-pol-csv-base" type="text" class="form-control" value="/mnt/swapbatch" />
+                            </div>
+                            <div class="form-group" style="margin:0; min-width: 220px;">
+                                <label for="batch-pol-id-contacto" class="batch-sub-label">ID contacto</label>
+                                <input id="batch-pol-id-contacto" type="number" class="form-control" value="732" min="0" step="1" />
+                            </div>
+                            <div class="form-group" style="margin:0; min-width: 220px;">
+                                <label for="batch-pol-tarifa-normal" class="batch-sub-label">Tarifa normal</label>
+                                <input id="batch-pol-tarifa-normal" type="number" class="form-control" value="0.22314" min="0" step="0.00001" />
+                            </div>
+                            <div class="form-group" style="margin:0; min-width: 220px;">
+                                <label for="batch-pol-tarifa-mate" class="batch-sub-label">Tarifa mate</label>
+                                <input id="batch-pol-tarifa-mate" type="number" class="form-control" value="0.7438" min="0" step="0.00001" />
+                            </div>
+                            <div class="form-group" style="margin:0; min-width: 180px;">
+                                <label for="batch-pol-iva" class="batch-sub-label">IVA (%)</label>
+                                <input id="batch-pol-iva" type="number" class="form-control" value="21" min="0" step="1" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="batch-totaldia-params-wrap" style="display:none;">
+                        <label>Parámetros: Total del día</label>
+                        <div class="batch-inline" style="flex-wrap: wrap; gap: 12px;">
+                            <div class="form-group" style="margin:0; min-width: 320px; flex: 1;">
+                                <label for="batch-totaldia-email" class="batch-sub-label">Correo</label>
+                                <input id="batch-totaldia-email" type="email" class="form-control" placeholder="correo@dominio.com" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch-params">Parámetros (JSON)</label>
+                        <textarea id="batch-params" class="form-control" rows="6" placeholder='{"modo":"dry_run"}'></textarea>
+                    </div>
+                </div>
+
+                <div class="batch-table-wrap">
+                    <table class="table" id="batch-schedules-table">
+                        <thead>
+                            <tr>
+                                <th>Proceso</th>
+                                <th>Cron</th>
+                                <th>Estado</th>
+                                <th>Próximo</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-list"></i> Ejecuciones</h2>
+                </div>
+
+                <div class="batch-inline" style="justify-content: space-between;">
+                    <div class="text-muted">Últimas ejecuciones (empresa actual)</div>
+                </div>
+
+                <div class="batch-table-wrap">
+                    <table class="table" id="batch-runs-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Proceso</th>
+                                <th>Estado</th>
+                                <th>Inicio</th>
+                                <th>Fin</th>
+                                <th>Duración</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="batch-logs">
+                    <div class="batch-logs-header">
+                        <div><i class="fas fa-file-lines"></i> Logs</div>
+                        <div class="batch-inline" style="gap: 8px;">
+                            <button class="btn btn-small" id="logs-clear" title="Limpiar logs">
+                                <i class="fas fa-eraser"></i>
+                            </button>
+                            <div class="text-muted" id="logs-meta"></div>
+                        </div>
+                    </div>
+                    <pre id="batch-logs" class="batch-logs-pre"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/static/notificaciones_loader.js"></script>
+    <script src="/static/admin_batch.js?v=UI_FRANJA_RESET_FIX_1"></script>
+</body>
+</html>

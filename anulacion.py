@@ -14,7 +14,7 @@ from datetime import datetime
 from flask import jsonify
 
 from db_utils import get_db_connection
-from utils_emisor import cargar_datos_emisor
+from utils_emisor import cargar_datos_emisor, verifactu_habilitado
 from logger_config import get_logger
 
 # Inicializar logger
@@ -22,10 +22,9 @@ logger = get_logger(__name__)
 
 # Configuración externamente para habilitar VeriFactu
 try:
-    from config_loader import get as get_config
-    VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", True))
+    VERIFACTU_HABILITADO = bool(verifactu_habilitado(default=True))
 except Exception as _e:
-    logger.info(f"[ANULACION] No se pudo cargar config.json: {_e}. Suponemos VeriFactu ON")
+    logger.info(f"[ANULACION] No se pudo cargar verifactu_enabled (empresa): {_e}. Suponemos VeriFactu ON")
     VERIFACTU_HABILITADO = True
 
 try:

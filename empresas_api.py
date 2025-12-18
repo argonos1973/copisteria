@@ -173,6 +173,71 @@ def generar_codigo_empresa(nombre):
     codigo = re.sub(r'[^A-Z0-9]', '', codigo)  # Solo letras y números
     return codigo[:5]  # Primeros 5 caracteres
 
+
+def _ensure_batch_job_definitions(conn):
+    items = [
+        ('batchfacturasVencidas', 'Batch Facturas Vencidas (Emitidas)', 'batchFacturasVencidas', 900),
+        ('batchPol', 'Batch POL (Proformas)', 'batchPol', 900),
+        ('batchTotalDia', 'Total del día (Tickets + Facturas)', 'batchTotalDia', 300),
+        ('batchScanFacturasRecibidas', 'Scanear Facturas Recibidas (OCR)', 'batchScanFacturasRecibidas', 1800),
+        ('batchOptimizar', 'Optimizar BD (VACUUM/ANALYZE)', 'batchOptimizar', 1800),
+        ('batchReindex', 'Reindexar BD (REINDEX)', 'batchOptimizar', 1800),
+    ]
+    for code, name, handler, timeout_sec in items:
+        conn.execute(
+            """
+            UPDATE batch_job_definitions
+            SET name = ?,
+                handler = ?,
+                timeout_sec = ?,
+                concurrency_mode = 'per_empresa_single',
+                active = 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE code = ?
+            """,
+            (name, handler, timeout_sec, code),
+        )
+        conn.execute(
+            """
+            INSERT INTO batch_job_definitions (code, name, handler, schema_json, timeout_sec, concurrency_mode, active)
+            SELECT ?, ?, ?, NULL, ?, 'per_empresa_single', 1
+            WHERE NOT EXISTS (SELECT 1 FROM batch_job_definitions WHERE code = ?)
+            """,
+            (code, name, handler, timeout_sec, code),
+        )
+
+
+def _ensure_default_batch_schedules_for_empresa(conn, empresa_id: int, user_id: int = None):
+    defaults = [
+        ('batchfacturasVencidas', '0 9 * * *', 0),
+        ('batchPol', '*/15 * * * *', 0),
+        ('batchTotalDia', '0 23 * * *', 0),
+        ('batchScanFacturasRecibidas', '*/15 * * * *', 0),
+        ('batchReindex', '0 2 * * *', 1),
+        ('batchOptimizar', '0 3 * * *', 1),
+    ]
+
+    for job_code, cron_expr, enabled in defaults:
+        job_def = conn.execute("SELECT id FROM batch_job_definitions WHERE code = ?", (job_code,)).fetchone()
+        if not job_def:
+            continue
+
+        exists = conn.execute(
+            "SELECT 1 FROM batch_job_schedules WHERE empresa_id = ? AND job_definition_id = ?",
+            (empresa_id, job_def['id']),
+        ).fetchone()
+        if exists:
+            continue
+
+        conn.execute(
+            """
+            INSERT INTO batch_job_schedules
+            (empresa_id, job_definition_id, enabled, cron_expr, timezone, params_json, created_by_usuario_id, updated_by_usuario_id)
+            VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)
+            """,
+            (empresa_id, job_def['id'], enabled, cron_expr, user_id, user_id),
+        )
+
 def clonar_estructura_bd(bd_origen, bd_destino):
     """Clona la estructura de una BD y copia datos maestros (provincia, codipostal)"""
     try:
@@ -383,6 +448,8 @@ def obtener_empresa(empresa_id):
                 empresa['email'] = emisor_data.get('email', empresa.get('email', ''))
                 empresa['pais'] = emisor_data.get('pais', 'ESP')
                 empresa['ruta_certificado'] = emisor_data.get('certificado', '')
+
+                empresa['verifactu_enabled'] = emisor_data.get('verifactu_enabled', False)
                 
                 # Incluir emisor_data completo para acceso al logo y otros campos
                 empresa['emisor_data'] = emisor_data
@@ -672,6 +739,13 @@ def crear_empresa():
         ))
         empresa_id = cursor.lastrowid
         # NO cerrar conexión todavía, la necesitamos para crear el usuario admin
+
+        try:
+            conn.row_factory = sqlite3.Row
+            _ensure_batch_job_definitions(conn)
+            _ensure_default_batch_schedules_for_empresa(conn, int(empresa_id), session.get('user_id'))
+        except Exception as e:
+            logger.warning(f"[CREAR EMPRESA] No se pudieron crear procesos batch por defecto: {e}")
         
         
         # Crear archivo emisor.json para la empresa
@@ -894,6 +968,15 @@ def actualizar_empresa(empresa_id):
             'db_path': db_path_empresa,
             'codigo': codigo_empresa
         }
+
+        if 'verifactu_enabled' in data:
+            v = data.get('verifactu_enabled')
+            if v in (True, 1, '1', 'true', 'True', 'on', 'ON', 'yes', 'YES'):
+                emisor_data['verifactu_enabled'] = True
+            elif v in (False, 0, '0', 'false', 'False', 'off', 'OFF', 'no', 'NO', None, ''):
+                emisor_data['verifactu_enabled'] = False
+            else:
+                emisor_data['verifactu_enabled'] = bool(v)
         
         # Agregar logo si existe
         if logo_path_relativa:

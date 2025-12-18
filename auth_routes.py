@@ -702,6 +702,11 @@ def obtener_menu():
                     'nombre': 'Gestión',
                     'icono': 'fas fa-users-cog',
                     'ruta': '/ADMIN_PERMISOS.html'
+                },
+                {
+                    'nombre': 'Procesos',
+                    'icono': 'fas fa-clock',
+                    'ruta': '/ADMIN_BATCH.html'
                 }
             ]
             

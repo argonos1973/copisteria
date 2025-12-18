@@ -3279,6 +3279,14 @@ async function cargarConfiguracionEmpresa() {
                                     <input type="email" id="empresa-email" value="${empresa.email || ''}" class="empresa-form-input">
                                 </div>
                                 <div class="empresa-form-group">
+                                    <label class="empresa-form-label">VeriFactu:</label>
+                                    <div style="display:flex; align-items:center; gap:8px; height: 32px;">
+                                        <input type="checkbox" id="empresa-verifactu-enabled" ${empresa.verifactu_enabled ? 'checked' : ''}>
+                                        <span style="font-size: 11px; color: #555;">Activar VeriFactu para esta empresa</span>
+                                    </div>
+                                    <small class="empresa-form-help">Se guardará en ${empresa.codigo}_emisor.json</small>
+                                </div>
+                                <div class="empresa-form-group">
                                     <label class="empresa-form-label">Logo:</label>
                                     <input type="file" id="empresa-logo" accept="image/*" onchange="previsualizarLogoEmpresa(event)" class="empresa-form-input file-input">
                                     <small class="empresa-form-help">PNG, JPG, SVG (máx. 2MB)</small>
@@ -3617,6 +3625,11 @@ async function guardarDatosEmpresa(empresaId) {
         formData.append('provincia', document.getElementById('empresa-provincia').value);
         formData.append('telefono', document.getElementById('empresa-telefono').value);
         formData.append('email', document.getElementById('empresa-email').value);
+
+        const verifactuCb = document.getElementById('empresa-verifactu-enabled');
+        if (verifactuCb) {
+            formData.append('verifactu_enabled', verifactuCb.checked ? '1' : '0');
+        }
         
         // Agregar ruta certificado si existe
         const rutaCert = document.getElementById('empresa-ruta-certificado');

@@ -7,13 +7,14 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 from notificaciones_utils import guardar_notificacion
+from batch_utils import load_batch_params, get_batch_db_path
 
 # Configuración
 # Permitir configurar la ruta del CSV por variable de entorno para compatibilidad con www-data
 # Por defecto, usar el punto de montaje CIFS
 CSV_BASE_PATH = os.getenv("CSV_BASE_PATH", "/mnt/swapbatch")
 ID_CONTACTO = 732
-DB_NAME = "/var/www/html/db/aleph70.db"  # Ajustar según tu configuración
+DB_NAME = get_batch_db_path()  # Ajustar según tu configuración
 LOG_DIR = Path("/var/www/html/logs")
 LOG_FILE = LOG_DIR / "batchPol.log"
 
@@ -21,6 +22,42 @@ LOG_FILE = LOG_DIR / "batchPol.log"
 TARIFA_NORMAL = 0.22314
 TARIFA_MATE = 0.7438
 IVA = 21
+
+def _apply_params():
+    global CSV_BASE_PATH, ID_CONTACTO, DB_NAME, TARIFA_NORMAL, TARIFA_MATE, IVA
+
+    params = load_batch_params()
+    if not params:
+        return
+
+    if params.get('csv_base_path'):
+        CSV_BASE_PATH = str(params.get('csv_base_path'))
+
+    if params.get('id_contacto') is not None:
+        try:
+            ID_CONTACTO = int(params.get('id_contacto'))
+        except Exception:
+            pass
+
+    DB_NAME = get_batch_db_path(params=params, default_path=DB_NAME)
+
+    if params.get('tarifa_normal') is not None:
+        try:
+            TARIFA_NORMAL = float(params.get('tarifa_normal'))
+        except Exception:
+            pass
+
+    if params.get('tarifa_mate') is not None:
+        try:
+            TARIFA_MATE = float(params.get('tarifa_mate'))
+        except Exception:
+            pass
+
+    if params.get('iva') is not None:
+        try:
+            IVA = int(params.get('iva'))
+        except Exception:
+            pass
 
 # Configurar logging
 LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -347,6 +384,11 @@ def actualizar_proforma_existente(proforma_id, detalles, conn):
 def main():
     """Función principal ejecutada por cron"""
     logger.info("Iniciando proceso de actualización de proforma")
+
+    _apply_params()
+    logger.info(f"DB_NAME: {DB_NAME}")
+    logger.info(f"CSV_BASE_PATH: {CSV_BASE_PATH}")
+    logger.info(f"ID_CONTACTO: {ID_CONTACTO}")
     
     try:
         # Paso 1: Procesar CSV y obtener líneas válidas

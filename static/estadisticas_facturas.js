@@ -736,12 +736,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     actualizarPorcentaje('globalPorcentaje', global.porcentaje_diferencia);
   
     const mediaMensual = parsearImporte(global.actual.media_mensual);
-    // En local, tratar el mes seleccionado como el "mes en curso"; en producción usar el mes real
-    const { mes: mesSel } = getFechaSeleccionada();
-    const esProd = IS_PROD;
-    const mesActual = esProd ? (new Date().getMonth() + 1) : parseInt(mesSel, 10);
+    // Usar siempre el mes seleccionado para que el cálculo de previsto sea coherente con el periodo mostrado
+    const { mes: mesSel, anio: anioSel } = getFechaSeleccionada();
+    const mesActual = parseInt(mesSel, 10);
+    const anioActual = parseInt(anioSel, 10);
     const acumulado = parsearImporte(global.actual.total);
-    const previsto = acumulado + (mediaMensual * (12 - mesActual));
+
+    const now = new Date();
+    const esPeriodoActual = (anioActual === now.getFullYear()) && (mesActual === (now.getMonth() + 1));
+
+    let previsto = acumulado + (mediaMensual * (12 - mesActual));
+    // Si estamos en diciembre (mes actual) el acumulado suele ser parcial: estimar el cierre de diciembre.
+    // - Proyección por ritmo diario del propio diciembre (si aún no ha terminado el mes)
+    // - Y como mínimo, la media de enero-noviembre
+    if (esPeriodoActual && mesActual === 12) {
+      const totalMes = parsearImporte(global.actual.mes_actual?.total || 0) || 0;
+      const acumSinMes = (parsearImporte(acumulado) || 0) - totalMes;
+      const mediaHasta11 = acumSinMes > 0 ? (acumSinMes / 11) : 0;
+
+      const diaMes = Math.max(1, now.getDate());
+      const diasMes = new Date(anioActual, 12, 0).getDate();
+      let proyeccionDiciembre = totalMes;
+      if (diaMes < diasMes && totalMes > 0) {
+        proyeccionDiciembre = totalMes * (diasMes / diaMes);
+      }
+      if (mediaHasta11 > 0) {
+        proyeccionDiciembre = Math.max(proyeccionDiciembre, mediaHasta11);
+      }
+      previsto = acumSinMes + proyeccionDiciembre;
+    }
     safeSetAmount('globalTotalPrevisto', formatearImporte(previsto), previsto);
   
     const p = (acumulado / previsto) * 100;

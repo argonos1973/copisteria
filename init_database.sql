@@ -184,3 +184,83 @@ FROM factura f
 LEFT JOIN contacto c ON f.cliente_id = c.id
 WHERE f.cobrado = 0
 ORDER BY f.fecha_vencimiento;
+
+-- Tabla de proveedores
+CREATE TABLE IF NOT EXISTS proveedores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empresa_id INTEGER NOT NULL,
+    nombre TEXT NOT NULL,
+    nif TEXT,
+    direccion TEXT,
+    cp TEXT,
+    poblacion TEXT,
+    provincia TEXT,
+    email TEXT,
+    email_facturacion TEXT,
+    telefono TEXT,
+    iban TEXT,
+    forma_pago TEXT DEFAULT 'transferencia',
+    dias_pago INTEGER DEFAULT 30,
+    activo INTEGER DEFAULT 1,
+    creado_automaticamente INTEGER DEFAULT 0,
+    requiere_revision INTEGER DEFAULT 0,
+    fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    notas TEXT
+);
+
+-- Tabla de facturas de proveedores
+CREATE TABLE IF NOT EXISTS facturas_proveedores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    empresa_id INTEGER NOT NULL,
+    proveedor_id INTEGER NOT NULL,
+    numero_factura TEXT,
+    fecha_emision DATE,
+    fecha_vencimiento DATE,
+    base_imponible REAL DEFAULT 0,
+    iva_porcentaje REAL DEFAULT 21,
+    iva_importe REAL DEFAULT 0,
+    total REAL DEFAULT 0,
+    estado TEXT DEFAULT 'pendiente',
+    fecha_pago DATE,
+    metodo_pago TEXT,
+    referencia_pago TEXT,
+    ruta_archivo TEXT,
+    pdf_hash TEXT,
+    email_origen TEXT,
+    trimestre TEXT,
+    año INTEGER,
+    metodo_extraccion TEXT,
+    confianza_extraccion REAL,
+    revisado INTEGER DEFAULT 0,
+    fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    usuario_alta TEXT,
+    concepto TEXT,
+    notas TEXT,
+    FOREIGN KEY (proveedor_id) REFERENCES proveedores(id)
+);
+
+-- Tabla de líneas de factura de proveedor
+CREATE TABLE IF NOT EXISTS lineas_factura_proveedor (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    factura_id INTEGER NOT NULL,
+    descripcion TEXT,
+    cantidad REAL DEFAULT 1,
+    precio_unitario REAL DEFAULT 0,
+    subtotal REAL DEFAULT 0,
+    iva_porcentaje REAL DEFAULT 21,
+    iva_importe REAL DEFAULT 0,
+    total REAL DEFAULT 0,
+    FOREIGN KEY (factura_id) REFERENCES facturas_proveedores(id) ON DELETE CASCADE
+);
+
+-- Tabla de historial de facturas de proveedor
+CREATE TABLE IF NOT EXISTS historial_facturas_proveedores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    factura_id INTEGER NOT NULL,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    accion TEXT,
+    usuario TEXT,
+    datos_anteriores TEXT,
+    datos_nuevos TEXT,
+    FOREIGN KEY (factura_id) REFERENCES facturas_proveedores(id) ON DELETE CASCADE
+);

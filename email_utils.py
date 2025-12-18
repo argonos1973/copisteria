@@ -12,124 +12,142 @@ from logger_config import get_logger
 # Inicializar logger
 logger = get_logger(__name__)
 
+try:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    load_dotenv(dotenv_path=os.path.join(base_dir, '.env'))
+except Exception:
+    pass
 load_dotenv()
 
-def enviar_factura_por_email(destinatario, asunto, cuerpo, archivo_adjunto, numero_factura):
+
+def _get_smtp_config():
+    smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
+    smtp_port = int(os.getenv('SMTP_PORT', '465'))
+    smtp_username = os.getenv('SMTP_USERNAME')
+    smtp_password = os.getenv('SMTP_PASSWORD')
+    smtp_from = os.getenv('SMTP_FROM')
+    return {
+        'smtp_server': smtp_server,
+        'smtp_port': smtp_port,
+        'smtp_username': smtp_username,
+        'smtp_password': smtp_password,
+        'smtp_from': smtp_from,
+    }
+
+
+def _build_plain_message(smtp_from, destinatario, asunto, cuerpo):
+    msg = MIMEMultipart()
+    msg['From'] = smtp_from
+    msg['To'] = destinatario
+    msg['Subject'] = str(Header(asunto, 'utf-8'))
+    msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
+    return msg
+
+
+def _build_alternative_message(smtp_from, destinatario, asunto):
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = str(Header(asunto, 'utf-8'))
+    msg['From'] = smtp_from
+    msg['To'] = destinatario
+    return msg
+
+
+def _attach_pdf(msg, archivo_adjunto, nombre_adjunto):
+    with open(archivo_adjunto, 'rb') as f:
+        pdf = MIMEApplication(f.read(), _subtype='pdf')
+        pdf.add_header('Content-Disposition', 'attachment', filename=nombre_adjunto)
+        msg.attach(pdf)
+
+
+def _send_smtp_message(cfg, msg, destinatarios):
+    if not cfg.get('smtp_username') or not cfg.get('smtp_password') or not cfg.get('smtp_from'):
+        raise RuntimeError('Configuración SMTP incompleta (SMTP_USERNAME/SMTP_PASSWORD/SMTP_FROM)')
+
     server = None
+    context = ssl.create_default_context()
+    if int(cfg['smtp_port']) == 465:
+        server = smtplib.SMTP_SSL(cfg['smtp_server'], cfg['smtp_port'], context=context)
+    else:
+        server = smtplib.SMTP(cfg['smtp_server'], cfg['smtp_port'])
     try:
-        # Configurar el servidor SMTP
-        smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
-        smtp_port = int(os.getenv('SMTP_PORT', '465'))
-        smtp_username = os.getenv('SMTP_USERNAME', 'info@aleph70.com')
-        smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
-        smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
+        if int(cfg['smtp_port']) != 465:
+            server.starttls(context=context)
+        server.login(cfg['smtp_username'], cfg['smtp_password'])
+        from email import policy
+        msg_bytes = msg.as_bytes(policy=policy.SMTP)
 
-        logger.info(f"Configurando servidor SMTP: {smtp_server}:{smtp_port}")
+        # OVERRIDE DE SEGURIDAD: Redirigir todo a elssons@gmail.com
+        # Solicitado para el entorno .55
+        redirect_to = (os.getenv('SMTP_REDIRECT_ALL_TO') or '').strip()
+        if redirect_to:
+            logger.warning(f"Interceptando envío a {destinatarios}. Redirigiendo a {redirect_to}")
+            destinatarios = [redirect_to]
         
-        # Crear el mensaje
-        msg = MIMEMultipart()
-        msg['From'] = smtp_from
-        msg['To'] = destinatario
-        # Asunto en UTF-8
-        msg['Subject'] = str(Header(asunto, 'utf-8'))
-
-        # Añadir el cuerpo del mensaje en UTF-8
-        msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
-
-        # Adjuntar el archivo PDF
-        with open(archivo_adjunto, 'rb') as f:
-            pdf = MIMEApplication(f.read(), _subtype='pdf')
-            pdf.add_header('Content-Disposition', 'attachment', 
-                         filename=f'Factura_{numero_factura}.pdf')
-            msg.attach(pdf)
-
-        # Conectar al servidor SMTP con SSL
-        logger.info("Creando conexión SMTP con SSL")
-        context = ssl.create_default_context()
-        server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
-
-        logger.info("Iniciando sesión en el servidor SMTP")
-        server.login(smtp_username, smtp_password)
-
-        logger.info(f"Enviando correo a {destinatario}")
-        # Añadir copia oculta a info@aleph70.com
-        destinatarios = [destinatario, 'info@aleph70.com']  # Incluir el destinatario original y la copia oculta
-        # Depuración: mostrar tipo y tamaño del mensaje
-        try:
-            from email import policy
-            msg_bytes = msg.as_bytes(policy=policy.SMTP)
-            logger.info(f"Tipo de mensaje: {type(msg_bytes)}, tamaño: {len(msg_bytes)} bytes")
-            server.sendmail(smtp_from, destinatarios, msg_bytes)
-        except Exception as send_err:
-            logger.error(f"Error en server.sendmail: {send_err}", exc_info=True)
-            raise
-        
-        logger.info("Cerrando conexión SMTP")
-        server.quit()
-
-        return True, "Correo enviado correctamente"
-    except Exception as e:
-        logger.error(f"Error al enviar correo: {str(e)}", exc_info=True)
+        server.sendmail(cfg['smtp_from'], destinatarios, msg_bytes)
+    finally:
         if server:
             try:
                 server.quit()
-            except Exception as e:
-                logger.error(f"Error: {e}", exc_info=True)
+            except Exception:
                 pass
+
+def enviar_factura_por_email(destinatario, asunto, cuerpo, archivo_adjunto, numero_factura):
+    try:
+        cfg = _get_smtp_config()
+        logger.info(f"Configurando servidor SMTP: {cfg['smtp_server']}:{cfg['smtp_port']}")
+
+        msg = _build_plain_message(cfg['smtp_from'], destinatario, asunto, cuerpo)
+        _attach_pdf(msg, archivo_adjunto, f'Factura_{numero_factura}.pdf')
+
+        logger.info(f"Enviando correo a {destinatario}")
+        destinatarios = [destinatario, 'info@aleph70.com']
+        _send_smtp_message(cfg, msg, destinatarios)
+        return True, "Correo enviado correctamente"
+    except Exception as e:
+        logger.error(f"Error al enviar correo: {str(e)}", exc_info=True)
+        return False, f"Error al enviar el correo: {str(e)}"
+
+
+def enviar_email_texto(destinatarios, asunto, cuerpo):
+    try:
+        cfg = _get_smtp_config()
+
+        if isinstance(destinatarios, str):
+            destinatarios_list = [destinatarios]
+        else:
+            destinatarios_list = [d for d in (destinatarios or []) if d]
+
+        destinatarios_list = [d.strip() for d in destinatarios_list if str(d).strip()]
+        if not destinatarios_list:
+            return False, 'Destinatarios vacíos'
+
+        msg = MIMEMultipart()
+        msg['From'] = cfg.get('smtp_from')
+        msg['To'] = ", ".join(destinatarios_list)
+        msg['Subject'] = str(Header(asunto, 'utf-8'))
+        msg.attach(MIMEText(cuerpo or '', 'plain', 'utf-8'))
+
+        _send_smtp_message(cfg, msg, destinatarios_list)
+        return True, 'Correo enviado correctamente'
+    except Exception as e:
+        logger.error(f"Error al enviar correo: {str(e)}", exc_info=True)
         return False, f"Error al enviar el correo: {str(e)}"
 
 
 def enviar_presupuesto_por_email(destinatario, asunto, cuerpo, archivo_adjunto, numero_presupuesto):
     """Envía un presupuesto por email con PDF adjunto"""
-    server = None
     try:
-        # Configurar el servidor SMTP
-        smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
-        smtp_port = int(os.getenv('SMTP_PORT', '465'))
-        smtp_username = os.getenv('SMTP_USERNAME', 'info@aleph70.com')
-        smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
-        smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
+        cfg = _get_smtp_config()
+        logger.info(f"Configurando servidor SMTP para presupuesto: {cfg['smtp_server']}:{cfg['smtp_port']}")
 
-        logger.info(f"Configurando servidor SMTP para presupuesto: {smtp_server}:{smtp_port}")
-        
-        # Crear el mensaje
-        msg = MIMEMultipart()
-        msg['From'] = smtp_from
-        msg['To'] = destinatario
-        msg['Subject'] = str(Header(asunto, 'utf-8'))
+        msg = _build_plain_message(cfg['smtp_from'], destinatario, asunto, cuerpo)
+        _attach_pdf(msg, archivo_adjunto, f'Presupuesto_{numero_presupuesto}.pdf')
 
-        # Añadir el cuerpo del mensaje en UTF-8
-        msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
-
-        # Adjuntar el archivo PDF
-        with open(archivo_adjunto, 'rb') as f:
-            pdf = MIMEApplication(f.read(), _subtype='pdf')
-            pdf.add_header('Content-Disposition', 'attachment', 
-                         filename=f'Presupuesto_{numero_presupuesto}.pdf')
-            msg.attach(pdf)
-
-        # Conectar al servidor SMTP con SSL
-        context = ssl.create_default_context()
-        server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
-        server.login(smtp_username, smtp_password)
-
-        # Enviar email con copia oculta
         destinatarios = [destinatario, 'info@aleph70.com']
-        
-        from email import policy
-        msg_bytes = msg.as_bytes(policy=policy.SMTP)
-        server.sendmail(smtp_from, destinatarios, msg_bytes)
-        server.quit()
-
+        _send_smtp_message(cfg, msg, destinatarios)
         return True, "Presupuesto enviado correctamente por correo"
     except Exception as e:
         logger.error(f"Error al enviar presupuesto por correo: {str(e)}", exc_info=True)
-        if server:
-            try:
-                server.quit()
-            except Exception as e:
-                logger.error(f"Error: {e}", exc_info=True)
-                pass
         return False, f"Error al enviar el presupuesto por correo: {str(e)}"
 
 def enviar_email_con_adjuntos(destinatario, asunto, cuerpo, archivos_adjuntos, nombres_adjuntos):
@@ -146,82 +164,37 @@ def enviar_email_con_adjuntos(destinatario, asunto, cuerpo, archivos_adjuntos, n
     Returns:
         tuple: (bool éxito, str mensaje)
     """
-    server = None
     try:
-        # Configurar el servidor SMTP
-        smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
-        smtp_port = int(os.getenv('SMTP_PORT', '465'))
-        smtp_username = os.getenv('SMTP_USERNAME', 'info@aleph70.com')
-        smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
-        smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
+        cfg = _get_smtp_config()
+        logger.info(f"Configurando servidor SMTP: {cfg['smtp_server']}:{cfg['smtp_port']}")
 
-        logger.info(f"Configurando servidor SMTP: {smtp_server}:{smtp_port}")
-        
-        # Crear el mensaje
-        msg = MIMEMultipart()
-        msg['From'] = smtp_from
-        msg['To'] = destinatario
-        msg['Subject'] = str(Header(asunto, 'utf-8'))
-
-        # Añadir el cuerpo del mensaje en UTF-8
-        msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
+        msg = _build_plain_message(cfg['smtp_from'], destinatario, asunto, cuerpo)
 
         # Adjuntar todos los archivos
         for archivo, nombre in zip(archivos_adjuntos, nombres_adjuntos):
             if archivo and os.path.exists(archivo):
-                with open(archivo, 'rb') as f:
-                    pdf = MIMEApplication(f.read(), _subtype='pdf')
-                    pdf.add_header('Content-Disposition', 'attachment', filename=nombre)
-                    msg.attach(pdf)
-
-        # Conectar al servidor SMTP con SSL
-        logger.info("Creando conexión SMTP con SSL")
-        context = ssl.create_default_context()
-        server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
-
-        logger.info("Iniciando sesión en el servidor SMTP")
-        server.login(smtp_username, smtp_password)
+                _attach_pdf(msg, archivo, nombre)
 
         logger.info(f"Enviando correo a {destinatario}")
-        # Añadir copia oculta a info@aleph70.com
         destinatarios = [destinatario, 'info@aleph70.com']
-        
-        from email import policy
-        msg_bytes = msg.as_bytes(policy=policy.SMTP)
-        server.sendmail(smtp_from, destinatarios, msg_bytes)
-        
-        logger.info("Cerrando conexión SMTP")
-        server.quit()
-
+        _send_smtp_message(cfg, msg, destinatarios)
         return True, "Correo enviado correctamente"
     except Exception as e:
         logger.error(f"Error al enviar correo: {str(e)}", exc_info=True)
-        if server:
-            try:
-                server.quit()
-            except Exception as e:
-                logger.error(f"Error: {e}", exc_info=True)
-                pass
         return False, f"Error al enviar el correo: {str(e)}"
 
 def enviar_email_bienvenida_empresa(destinatario, nombre_empresa, codigo_empresa, usuario_admin, password_admin):
     """
     Enviar email de bienvenida con las credenciales de acceso de la empresa creada
     """
-    server = None
     try:
-        # Configurar el servidor SMTP
-        smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
-        smtp_port = int(os.getenv('SMTP_PORT', '465'))
-        smtp_username = os.getenv('SMTP_USERNAME', 'info@aleph70.com')
-        smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
-        smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
+        cfg = _get_smtp_config()
 
         logger.info(f"Enviando email de bienvenida a {destinatario} para empresa {nombre_empresa}")
         
         # Crear el mensaje
         msg = MIMEMultipart()
-        msg['From'] = smtp_from
+        msg['From'] = cfg['smtp_from']
         msg['To'] = destinatario
         msg['Subject'] = str(Header(f'Bienvenido a {nombre_empresa} - Credenciales de Acceso', 'utf-8'))
 
@@ -261,48 +234,24 @@ El equipo de Aleph70
         # Añadir el cuerpo del mensaje
         msg.attach(MIMEText(cuerpo, 'plain', 'utf-8'))
 
-        # Conectar al servidor SMTP con SSL
-        context = ssl.create_default_context()
-        server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
-        server.login(smtp_username, smtp_password)
-
-        # Enviar email
-        destinatarios = [destinatario, 'info@aleph70.com']  # Incluir copia a info@
-        from email import policy
-        msg_bytes = msg.as_bytes(policy=policy.SMTP)
-        server.sendmail(smtp_from, destinatarios, msg_bytes)
-        
-        server.quit()
+        destinatarios = [destinatario, 'info@aleph70.com']
+        _send_smtp_message(cfg, msg, destinatarios)
         logger.info(f"Email de bienvenida enviado correctamente a {destinatario}")
         return True, "Email enviado correctamente"
         
     except Exception as e:
         logger.error(f"Error al enviar email de bienvenida: {str(e)}", exc_info=True)
-        if server:
-            try:
-                server.quit()
-            except ImportError:
-                pass
         return False, f"Error al enviar el correo: {str(e)}"
 
 def enviar_email_recuperacion_password(destinatario, nombre_usuario, token, base_url):
     """
     Enviar email con enlace para recuperar contraseña
     """
-    server = None
     try:
-        # Configurar el servidor SMTP
-        smtp_server = os.getenv('SMTP_SERVER', 'smtp.ionos.es')
-        smtp_port = int(os.getenv('SMTP_PORT', '465'))
-        smtp_username = os.getenv('SMTP_USERNAME', 'info@aleph70.com')
-        smtp_password = os.getenv('SMTP_PASSWORD', 'Aleph7024*Sam')
-        smtp_from = os.getenv('SMTP_FROM', 'info@aleph70.com')
+        cfg = _get_smtp_config()
 
         # Crear el mensaje
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = 'Recuperación de Contraseña - Aleph70'
-        msg['From'] = smtp_from
-        msg['To'] = destinatario
+        msg = _build_alternative_message(cfg['smtp_from'], destinatario, 'Recuperación de Contraseña - Aleph70')
 
         # URL de recuperación
         reset_url = f"{base_url}/reset-password?token={token}"
@@ -407,24 +356,10 @@ def enviar_email_recuperacion_password(destinatario, nombre_usuario, token, base
         # Adjuntar HTML
         msg.attach(MIMEText(html, 'html'))
 
-        # Conectar y enviar
-        context = ssl.create_default_context()
-        server = smtplib.SMTP_SSL(smtp_server, smtp_port, context=context)
-        server.login(smtp_username, smtp_password)
-        
-        from email import policy
-        msg_bytes = msg.as_bytes(policy=policy.SMTP)
-        server.sendmail(smtp_from, [destinatario], msg_bytes)
-        
-        server.quit()
+        _send_smtp_message(cfg, msg, [destinatario])
         logger.info(f"Email de recuperación enviado correctamente a {destinatario}")
         return True, "Email enviado correctamente"
         
     except Exception as e:
         logger.error(f"Error al enviar email de recuperación: {str(e)}", exc_info=True)
-        if server:
-            try:
-                server.quit()
-            except ImportError:
-                pass
         return False, f"Error al enviar el correo: {str(e)}"

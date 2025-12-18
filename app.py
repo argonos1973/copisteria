@@ -15,6 +15,7 @@ load_dotenv()
 
 from flask import Flask, request, make_response, session, send_from_directory
 from flask_cors import CORS
+from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
 from logger_config import get_logger
@@ -43,6 +44,7 @@ from routes.system_routes import system_bp
 from routes.presupuestos_routes import presupuestos_bp
 from routes.proformas_routes import proformas_bp
 from routes.facturas_recibidas_routes import facturas_recibidas_bp
+from routes.batch_routes import batch_bp
 from public_routes import public_bp
 
 # Middlewares
@@ -76,7 +78,8 @@ def create_app():
     application.config.update(SESSION_CONFIG)
     
     # Configuración de límite de carga (20MB)
-    application.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024
+    max_upload_mb = int(os.getenv('MAX_CONTENT_LENGTH_MB', '200'))
+    application.config['MAX_CONTENT_LENGTH'] = max_upload_mb * 1024 * 1024
     
     # Inicializar base de datos de usuarios
     inicializar_bd_usuarios()
@@ -203,6 +206,7 @@ def register_blueprints(app):
     app.register_blueprint(presupuestos_bp)    # Rutas de presupuestos
     app.register_blueprint(proformas_bp)       # Rutas de proformas
     app.register_blueprint(facturas_recibidas_bp) # Rutas de facturas recibidas y proveedores
+    app.register_blueprint(batch_bp)           # Rutas de procesos batch (admin)
     
     logger.info("✅ Todos los blueprints registrados correctamente")
 
@@ -210,6 +214,10 @@ def register_blueprints(app):
 def setup_error_handlers(app):
     """Configura manejadores de errores globales"""
     
+    @app.errorhandler(RequestEntityTooLarge)
+    def request_entity_too_large(error):
+        return {'error': 'Archivo demasiado grande', 'status': 413}, 413
+
     @app.errorhandler(404)
     def not_found_error(error):
         return {'error': 'Recurso no encontrado', 'status': 404}, 404
@@ -229,6 +237,11 @@ def setup_error_handlers(app):
     
     @app.errorhandler(Exception)
     def handle_exception(error):
+        if isinstance(error, HTTPException):
+            code = getattr(error, 'code', 500) or 500
+            description = getattr(error, 'description', None)
+            message = description if description else 'Error HTTP'
+            return {'error': message, 'status': code}, code
         logger.error(f"Excepción no manejada: {error}", exc_info=True)
         return {'error': 'Error inesperado', 'details': str(error), 'status': 500}, 500
 

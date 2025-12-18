@@ -32,18 +32,55 @@ async function verificarSesionYCargarMenu() {
         let menuData = null;
         const cachedMenu = sessionStorage.getItem('aleph70_menu_data');
         
-        if (cachedMenu) {
-            menuData = JSON.parse(cachedMenu);
-            console.log('[MENU] ⚡ Usando menú en caché');
-        } else {
+        const fetchMenu = async () => {
             const menuResponse = await fetch('/api/auth/menu', { credentials: 'include' });
-            
             if (!menuResponse.ok) {
                 throw new Error(`Error ${menuResponse.status}: ${menuResponse.statusText}`);
             }
-            
-            menuData = await menuResponse.json();
-            sessionStorage.setItem('aleph70_menu_data', JSON.stringify(menuData));
+            const fresh = await menuResponse.json();
+            sessionStorage.setItem('aleph70_menu_data', JSON.stringify(fresh));
+            return fresh;
+        };
+
+        if (cachedMenu) {
+            menuData = JSON.parse(cachedMenu);
+            console.log('[MENU] ⚡ Usando menú en caché');
+
+            const esAdmin = sessionData && (sessionData.es_admin_empresa || sessionData.es_superadmin);
+            if (esAdmin) {
+                const adminItem = Array.isArray(menuData) ? menuData.find(i => i && i.codigo === 'admin') : null;
+                const adminSub = adminItem && Array.isArray(adminItem.submenu) ? adminItem.submenu : [];
+                const tieneProcesos = adminSub.some(s => s && (s.nombre === 'Procesos' || s.ruta === '/ADMIN_BATCH.html'));
+                if (!tieneProcesos) {
+                    console.log('[MENU] Menú admin cacheado sin Procesos, recargando desde servidor...');
+                    menuData = await fetchMenu();
+                }
+            }
+        } else {
+            menuData = await fetchMenu();
+        }
+
+        // Fallback: si el backend aún no devolvió el subitem, inyectarlo para admins
+        try {
+            const esAdminFinal = sessionData && (sessionData.es_admin_empresa || sessionData.es_superadmin);
+            if (esAdminFinal && Array.isArray(menuData)) {
+                const adminItem = menuData.find(i => i && i.codigo === 'admin');
+                if (adminItem) {
+                    adminItem.submenu = Array.isArray(adminItem.submenu) ? adminItem.submenu : [];
+                    const tieneProcesos = adminItem.submenu.some(s => s && (s.nombre === 'Procesos' || s.ruta === '/ADMIN_BATCH.html'));
+                    if (!tieneProcesos) {
+                        adminItem.submenu.push({
+                            nombre: 'Procesos',
+                            icono: 'fas fa-clock',
+                            ruta: '/ADMIN_BATCH.html'
+                        });
+                        sessionStorage.setItem('aleph70_menu_data', JSON.stringify(menuData));
+                        console.log('[MENU] Fallback aplicado: submenú Procesos añadido a Administración');
+                    }
+                }
+            }
+        } catch (e) {
+            // noop
         }
         
         console.log('[MENU] Menú recibido según permisos del usuario:', menuData);

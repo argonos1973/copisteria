@@ -32,7 +32,7 @@ from db_utils import (actualizar_numerador, get_db_connection,
                       verificar_numero_factura)
 from email_utils import enviar_factura_por_email
 # --- Integración Facturae ---
-from utils_emisor import cargar_datos_emisor
+from utils_emisor import cargar_datos_emisor, verifactu_habilitado
 
 # --- Integración VERI*FACTU ---
 import logging
@@ -65,15 +65,14 @@ except ImportError:
 
 # Cargamos configuración externa (config.json)
 try:
-    from config_loader import get as get_config
-    VERIFACTU_HABILITADO = bool(get_config("verifactu_enabled", VERIFACTU_DISPONIBLE))
+    VERIFACTU_HABILITADO = bool(verifactu_habilitado(default=VERIFACTU_DISPONIBLE))
 except Exception as e:
     logging.warning("No se pudo cargar configuración externa: %s", e)
     VERIFACTU_HABILITADO = VERIFACTU_DISPONIBLE
 
 # Si la configuración deshabilita VERI*FACTU, forzamos su desactivación en el resto del módulo
 if not VERIFACTU_HABILITADO:
-    VERIFACTU_DISPONIBLE = False
+    pass
 
 
 # Asegurar que XDG_RUNTIME_DIR esté configurado
@@ -219,8 +218,10 @@ def crear_factura(data=None):
                     'notificaciones': notificaciones
                 })
 
+            vf_on = bool(verifactu_habilitado(default=VERIFACTU_DISPONIBLE))
+
             # --- Generación de Facturae ---
-            logger.info(f"[FACTURA] Generando XML Facturae (presentar_face={presentar_face_flag}, VERIFACTU_HABILITADO={VERIFACTU_HABILITADO})")
+            logger.info(f"[FACTURA] Generando XML Facturae (presentar_face={presentar_face_flag}, verifactu_enabled={vf_on})")
 
             try:
                 logger.info("[FACTURAE] Iniciando integración Facturae para factura_id:", factura_id)
@@ -369,7 +370,7 @@ def crear_factura(data=None):
                 datos_facturae['total_amount'] = data['total']  # Añadimos el campo requerido
                 
                 # Añadimos campos para VERI*FACTU
-                datos_facturae['verifactu'] = VERIFACTU_DISPONIBLE  # Se genera formato VERI*FACTU sólo si está habilitado
+                datos_facturae['verifactu'] = bool(VERIFACTU_DISPONIBLE and vf_on)  # Se genera formato VERI*FACTU sólo si está habilitado
                 datos_facturae['factura_id'] = factura_id  # ID de factura para registro en VERI*FACTU
                 
                 logger.info("[FACTURAE] Llamando a generar_facturae con configuración VERI*FACTU")
@@ -409,7 +410,7 @@ def crear_factura(data=None):
                 logger.info("[VERIFACTU] Iniciando integración VERI*FACTU para factura_id:", factura_id)
                 push_notif("Enviando registro AEAT ...")
                 # Generar datos VERI*FACTU para la factura (solo si está disponible)
-                if VERIFACTU_DISPONIBLE:
+                if VERIFACTU_DISPONIBLE and vf_on:
                     try:
                         # Obtener código de empresa de la ruta de la BD
                         import re
@@ -1477,8 +1478,8 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
         nombres_columnas = [description[0] for description in cursor.description]
         factura_dict = dict(zip(nombres_columnas, factura))
         
-        logger.debug("Columnas de la factura:", nombres_columnas)
-        logger.info("Datos de la factura:", factura_dict)
+        logger.debug("Columnas de la factura: %s", nombres_columnas)
+        logger.info("Datos de la factura: %s", factura_dict)
 
         # Si se proporciona email_destino_override, usarlo; si no, usar el del cliente
         email_destino = email_destino_override if email_destino_override else factura_dict.get('mail')
@@ -1499,7 +1500,7 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
         detalles = cursor.fetchall()
         detalles_list = [dict(zip([d[0] for d in cursor.description], detalle)) for detalle in detalles]
         
-        logger.info("Detalles de la factura:", detalles_list)
+        logger.info("Detalles de la factura: %s", detalles_list)
 
         # Utilidad segura para parsear importes en formato europeo o numérico
         def _parse_euro(value):
@@ -1829,7 +1830,7 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             import re
             csv_value = registro['csv'] if registro else None
             has_csv = bool(csv_value and str(csv_value).strip())
-            if not has_csv or not VERIFACTU_HABILITADO:
+            if not has_csv or not bool(verifactu_habilitado(default=False)):
                 qr_code = None
                 logger.info("Factura sin CSV VERI*FACTU o VERIFACTU deshabilitado - se omite leyenda y QR.")
                 # Eliminar leyenda y QR relativos a VERI*FACTU

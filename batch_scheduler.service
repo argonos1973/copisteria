@@ -1,0 +1,17 @@
+[Unit]
+Description=Aleph70 Batch Scheduler
+After=network.target
+
+[Service]
+User=sami
+Group=www-data
+WorkingDirectory=/var/www/html
+Environment="PYTHONPATH=/var/www/html"
+ExecStart=/var/www/html/venv/bin/python3 /var/www/html/scripts/batch_scheduler.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/www/html/logs/batch_scheduler.log
+StandardError=append:/var/www/html/logs/batch_scheduler.log
+
+[Install]
+WantedBy=multi-user.target
