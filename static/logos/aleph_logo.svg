@@ -7,10 +7,10 @@
   </defs>
   
   <!-- Background circle -->
-  <circle cx="60" cy="60" r="55" fill="white" stroke="#e0e0e0" stroke-width="1"/>
+  <circle cx="60" cy="60" r="55" fill="none" stroke="none" stroke-width="1"/>
   
   <!-- Aleph symbol stylized -->
-  <g fill="#2c3e50" transform="translate(60, 60)">
+  <g fill="#2c3e50" transform="translate(60, 60) scale(1.55)">
     <!-- Main diagonal -->
     <path d="M -20,-25 L 15,30 Q 18,33 21,30 L 25,20 L -10,-35 Q -13,-38 -16,-35 Z" fill="url(#alephGrad)"/>
     
@@ -25,5 +25,5 @@
   </g>
   
   <!-- Text "Aleph" below -->
-  <text x="60" y="95" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#2c3e50" text-anchor="middle">Aleph</text>
+  <text x="60" y="95" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#2c3e50" text-anchor="middle" display="none">Aleph</text>
 </svg>
