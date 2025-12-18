@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Factura</title>
-    <script src="/static/auto_branding.js?v=1764787007"></script>
     <style>
         /* Reglas específicas para impresión */
         @media print {
@@ -30,8 +29,9 @@
             font-size: 12px;
         }
         .factura-header {
-            background: none;
-            color: #000;
+            background: none !important;
+            background-color: transparent !important;
+            color: #000 !important;
             padding: 10px;
             padding-right: 140px; /* Espacio para el logo */
             border-radius: 5px;
@@ -260,6 +260,6 @@
         </div>
     </div>
 
-    <script type="module" src="/static/imprimir-factura.js?v=PRINT_FIX_1"></script>
+    <script type="module" src="/static/imprimir-factura.js?v=PRINT_FIX_2"></script>
 </body>
 </html>
