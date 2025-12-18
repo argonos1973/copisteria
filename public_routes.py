@@ -77,6 +77,24 @@ def forgot_password_page():
 
     return send_from_directory(os.path.join(os.path.dirname(__file__), 'frontend'), 'forgot-password.html')
 
+@public_bp.route('/reset-password')
+def reset_password_page():
+    user_agent = request.headers.get('User-Agent', '').lower()
+    is_mobile = 'mobile' in user_agent or 'android' in user_agent or 'iphone' in user_agent
+
+    logger.info(f"[RESET] UA: {user_agent[:50]}... | Mobile: {is_mobile}")
+
+    if is_mobile:
+        mobile_path = os.path.join(os.path.dirname(__file__), 'frontend', 'mobile', 'reset-password.html')
+        if os.path.exists(mobile_path):
+            logger.info(f"[RESET] Sirviendo versión móvil desde {mobile_path}")
+            with open(mobile_path, 'r', encoding='utf-8') as f:
+                return Response(f.read(), mimetype='text/html')
+        else:
+            logger.error(f"[RESET] Archivo móvil no encontrado: {mobile_path}")
+
+    return send_from_directory(os.path.join(os.path.dirname(__file__), 'frontend'), 'reset-password.html')
+
 @public_bp.route('/public/<path:filename>')
 def serve_public(filename):
     """Servir archivos estáticos del sitio público"""
