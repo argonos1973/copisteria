@@ -176,8 +176,9 @@ img {
 }
 
 .logo-img {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
+    filter: drop-shadow(0 12px 18px rgba(2, 6, 23, 0.18));
 }
 
 .logo-text {
