@@ -143,7 +143,7 @@ def main():
             schedules = cur.execute(
                 """
                 SELECT s.id, s.empresa_id, s.job_definition_id, s.enabled, s.cron_expr, s.params_json,
-                       s.next_run_at, s.last_run_at
+                       s.next_run_at, s.last_run_at, s.days_of_week
                 FROM batch_job_schedules s
                 WHERE s.enabled = 1
                 """
@@ -179,6 +179,28 @@ def main():
                     continue
 
                 if next_run_at and next_run_at > now:
+                    continue
+
+                # Verificar si hoy es un día permitido
+                days_of_week_str = s['days_of_week'] or '0,1,2,3,4,5,6'
+                allowed_days = set()
+                for d in days_of_week_str.split(','):
+                    try:
+                        allowed_days.add(int(d.strip()))
+                    except ValueError:
+                        pass
+                current_weekday = now.weekday()  # 0=Lunes, 6=Domingo
+                if current_weekday not in allowed_days:
+                    # Saltar al siguiente día permitido
+                    nxt = _next_run_from_cron(s['cron_expr'], last_run_at)
+                    cur.execute(
+                        """
+                        UPDATE batch_job_schedules
+                        SET next_run_at = ?, updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?
+                        """,
+                        (nxt.isoformat(), s['id']),
+                    )
                     continue
 
                 if next_run_at and (now - next_run_at).total_seconds() > max_catchup_seconds:

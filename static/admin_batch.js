@@ -341,6 +341,39 @@
         return `Cada ${n} min (todo el día)`;
     }
 
+    function getDaysOfWeekFromUI() {
+        const days = [];
+        for (let i = 0; i < 7; i++) {
+            const cb = $(`batch-day-${i}`);
+            if (cb && cb.checked) days.push(i);
+        }
+        return days.length > 0 ? days.join(',') : '0,1,2,3,4,5,6';
+    }
+
+    function setDaysOfWeekInUI(daysStr) {
+        const days = new Set();
+        (daysStr || '0,1,2,3,4,5,6').split(',').forEach((d) => {
+            const n = parseInt(d.trim(), 10);
+            if (!isNaN(n) && n >= 0 && n <= 6) days.add(n);
+        });
+        for (let i = 0; i < 7; i++) {
+            const cb = $(`batch-day-${i}`);
+            if (cb) cb.checked = days.has(i);
+        }
+    }
+
+    function formatDaysOfWeek(daysStr) {
+        const names = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+        const days = new Set();
+        (daysStr || '0,1,2,3,4,5,6').split(',').forEach((d) => {
+            const n = parseInt(d.trim(), 10);
+            if (!isNaN(n) && n >= 0 && n <= 6) days.add(n);
+        });
+        if (days.size === 7) return 'Todos';
+        if (days.size === 5 && [0,1,2,3,4].every(d => days.has(d))) return 'L-V';
+        return Array.from(days).sort((a,b) => a-b).map(d => names[d]).join(',');
+    }
+
     function _ensureSelectHasValue(selectEl, value, label) {
         if (!selectEl) return;
         const v = String(value);
@@ -563,7 +596,7 @@
             const enabled = s.enabled ? 'Activo' : 'Inactivo';
             tr.innerHTML = `
                 <td>${stripBatchPrefix(s.job_name || s.job_code)}</td>
-                <td><code>${s.cron_expr || ''}</code></td>
+                <td><code>${s.cron_expr || ''}</code> <span style="color:#888;font-size:11px;">(${formatDaysOfWeek(s.days_of_week)})</span></td>
                 <td>${enabled}</td>
                 <td>${formatTs(s.next_run_at)}</td>
                 <td class="batch-actions"></td>
@@ -582,6 +615,8 @@
                     if (s.cron_expr) {
                         _applyCronExprToBuilder(s.cron_expr);
                     }
+
+                    setDaysOfWeekInUI(s.days_of_week);
 
                     const ta = $('batch-params');
                     const supports = jobSupportsParams(s.job_code);
@@ -752,7 +787,8 @@
             }
         }
 
-        const payload = { job_code, cron_expr, enabled, params };
+        const days_of_week = getDaysOfWeekFromUI();
+        const payload = { job_code, cron_expr, enabled, params, days_of_week };
 
         const data = await apiJson('/api/batch/schedules', {
             method: 'POST',
@@ -970,6 +1006,9 @@
                     if (found && found.cron_expr) {
                         _applyCronExprToBuilder(found.cron_expr);
                     }
+                    if (found && found.days_of_week) {
+                        setDaysOfWeekInUI(found.days_of_week);
+                    }
                     if (found) {
                         lastSelectedJobCode = newCode;
                         const supports = jobSupportsParams(newCode);
@@ -1072,6 +1111,24 @@
                     await uploadScanZipToInbox();
                 } catch (e) {
                     showAlert(e.message || String(e), 'error');
+                }
+            });
+        } catch (e) {
+            // noop
+        }
+
+        // Botones de días de la semana
+        try {
+            $('batch-days-all')?.addEventListener('click', () => {
+                for (let i = 0; i < 7; i++) {
+                    const cb = $(`batch-day-${i}`);
+                    if (cb) cb.checked = true;
+                }
+            });
+            $('batch-days-weekdays')?.addEventListener('click', () => {
+                for (let i = 0; i < 7; i++) {
+                    const cb = $(`batch-day-${i}`);
+                    if (cb) cb.checked = (i < 5); // L-V
                 }
             });
         } catch (e) {

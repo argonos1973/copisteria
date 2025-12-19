@@ -240,3 +240,26 @@ body {
 #batch-runs-table tbody tr:hover td {
     filter: brightness(1.08);
 }
+
+.batch-day-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(255,255,255,0.08);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+
+.batch-day-check:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+.batch-day-check input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+}

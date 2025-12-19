@@ -137,6 +137,19 @@
                                 <div class="text-muted" id="batch-cron-times" style="margin-left: 10px;"></div>
                                 <input type="hidden" id="batch-cron" />
                             </div>
+
+                            <div class="batch-inline" style="margin-top: 12px; flex-wrap: wrap; gap: 6px;">
+                                <label class="batch-sub-label" style="width: 100%; margin-bottom: 4px;">Días de ejecución</label>
+                                <label class="batch-day-check"><input type="checkbox" id="batch-day-0" checked /> L</label>
+                                <label class="batch-day-check"><input type="checkbox" id="batch-day-1" checked /> M</label>
+                                <label class="batch-day-check"><input type="checkbox" id="batch-day-2" checked /> X</label>
+                                <label class="batch-day-check"><input type="checkbox" id="batch-day-3" checked /> J</label>
+                                <label class="batch-day-check"><input type="checkbox" id="batch-day-4" checked /> V</label>
+                                <label class="batch-day-check"><input type="checkbox" id="batch-day-5" checked /> S</label>
+                                <label class="batch-day-check"><input type="checkbox" id="batch-day-6" checked /> D</label>
+                                <button type="button" class="btn btn-small" id="batch-days-all" style="margin-left: 10px; padding: 2px 8px; font-size: 11px;">Todos</button>
+                                <button type="button" class="btn btn-small" id="batch-days-weekdays" style="padding: 2px 8px; font-size: 11px;">L-V</button>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group batch-inline batch-controls">

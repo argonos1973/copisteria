@@ -93,6 +93,16 @@ def _strip_batch_prefix(name: str):
     return n[6:] if n.lower().startswith('batch ') else n
 
 
+def _ensure_days_of_week_column(conn):
+    """Añade la columna days_of_week si no existe (migración)."""
+    try:
+        conn.execute("SELECT days_of_week FROM batch_job_schedules LIMIT 1")
+    except sqlite3.OperationalError:
+        conn.execute("ALTER TABLE batch_job_schedules ADD COLUMN days_of_week TEXT DEFAULT '0,1,2,3,4,5,6'")
+        conn.commit()
+        logger.info("[BATCH] Añadida columna days_of_week a batch_job_schedules")
+
+
 def _ensure_system_schedules(conn, empresa_id: int):
     """Garantiza que existan los schedules de sistema para la empresa (Reindex 02:00, Optimizar 03:00)."""
     system_jobs = [
@@ -253,13 +263,14 @@ def list_schedules():
             return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
         _ensure_batch_job_definitions(conn)
+        _ensure_days_of_week_column(conn)
         _ensure_default_schedules(conn, empresa_id)
         _ensure_system_schedules(conn, empresa_id)
 
         rows = conn.execute(
             """
             SELECT s.id, s.empresa_id, s.enabled, s.cron_expr, s.timezone, s.params_json,
-                   s.last_run_at, s.next_run_at, s.last_status,
+                   s.last_run_at, s.next_run_at, s.last_status, s.days_of_week,
                    d.code as job_code, d.name as job_name
             FROM batch_job_schedules s
             JOIN batch_job_definitions d ON d.id = s.job_definition_id
@@ -282,6 +293,7 @@ def list_schedules():
                 'last_run_at': r['last_run_at'],
                 'next_run_at': r['next_run_at'],
                 'last_status': r['last_status'],
+                'days_of_week': r['days_of_week'] or '0,1,2,3,4,5,6',
                 'job_code': r['job_code'],
                 'job_name': _strip_batch_prefix(r['job_name']),
             })
@@ -300,6 +312,7 @@ def create_schedule():
     enabled = 1 if payload.get('enabled', True) else 0
     timezone = payload.get('timezone')
     params = payload.get('params')
+    days_of_week = (payload.get('days_of_week') or '0,1,2,3,4,5,6').strip()
 
     if job_code in ('batchOptimizar', 'batchReindex'):
         return jsonify({'success': False, 'error': 'No se pueden crear procesos del sistema'}), 403
@@ -318,6 +331,8 @@ def create_schedule():
         if not _ensure_admin_access_to_empresa(conn, empresa_id):
             return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
+        _ensure_days_of_week_column(conn)
+
         job = conn.execute(
             "SELECT id FROM batch_job_definitions WHERE code = ? AND active = 1",
             (job_code,),
@@ -334,10 +349,10 @@ def create_schedule():
         cur = conn.execute(
             """
             INSERT INTO batch_job_schedules
-            (empresa_id, job_definition_id, enabled, cron_expr, timezone, params_json, created_by_usuario_id, updated_by_usuario_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (empresa_id, job_definition_id, enabled, cron_expr, timezone, params_json, days_of_week, created_by_usuario_id, updated_by_usuario_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (empresa_id, job['id'], enabled, cron_expr, timezone, params_json, user_id, user_id),
+            (empresa_id, job['id'], enabled, cron_expr, timezone, params_json, days_of_week, user_id, user_id),
         )
         conn.commit()
 
@@ -395,6 +410,10 @@ def update_schedule(schedule_id: int):
         if 'params' in payload:
             fields.append('params_json = ?')
             values.append(json.dumps(payload.get('params'), ensure_ascii=False) if payload.get('params') is not None else None)
+
+        if 'days_of_week' in payload:
+            fields.append('days_of_week = ?')
+            values.append((payload.get('days_of_week') or '0,1,2,3,4,5,6').strip())
 
         if not fields:
             return jsonify({'success': False, 'error': 'Sin cambios'}), 400
