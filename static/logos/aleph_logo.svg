@@ -1,29 +1,25 @@
-<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aleph70">
   <defs>
-    <linearGradient id="alephGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2c3e50;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#34495e;stop-opacity:1" />
+    <linearGradient id="a70Bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="60%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="a70Shine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
     </linearGradient>
   </defs>
-  
-  <!-- Background circle -->
-  <circle cx="60" cy="60" r="55" fill="none" stroke="none" stroke-width="1"/>
-  
-  <!-- Aleph symbol stylized -->
-  <g fill="#2c3e50" transform="translate(60, 60) scale(1.55)">
-    <!-- Main diagonal -->
-    <path d="M -20,-25 L 15,30 Q 18,33 21,30 L 25,20 L -10,-35 Q -13,-38 -16,-35 Z" fill="url(#alephGrad)"/>
-    
-    <!-- Upper arm -->
-    <path d="M 5,-30 Q 8,-33 11,-30 L 25,-10 Q 28,-7 25,-4 L 20,-2 L 5,-22 Q 2,-25 5,-28 Z" fill="url(#alephGrad)"/>
-    
-    <!-- Lower arm -->
-    <path d="M -25,10 Q -28,7 -25,4 L -20,2 L -5,22 Q -2,25 -5,28 L -10,30 Q -13,33 -16,30 Z" fill="url(#alephGrad)"/>
-    
-    <!-- Center connector -->
-    <circle cx="0" cy="0" r="5" fill="#34495e"/>
+
+  <rect x="10" y="10" width="100" height="100" rx="26" fill="url(#a70Bg)"/>
+  <path d="M20 22 C36 14, 58 12, 78 18 C94 22, 104 34, 110 48 L110 26 C104 18, 94 12, 80 10 C58 6, 36 10, 20 18 Z" fill="url(#a70Shine)"/>
+  <rect x="10" y="10" width="100" height="100" rx="26" fill="none" stroke="#ffffff" stroke-opacity="0.18"/>
+
+  <g fill="#ffffff">
+    <path d="M43 78 L52.5 50.5 C53.3 48.3 56.4 48.3 57.2 50.5 L66.7 78 H61.1 L59.3 72.2 H50.4 L48.6 78 Z M52.1 67.8 H57.6 L54.9 59.5 Z" opacity="0.96"/>
+    <path d="M69.8 57.4 C69.8 51.6 74.4 47.8 81.1 47.8 C87.6 47.8 92.2 51.5 92.2 56.7 C92.2 60.3 89.9 62.9 85.8 65.3 L79.2 69.2 H92.6 V74.2 H69.8 V69.8 L83.1 62.1 C85.9 60.5 87 59.2 87 57.2 C87 55 84.8 53.3 81.2 53.3 C77.5 53.3 75.2 55 75.2 57.5 Z" opacity="0.94"/>
+    <path d="M70.1 80.6 H92.6 V86 H70.1 Z" opacity="0"/>
   </g>
-  
-  <!-- Text "Aleph" below -->
-  <text x="60" y="95" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#2c3e50" text-anchor="middle" display="none">Aleph</text>
+
+  <text x="60" y="104" font-family="Inter, Arial, sans-serif" font-size="10" font-weight="700" fill="#ffffff" text-anchor="middle" opacity="0" >Aleph70</text>
 </svg>
