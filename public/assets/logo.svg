@@ -1,29 +1,16 @@
-<svg width="220" height="44" viewBox="0 0 520 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aleph70">
+<svg width="220" height="44" viewBox="0 0 320 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aleph70">
   <defs>
     <linearGradient id="a70Bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#4f46e5"/>
       <stop offset="60%" stop-color="#7c3aed"/>
       <stop offset="100%" stop-color="#ec4899"/>
     </linearGradient>
-    <linearGradient id="a70Shine" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
-      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
-    </linearGradient>
-    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0b1220" flood-opacity="0.25"/>
+    <filter id="softShadow" x="-20%" y="-40%" width="140%" height="180%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#0b1220" flood-opacity="0.18"/>
     </filter>
   </defs>
 
   <g filter="url(#softShadow)">
-    <rect x="10" y="10" width="100" height="100" rx="26" fill="url(#a70Bg)"/>
-    <path d="M20 22 C36 14, 58 12, 78 18 C94 22, 104 34, 110 48 L110 26 C104 18, 94 12, 80 10 C58 6, 36 10, 20 18 Z" fill="url(#a70Shine)"/>
-    <rect x="10" y="10" width="100" height="100" rx="26" fill="none" stroke="#ffffff" stroke-opacity="0.18"/>
-
-    <g fill="#ffffff">
-      <path d="M43 78 L52.5 50.5 C53.3 48.3 56.4 48.3 57.2 50.5 L66.7 78 H61.1 L59.3 72.2 H50.4 L48.6 78 Z M52.1 67.8 H57.6 L54.9 59.5 Z" opacity="0.96"/>
-      <path d="M69.8 57.4 C69.8 51.6 74.4 47.8 81.1 47.8 C87.6 47.8 92.2 51.5 92.2 56.7 C92.2 60.3 89.9 62.9 85.8 65.3 L79.2 69.2 H92.6 V74.2 H69.8 V69.8 L83.1 62.1 C85.9 60.5 87 59.2 87 57.2 C87 55 84.8 53.3 81.2 53.3 C77.5 53.3 75.2 55 75.2 57.5 Z" opacity="0.94"/>
-    </g>
-
-    <text x="150" y="78" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="62" font-weight="900" fill="url(#a70Bg)" letter-spacing="1.5" style="text-rendering:geometricPrecision">A70</text>
+    <text x="6" y="58" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="64" font-weight="900" fill="url(#a70Bg)" letter-spacing="1.5" style="text-rendering:geometricPrecision">A70</text>
   </g>
 </svg>
