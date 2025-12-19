@@ -30,6 +30,7 @@
     
     /* Typography */
     --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-display: 'Anton', Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
     --font-size-base: 16px;
     
     /* Transitions */
@@ -173,7 +174,7 @@ img {
     height: 56px;
     max-width: 320px;
     display: block;
-    filter: drop-shadow(0 12px 18px rgba(2, 6, 23, 0.18));
+    filter: none;
 }
 
 .logo-text {
@@ -197,8 +198,9 @@ img {
     color: var(--text-color);
     position: relative;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     font-size: 0.78rem;
+    font-family: var(--font-display);
 }
 
 .nav-link:hover {
@@ -221,17 +223,19 @@ img {
 }
 
 .btn-login {
-    background: var(--primary-color);
+    background: var(--dark-color);
     color: var(--white) !important;
     padding: 0.5rem 1.5rem;
     border-radius: 5px;
     text-transform: none;
     letter-spacing: normal;
     font-size: 0.9rem;
+    font-family: var(--font-display);
+    font-weight: 400;
 }
 
 .btn-login:hover {
-    background: var(--primary-dark);
+    background: #0b1220;
 }
 
 .hamburger {
@@ -302,9 +306,11 @@ img {
 
 .hero-title {
     font-size: 3.5rem;
-    font-weight: 800;
+    font-weight: 400;
     line-height: 1.1;
     margin-bottom: 1.5rem;
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
 }
 
 .hero-eyebrow {
@@ -317,7 +323,7 @@ img {
 
 .hero-title-editorial {
     font-size: 4.25rem;
-    letter-spacing: -0.03em;
+    letter-spacing: 0.01em;
 }
 
 .hero-description.hero-description-editorial {
@@ -360,10 +366,7 @@ img {
 }
 
 .gradient-text {
-    background: var(--gradient-primary);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--text-color);
 }
 
 .hero-description {
@@ -389,18 +392,35 @@ img {
     border: none;
     cursor: pointer;
     transition: var(--transition-normal);
+    font-family: var(--font-display);
+    font-weight: 400;
 }
 
 .btn-primary {
-    background: var(--gradient-primary);
+    background: var(--dark-color);
     color: var(--white);
     box-shadow: var(--shadow-md);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg), var(--shadow-glow);
+    box-shadow: var(--shadow-lg);
+    background: #0b1220;
 }
+
+ .btn-outline {
+     background: transparent;
+     color: var(--text-color);
+     border: 1px solid rgba(15, 23, 42, 0.20);
+     box-shadow: none;
+ }
+
+ .btn-outline:hover {
+     transform: translateY(-1px);
+     background: rgba(15, 23, 42, 0.04);
+     border-color: rgba(15, 23, 42, 0.30);
+     box-shadow: none;
+ }
 
 .hero-stats {
     display: flex;
@@ -449,9 +469,10 @@ img {
 
 .section-title {
     font-size: 3rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-weight: 400;
+    letter-spacing: 0.01em;
     margin-bottom: 1rem;
+    font-family: var(--font-display);
 }
 
 .section-subtitle {

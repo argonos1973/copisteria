@@ -1,16 +1,12 @@
 <svg width="520" height="120" viewBox="0 0 210 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aleph70">
   <defs>
-    <linearGradient id="a70Bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4f46e5"/>
-      <stop offset="60%" stop-color="#7c3aed"/>
-      <stop offset="100%" stop-color="#ec4899"/>
-    </linearGradient>
-    <filter id="softShadow" x="-20%" y="-40%" width="140%" height="180%">
-      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#0b1220" flood-opacity="0.22"/>
-    </filter>
+    <style><![CDATA[
+      @import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
+    ]]></style>
   </defs>
 
-  <g filter="url(#softShadow)">
-    <text x="2" y="58" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="64" font-weight="900" fill="url(#a70Bg)" letter-spacing="1.5" style="text-rendering:geometricPrecision">A70</text>
+  <g style="text-rendering:geometricPrecision">
+    <text x="0" y="64" font-family="Anton, Impact, Haettenschweiler, 'Arial Narrow Bold', system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="74" font-weight="400" fill="#e5e7eb" letter-spacing="-1">A</text>
+    <text x="22" y="64" font-family="Anton, Impact, Haettenschweiler, 'Arial Narrow Bold', system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="74" font-weight="400" fill="#0b0f19" letter-spacing="-1">A70</text>
   </g>
 </svg>
