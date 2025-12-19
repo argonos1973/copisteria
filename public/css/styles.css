@@ -177,8 +177,9 @@ img {
 
 .logo-img {
     width: auto;
-    height: 44px;
-    max-width: 240px;
+    height: 56px;
+    max-width: 320px;
+    display: block;
     filter: drop-shadow(0 12px 18px rgba(2, 6, 23, 0.18));
 }
 
@@ -1027,7 +1028,7 @@ img {
     .nav-menu {
         position: fixed;
         left: -100%;
-        top: 70px;
+        top: 88px;
         flex-direction: column;
         background: var(--white);
         width: 100%;
