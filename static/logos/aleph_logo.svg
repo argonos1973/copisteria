@@ -1,4 +1,4 @@
-<svg width="520" height="120" viewBox="0 0 320 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aleph70">
+<svg width="520" height="120" viewBox="0 0 210 80" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Aleph70">
   <defs>
     <linearGradient id="a70Bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#4f46e5"/>
@@ -11,6 +11,6 @@
   </defs>
 
   <g filter="url(#softShadow)">
-    <text x="6" y="58" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="64" font-weight="900" fill="url(#a70Bg)" letter-spacing="1.5" style="text-rendering:geometricPrecision">A70</text>
+    <text x="2" y="58" font-family="Inter, system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="64" font-weight="900" fill="url(#a70Bg)" letter-spacing="1.5" style="text-rendering:geometricPrecision">A70</text>
   </g>
 </svg>
