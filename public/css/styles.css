@@ -198,9 +198,12 @@ img {
 }
 
 .nav-link {
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-color);
     position: relative;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.78rem;
 }
 
 .nav-link:hover {
@@ -227,6 +230,9 @@ img {
     color: var(--white) !important;
     padding: 0.5rem 1.5rem;
     border-radius: 5px;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.9rem;
 }
 
 .btn-login:hover {
@@ -303,6 +309,58 @@ img {
     font-weight: 800;
     line-height: 1.1;
     margin-bottom: 1.5rem;
+}
+
+.hero-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.78rem;
+    color: rgba(31, 41, 55, 0.72);
+    margin-bottom: 18px;
+}
+
+.hero-title-editorial {
+    font-size: 4.25rem;
+    letter-spacing: -0.03em;
+}
+
+.hero-description.hero-description-editorial {
+    max-width: 42ch;
+    font-size: 1.1rem;
+    color: rgba(31, 41, 55, 0.72);
+}
+
+.hero-points {
+    margin-top: 10px;
+    color: rgba(31, 41, 55, 0.72);
+}
+
+.hero-points li {
+    padding-left: 18px;
+    position: relative;
+}
+
+.hero-points li::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    background: rgba(79, 70, 229, 0.55);
+}
+
+@media (max-width: 768px) {
+    .hero-title-editorial {
+        font-size: 3rem;
+    }
+
+    .nav-link {
+        text-transform: none;
+        letter-spacing: normal;
+        font-size: 1rem;
+    }
 }
 
 .gradient-text {
@@ -389,19 +447,21 @@ img {
 }
 
 .section-header {
-    text-align: center;
+    text-align: left;
     margin-bottom: 60px;
 }
 
 .section-title {
-    font-size: 2.5rem;
+    font-size: 3rem;
     font-weight: 700;
+    letter-spacing: -0.02em;
     margin-bottom: 1rem;
 }
 
 .section-subtitle {
     font-size: 1.1rem;
     color: var(--gray);
+    max-width: 70ch;
 }
 
 .features-grid {
@@ -414,7 +474,7 @@ img {
     background: var(--glass-bg);
     padding: 2.5rem;
     border-radius: 1.5rem;
-    text-align: center;
+    text-align: left;
     transition: var(--transition-normal);
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--glass-border);
@@ -430,7 +490,7 @@ img {
 .feature-icon {
     width: 64px;
     height: 64px;
-    margin: 0 auto 1.5rem;
+    margin: 0 0 1.5rem;
     background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
     border-radius: 1rem;
     display: flex;
