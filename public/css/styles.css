@@ -4,11 +4,11 @@
 
 :root {
     /* Colors */
-    --primary-color: #4f46e5; /* Indigo 600 */
-    --primary-dark: #4338ca; /* Indigo 700 */
-    --secondary-color: #10b981; /* Emerald 500 */
-    --danger-color: #ef4444;
-    --warning-color: #f59e0b;
+    --primary-color: #000000;
+    --primary-dark: #1f2937;
+    --secondary-color: #374151;
+    --danger-color: #000000;
+    --warning-color: #525252;
     --dark-color: #111827; /* Gray 900 */
     --light-color: #f3f4f6;
     --white: #ffffff;
@@ -17,16 +17,16 @@
     --text-color: #1f2937; /* Gray 800 */
     
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-    --gradient-secondary: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
-    --gradient-hero: linear-gradient(135deg, #4f46e5 0%, #9333ea 100%);
+    --gradient-primary: linear-gradient(135deg, #000000 0%, #333333 100%);
+    --gradient-secondary: linear-gradient(135deg, #333333 0%, #666666 100%);
+    --gradient-hero: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
     
     /* Shadows - Modern & Soft */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    --shadow-glow: 0 0 15px rgba(79, 70, 229, 0.3);
+    --shadow-glow: 0 0 15px rgba(0, 0, 0, 0.15);
     
     /* Typography */
     --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
@@ -350,7 +350,7 @@ img {
     position: absolute;
     left: 0;
     top: 0.55em;
-    background: rgba(79, 70, 229, 0.55);
+    background: #000000;
 }
 
 @media (max-width: 768px) {
@@ -500,14 +500,14 @@ img {
 .feature-card:hover {
     transform: translateY(-8px);
     box-shadow: var(--shadow-xl);
-    border-color: rgba(79, 70, 229, 0.1);
+    border-color: rgba(0, 0, 0, 0.1);
 }
 
 .feature-icon {
     width: 64px;
     height: 64px;
     margin: 0 0 1.5rem;
-    background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(124, 58, 237, 0.1) 100%);
+    background: rgba(0, 0, 0, 0.05);
     border-radius: 1rem;
     display: flex;
     align-items: center;
