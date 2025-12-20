@@ -59,8 +59,8 @@ ADMIN_ROUTES = [
 
 # Logos por defecto
 DEFAULT_LOGOS = {
-    'header': '/static/logos/default_header.png',
-    'factura': '/static/logos/default_factura.png'
+    'header': '/static/logos/aleph70_default.svg',
+    'factura': '/static/logos/aleph70_default.svg'
 }
 
 # Configuración de branding por defecto

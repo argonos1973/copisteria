@@ -734,7 +734,7 @@ def crear_empresa():
         ''', (
             codigo, nombre, razon_social, cif, direccion, codigo_postal, ciudad, provincia,
             telefono, email, web,
-            logo_filename or 'default_header.png', logo_filename or 'default_header.png',
+            logo_filename or 'aleph70_default.svg', logo_filename or 'aleph70_default.svg',
             bd_destino
         ))
         empresa_id = cursor.lastrowid
@@ -821,7 +821,7 @@ def crear_empresa():
         session['empresa_db'] = bd_destino
         session['es_admin_empresa'] = True
         session['rol'] = 'admin'
-        session['empresa_logo'] = logo_filename or 'default_header.png'
+        session['empresa_logo'] = logo_filename or 'aleph70_default.svg'
         
         # Forzar persistencia de sesión
         session.permanent = True

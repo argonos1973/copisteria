@@ -897,7 +897,7 @@ def generar_pdf_presupuesto(id):
         
         # Modificar ruta del logo para usar ruta absoluta
         # Obtener logo de la empresa desde la sesión
-        empresa_logo = session.get('empresa_logo', 'default_header.png')
+        empresa_logo = session.get('empresa_logo', 'aleph70_default.svg')
         logo_factura = f'/static/logos/{empresa_logo}'
         # Convertir ruta web a ruta absoluta del sistema de archivos
         logo_path = logo_factura.replace('/static/logos/', '/var/www/html/static/logos/')
@@ -908,7 +908,7 @@ def generar_pdf_presupuesto(id):
         temp_pdf_path = f"/tmp/{pdf_filename}"
         
         # Obtener logo de la empresa desde la sesión
-        empresa_logo = session.get('empresa_logo', 'default_header.png')
+        empresa_logo = session.get('empresa_logo', 'aleph70_default.svg')
         logo_factura = f'/static/logos/{empresa_logo}'
         # Convertir ruta web a ruta absoluta del sistema de archivos
         logo_path = logo_factura.replace('/static/logos/', '/var/www/html/static/logos/')
@@ -1088,7 +1088,7 @@ def enviar_email_presupuesto(id):
 
         # Asegurar ruta absoluta del logo
         # Obtener logo de la empresa desde la sesión
-        empresa_logo = session.get('empresa_logo', 'default_header.png')
+        empresa_logo = session.get('empresa_logo', 'aleph70_default.svg')
         logo_factura = f'/static/logos/{empresa_logo}'
         # Convertir ruta web a ruta absoluta del sistema de archivos
         logo_path = logo_factura.replace('/static/logos/', '/var/www/html/static/logos/')

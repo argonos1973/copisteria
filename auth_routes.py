@@ -334,7 +334,7 @@ def obtener_sesion():
             'telefono': telefono,
             'empresa': session.get('empresa_nombre'),
             'empresa_codigo': session.get('empresa_codigo'),
-            'logo': f"/static/logos/{session.get('empresa_logo', 'default_header.png')}",
+            'logo': f"/static/logos/{session.get('empresa_logo', 'aleph70_default.svg')}",
             'avatar': avatar,
             'rol': rol,
             'es_admin': es_admin_empresa or es_superadmin,
@@ -1069,8 +1069,8 @@ def obtener_branding():
             logger.info("[BRANDING] Usuario sin empresa - devolviendo tema minimal por defecto")
             return jsonify({
                 'empresa_id': None,
-                'logo_header': 'default_header.png',
-                'logo_factura': 'default_header.png',
+                'logo_header': 'aleph70_default.svg',
+                'logo_factura': 'aleph70_default.svg',
                 'plantilla': 'minimal',
                 'datos': {
                     'nombre': 'Mi Empresa',
