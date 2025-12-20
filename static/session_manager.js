@@ -41,6 +41,12 @@ class SessionManager {
 
             const data = await response.json();
             
+            // Si requiere 2FA, devolver los datos para que el frontend muestre el modal
+            if (data.requires_2fa) {
+                console.log('🔐 Se requiere 2FA');
+                return { success: false, data, requires_2fa: true };
+            }
+            
             if (data.success) {
                 // Guardar sesión en localStorage con expiración
                 const sessionInfo = {
