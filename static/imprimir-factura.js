@@ -236,7 +236,7 @@ async function rellenarFactura(datos, emisor) {
                 logoElement.src = logoUrl;
                 logoElement.onerror = function() {
                     console.error('[FACTURA] Error cargando logo:', logoUrl);
-                    this.src = '/static/logos/default_header.png';
+                    this.src = '/static/logos/aleph70_default.svg';
                 };
                 console.log('[FACTURA] Logo configurado:', logoUrl);
             }

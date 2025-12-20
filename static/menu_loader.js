@@ -168,7 +168,7 @@ function actualizarInfoUsuario(sessionData) {
         logoEmpresa.style.display = 'block';
         logoEmpresa.onerror = function() {
             console.error('[MENU] Error cargando logo:', sessionData.logo);
-            this.src = '/static/logos/default_header.png';
+            this.src = '/static/logos/aleph70_default.svg';
         };
         console.log('[MENU] Logo actualizado a:', sessionData.logo);
     } else {

@@ -328,7 +328,7 @@ async function cargarColoresEmpresa(force = false) {
                 // Forzar tema Minimal si no hay empresa asignada
                 branding = { 
                     plantilla: 'minimal',
-                    logo_header: 'default_header.png'
+                    logo_header: 'aleph70_default.svg'
                 };
             } else {
                 branding = await response.json();
@@ -353,7 +353,7 @@ async function cargarColoresEmpresa(force = false) {
             logoEmpresa.style.display = 'block';
             logoEmpresa.onerror = function() {
                 console.error('[BRANDING] ❌ Error cargando logo:', logoUrl);
-                this.src = '/static/logos/default_header.png';
+                this.src = '/static/logos/aleph70_default.svg';
             };
             logoEmpresa.onload = function() {
                 console.log('[BRANDING] ✅ Logo cargado exitosamente:', logoUrl);
