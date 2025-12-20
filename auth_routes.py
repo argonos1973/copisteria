@@ -1276,8 +1276,16 @@ def forgot_password():
         conn.commit()
         conn.close()
         
-        # Obtener URL base del request
-        base_url = request.host_url.rstrip('/')
+        # Obtener URL base - priorizar variable de entorno, luego headers de proxy
+        base_url = os.environ.get('APP_URL')
+        if not base_url:
+            # Usar X-Forwarded-Host si está detrás de proxy
+            forwarded_host = request.headers.get('X-Forwarded-Host')
+            forwarded_proto = request.headers.get('X-Forwarded-Proto', 'https')
+            if forwarded_host:
+                base_url = f"{forwarded_proto}://{forwarded_host}"
+            else:
+                base_url = request.host_url.rstrip('/')
         
         # Enviar email
         success, message = enviar_email_recuperacion_password(
