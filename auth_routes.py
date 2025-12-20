@@ -1738,6 +1738,7 @@ def validate_2fa_login():
     """
     Valida el código 2FA durante el proceso de login.
     Se llama después de verificar usuario/contraseña si 2FA está activo.
+    Nota: No depende de pending_2fa_session para compatibilidad con Cloudflare.
     """
     try:
         data = request.json or {}
@@ -1750,49 +1751,73 @@ def validate_2fa_login():
         if not code or len(code) != 6:
             return jsonify({'error': 'Código inválido'}), 400
         
-        # Obtener secreto del usuario
+        # Obtener datos completos del usuario para establecer sesión
         conn = sqlite3.connect(DB_USUARIOS_PATH)
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT totp_secret, username, nombre_completo FROM usuarios WHERE id = ?",
-            (user_id,)
-        )
-        result = cursor.fetchone()
-        conn.close()
+        cursor.execute('''
+            SELECT id, username, nombre_completo, totp_secret, es_superadmin, rol
+            FROM usuarios WHERE id = ? AND activo = 1 AND totp_enabled = 1
+        ''', (user_id,))
+        usuario = cursor.fetchone()
         
-        if not result or not result[0]:
-            return jsonify({'error': 'Usuario no tiene 2FA configurado'}), 400
+        if not usuario or not usuario['totp_secret']:
+            conn.close()
+            return jsonify({'error': 'Usuario no válido o 2FA no configurado'}), 400
         
-        secret, username, nombre_completo = result
-        
-        # Verificar código
-        totp = pyotp.TOTP(secret)
+        # Verificar código TOTP
+        totp = pyotp.TOTP(usuario['totp_secret'])
         if not totp.verify(code, valid_window=1):
-            logger.warning(f"Código 2FA login incorrecto para {username}")
+            logger.warning(f"Código 2FA login incorrecto para {usuario['username']}")
+            conn.close()
             return jsonify({'error': 'Código incorrecto'}), 401
         
-        # Código correcto - completar la sesión pendiente
-        # Los datos de sesión ya fueron preparados, solo falta marcar como autenticado
-        pending_session = session.get('pending_2fa_session')
-        if pending_session and pending_session.get('user_id') == user_id:
-            # Restaurar sesión completa
-            for key, value in pending_session.items():
-                if key != 'pending_2fa_session':
-                    session[key] = value
-            session.pop('pending_2fa_session', None)
-            session.permanent = True
-            session.modified = True
-            
-            logger.info(f"Login 2FA completado para {username}")
-            registrar_auditoria('login_2fa', descripcion=f'Login con 2FA exitoso')
-            
-            return jsonify({
-                'success': True,
-                'usuario': nombre_completo,
-                'message': 'Autenticación completada'
-            }), 200
-        else:
-            return jsonify({'error': 'Sesión 2FA expirada, inicia sesión de nuevo'}), 400
+        # Código correcto - obtener empresa del usuario para establecer sesión
+        cursor.execute('''
+            SELECT ue.empresa_id, ue.es_admin, e.codigo, e.nombre, e.db_path, e.logo_header
+            FROM usuario_empresa ue
+            JOIN empresas e ON ue.empresa_id = e.id
+            WHERE ue.usuario_id = ?
+            ORDER BY ue.es_admin DESC
+            LIMIT 1
+        ''', (user_id,))
+        empresa_row = cursor.fetchone()
+        conn.close()
+        
+        # Preparar datos de sesión
+        empresa_id = empresa_row['empresa_id'] if empresa_row else None
+        empresa_codigo = empresa_row['codigo'] if empresa_row else None
+        empresa_nombre = empresa_row['nombre'] if empresa_row else 'Sin empresa'
+        db_path = empresa_row['db_path'] if empresa_row else None
+        logo_header = empresa_row['logo_header'] if empresa_row else 'aleph70_default.svg'
+        es_admin_empresa = empresa_row['es_admin'] if empresa_row else 0
+        
+        # Establecer sesión completa
+        session.permanent = True
+        session['user_id'] = usuario['id']
+        session['username'] = usuario['username']
+        session['nombre_completo'] = usuario['nombre_completo']
+        session['empresa_id'] = empresa_id
+        session['empresa_codigo'] = empresa_codigo
+        session['empresa_nombre'] = empresa_nombre
+        session['empresa_db'] = db_path
+        session['empresa_logo'] = logo_header
+        session['rol'] = usuario['rol']
+        session['es_admin_empresa'] = es_admin_empresa
+        session['es_superadmin'] = usuario['es_superadmin']
+        session.modified = True
+        
+        logger.info(f"Login 2FA completado para {usuario['username']}")
+        registrar_auditoria('login_2fa', descripcion=f'Login con 2FA exitoso')
+        
+        return jsonify({
+            'success': True,
+            'usuario': usuario['nombre_completo'],
+            'empresa': empresa_nombre,
+            'rol': usuario['rol'],
+            'es_admin': es_admin_empresa or usuario['es_superadmin'],
+            'message': 'Autenticación completada'
+        }), 200
         
     except Exception as e:
         logger.error(f"Error validando 2FA login: {e}", exc_info=True)
