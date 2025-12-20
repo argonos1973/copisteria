@@ -27,6 +27,13 @@ try:
 except ImportError:
     RATE_LIMITER_AVAILABLE = False
 
+# Seguridad (CSRF + XSS)
+try:
+    from security_utils import init_security, sanitize_input, sanitize_html
+    SECURITY_UTILS_AVAILABLE = True
+except ImportError:
+    SECURITY_UTILS_AVAILABLE = False
+
 # Sistema Multiempresa
 from multiempresa_config import SESSION_CONFIG, inicializar_bd_usuarios
 
@@ -102,6 +109,14 @@ def create_app():
         limiter = create_limiter(application)
         application.limiter = limiter
         logger.info("✅ Rate Limiter activado")
+    
+    # Activar protección CSRF y sanitización XSS
+    if SECURITY_UTILS_AVAILABLE:
+        csrf = init_security(application)
+        application.csrf = csrf
+        # Eximir rutas API que usan autenticación por sesión/header
+        csrf.exempt(auth_bp)
+        logger.info("✅ CSRF + XSS Protection activado")
     
     @application.route('/favicon.ico')
     def favicon():
