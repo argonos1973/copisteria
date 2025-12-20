@@ -1766,9 +1766,9 @@ def validate_2fa_login():
             conn.close()
             return jsonify({'error': 'Usuario no válido o 2FA no configurado'}), 400
         
-        # Verificar código TOTP
+        # Verificar código TOTP (ventana ampliada para tolerancia de tiempo)
         totp = pyotp.TOTP(usuario['totp_secret'])
-        if not totp.verify(code, valid_window=1):
+        if not totp.verify(code, valid_window=2):
             logger.warning(f"Código 2FA login incorrecto para {usuario['username']}")
             conn.close()
             return jsonify({'error': 'Código incorrecto'}), 401
