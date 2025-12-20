@@ -10,9 +10,13 @@ Fecha: 2025-10-21
 """
 
 import os
+import io
+import base64
 import uuid
 import secrets
 import requests
+import pyotp
+import qrcode
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash
@@ -1495,3 +1499,293 @@ def servir_mobile_facturas_recibidas_gestion():
     except Exception as e:
         logger.error(f"Error sirviendo gestion facturas recibidas mobile: {e}", exc_info=True)
         return jsonify({'error': 'Error interno'}), 500
+
+# ============================================================================
+# ENDPOINTS 2FA (Doble Factor de Autenticación)
+# ============================================================================
+
+def _ensure_2fa_columns():
+    """Asegura que existan las columnas de 2FA en la tabla usuarios"""
+    try:
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        
+        # Verificar si existen las columnas
+        cursor.execute("PRAGMA table_info(usuarios)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        if 'totp_secret' not in columns:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN totp_secret TEXT")
+            logger.info("Columna totp_secret añadida a usuarios")
+        
+        if 'totp_enabled' not in columns:
+            cursor.execute("ALTER TABLE usuarios ADD COLUMN totp_enabled INTEGER DEFAULT 0")
+            logger.info("Columna totp_enabled añadida a usuarios")
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.error(f"Error asegurando columnas 2FA: {e}")
+
+@auth_bp.route('/2fa/status', methods=['GET'])
+@login_required
+def get_2fa_status():
+    """Obtiene el estado de 2FA del usuario actual"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'No autenticado'}), 401
+        
+        _ensure_2fa_columns()
+        
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT totp_enabled FROM usuarios WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+        conn.close()
+        
+        enabled = bool(result[0]) if result and result[0] else False
+        
+        return jsonify({
+            'enabled': enabled
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo estado 2FA: {e}", exc_info=True)
+        return jsonify({'error': 'Error obteniendo estado 2FA'}), 500
+
+@auth_bp.route('/2fa/setup', methods=['POST'])
+@login_required
+def setup_2fa():
+    """
+    Inicia la configuración de 2FA.
+    Genera un secreto TOTP y devuelve el código QR para escanear.
+    """
+    try:
+        user_id = session.get('user_id')
+        username = session.get('username')
+        
+        if not user_id:
+            return jsonify({'error': 'No autenticado'}), 401
+        
+        _ensure_2fa_columns()
+        
+        # Generar secreto TOTP
+        secret = pyotp.random_base32()
+        
+        # Guardar secreto temporalmente (no activado aún)
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE usuarios SET totp_secret = ? WHERE id = ?",
+            (secret, user_id)
+        )
+        conn.commit()
+        conn.close()
+        
+        # Crear URI para el QR
+        totp = pyotp.TOTP(secret)
+        uri = totp.provisioning_uri(name=username, issuer_name="Aleph70")
+        
+        # Generar imagen QR
+        qr = qrcode.QRCode(version=1, box_size=10, border=5)
+        qr.add_data(uri)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+        
+        # Convertir a base64
+        buffer = io.BytesIO()
+        img.save(buffer, format='PNG')
+        buffer.seek(0)
+        qr_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        logger.info(f"2FA setup iniciado para usuario {username}")
+        
+        return jsonify({
+            'success': True,
+            'qr_code': f"data:image/png;base64,{qr_base64}",
+            'secret': secret,  # Para entrada manual si no pueden escanear QR
+            'message': 'Escanea el código QR con tu app de autenticación'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error en setup 2FA: {e}", exc_info=True)
+        return jsonify({'error': 'Error configurando 2FA'}), 500
+
+@auth_bp.route('/2fa/verify', methods=['POST'])
+@login_required
+def verify_2fa():
+    """
+    Verifica el código TOTP y activa 2FA si es correcto.
+    Se usa durante la configuración inicial.
+    """
+    try:
+        user_id = session.get('user_id')
+        username = session.get('username')
+        data = request.json or {}
+        code = data.get('code', '').strip()
+        
+        if not user_id:
+            return jsonify({'error': 'No autenticado'}), 401
+        
+        if not code or len(code) != 6:
+            return jsonify({'error': 'Código inválido. Debe ser de 6 dígitos'}), 400
+        
+        # Obtener secreto del usuario
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT totp_secret FROM usuarios WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+        
+        if not result or not result[0]:
+            conn.close()
+            return jsonify({'error': 'No hay configuración 2FA pendiente'}), 400
+        
+        secret = result[0]
+        
+        # Verificar código
+        totp = pyotp.TOTP(secret)
+        if not totp.verify(code, valid_window=1):  # Permite 30 segundos de margen
+            conn.close()
+            logger.warning(f"Código 2FA incorrecto para usuario {username}")
+            return jsonify({'error': 'Código incorrecto. Inténtalo de nuevo'}), 400
+        
+        # Activar 2FA
+        cursor.execute(
+            "UPDATE usuarios SET totp_enabled = 1 WHERE id = ?",
+            (user_id,)
+        )
+        conn.commit()
+        conn.close()
+        
+        registrar_auditoria('2fa_activado', descripcion=f'2FA activado para {username}')
+        logger.info(f"2FA activado exitosamente para usuario {username}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Autenticación de doble factor activada correctamente'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error verificando 2FA: {e}", exc_info=True)
+        return jsonify({'error': 'Error verificando código'}), 500
+
+@auth_bp.route('/2fa/disable', methods=['POST'])
+@login_required
+def disable_2fa():
+    """
+    Desactiva 2FA para el usuario actual.
+    Requiere verificar la contraseña actual.
+    """
+    try:
+        user_id = session.get('user_id')
+        username = session.get('username')
+        data = request.json or {}
+        password = data.get('password', '')
+        
+        if not user_id:
+            return jsonify({'error': 'No autenticado'}), 401
+        
+        if not password:
+            return jsonify({'error': 'Se requiere la contraseña actual'}), 400
+        
+        # Verificar contraseña
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT password_hash FROM usuarios WHERE id = ?", (user_id,))
+        result = cursor.fetchone()
+        
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Usuario no encontrado'}), 404
+        
+        from werkzeug.security import check_password_hash
+        if not check_password_hash(result[0], password):
+            conn.close()
+            logger.warning(f"Intento de desactivar 2FA con contraseña incorrecta: {username}")
+            return jsonify({'error': 'Contraseña incorrecta'}), 401
+        
+        # Desactivar 2FA
+        cursor.execute(
+            "UPDATE usuarios SET totp_enabled = 0, totp_secret = NULL WHERE id = ?",
+            (user_id,)
+        )
+        conn.commit()
+        conn.close()
+        
+        registrar_auditoria('2fa_desactivado', descripcion=f'2FA desactivado para {username}')
+        logger.info(f"2FA desactivado para usuario {username}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Autenticación de doble factor desactivada'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error desactivando 2FA: {e}", exc_info=True)
+        return jsonify({'error': 'Error desactivando 2FA'}), 500
+
+@auth_bp.route('/2fa/validate', methods=['POST'])
+def validate_2fa_login():
+    """
+    Valida el código 2FA durante el proceso de login.
+    Se llama después de verificar usuario/contraseña si 2FA está activo.
+    """
+    try:
+        data = request.json or {}
+        user_id = data.get('user_id')
+        code = data.get('code', '').strip()
+        
+        if not user_id:
+            return jsonify({'error': 'Sesión inválida'}), 400
+        
+        if not code or len(code) != 6:
+            return jsonify({'error': 'Código inválido'}), 400
+        
+        # Obtener secreto del usuario
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT totp_secret, username, nombre_completo FROM usuarios WHERE id = ?",
+            (user_id,)
+        )
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result or not result[0]:
+            return jsonify({'error': 'Usuario no tiene 2FA configurado'}), 400
+        
+        secret, username, nombre_completo = result
+        
+        # Verificar código
+        totp = pyotp.TOTP(secret)
+        if not totp.verify(code, valid_window=1):
+            logger.warning(f"Código 2FA login incorrecto para {username}")
+            return jsonify({'error': 'Código incorrecto'}), 401
+        
+        # Código correcto - completar la sesión pendiente
+        # Los datos de sesión ya fueron preparados, solo falta marcar como autenticado
+        pending_session = session.get('pending_2fa_session')
+        if pending_session and pending_session.get('user_id') == user_id:
+            # Restaurar sesión completa
+            for key, value in pending_session.items():
+                if key != 'pending_2fa_session':
+                    session[key] = value
+            session.pop('pending_2fa_session', None)
+            session.permanent = True
+            session.modified = True
+            
+            logger.info(f"Login 2FA completado para {username}")
+            registrar_auditoria('login_2fa', descripcion=f'Login con 2FA exitoso')
+            
+            return jsonify({
+                'success': True,
+                'usuario': nombre_completo,
+                'message': 'Autenticación completada'
+            }), 200
+        else:
+            return jsonify({'error': 'Sesión 2FA expirada, inicia sesión de nuevo'}), 400
+        
+    except Exception as e:
+        logger.error(f"Error validando 2FA login: {e}", exc_info=True)
+        return jsonify({'error': 'Error validando código'}), 500

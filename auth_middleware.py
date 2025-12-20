@@ -228,9 +228,10 @@ def autenticar_usuario(username, password, empresa_codigo):
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        # Verificar usuario
+        # Verificar usuario (incluir campos 2FA)
         cursor.execute('''
-            SELECT id, password_hash, nombre_completo, activo, es_superadmin, intentos_fallidos
+            SELECT id, password_hash, nombre_completo, activo, es_superadmin, intentos_fallidos,
+                   totp_enabled, totp_secret
             FROM usuarios
             WHERE username = ?
         ''', (username,))
@@ -241,7 +242,7 @@ def autenticar_usuario(username, password, empresa_codigo):
             logger.warning(f"Intento de login con usuario inexistente: {username}")
             return None
         
-        user_id, password_hash, nombre_completo, activo, es_superadmin, intentos_fallidos = usuario
+        user_id, password_hash, nombre_completo, activo, es_superadmin, intentos_fallidos, totp_enabled, totp_secret = usuario
         
         # Verificar si está bloqueado
         if intentos_fallidos >= SECURITY_CONFIG['MAX_LOGIN_ATTEMPTS']:
@@ -320,21 +321,41 @@ def autenticar_usuario(username, password, empresa_codigo):
         conn.commit()
         conn.close()
         
-        # Registrar login exitoso
+        # Preparar datos de sesión
+        session_data = {
+            'user_id': user_id,
+            'username': username,
+            'nombre_completo': nombre_completo,
+            'empresa_id': empresa_id,
+            'empresa_codigo': empresa_codigo,
+            'empresa_nombre': empresa_nombre,
+            'empresa_db': db_path,
+            'empresa_logo': logo_header,
+            'rol': rol,
+            'es_admin_empresa': es_admin_empresa,
+            'es_superadmin': es_superadmin,
+            'ultimo_acceso': ultimo_acceso_anterior
+        }
+        
+        # Verificar si tiene 2FA activo
+        if totp_enabled and totp_secret:
+            logger.info(f"2FA requerido para usuario {username}")
+            # Guardar sesión pendiente para completar después de verificar 2FA
+            session['pending_2fa_session'] = session_data
+            session.permanent = True
+            session.modified = True
+            return {
+                'requires_2fa': True,
+                'user_id': user_id,
+                'usuario': nombre_completo,
+                'message': 'Se requiere código de autenticación'
+            }
+        
+        # Sin 2FA - login directo
         # NO usar session.clear() porque borra metadatos de Flask-Session
         session.permanent = True  # Hacer que la sesión persista según PERMANENT_SESSION_LIFETIME
-        session['user_id'] = user_id
-        session['username'] = username
-        session['nombre_completo'] = nombre_completo
-        session['empresa_id'] = empresa_id
-        session['empresa_codigo'] = empresa_codigo
-        session['empresa_nombre'] = empresa_nombre
-        session['empresa_db'] = db_path  # IMPORTANTE: BD de la empresa para conexiones
-        session['empresa_logo'] = logo_header  # Guardar logo en sesión
-        session['rol'] = rol
-        session['es_admin_empresa'] = es_admin_empresa
-        session['es_superadmin'] = es_superadmin
-        session['ultimo_acceso'] = ultimo_acceso_anterior
+        for key, value in session_data.items():
+            session[key] = value
         
         logger.info(f"Login exitoso: {username} → {empresa_nombre} (BD: {db_path})")
         

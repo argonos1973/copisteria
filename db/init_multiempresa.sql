@@ -52,6 +52,10 @@ CREATE TABLE IF NOT EXISTS usuarios (
     verification_token TEXT,
     token_expiry TEXT,
     
+    -- 2FA (Doble Factor de Autenticación)
+    totp_secret TEXT,           -- Secreto TOTP para generar códigos
+    totp_enabled INTEGER DEFAULT 0,  -- 1 si 2FA está activo
+    
     -- Control
     activo INTEGER DEFAULT 1,
     es_superadmin INTEGER DEFAULT 0,
