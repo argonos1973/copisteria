@@ -20,6 +20,13 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
 from logger_config import get_logger
 
+# Rate Limiting
+try:
+    from rate_limiter import create_limiter, RateLimits
+    RATE_LIMITER_AVAILABLE = True
+except ImportError:
+    RATE_LIMITER_AVAILABLE = False
+
 # Sistema Multiempresa
 from multiempresa_config import SESSION_CONFIG, inicializar_bd_usuarios
 
@@ -89,6 +96,12 @@ def create_app():
     
     # Registrar middlewares
     register_middlewares(application)
+    
+    # Activar Rate Limiting
+    if RATE_LIMITER_AVAILABLE:
+        limiter = create_limiter(application)
+        application.limiter = limiter
+        logger.info("✅ Rate Limiter activado")
     
     @application.route('/favicon.ico')
     def favicon():
@@ -173,6 +186,11 @@ def register_middlewares(app):
         response.headers.add('X-Content-Type-Options', 'nosniff')
         response.headers.add('X-Frame-Options', 'SAMEORIGIN')
         response.headers.add('X-XSS-Protection', '1; mode=block')
+        response.headers.add('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.add('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+        # HSTS solo si es HTTPS
+        if request.is_secure or request.headers.get('X-Forwarded-Proto') == 'https':
+            response.headers.add('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
         
         # Cache control para recursos estáticos
         if request.path.startswith('/static/'):

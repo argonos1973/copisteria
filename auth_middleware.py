@@ -31,17 +31,34 @@ def hash_password(password):
     """
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
-def verificar_password(password, password_hash):
+def verificar_password(password, password_hash, user_id=None):
     """
     Verifica una contraseña contra su hash
-    Soporta tanto SHA256 (legacy) como Werkzeug scrypt (nuevo)
+    Soporta tanto SHA256 (legacy) como Werkzeug scrypt/pbkdf2 (nuevo)
+    Si user_id se proporciona y es SHA256 legacy, migra automáticamente a PBKDF2
     """
-    # Si el hash empieza con scrypt: es un hash de Werkzeug
+    from werkzeug.security import check_password_hash, generate_password_hash
+    
+    # Si el hash empieza con scrypt: o pbkdf2: es un hash de Werkzeug
     if password_hash.startswith('scrypt:') or password_hash.startswith('pbkdf2:'):
-        from werkzeug.security import check_password_hash
         return check_password_hash(password_hash, password)
+    
     # Si no, es el hash SHA256 legacy
-    return hash_password(password) == password_hash
+    if hash_password(password) == password_hash:
+        # Migrar automáticamente a PBKDF2 si tenemos user_id
+        if user_id:
+            try:
+                nuevo_hash = generate_password_hash(password)
+                conn = sqlite3.connect(DB_USUARIOS_PATH)
+                cursor = conn.cursor()
+                cursor.execute("UPDATE usuarios SET password = ? WHERE id = ?", (nuevo_hash, user_id))
+                conn.commit()
+                conn.close()
+                logger.info(f"✅ Contraseña migrada de SHA256 a PBKDF2 para usuario {user_id}")
+            except Exception as e:
+                logger.warning(f"No se pudo migrar contraseña: {e}")
+        return True
+    return False
 
 def es_ruta_publica(ruta):
     """
@@ -254,8 +271,8 @@ def autenticar_usuario(username, password, empresa_codigo):
             logger.warning(f"Intento de login con usuario inactivo: {username}")
             return {'error': 'Usuario inactivo'}
         
-        # Verificar contraseña
-        if not verificar_password(password, password_hash):
+        # Verificar contraseña (con migración automática de SHA256 a PBKDF2)
+        if not verificar_password(password, password_hash, user_id):
             # Incrementar intentos fallidos
             cursor.execute('''
                 UPDATE usuarios 

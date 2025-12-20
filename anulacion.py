@@ -38,6 +38,13 @@ except Exception:
 
 def _ensure_column(table: str, col_name: str, col_type: str = "TEXT") -> None:
     """Asegura que existe la columna en la tabla indicada."""
+    # Validar nombres para prevenir SQL injection (PRAGMA no acepta parámetros)
+    import re
+    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table):
+        raise ValueError(f"Nombre de tabla inválido: {table}")
+    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', col_name):
+        raise ValueError(f"Nombre de columna inválido: {col_name}")
+    
     conn = None
     try:
         conn = get_db_connection()

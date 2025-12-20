@@ -28,7 +28,7 @@ SESSION_CONFIG = {
     'SESSION_COOKIE_HTTPONLY': True,
     'SESSION_COOKIE_SAMESITE': 'Lax',
     'SESSION_COOKIE_PATH': '/',  # Cookies disponibles en todas las rutas
-    'SESSION_COOKIE_SECURE': False  # True solo si usas HTTPS
+    'SESSION_COOKIE_SECURE': os.getenv('FLASK_ENV') == 'production'  # True en producción (HTTPS)
 }
 
 # Configuración de seguridad
