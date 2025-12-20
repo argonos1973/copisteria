@@ -1744,6 +1744,7 @@ def validate_2fa_login():
         data = request.json or {}
         user_id = data.get('user_id')
         code = data.get('code', '').strip()
+        logger.info(f"2FA validate request: user_id={user_id}, code_len={len(code) if code else 0}")
         
         if not user_id:
             return jsonify({'error': 'Sesión inválida'}), 400
@@ -1774,11 +1775,11 @@ def validate_2fa_login():
         
         # Código correcto - obtener empresa del usuario para establecer sesión
         cursor.execute('''
-            SELECT ue.empresa_id, ue.es_admin, e.codigo, e.nombre, e.db_path, e.logo_header
+            SELECT ue.empresa_id, ue.es_admin_empresa, e.codigo, e.nombre, e.db_path, e.logo_header
             FROM usuario_empresa ue
             JOIN empresas e ON ue.empresa_id = e.id
             WHERE ue.usuario_id = ?
-            ORDER BY ue.es_admin DESC
+            ORDER BY ue.es_admin_empresa DESC
             LIMIT 1
         ''', (user_id,))
         empresa_row = cursor.fetchone()
@@ -1790,7 +1791,7 @@ def validate_2fa_login():
         empresa_nombre = empresa_row['nombre'] if empresa_row else 'Sin empresa'
         db_path = empresa_row['db_path'] if empresa_row else None
         logo_header = empresa_row['logo_header'] if empresa_row else 'aleph70_default.svg'
-        es_admin_empresa = empresa_row['es_admin'] if empresa_row else 0
+        es_admin_empresa = empresa_row['es_admin_empresa'] if empresa_row else 0
         
         # Establecer sesión completa
         session.permanent = True
