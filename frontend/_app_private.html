@@ -148,6 +148,7 @@
             <div class="modal-perfil-tabs">
                 <button class="tab-btn active" onclick="cambiarTab('datos', this)"><i class="fas fa-user"></i> Datos Personales</button>
                 <button class="tab-btn" onclick="cambiarTab('password', this)"><i class="fas fa-key"></i> Contraseña</button>
+                <button class="tab-btn" onclick="cambiarTab('seguridad', this)"><i class="fas fa-shield-alt"></i> Seguridad</button>
                 <button class="tab-btn" onclick="cambiarTab('plantilla', this)"><i class="fas fa-palette"></i> Plantilla</button>
             </div>
             
@@ -228,6 +229,33 @@
                     </div>
                     <button type="submit" class="btn-guardar">Cambiar Contraseña</button>
                 </form>
+            </div>
+            
+            <!-- Tab: Seguridad (2FA) -->
+            <div id="tab-seguridad" class="tab-content">
+                <div style="background: var(--bg-elevated, #f8f9fa); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: var(--color-texto, #333);"><i class="fas fa-shield-alt"></i> Autenticación de Doble Factor (2FA)</h4>
+                    <p style="margin: 0; font-size: 13px; color: var(--color-texto-secundario, #666);">
+                        Añade una capa extra de seguridad a tu cuenta. Necesitarás una app como Google Authenticator o Authy.
+                    </p>
+                </div>
+                
+                <div id="2fa-status-container">
+                    <div style="text-align: center; padding: 20px;">
+                        <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--color-primario, #007bff);"></i>
+                        <p style="margin-top: 10px; color: var(--color-texto-secundario, #666);">Cargando estado...</p>
+                    </div>
+                </div>
+                
+                <!-- Modal QR 2FA -->
+                <div id="modal-2fa-qr" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10001; display: none; align-items: center; justify-content: center;">
+                    <div style="background: var(--bg-card, white); border-radius: 12px; padding: 25px; max-width: 400px; width: 90%; text-align: center;">
+                        <h3 style="margin: 0 0 15px 0; color: var(--color-texto, #333);"><i class="fas fa-qrcode"></i> Configurar 2FA</h3>
+                        <div id="2fa-qr-content">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Tab: Plantilla -->

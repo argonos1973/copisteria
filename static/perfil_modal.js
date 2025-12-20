@@ -1,6 +1,7 @@
 // perfil_modal.js - Gestión del modal de perfil de usuario
 
 let datosUsuarioActual = {};
+let twoFactorEnabled = false;
 
 async function abrirModalPerfil() {
     try {
@@ -37,6 +38,9 @@ async function abrirModalPerfil() {
         
         // Cargar plantillas disponibles
         await cargarPlantillasModal();
+        
+        // Cargar estado 2FA
+        await cargar2FAStatus();
         
         // Mostrar modal
         document.getElementById('modal-perfil').style.display = 'block';
@@ -537,10 +541,236 @@ document.addEventListener('DOMContentLoaded', () => {
 window.onclick = function(event) {
     const modal = document.getElementById('modal-perfil');
     const modalSelector = document.getElementById('modal-selector-avatares');
+    const modal2fa = document.getElementById('modal-2fa-qr');
     if (event.target === modal) {
         cerrarModalPerfil();
     }
     if (event.target === modalSelector) {
         cerrarSelectorAvatares();
+    }
+    if (event.target === modal2fa) {
+        cerrarModal2FA();
+    }
+}
+
+// ============================================================================
+// FUNCIONES 2FA
+// ============================================================================
+
+async function cargar2FAStatus() {
+    const container = document.getElementById('2fa-status-container');
+    if (!container) return;
+    
+    try {
+        const response = await fetch('/api/auth/2fa/status');
+        const data = await response.json();
+        
+        twoFactorEnabled = data.enabled;
+        
+        if (twoFactorEnabled) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #28a745, #20c997); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-shield-alt" style="font-size: 36px; color: white;"></i>
+                    </div>
+                    <h3 style="color: #28a745; margin: 0 0 10px 0;"><i class="fas fa-check-circle"></i> 2FA Activado</h3>
+                    <p style="color: var(--color-texto-secundario, #666); margin-bottom: 20px; font-size: 13px;">
+                        Tu cuenta está protegida con autenticación de doble factor.
+                    </p>
+                    <button onclick="mostrarDesactivar2FA()" class="btn-guardar" style="background: #dc3545;">
+                        <i class="fas fa-times-circle"></i> Desactivar 2FA
+                    </button>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #6c757d, #adb5bd); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-shield-alt" style="font-size: 36px; color: white;"></i>
+                    </div>
+                    <h3 style="color: var(--color-texto, #333); margin: 0 0 10px 0;">2FA Desactivado</h3>
+                    <p style="color: var(--color-texto-secundario, #666); margin-bottom: 20px; font-size: 13px;">
+                        Activa la autenticación de doble factor para mayor seguridad.
+                    </p>
+                    <button onclick="iniciarSetup2FA()" class="btn-guardar btn-force-blue">
+                        <i class="fas fa-shield-alt"></i> Activar 2FA
+                    </button>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error cargando estado 2FA:', error);
+        container.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: #dc3545;">
+                <i class="fas fa-exclamation-triangle"></i> Error cargando estado de 2FA
+            </div>
+        `;
+    }
+}
+
+async function iniciarSetup2FA() {
+    const modal = document.getElementById('modal-2fa-qr');
+    const content = document.getElementById('2fa-qr-content');
+    
+    modal.style.display = 'flex';
+    content.innerHTML = `
+        <div style="padding: 20px;">
+            <i class="fas fa-spinner fa-spin fa-2x" style="color: var(--color-primario, #007bff);"></i>
+            <p style="margin-top: 10px;">Generando código QR...</p>
+        </div>
+    `;
+    
+    try {
+        const response = await fetch('/api/auth/2fa/setup', { method: 'POST' });
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Error al configurar 2FA');
+        }
+        
+        content.innerHTML = `
+            <p style="margin-bottom: 15px; font-size: 13px; color: var(--color-texto-secundario, #666);">
+                Escanea este código QR con Google Authenticator o Authy:
+            </p>
+            <div style="background: white; padding: 15px; border-radius: 8px; display: inline-block; margin-bottom: 15px;">
+                <img src="${data.qr_code}" alt="QR Code" style="max-width: 180px;">
+            </div>
+            <p style="font-size: 11px; color: var(--color-texto-secundario, #888); margin-bottom: 10px;">
+                O introduce este código manualmente:
+            </p>
+            <code style="display: block; background: var(--bg-elevated, #f5f5f5); padding: 10px; border-radius: 6px; font-size: 12px; letter-spacing: 2px; margin-bottom: 20px; word-break: break-all;">${data.secret}</code>
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--color-texto, #333);">
+                    Introduce el código de 6 dígitos:
+                </label>
+                <input type="text" id="verify-2fa-code" maxlength="6" placeholder="000000" 
+                       style="width: 150px; padding: 12px; font-size: 20px; text-align: center; letter-spacing: 8px; border: 2px solid var(--color-border, #ddd); border-radius: 8px; font-family: monospace;"
+                       onkeypress="if(event.key==='Enter')verificar2FA()">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="cerrarModal2FA()" class="btn-guardar" style="background: #6c757d;">Cancelar</button>
+                <button onclick="verificar2FA()" class="btn-guardar btn-force-blue">Verificar y Activar</button>
+            </div>
+        `;
+        
+        document.getElementById('verify-2fa-code').focus();
+        
+    } catch (error) {
+        content.innerHTML = `
+            <div style="color: #dc3545; padding: 20px;">
+                <i class="fas fa-exclamation-triangle fa-2x"></i>
+                <p style="margin-top: 10px;">${error.message}</p>
+                <button onclick="cerrarModal2FA()" class="btn-guardar" style="margin-top: 15px; background: #6c757d;">Cerrar</button>
+            </div>
+        `;
+    }
+}
+
+async function verificar2FA() {
+    const code = document.getElementById('verify-2fa-code').value.trim();
+    
+    if (!code || code.length !== 6) {
+        mostrarNotificacion('Introduce un código de 6 dígitos', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/auth/2fa/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Código incorrecto');
+        }
+        
+        const content = document.getElementById('2fa-qr-content');
+        content.innerHTML = `
+            <div style="padding: 20px;">
+                <div style="width: 60px; height: 60px; background: #28a745; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-check" style="font-size: 30px; color: white;"></i>
+                </div>
+                <h3 style="color: #28a745; margin: 0 0 10px 0;">¡2FA Activado!</h3>
+                <p style="color: var(--color-texto-secundario, #666); font-size: 13px;">
+                    Tu cuenta ahora está protegida con autenticación de doble factor.
+                </p>
+                <button onclick="cerrarModal2FA(); cargar2FAStatus();" class="btn-guardar btn-force-blue" style="margin-top: 15px;">Entendido</button>
+            </div>
+        `;
+        
+    } catch (error) {
+        mostrarNotificacion(error.message, 'error');
+        document.getElementById('verify-2fa-code').value = '';
+        document.getElementById('verify-2fa-code').focus();
+    }
+}
+
+function mostrarDesactivar2FA() {
+    const modal = document.getElementById('modal-2fa-qr');
+    const content = document.getElementById('2fa-qr-content');
+    
+    modal.style.display = 'flex';
+    content.innerHTML = `
+        <div style="padding: 10px;">
+            <div style="width: 60px; height: 60px; background: #dc3545; border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 28px; color: white;"></i>
+            </div>
+            <h3 style="color: #dc3545; margin: 0 0 10px 0;">Desactivar 2FA</h3>
+            <p style="color: var(--color-texto-secundario, #666); font-size: 13px; margin-bottom: 20px;">
+                Esto reducirá la seguridad de tu cuenta. ¿Estás seguro?
+            </p>
+            <div style="margin-bottom: 15px; text-align: left;">
+                <label style="display: block; margin-bottom: 8px; font-size: 13px;">Introduce tu contraseña:</label>
+                <input type="password" id="disable-2fa-password" placeholder="Tu contraseña actual"
+                       style="width: 100%; padding: 10px; border: 1px solid var(--color-border, #ddd); border-radius: 6px; box-sizing: border-box;"
+                       onkeypress="if(event.key==='Enter')desactivar2FA()">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button onclick="cerrarModal2FA()" class="btn-guardar" style="background: #6c757d;">Cancelar</button>
+                <button onclick="desactivar2FA()" class="btn-guardar" style="background: #dc3545;">Desactivar</button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('disable-2fa-password').focus();
+}
+
+async function desactivar2FA() {
+    const password = document.getElementById('disable-2fa-password').value;
+    
+    if (!password) {
+        mostrarNotificacion('Introduce tu contraseña', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/auth/2fa/disable', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Error al desactivar 2FA');
+        }
+        
+        mostrarNotificacion('2FA desactivado correctamente', 'success');
+        cerrarModal2FA();
+        cargar2FAStatus();
+        
+    } catch (error) {
+        mostrarNotificacion(error.message, 'error');
+    }
+}
+
+function cerrarModal2FA() {
+    const modal = document.getElementById('modal-2fa-qr');
+    if (modal) {
+        modal.style.display = 'none';
     }
 }
