@@ -904,13 +904,14 @@ def obtener_gastos_por_categoria_anio():
 @estadisticas_gastos_bp.route('/api/gastos/detalles-categoria', methods=['GET'])
 def obtener_detalles_categoria():
     """
-    Devuelve los detalles de gastos de una categoría específica para un mes/año
+    Devuelve los detalles de gastos de una categoría específica para un mes/trimestre/año
     Adaptado para soportar la nueva agrupación dinámica (Top 9 + Otros)
     """
     try:
         categoria = request.args.get('categoria', type=str)
         anio = request.args.get('anio', datetime.now().year, type=int)
         mes = request.args.get('mes', type=int)  # Opcional
+        trimestre = request.args.get('trimestre', type=int)  # Opcional (1-4)
         
         if not categoria:
             return jsonify({'error': 'Categoría requerida'}), 400
@@ -929,7 +930,7 @@ def obtener_detalles_categoria():
             cols = [c['name'] for c in cursor.fetchall()]
             col_razon = "razon_social" if "razon_social" in cols else "NULL as razon_social"
             
-            # 1. Obtener TODOS los gastos (del año o del mes según corresponda)
+            # 1. Obtener TODOS los gastos (del año, trimestre o mes según corresponda)
             query = f'''
                 SELECT 
                     id, fecha_valor, concepto, ABS(importe_eur) as importe, puntual, {col_razon}
@@ -939,7 +940,13 @@ def obtener_detalles_categoria():
             '''
             params = [str(anio)]
             
-            if mes:
+            if trimestre and trimestre >= 1 and trimestre <= 4:
+                # Filtrar por trimestre
+                mes_inicio = (trimestre - 1) * 3 + 1
+                mes_fin = mes_inicio + 2
+                query += ' AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) BETWEEN ? AND ?'
+                params.extend([mes_inicio, mes_fin])
+            elif mes:
                 query += ' AND substr(fecha_valor, 4, 2) = ?'
                 params.append(str(mes).zfill(2))
                 
@@ -1254,7 +1261,7 @@ def generar_informe_situacion():
             _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
     
             # ===== DATOS DE GASTOS =====
-            # Total gastos del año hasta el mes actual - EXCLUYENDO PUNTUALES
+            # Total gastos del año hasta el mes actual
             cursor.execute('''
                 SELECT
                     COALESCE(SUM(ABS(importe_eur)), 0) as total_gastos,
@@ -1263,20 +1270,18 @@ def generar_informe_situacion():
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
                 AND importe_eur < 0
-                AND (puntual IS NULL OR puntual = 0)
             ''', (str(anio), mes))
             gastos_anio = cursor.fetchone()
             total_gastos = float(gastos_anio['total_gastos'] or 0)
             num_gastos = int(gastos_anio['num_gastos'] or 0)
     
-            # Gastos del mes actual - EXCLUYENDO PUNTUALES
+            # Gastos del mes actual
             cursor.execute('''
                 SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total_mes
                 FROM gastos
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND substr(fecha_valor, 4, 2) = ?
                 AND importe_eur < 0
-                AND (puntual IS NULL OR puntual = 0)
             ''', (str(anio), mes_str))
             gastos_mes = float(cursor.fetchone()['total_mes'] or 0)
             
@@ -1300,26 +1305,29 @@ def generar_informe_situacion():
             proyeccion_gastos = total_gastos + (media_gastos_mensual * meses_restantes)
             proyeccion_balance = proyeccion_ventas - proyeccion_gastos
             
-            # Top 5 categorías de gastos
-            case_categoria = _obtener_case_categoria_sql().replace('ELSE substr(concepto, 1, 30)', 'ELSE \'Otros\'')
+            # Top 10 gastos por razón social/concepto
+            cursor.execute("PRAGMA table_info(gastos)")
+            cols = [c['name'] for c in cursor.fetchall()]
+            col_razon = "razon_social" if "razon_social" in cols else "concepto"
+            
             cursor.execute(f'''
                 SELECT 
-                    {case_categoria} as categoria,
+                    COALESCE(NULLIF(TRIM({col_razon}), ''), TRIM(concepto)) as nombre_gasto,
                     COALESCE(SUM(ABS(importe_eur)), 0) as total,
                     COUNT(*) as cantidad
                 FROM gastos
                 WHERE substr(fecha_valor, 7, 4) = ?
                 AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
                 AND importe_eur < 0
-                GROUP BY categoria
+                GROUP BY nombre_gasto
                 ORDER BY total DESC
-                LIMIT 5
+                LIMIT 10
             ''', (str(anio), mes))
             
             top_categorias_gastos = []
             for row in cursor.fetchall():
                 top_categorias_gastos.append({
-                    'categoria': row['categoria'],
+                    'categoria': row['nombre_gasto'] or 'Sin nombre',
                     'total': round(float(row['total']), 2),
                     'cantidad': int(row['cantidad']),
                     'porcentaje': round((float(row['total']) / total_gastos * 100) if total_gastos > 0 else 0, 1)
@@ -1442,14 +1450,13 @@ def simular_escenarios():
         ''', (anio, mes))
         ventas_tickets = float(cursor.fetchone()['total'] or 0)
 
-        # Gastos - EXCLUYENDO PUNTUALES
+        # Gastos
         cursor.execute('''
             SELECT COALESCE(SUM(ABS(importe_eur)), 0) as total
             FROM gastos
             WHERE substr(fecha_valor, 7, 4) = ?
             AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
             AND importe_eur < 0
-            AND (puntual IS NULL OR puntual = 0)
         ''', (str(anio), mes))
         gastos_totales = float(cursor.fetchone()['total'] or 0)
         
@@ -1537,3 +1544,198 @@ def simular_escenarios():
         # Cerrar conexión siempre
         if 'conn' in locals():
             conn.close()
+
+@estadisticas_gastos_bp.route('/api/productos-mas-vendidos', methods=['GET'])
+def productos_mas_vendidos():
+    """
+    Devuelve los productos más vendidos con cálculo de nuevo precio según porcentaje
+    """
+    try:
+        porcentaje = float(request.args.get('porcentaje', 0))
+        limite = int(request.args.get('limite', 20))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Usar la misma lógica que /api/productos/top_ventas: facturas + tickets, ordenado por total vendido
+        anio = request.args.get('anio') or str(datetime.now().year)
+        ejercicio_actual = datetime.now().year
+        
+        # Ventas del año seleccionado - sin filtrar por ejercicio ya que las ventas usan IDs originales
+        cursor.execute('''
+            WITH ventas_facturas AS (
+                SELECT 
+                    p.id as producto_id,
+                    p.nombre,
+                    p.subtotal as precio_sin_iva,
+                    p.impuestos as iva_pct,
+                    p.total as precio_con_iva,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_f,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_f
+                FROM productos p
+                LEFT JOIN detalle_factura df ON p.id = df.productoId
+                LEFT JOIN factura f ON df.id_factura = f.id AND f.estado = 'C'
+                WHERE p.subtotal > 0
+                GROUP BY p.id, p.nombre
+            ),
+            ventas_tickets AS (
+                SELECT 
+                    p.id as producto_id,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.cantidad ELSE 0 END), 0) as cantidad_t,
+                    COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.total ELSE 0 END), 0) as total_t
+                FROM productos p
+                LEFT JOIN detalle_tickets dt ON p.id = dt.productoId
+                LEFT JOIN tickets t ON dt.id_ticket = t.id AND t.estado = 'C'
+                WHERE p.subtotal > 0
+                GROUP BY p.id
+            )
+            SELECT 
+                vf.producto_id as id,
+                vf.nombre,
+                vf.precio_sin_iva,
+                vf.iva_pct,
+                vf.precio_con_iva,
+                ROUND(vf.precio_sin_iva * (1 + ? / 100.0), 2) as nuevo_sin_iva,
+                ROUND(vf.precio_con_iva * (1 + ? / 100.0), 2) as nuevo_con_iva,
+                ROUND(vf.precio_sin_iva * ? / 100.0, 2) as incremento_sin_iva,
+                ROUND(vf.precio_con_iva * ? / 100.0, 2) as incremento_con_iva,
+                (vf.cantidad_f + COALESCE(vt.cantidad_t, 0)) as unidades_vendidas,
+                (vf.total_f + COALESCE(vt.total_t, 0)) as total_vendido
+            FROM ventas_facturas vf
+            LEFT JOIN ventas_tickets vt ON vf.producto_id = vt.producto_id
+            WHERE (vf.total_f + COALESCE(vt.total_t, 0)) > 0
+            ORDER BY total_vendido DESC
+            LIMIT ?
+        ''', (anio, anio, anio, anio, porcentaje, porcentaje, porcentaje, porcentaje, limite))
+        
+        def to_float(val):
+            if val is None:
+                return 0.0
+            if isinstance(val, (int, float)):
+                return float(val)
+            return float(str(val).replace(',', '.'))
+        
+        productos = []
+        for row in cursor.fetchall():
+            productos.append({
+                'id': row['id'],
+                'nombre': row['nombre'],
+                'precio_sin_iva': round(to_float(row['precio_sin_iva']), 2),
+                'precio_con_iva': round(to_float(row['precio_con_iva']), 2),
+                'iva_pct': int(row['iva_pct'] or 21),
+                'nuevo_sin_iva': round(to_float(row['nuevo_sin_iva']), 2),
+                'nuevo_con_iva': round(to_float(row['nuevo_con_iva']), 2),
+                'incremento_sin_iva': round(to_float(row['incremento_sin_iva']), 2),
+                'incremento_con_iva': round(to_float(row['incremento_con_iva']), 2),
+                'unidades_vendidas': int(row['unidades_vendidas'] or 0)
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'porcentaje': porcentaje,
+            'productos': productos
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al obtener productos más vendidos: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@estadisticas_gastos_bp.route('/api/duplicar-productos-ejercicio', methods=['POST'])
+def duplicar_productos_ejercicio():
+    """
+    Duplica todos los productos del ejercicio anterior al nuevo ejercicio
+    """
+    try:
+        data = request.json
+        ejercicio_nuevo = int(data.get('ejercicio_nuevo', datetime.now().year))
+        ejercicio_anterior = ejercicio_nuevo - 1
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Verificar si ya existen productos para el nuevo ejercicio
+        cursor.execute('SELECT COUNT(*) as count FROM productos WHERE ejercicio = ?', (ejercicio_nuevo,))
+        count = cursor.fetchone()['count']
+        
+        if count > 0:
+            conn.close()
+            return jsonify({
+                'success': False,
+                'mensaje': f'Ya existen {count} productos para el ejercicio {ejercicio_nuevo}',
+                'productos_existentes': count
+            })
+        
+        # Obtener productos del ejercicio anterior
+        cursor.execute('''
+            SELECT nombre, descripcion, subtotal, iva, impuestos, total,
+                   calculo_automatico, franja_inicial, numero_franjas, ancho_franja,
+                   descuento_inicial, incremento_franja, no_generar_franjas
+            FROM productos 
+            WHERE ejercicio = ?
+        ''', (ejercicio_anterior,))
+        
+        productos_anteriores = cursor.fetchall()
+        
+        if not productos_anteriores:
+            conn.close()
+            return jsonify({
+                'success': False,
+                'mensaje': f'No hay productos en el ejercicio {ejercicio_anterior} para duplicar'
+            })
+        
+        # Duplicar productos con el nuevo ejercicio
+        productos_duplicados = 0
+        franjas_duplicadas = 0
+        
+        for p in productos_anteriores:
+            # Obtener el ID del producto original
+            cursor.execute('SELECT id FROM productos WHERE nombre = ? AND ejercicio = ?', 
+                          (p['nombre'], ejercicio_anterior))
+            producto_original = cursor.fetchone()
+            producto_id_original = producto_original['id'] if producto_original else None
+            
+            # Insertar el nuevo producto
+            cursor.execute('''
+                INSERT INTO productos (nombre, descripcion, subtotal, iva, impuestos, total,
+                                       calculo_automatico, franja_inicial, numero_franjas, ancho_franja,
+                                       descuento_inicial, incremento_franja, no_generar_franjas, ejercicio)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (p['nombre'], p['descripcion'], p['subtotal'], p['iva'], p['impuestos'], p['total'],
+                  p['calculo_automatico'], p['franja_inicial'], p['numero_franjas'], p['ancho_franja'],
+                  p['descuento_inicial'], p['incremento_franja'], p['no_generar_franjas'], ejercicio_nuevo))
+            
+            nuevo_producto_id = cursor.lastrowid
+            productos_duplicados += 1
+            
+            # Duplicar franjas del producto si existen
+            if producto_id_original:
+                cursor.execute('''
+                    SELECT min_cantidad, max_cantidad, porcentaje_descuento, calculo_automatico
+                    FROM descuento_producto_franja
+                    WHERE producto_id = ? AND ejercicio = ?
+                ''', (producto_id_original, ejercicio_anterior))
+                
+                franjas = cursor.fetchall()
+                for f in franjas:
+                    cursor.execute('''
+                        INSERT INTO descuento_producto_franja 
+                        (producto_id, min_cantidad, max_cantidad, porcentaje_descuento, calculo_automatico, ejercicio)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (nuevo_producto_id, f['min_cantidad'], f['max_cantidad'], 
+                          f['porcentaje_descuento'], f['calculo_automatico'], ejercicio_nuevo))
+                    franjas_duplicadas += 1
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'mensaje': f'Se han duplicado {productos_duplicados} productos y {franjas_duplicadas} franjas al ejercicio {ejercicio_nuevo}',
+            'productos_duplicados': productos_duplicados,
+            'franjas_duplicadas': franjas_duplicadas
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al duplicar productos: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500

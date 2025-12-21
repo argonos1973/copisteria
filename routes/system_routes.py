@@ -204,23 +204,26 @@ def exportar():
                 cursor = conn.cursor()
                 
                 query_tickets = '''
-                    SELECT id, fecha, total, observaciones, timestamp
+                    SELECT fecha, numero, importe_bruto, importe_impuestos, 
+                           importe_cobrado, total
                     FROM tickets 
                     WHERE fecha BETWEEN ? AND ?
-                    ORDER BY fecha, timestamp
+                    ORDER BY fecha
                 '''
                 
                 cursor.execute(query_tickets, (fecha_inicio, fecha_fin))
                 tickets_raw = cursor.fetchall()
                 
-                for ticket in tickets_raw:
+                for t in tickets_raw:
                     tickets_data.append({
-                        'tipo': 'TICKET',
-                        'id': ticket[0],
-                        'fecha': format_date(ticket[1]) if ticket[1] else '',
-                        'total': float(ticket[2]) if ticket[2] else 0.0,
-                        'observaciones': ticket[3] or '',
-                        'timestamp': ticket[4]
+                        'fecha': format_date(t[0]) if t[0] else '',
+                        'numero': t[1] or '',
+                        'nif': '',
+                        'razonSocial': '',
+                        'importe_bruto': float(t[2]) if t[2] else 0.0,
+                        'importe_impuestos': float(t[3]) if t[3] else 0.0,
+                        'importe_cobrado': float(t[4]) if t[4] else 0.0,
+                        'total': float(t[5]) if t[5] else 0.0
                     })
                 
         except Exception as e:
@@ -235,27 +238,28 @@ def exportar():
                 cursor = conn.cursor()
                 
                 query_facturas = '''
-                    SELECT f.id, f.fecha, f.total, f.observaciones, f.timestamp, 
-                           f.numerofactura, c.razonsocial as cliente
+                    SELECT f.fecha, f.numero, f.nif, c.razonsocial,
+                           f.importe_bruto, f.importe_impuestos, 
+                           f.importe_cobrado, f.total
                     FROM factura f
                     LEFT JOIN contactos c ON f.idcontacto = c.idContacto
                     WHERE f.fecha BETWEEN ? AND ?
-                    ORDER BY f.fecha, f.timestamp
+                    ORDER BY f.fecha
                 '''
                 
                 cursor.execute(query_facturas, (fecha_inicio, fecha_fin))
                 facturas_raw = cursor.fetchall()
                 
-                for factura_row in facturas_raw:
+                for f in facturas_raw:
                     facturas_data.append({
-                        'tipo': 'FACTURA',
-                        'id': factura_row[0],
-                        'fecha': format_date(factura_row[1]) if factura_row[1] else '',
-                        'total': float(factura_row[2]) if factura_row[2] else 0.0,
-                        'observaciones': factura_row[3] or '',
-                        'timestamp': factura_row[4],
-                        'numero_factura': factura_row[5] or '',
-                        'cliente': factura_row[6] or ''
+                        'fecha': format_date(f[0]) if f[0] else '',
+                        'numero': f[1] or '',
+                        'nif': f[2] or '',
+                        'razonSocial': f[3] or '',
+                        'importe_bruto': float(f[4]) if f[4] else 0.0,
+                        'importe_impuestos': float(f[5]) if f[5] else 0.0,
+                        'importe_cobrado': float(f[6]) if f[6] else 0.0,
+                        'total': float(f[7]) if f[7] else 0.0
                     })
                 
         except Exception as e:
@@ -263,41 +267,44 @@ def exportar():
             facturas_data = []
         
         # ================ 3) UNIFICAR DATOS =====================
+        # Primero tickets ordenados por fecha, luego facturas ordenadas por fecha
         todos_los_datos = tickets_data + facturas_data
-        
-        # Ordenar por fecha y timestamp
-        todos_los_datos.sort(key=lambda x: (x['fecha'], x['timestamp']))
         
         # ================ 4) GENERAR ARCHIVO =====================
         if formato == 'csv':
             # Generar CSV
             output = []
             
-            # Cabeceras
+            # Cabeceras según formato correcto
             cabeceras = [
-                'Tipo', 'ID', 'Fecha', 'Total', 'Observaciones', 
-                'Número Factura', 'Cliente', 'Timestamp'
+                'fecha', 'numero', 'nif', 'razonSocial',
+                'importe_bruto', 'importe_impuestos', 'importe_cobrado', 'total'
             ]
             output.append(cabeceras)
             
             # Datos
             for item in todos_los_datos:
                 fila = [
-                    item['tipo'],
-                    item['id'],
                     item['fecha'],
-                    item['total'],
-                    item['observaciones'],
-                    item.get('numero_factura', ''),
-                    item.get('cliente', ''),
-                    item['timestamp']
+                    item['numero'],
+                    item['nif'],
+                    item['razonSocial'],
+                    item['importe_bruto'],
+                    item['importe_impuestos'],
+                    item['importe_cobrado'],
+                    item['total']
                 ]
                 output.append(fila)
             
-            # Crear respuesta CSV
+            # Crear respuesta CSV con separador decimal coma y 2 decimales
+            def format_cell(cell):
+                if isinstance(cell, float):
+                    return f"{cell:.2f}".replace('.', ',')
+                return str(cell)
+            
             def generate():
                 for row in output:
-                    yield ','.join([f'"{str(cell)}"' for cell in row]) + '\n'
+                    yield ';'.join([format_cell(cell) for cell in row]) + '\n'
             
             # Nombre del archivo
             nombre_archivo = f"exportacion_{ejercicio}"
@@ -339,6 +346,179 @@ def exportar():
         
     except Exception as e:
         logger.error(f"Error en exportación: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@system_bp.route('/api/exportar-recibidas', methods=['GET'])
+def exportar_recibidas():
+    """Exporta facturas recibidas (gastos) a CSV"""
+    try:
+        ejercicio = request.args.get('ejercicio')
+        trimestre = request.args.get('trimestre')
+        
+        if not ejercicio:
+            return jsonify({'error': 'Ejercicio es requerido'}), 400
+        
+        try:
+            ejercicio = int(ejercicio)
+        except ValueError:
+            return jsonify({'error': 'Ejercicio debe ser un número'}), 400
+        
+        # Construir fechas según trimestre
+        if trimestre and trimestre != 'todos':
+            try:
+                trimestre = int(trimestre)
+                if trimestre == 1:
+                    fecha_inicio = f"{ejercicio}-01-01"
+                    fecha_fin = f"{ejercicio}-03-31"
+                elif trimestre == 2:
+                    fecha_inicio = f"{ejercicio}-04-01"
+                    fecha_fin = f"{ejercicio}-06-30"
+                elif trimestre == 3:
+                    fecha_inicio = f"{ejercicio}-07-01"
+                    fecha_fin = f"{ejercicio}-09-30"
+                elif trimestre == 4:
+                    fecha_inicio = f"{ejercicio}-10-01"
+                    fecha_fin = f"{ejercicio}-12-31"
+                else:
+                    return jsonify({'error': 'Trimestre debe ser 1-4'}), 400
+            except ValueError:
+                return jsonify({'error': 'Trimestre debe ser un número'}), 400
+        else:
+            fecha_inicio = f"{ejercicio}-01-01"
+            fecha_fin = f"{ejercicio}-12-31"
+        
+        # Consultar gastos (facturas recibidas)
+        logger.info(f"Exportando facturas recibidas: {fecha_inicio} a {fecha_fin}")
+        gastos_data = []
+        try:
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Detectar estructura de tabla gastos
+                cursor.execute("PRAGMA table_info(gastos)")
+                columnas = [col[1] for col in cursor.fetchall()]
+                
+                if 'fecha_operacion' in columnas:
+                    # Estructura con fecha_operacion (formato DD/MM/YYYY)
+                    # JOIN con facturas_proveedores y proveedores para obtener NIF e IVA
+                    query = '''
+                        SELECT g.fecha_operacion, g.concepto, g.razon_social, ABS(g.importe_eur), p.nif,
+                               COALESCE(fp.base_imponible, 0) as base, COALESCE(fp.iva_importe, 0) as iva
+                        FROM gastos g
+                        LEFT JOIN facturas_proveedores fp ON g.factura_proveedor_id = fp.id
+                        LEFT JOIN proveedores p ON fp.proveedor_id = p.id
+                        WHERE substr(g.fecha_operacion, 7, 4) || '-' || substr(g.fecha_operacion, 4, 2) || '-' || substr(g.fecha_operacion, 1, 2) BETWEEN ? AND ?
+                        ORDER BY substr(g.fecha_operacion, 7, 4) || '-' || substr(g.fecha_operacion, 4, 2) || '-' || substr(g.fecha_operacion, 1, 2)
+                    '''
+                    cursor.execute(query, (fecha_inicio, fecha_fin))
+                    for row in cursor.fetchall():
+                        base = float(row[5]) if row[5] else 0.0
+                        iva = float(row[6]) if row[6] else 0.0
+                        total = float(row[3]) if row[3] else 0.0
+                        # Si no hay base/iva de factura_proveedor, usar el total como base
+                        if base == 0 and iva == 0 and total > 0:
+                            base = total
+                        gastos_data.append({
+                            'fecha': row[0] if row[0] else '',
+                            'numero': '',
+                            'nif': row[4] or '',
+                            'razonSocial': row[2] or row[1] or '',
+                            'importe_bruto': round(base, 2),
+                            'importe_impuestos': round(iva, 2),
+                            'importe_cobrado': 0.0,
+                            'total': round(total, 2)
+                        })
+                elif 'fecha_operacion_iso' in columnas:
+                    # Estructura con fecha ISO
+                    query = '''
+                        SELECT fecha_operacion_iso, concepto, razon_social, importe_eur
+                        FROM gastos 
+                        WHERE fecha_operacion_iso BETWEEN ? AND ?
+                        ORDER BY fecha_operacion_iso
+                    '''
+                    cursor.execute(query, (fecha_inicio, fecha_fin))
+                    for row in cursor.fetchall():
+                        gastos_data.append({
+                            'fecha': format_date(row[0]) if row[0] else '',
+                            'numero': '',
+                            'nif': '',
+                            'razonSocial': row[2] or row[1] or '',
+                            'importe_bruto': float(row[3]) if row[3] else 0.0,
+                            'importe_impuestos': 0.0,
+                            'importe_cobrado': 0.0,
+                            'total': float(row[3]) if row[3] else 0.0
+                        })
+                elif 'fecha' in columnas:
+                    # Estructura simple
+                    query = '''
+                        SELECT fecha, concepto, proveedor, importe
+                        FROM gastos 
+                        WHERE fecha BETWEEN ? AND ?
+                        ORDER BY fecha
+                    '''
+                    cursor.execute(query, (fecha_inicio, fecha_fin))
+                    for row in cursor.fetchall():
+                        gastos_data.append({
+                            'fecha': format_date(row[0]) if row[0] else '',
+                            'numero': '',
+                            'nif': '',
+                            'razonSocial': row[2] or row[1] or '',
+                            'importe_bruto': float(row[3]) if row[3] else 0.0,
+                            'importe_impuestos': 0.0,
+                            'importe_cobrado': 0.0,
+                            'total': float(row[3]) if row[3] else 0.0
+                        })
+                        
+        except Exception as e:
+            logger.error(f"Error consultando gastos: {e}")
+            gastos_data = []
+        
+        # Generar CSV
+        output = []
+        cabeceras = ['fecha', 'numero', 'nif', 'razonSocial', 
+                     'importe_bruto', 'importe_impuestos', 'importe_cobrado', 'total']
+        output.append(cabeceras)
+        
+        for item in gastos_data:
+            fila = [
+                item['fecha'],
+                item['numero'],
+                item['nif'],
+                item['razonSocial'],
+                item['importe_bruto'],
+                item['importe_impuestos'],
+                item['importe_cobrado'],
+                item['total']
+            ]
+            output.append(fila)
+        
+        # Formato con separador ; y decimal ,
+        def format_cell(cell):
+            if isinstance(cell, float):
+                return f"{cell:.2f}".replace('.', ',')
+            return str(cell)
+        
+        def generate():
+            for row in output:
+                yield ';'.join([format_cell(cell) for cell in row]) + '\n'
+        
+        nombre_archivo = f"facturas_recibidas_{ejercicio}"
+        if trimestre and trimestre != 'todos':
+            nombre_archivo += f"_T{trimestre}"
+        nombre_archivo += f"_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        return Response(
+            generate(),
+            mimetype='text/csv',
+            headers={
+                'Content-Disposition': f'attachment; filename={nombre_archivo}',
+                'Content-Type': 'text/csv; charset=utf-8'
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error en exportación recibidas: {e}")
         return jsonify({'error': str(e)}), 500
 
 

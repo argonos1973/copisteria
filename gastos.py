@@ -32,15 +32,11 @@ def ingresos_gastos_mes():
         cur = conn.cursor()
         cur.execute(
             """
-            SELECT substr(COALESCE(fecha_operacion_iso, 
-                          substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)
-                         ), 6, 2) as mes,
+            SELECT substr(fecha_valor, 4, 2) as mes,
                    SUM(CASE WHEN importe_eur > 0 THEN importe_eur ELSE 0 END) as ingresos,
                    SUM(CASE WHEN importe_eur < 0 THEN importe_eur ELSE 0 END) as gastos
             FROM gastos
-            WHERE substr(COALESCE(fecha_operacion_iso, 
-                          substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)
-                         ), 1, 4) = ?
+            WHERE substr(fecha_valor, 7, 4) = ?
             GROUP BY mes
             """,
             (str(anio),)

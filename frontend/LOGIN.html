@@ -683,9 +683,10 @@
                     loginData.empresa
                 );
                 
-                // Verificar si requiere 2FA
-                if (result.data && result.data.requires_2fa) {
+                // Verificar si requiere 2FA (puede venir en result.requires_2fa o result.data.requires_2fa)
+                if (result.requires_2fa || (result.data && result.data.requires_2fa)) {
                     pending2FAUserId = result.data.user_id;
+                    console.log('🔐 2FA requerido - user_id:', pending2FAUserId, 'result:', result);
                     mostrar2FA();
                     mostrarCargando(false);
                     return;

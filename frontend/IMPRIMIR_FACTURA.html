@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Factura</title>
     <style>
+        /* Ocultar URL/IP en encabezado y pie de página del navegador */
+        @page {
+            margin: 10mm;
+            /* Elimina encabezado y pie de página del navegador */
+            @top-left { content: none; }
+            @top-center { content: none; }
+            @top-right { content: none; }
+            @bottom-left { content: none; }
+            @bottom-center { content: none; }
+            @bottom-right { content: none; }
+        }
+        
         /* Reglas específicas para impresión */
         @media print {
             #loading-overlay {

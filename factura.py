@@ -974,6 +974,7 @@ def obtener_facturas_paginadas(filtros, page=1, page_size=10, sort='fecha', orde
                 COALESCE(c.mail, '') as mail,
                 COALESCE(f.enviado, 0) as enviado,
                 COALESCE(f.carta_enviada, 0) as carta_enviada,
+                f.fecha_ultima_carta,
                 f.fechaCobro,
                 rf.csv,
                 rf.estado_envio,

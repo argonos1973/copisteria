@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import datetime
 from functools import lru_cache
 
 from constantes import *
@@ -33,12 +34,13 @@ def invalidar_cache_franjas(producto_id=None):
 
 def obtener_productos():
     """
-    Obtiene todos los productos ordenados por nombre.
+    Obtiene todos los productos del ejercicio actual ordenados por nombre.
     
     Returns:
         list: Lista de diccionarios con los datos de los productos.
     """
     try:
+        ejercicio_actual = datetime.now().year
         with get_db_connection() as conn:
             cursor = conn.cursor()
             
@@ -47,8 +49,9 @@ def obtener_productos():
                        calculo_automatico, franja_inicial, numero_franjas, 
                        ancho_franja, descuento_inicial, incremento_franja, no_generar_franjas
                 FROM productos 
+                WHERE ejercicio = ?
                 ORDER BY nombre ASC
-            ''')
+            ''', (ejercicio_actual,))
             productos = cursor.fetchall()
             
             return [dict(producto) for producto in productos]
@@ -515,14 +518,16 @@ def obtener_franjas_descuento_por_producto(producto_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        # Obtener ejercicio actual
+        ejercicio_actual = datetime.now().year
         cur.execute(
             """
             SELECT min_cantidad, max_cantidad, porcentaje_descuento
             FROM descuento_producto_franja
-            WHERE producto_id = ?
+            WHERE producto_id = ? AND ejercicio = ?
             ORDER BY min_cantidad ASC, max_cantidad ASC
             """,
-            (producto_id,)
+            (producto_id, ejercicio_actual)
         )
         filas = cur.fetchall()
         resultado = [
@@ -563,8 +568,9 @@ def reemplazar_franjas_descuento_producto(producto_id, franjas):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
+        ejercicio_actual = datetime.now().year
         conn.execute('BEGIN IMMEDIATE')
-        cur.execute('DELETE FROM descuento_producto_franja WHERE producto_id = ?', (producto_id,))
+        cur.execute('DELETE FROM descuento_producto_franja WHERE producto_id = ? AND ejercicio = ?', (producto_id, ejercicio_actual))
         for fr in franjas:
             # Detectar formato: diccionario o lista
             if isinstance(fr, (list, tuple)):
@@ -603,8 +609,8 @@ def reemplazar_franjas_descuento_producto(producto_id, franjas):
             else:
                 logger.debug(f"Descuento dentro de rango producto {producto_id}: desc={desc}")
             cur.execute(
-                'INSERT INTO descuento_producto_franja (producto_id, min_cantidad, max_cantidad, porcentaje_descuento) VALUES (?,?,?,?)',
-                (producto_id, min_c, max_c, clamped_desc)
+                'INSERT INTO descuento_producto_franja (producto_id, min_cantidad, max_cantidad, porcentaje_descuento, ejercicio) VALUES (?,?,?,?,?)',
+                (producto_id, min_c, max_c, clamped_desc, ejercicio_actual)
             )
             logger.debug(f"Insertada franja producto {producto_id}: min={min_c}, max={max_c}, desc={clamped_desc}")
         conn.commit()
@@ -662,8 +668,10 @@ def obtener_productos_paginados(filtros, page=1, page_size=20, sort='nombre', or
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        where_sql = 'WHERE 1=1'
-        params = []
+        # Filtrar por ejercicio actual
+        ejercicio_actual = filtros.get('ejercicio', datetime.now().year)
+        where_sql = 'WHERE ejercicio = ?'
+        params = [ejercicio_actual]
 
         if filtros.get('nombre'):
             where_sql += ' AND LOWER(nombre) LIKE LOWER(?)'
@@ -759,9 +767,10 @@ def buscar_productos(filtros):
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Construir la consulta SQL base
-        sql = 'SELECT * FROM productos WHERE 1=1'
-        params = []
+        # Construir la consulta SQL base - filtrar por ejercicio actual
+        ejercicio_actual = filtros.get('ejercicio', datetime.now().year)
+        sql = 'SELECT * FROM productos WHERE ejercicio = ?'
+        params = [ejercicio_actual]
         
         # Añadir condiciones según los filtros
         if filtros.get('nombre'):
@@ -1193,9 +1202,10 @@ def obtener_productos_paginado(page=1, page_size=20, sort_by='nombre', order='AS
         if str(order).upper() not in ['ASC', 'DESC']:
             order = 'ASC'
             
-        # Construir consulta
-        where_clause = " WHERE 1=1"
-        params = []
+        # Construir consulta - filtrar por ejercicio actual
+        ejercicio_actual = datetime.now().year
+        where_clause = " WHERE ejercicio = ?"
+        params = [ejercicio_actual]
         
         if search_term:
             # Dividir términos por espacios para búsqueda flexible (todas las palabras deben estar presentes)

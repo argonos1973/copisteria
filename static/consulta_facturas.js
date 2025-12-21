@@ -239,6 +239,9 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
         
         console.log('Resultados obtenidos:', data);
 
+        // Guardar flag de verifactu para usar después de generar filas
+        const verifactuEnabled = data.verifactu_enabled === true;
+
         // Estructura paginada
         const items = Array.isArray(data.items) ? data.items : [];
         pagination.totalPages = parseInt(data.total_pages || 1) || 1;
@@ -340,7 +343,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                 <td class="text-right">${cobradoRaw} €</td>
                 <td class="text-right">${totalRaw} €</td>
                 <td class="text-center ${getEstadoClassFactura(factura.estado)}">${getEstadoFormateadoFactura(factura.estado)}</td>
-                <td class="text-center">${eatIconHtml}</td>
+                <td class="text-center col-aeat">${eatIconHtml}</td>
                 <td class="text-center">
                     ${(['A'].includes(factura.estado)) ? '' : `<i class=\"fas fa-print print-icon\" style=\"cursor: pointer;\" data-id=\"${factura.id}\"></i>`}
                 </td>
@@ -367,7 +370,7 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
                     }
                 </td>
                 <td class="text-center">
-                    ${(!['A','RE'].includes(factura.estado) && (Number(factura.carta_enviada) === 1 || factura.carta_enviada === '1')) ? 
+                    ${(!['A','RE'].includes(factura.estado) && (Number(factura.carta_enviada) === 1 || factura.carta_enviada === '1' || factura.fecha_ultima_carta)) ? 
                         `<i class="fas fa-file-pdf carta-icon" 
                             style="cursor: pointer; color: #dc3545;" 
                             data-numero="${factura.numero}" 
@@ -496,6 +499,19 @@ async function buscarFacturas(usarFiltrosGuardados = false) {
             totalIVA += isNaN(ivaNum) ? 0 : ivaNum;
             totalCobrado += isNaN(cobradoNum) ? 0 : cobradoNum;
             totalTotal += isNaN(totalNum) ? 0 : totalNum;
+        });
+
+        // Ocultar/mostrar columna AEAT según verifactu_enabled (después de generar filas)
+        const colAEAT = document.querySelectorAll('.col-aeat');
+        colAEAT.forEach(el => {
+            if (verifactuEnabled) {
+                el.style.display = '';
+                el.style.width = '';
+                el.style.padding = '';
+                el.style.border = '';
+            } else {
+                el.style.display = 'none';
+            }
         });
 
         // Actualizar los totales en el pie de página (totales globales del filtro)

@@ -28,6 +28,14 @@
     <div class="filters-container">
       
       <div class="filter-group">
+        <label for="tipo-factura">Tipo</label>
+        <select id="tipo-factura" name="tipo-factura">
+          <option value="emitidas">Facturas Emitidas</option>
+          <option value="recibidas">Facturas Recibidas</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
         <label for="ejercicio">Ejercicio</label>
         <select id="ejercicio" name="ejercicio">
           <!-- Opciones rellenadas dinámicamente -->
@@ -142,6 +150,7 @@
         }
       }
       
+      const tipoFactura = document.getElementById('tipo-factura').value;
       const ejercicio = document.getElementById('ejercicio').value;
       const trimestre = document.getElementById('trimestre').value;
 
@@ -158,7 +167,9 @@
             baseApi = baseApi.replace('http:', 'https:');
         }
 
-        const url = new URL(`${baseApi}/api/exportar`);
+        // Endpoint según tipo de factura
+        const endpoint = tipoFactura === 'recibidas' ? '/api/exportar-recibidas' : '/api/exportar';
+        const url = new URL(`${baseApi}${endpoint}`);
         url.searchParams.append('ejercicio', ejercicio);
         url.searchParams.append('trimestre', trimestre);
 

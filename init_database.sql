@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS productos (
     iva REAL DEFAULT 21,
     stock INTEGER DEFAULT 0,
     activo INTEGER DEFAULT 1,
+    ejercicio INTEGER DEFAULT 2024,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

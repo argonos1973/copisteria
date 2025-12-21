@@ -41,7 +41,7 @@ def facturas_paginado():
         
         # Parámetros de paginación
         page = int(request.args.get('page', 1))
-        page_size = int(request.args.get('pageSize', 25))
+        page_size = int(request.args.get('page_size') or request.args.get('pageSize', 25))
         sort = request.args.get('sort', 'fecha')
         order = request.args.get('order', 'DESC')
         
@@ -62,6 +62,14 @@ def facturas_paginado():
         
         # Obtener facturas paginadas
         resultado = factura.obtener_facturas_paginadas(filtros, page, page_size, sort, order)
+        
+        # Añadir flag de verifactu_enabled
+        try:
+            from utils_emisor import verifactu_habilitado
+            resultado['verifactu_enabled'] = bool(verifactu_habilitado(default=False))
+        except Exception:
+            resultado['verifactu_enabled'] = False
+        
         return jsonify(resultado)
         
     except Exception as e:

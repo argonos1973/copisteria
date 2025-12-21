@@ -25,7 +25,7 @@ def contactos_paginado():
         nif = request.args.get('nif', '')
         poblacion = request.args.get('poblacion', '')
         page = int(request.args.get('page', 1))
-        page_size = int(request.args.get('pageSize', 25))
+        page_size = int(request.args.get('page_size') or request.args.get('pageSize', 25))
         
         # Construir filtros
         filtros = {}

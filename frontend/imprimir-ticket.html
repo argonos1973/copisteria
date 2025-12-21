@@ -84,6 +84,17 @@
         
       
          
+        /* Ocultar URL/IP en encabezado y pie de página del navegador */
+        @page {
+            margin: 10mm;
+            @top-left { content: none; }
+            @top-center { content: none; }
+            @top-right { content: none; }
+            @bottom-left { content: none; }
+            @bottom-center { content: none; }
+            @bottom-right { content: none; }
+        }
+        
         /* Ajustes para impresión */
         @media print {
             /* Ocultar spinner/overlay de carga al imprimir */

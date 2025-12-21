@@ -472,11 +472,6 @@ def obtener_menu():
                     'submenu': [
                         {'nombre': 'Consultar', 'icono': 'fas fa-search', 'ruta': '/CONSULTA_PROFORMAS.html'}
                     ]
-                },
-                {
-                    'nombre': 'Exportar',
-                    'icono': 'fas fa-download',
-                    'ruta': '/EXPORTAR.html'
                 }
             ],
             'presupuestos': [
@@ -504,7 +499,7 @@ def obtener_menu():
         }
         
         # Módulos que ya están incluidos en submenus (no deben aparecer como items independientes)
-        modulos_en_submenu = ['facturas', 'tickets', 'proformas', 'exportar', 'admin_empresas']
+        modulos_en_submenu = ['facturas', 'tickets', 'proformas', 'admin_empresas']
         
         menu = []
         for row in rows:
@@ -1707,8 +1702,9 @@ def disable_2fa():
             conn.close()
             return jsonify({'error': 'Usuario no encontrado'}), 404
         
-        from werkzeug.security import check_password_hash
-        if not check_password_hash(result[0], password):
+        # Usar verificar_password que soporta SHA256 legacy y PBKDF2
+        from auth_middleware import verificar_password
+        if not verificar_password(password, result[0], user_id):
             conn.close()
             logger.warning(f"Intento de desactivar 2FA con contraseña incorrecta: {username}")
             return jsonify({'error': 'Contraseña incorrecta'}), 401

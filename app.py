@@ -114,9 +114,29 @@ def create_app():
     if SECURITY_UTILS_AVAILABLE:
         csrf = init_security(application)
         application.csrf = csrf
-        # Eximir rutas API que usan autenticación por sesión/header
+        # Eximir TODAS las rutas API (usan autenticación por sesión, no formularios)
+        # CSRF es para formularios HTML, las APIs JSON usan otros mecanismos
         csrf.exempt(auth_bp)
-        logger.info("✅ CSRF + XSS Protection activado")
+        csrf.exempt(tickets_bp)
+        csrf.exempt(facturas_bp)
+        csrf.exempt(contactos_bp)
+        csrf.exempt(productos_bp)
+        csrf.exempt(presupuestos_bp)
+        csrf.exempt(proformas_bp)
+        csrf.exempt(facturas_recibidas_bp)
+        csrf.exempt(empresas_bp)
+        csrf.exempt(admin_bp)
+        csrf.exempt(usuario_bp)
+        csrf.exempt(system_bp)
+        csrf.exempt(batch_bp)
+        csrf.exempt(public_bp)
+        csrf.exempt(conciliacion_bp)
+        csrf.exempt(gastos_bp)
+        csrf.exempt(estadisticas_gastos_bp)
+        csrf.exempt(dashboard_bp)
+        csrf.exempt(avatares_bp)
+        csrf.exempt(plantillas_bp)
+        logger.info("✅ CSRF + XSS Protection activado (APIs exentas)")
     
     @application.route('/favicon.ico')
     def favicon():
