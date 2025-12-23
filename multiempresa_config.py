@@ -26,7 +26,7 @@ SESSION_CONFIG = {
     'PERMANENT_SESSION_LIFETIME': 3600 * 4,  # 4 horas
     'SESSION_COOKIE_NAME': 'aleph70_session',
     'SESSION_COOKIE_HTTPONLY': True,
-    'SESSION_COOKIE_SAMESITE': 'Lax',
+    'SESSION_COOKIE_SAMESITE': None,  # Desactivar SameSite para permitir cookies en iframes
     'SESSION_COOKIE_PATH': '/',  # Cookies disponibles en todas las rutas
     'SESSION_COOKIE_SECURE': os.getenv('FLASK_ENV') == 'production'  # True en producción (HTTPS)
 }
@@ -44,8 +44,11 @@ SECURITY_CONFIG = {
 PUBLIC_ROUTES = [
     '/login',
     '/LOGIN.html',
+    '/REGISTRO.html',
     '/api/auth/login',
     '/api/auth/logout',
+    '/api/auth/registro',
+    '/api/subscription/start-free-trial',
     '/static/',
     '/favicon.ico'
 ]
@@ -72,8 +75,9 @@ DEFAULT_BRANDING = {
 }
 
 # Configuración de Google Auth
+# Desactivado en .23 - activar solo en producción
 GOOGLE_AUTH_CONFIG = {
-    'CLIENT_ID': '496347553218-qmp8qtqm3qub97j03ibcl2hu3l6n8oqm.apps.googleusercontent.com'
+    'CLIENT_ID': None
 }
 
 # Módulos del sistema con configuración

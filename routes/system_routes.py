@@ -426,7 +426,6 @@ def exportar_recibidas():
                             'razonSocial': row[2] or row[1] or '',
                             'importe_bruto': round(base, 2),
                             'importe_impuestos': round(iva, 2),
-                            'importe_cobrado': 0.0,
                             'total': round(total, 2)
                         })
                 elif 'fecha_operacion_iso' in columnas:
@@ -446,7 +445,6 @@ def exportar_recibidas():
                             'razonSocial': row[2] or row[1] or '',
                             'importe_bruto': float(row[3]) if row[3] else 0.0,
                             'importe_impuestos': 0.0,
-                            'importe_cobrado': 0.0,
                             'total': float(row[3]) if row[3] else 0.0
                         })
                 elif 'fecha' in columnas:
@@ -466,7 +464,6 @@ def exportar_recibidas():
                             'razonSocial': row[2] or row[1] or '',
                             'importe_bruto': float(row[3]) if row[3] else 0.0,
                             'importe_impuestos': 0.0,
-                            'importe_cobrado': 0.0,
                             'total': float(row[3]) if row[3] else 0.0
                         })
                         
@@ -477,7 +474,7 @@ def exportar_recibidas():
         # Generar CSV
         output = []
         cabeceras = ['fecha', 'numero', 'nif', 'razonSocial', 
-                     'importe_bruto', 'importe_impuestos', 'importe_cobrado', 'total']
+                     'importe_bruto', 'importe_impuestos', 'total']
         output.append(cabeceras)
         
         for item in gastos_data:
@@ -488,7 +485,6 @@ def exportar_recibidas():
                 item['razonSocial'],
                 item['importe_bruto'],
                 item['importe_impuestos'],
-                item['importe_cobrado'],
                 item['total']
             ]
             output.append(fila)

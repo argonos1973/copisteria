@@ -60,6 +60,9 @@
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Stripe -->
+    <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
     <!-- Loading Screen -->
@@ -114,7 +117,7 @@
                         Controla tu día a día con una herramienta simple, rápida y fiable.
                     </p>
                     <div class="hero-buttons animate-fade-up-delay-2">
-                        <button class="btn btn-primary" onclick="openRegisterModal()">
+                        <button class="btn btn-primary" onclick="openSubscribeModal()">
                             <i class="fas fa-rocket"></i> Empezar Prueba
                         </button>
                         <a href="#caracteristicas" class="btn btn-outline">
@@ -238,7 +241,7 @@
             </div>
             <div class="pricing-grid" style="display: flex; justify-content: center;">
                 <div class="pricing-card featured" style="max-width: 450px; width: 100%; transform: scale(1.05);">
-                    <div class="badge">Precio Único</div>
+                    <div class="badge" style="background: linear-gradient(135deg, #2ecc71, #27ae60);">🎁 30 días GRATIS</div>
                     <div class="pricing-header">
                         <h3>Premium</h3>
                         <div class="price">
@@ -246,7 +249,7 @@
                             <span class="amount">20</span>
                             <span class="period">/mes + IVA</span>
                         </div>
-                        <p style="margin-top: 10px; color: #666;">Sin permanencia. Cancela cuando quieras.</p>
+                        <p style="margin-top: 10px; color: #2ecc71; font-weight: 600;">Prueba gratis 30 días. Sin compromiso.</p>
                     </div>
                     <ul class="pricing-features">
                         <li><i class="fas fa-check-circle" style="color: #2ecc71;"></i> <strong>VeriFactu Incluido</strong></li>
@@ -258,7 +261,9 @@
                         <li><i class="fas fa-check"></i> Personalización de Marca</li>
                         <li><i class="fas fa-check"></i> Actualizaciones Gratuitas</li>
                     </ul>
-                    <button class="btn btn-primary-full" onclick="openRegisterModal()">Empezar Ahora</button>
+                    <button class="btn btn-primary-full" onclick="openSubscribeModal()">
+                        <i class="fas fa-rocket"></i> Empezar 30 días GRATIS
+                    </button>
                 </div>
             </div>
         </div>
@@ -444,6 +449,7 @@
     <!-- Scripts -->
     <script src="js/main.js"></script>
     <script src="js/animations.js"></script>
+    <script src="js/subscription.js"></script>
     <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </body>
 </html>

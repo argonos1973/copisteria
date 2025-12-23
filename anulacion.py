@@ -186,7 +186,12 @@ def anular_factura(id_factura: int):
                 cur.execute('SELECT concepto, descripcion, cantidad, precio, impuestos, total FROM detalle_factura WHERE id_factura = ?', (id_rect,))
                 detalles_rows = [dict(row) for row in cur.fetchall()]
 
+                # Obtener empresa_id de la sesión
+                from flask import session
+                empresa_id = session.get('empresa_seleccionada', session.get('empresa', 'default'))
+                
                 datos_facturae = {
+                    'empresa_id': empresa_id,
                     'emisor': cargar_datos_emisor(),
                     'receptor': {
                         'nif': contacto_row['identificador'] if contacto_row['identificador'] else 'B00000000',

@@ -42,6 +42,11 @@
       border-radius: 4px;
     }
 
+    #formProducto #nombre {
+      width: 30ch;
+      max-width: 100%;
+    }
+
     .form-group textarea {
       height: 100px;
       resize: vertical;
@@ -132,6 +137,17 @@
     .uppercase {
       text-transform: uppercase;
     }
+
+    /* Fieldset sin borde */
+    .fieldset-franjas-auto {
+      border: none;
+      padding: 0;
+      margin: 0 0 15px 0;
+    }
+    .fieldset-franjas-auto legend {
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
   </style>
 
   <!-- Axios (CDN) -->
@@ -153,6 +169,7 @@
           id="nombre" 
           required
           class="uppercase"
+          maxlength="30"
         />
         <div id="errorNombre" class="error-message hidden"></div>
       </div>

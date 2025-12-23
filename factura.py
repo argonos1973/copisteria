@@ -8,7 +8,7 @@ import time
 import traceback
 from datetime import datetime, timedelta
 
-from flask import Flask, jsonify, render_template, request, Blueprint
+from flask import Flask, jsonify, render_template, request, Blueprint, session
 from logger_config import get_factura_logger
 
 logger = get_factura_logger()
@@ -274,7 +274,10 @@ def crear_factura(data=None):
                             return jsonify({'error': mensaje_error, 'codigo': 'DIR3_INCOMPLETO'}), 400
 
                     direccion_completa = f"{datos_contacto['direccion']}, {datos_contacto['cp']} {datos_contacto['localidad']} ({datos_contacto['provincia']})"
+                    # Obtener empresa_id de la sesión para la ruta de guardado
+                    empresa_id = session.get('empresa_seleccionada', session.get('empresa', 'default'))
                     datos_facturae = {
+                        'empresa_id': empresa_id,
                         'emisor': cargar_datos_emisor(),
                         'receptor': {
                             'nif': datos_contacto['nif'] if datos_contacto['nif'] else 'B00000000',
@@ -321,7 +324,9 @@ def crear_factura(data=None):
                     }
                 else:
                     logger.info("[FACTURAE] No se encontraron datos del contacto, usando valores por defecto para receptor.")
+                    empresa_id = session.get('empresa_seleccionada', session.get('empresa', 'default'))
                     datos_facturae = {
+                        'empresa_id': empresa_id,
                         'emisor': cargar_datos_emisor(),
                         'receptor': {
                             'nif': 'B00000000',

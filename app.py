@@ -60,6 +60,7 @@ from routes.proformas_routes import proformas_bp
 from routes.facturas_recibidas_routes import facturas_recibidas_bp
 from routes.batch_routes import batch_bp
 from public_routes import public_bp
+from subscription_routes import subscription_bp
 
 # Middlewares
 from auth_middleware import login_required, require_admin, require_permission
@@ -136,6 +137,7 @@ def create_app():
         csrf.exempt(dashboard_bp)
         csrf.exempt(avatares_bp)
         csrf.exempt(plantillas_bp)
+        csrf.exempt(subscription_bp)
         logger.info("✅ CSRF + XSS Protection activado (APIs exentas)")
     
     @application.route('/favicon.ico')
@@ -251,6 +253,7 @@ def register_blueprints(app):
     
     # Nuevos blueprints refactorizados
     app.register_blueprint(public_bp)          # Rutas públicas (landing page, registro)
+    app.register_blueprint(subscription_bp)    # Rutas de suscripciones (Stripe)
     app.register_blueprint(system_bp)          # Rutas de sistema (/config.json, /api/version, etc.)
     app.register_blueprint(productos_bp)       # Rutas de productos y franjas
     app.register_blueprint(contactos_bp)       # Rutas de contactos

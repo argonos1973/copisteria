@@ -322,18 +322,18 @@ def actualizar_facturas_vencidas(dias_para_vencer: int = 15, dias_para_carta: in
         if dias_para_carta < 0:
             dias_para_carta = 0
 
-        fecha_limite_vencimiento = (datetime.now() - timedelta(days=dias_para_vencer)).strftime('%Y-%m-%d')
+        fecha_hoy = datetime.now().strftime('%Y-%m-%d')
         fecha_limite_carta = (datetime.now() - timedelta(days=dias_para_carta)).strftime('%Y-%m-%d')
-        logger.info(f"Buscando facturas con fecha anterior a {fecha_limite_vencimiento} (dias_para_vencer={dias_para_vencer})")
+        logger.info(f"Buscando facturas con fecha de vencimiento anterior a {fecha_hoy}")
         
-        # 1. Facturas PENDIENTES cuya creación/emisión fue hace más de dias_para_vencer días
+        # 1. Facturas PENDIENTES cuya fecha de vencimiento ya pasó
         cursor.execute('''
             SELECT id, numero, fecha, fvencimiento, estado, idContacto, total, fecha_ultima_carta, carta_enviada
             FROM factura
             WHERE estado = 'P'
-            AND fecha < ?
+            AND fvencimiento < ?
             AND total > 0
-        ''', (fecha_limite_vencimiento,))
+        ''', (fecha_hoy,))
         
         facturas_pendientes = cursor.fetchall()
         

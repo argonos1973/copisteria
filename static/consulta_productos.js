@@ -204,6 +204,103 @@ createApp({
       }, 300);
     };
 
+    // --- Importar CSV ---
+    const importando = ref(false);
+    
+    const abrirImportarCSV = () => {
+      if (typeof verificarPermisoConAlerta !== 'undefined') {
+        if (!verificarPermisoConAlerta('productos', 'crear')) {
+          return;
+        }
+      }
+      document.getElementById('modal-importar-csv').style.display = 'flex';
+      document.getElementById('csv-file-input').value = '';
+      document.getElementById('import-result').innerHTML = '';
+    };
+    
+    const cerrarImportarCSV = () => {
+      document.getElementById('modal-importar-csv').style.display = 'none';
+    };
+    
+    const importarCSV = async () => {
+      const fileInput = document.getElementById('csv-file-input');
+      const resultDiv = document.getElementById('import-result');
+      
+      if (!fileInput.files || !fileInput.files[0]) {
+        resultDiv.innerHTML = '<span style="color:red;">Seleccione un archivo CSV</span>';
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      importando.value = true;
+      resultDiv.innerHTML = '<span style="color:#666;">Importando...</span>';
+      
+      try {
+        const response = await fetch('/api/productos/importar-csv', {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          let msg = `<span style="color:green;">✓ Creados: ${data.productos_creados}, Actualizados: ${data.productos_actualizados}</span>`;
+          if (data.errores && data.errores.length > 0) {
+            msg += `<br><span style="color:orange;">Errores: ${data.errores.join(', ')}</span>`;
+          }
+          resultDiv.innerHTML = msg;
+          mostrarNotificacion(`Importación completada: ${data.productos_creados} creados, ${data.productos_actualizados} actualizados`, 'success');
+          await fetchProductos();
+        } else {
+          resultDiv.innerHTML = `<span style="color:red;">Error: ${data.error}</span>`;
+          mostrarNotificacion(data.error || 'Error en la importación', 'error');
+        }
+      } catch (error) {
+        console.error('Error importando CSV:', error);
+        resultDiv.innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
+        mostrarNotificacion('Error al importar CSV', 'error');
+      } finally {
+        importando.value = false;
+      }
+    };
+
+    // Exportar productos a CSV
+    const exportarProductosCSV = async () => {
+      if (productos.value.length === 0) {
+        mostrarNotificacion('No hay productos para exportar', 'warning');
+        return;
+      }
+      
+      const año = new Date().getFullYear();
+      
+      // Generar CSV con cabecera
+      let csv = 'Nombre;Subtotal;IVA %;Total;Descripcion\n';
+      
+      for (const p of productos.value) {
+        const nombre = (p.nombre || '').replace(/;/g, ',');
+        const subtotal = Number(p.subtotal || 0).toFixed(2).replace('.', ',');
+        const ivaPct = Number(p.impuestos || 0);
+        const total = Number(p.total || 0).toFixed(2).replace('.', ',');
+        const descripcion = (p.descripcion || '').replace(/;/g, ',').replace(/\n/g, ' ');
+        
+        csv += `${nombre};${subtotal};${ivaPct};${total};${descripcion}\n`;
+      }
+      
+      // Crear y descargar archivo
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `productos_${año}.csv`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      
+      mostrarNotificacion(`Exportados ${productos.value.length} productos`, 'success');
+    };
+
     onMounted(async () => {
       restaurarFiltros();
       // Aplicar permisos al cargar la página
@@ -237,7 +334,12 @@ createApp({
       nextPage,
       prevPage,
       goToPage,
-      changePageSize
+      changePageSize,
+      importando,
+      abrirImportarCSV,
+      cerrarImportarCSV,
+      importarCSV,
+      exportarProductosCSV
     };
   }
 }).mount('#app');

@@ -28,6 +28,9 @@ async function verificarSesionYCargarMenu() {
         // Actualizar info de usuario
         actualizarInfoUsuario(sessionData);
         
+        // Verificar estado de suscripción (trial, activa, expirada)
+        verificarSuscripcion(sessionData);
+        
         // 2. CARGAR EL MENÚ (con caché)
         let menuData = null;
         const cachedMenu = sessionStorage.getItem('aleph70_menu_data');
@@ -377,6 +380,115 @@ function crearMenuItem(nombre, icono, ruta, submodulos) {
 
 // Exportar función
 window.verificarSesionYCargarMenu = verificarSesionYCargarMenu;
+
+// Verificar estado de suscripción y mostrar banner de trial
+async function verificarSuscripcion(sessionData) {
+    try {
+        if (!sessionData || !sessionData.empresa_id) return;
+        
+        const response = await fetch(`/api/subscription/status/${sessionData.empresa_id}`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) return;
+        
+        const sub = await response.json();
+        console.log('[SUBSCRIPTION] Estado:', sub);
+        
+        // Guardar en sessionStorage para uso en otras páginas
+        sessionStorage.setItem('aleph70_subscription', JSON.stringify(sub));
+        
+        // Mostrar banner según estado
+        if (sub.status === 'free_trial') {
+            mostrarBannerTrial(sub.days_remaining);
+        } else if (sub.status === 'expired' || (sub.status === 'free_trial' && sub.days_remaining <= 0)) {
+            mostrarBannerExpirado();
+        }
+        
+    } catch (e) {
+        console.error('[SUBSCRIPTION] Error verificando:', e);
+    }
+}
+
+function mostrarBannerTrial(diasRestantes) {
+    // Evitar duplicados
+    if (document.getElementById('trial-banner')) return;
+    
+    const banner = document.createElement('div');
+    banner.id = 'trial-banner';
+    banner.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #3498db, #2ecc71);
+        color: white;
+        padding: 10px 20px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 500;
+        z-index: 10000;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    `;
+    
+    const diasTexto = diasRestantes === 1 ? 'día' : 'días';
+    const urgencia = diasRestantes <= 3 ? '⚠️' : '🎁';
+    
+    banner.innerHTML = `
+        ${urgencia} <strong>Periodo de prueba:</strong> Te quedan <strong>${diasRestantes} ${diasTexto}</strong> de prueba gratuita
+        <a href="/SUSCRIPCION.html" style="color: white; margin-left: 15px; background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; text-decoration: none;">
+            Suscribirse ahora
+        </a>
+        <button onclick="this.parentElement.remove()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: white; font-size: 18px; cursor: pointer;">×</button>
+    `;
+    
+    document.body.insertBefore(banner, document.body.firstChild);
+    
+    // Ajustar padding del body para no tapar contenido
+    document.body.style.paddingTop = '45px';
+}
+
+function mostrarBannerExpirado() {
+    // Evitar duplicados
+    if (document.getElementById('expired-banner')) return;
+    
+    const banner = document.createElement('div');
+    banner.id = 'expired-banner';
+    banner.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.9);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+        text-align: center;
+        padding: 40px;
+    `;
+    
+    banner.innerHTML = `
+        <div style="max-width: 500px;">
+            <i class="fas fa-clock" style="font-size: 60px; color: #e74c3c; margin-bottom: 20px;"></i>
+            <h2 style="margin-bottom: 15px; font-size: 28px;">Tu periodo de prueba ha terminado</h2>
+            <p style="margin-bottom: 30px; opacity: 0.8; font-size: 16px;">
+                Para seguir usando Aleph70, activa tu suscripción y accede a todas las funcionalidades.
+            </p>
+            <a href="/SUSCRIPCION.html" style="display: inline-block; background: #2ecc71; color: white; padding: 15px 40px; border-radius: 30px; text-decoration: none; font-weight: 600; font-size: 18px;">
+                Activar suscripción
+            </a>
+            <p style="margin-top: 20px; font-size: 14px; opacity: 0.6;">
+                <a href="/api/auth/logout" style="color: white;">Cerrar sesión</a>
+            </p>
+        </div>
+    `;
+    
+    document.body.appendChild(banner);
+}
 
 // Formatear y mostrar último acceso
 function mostrarUltimoAcceso(ultimoAcceso) {

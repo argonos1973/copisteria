@@ -292,3 +292,50 @@ hr {
     color: var(--color-primario, #333) !important;
 }
 
+/* Trial box */
+.trial-box {
+    background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(52, 152, 219, 0.1));
+    border: 2px solid var(--color-success, #2ecc71);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+}
+
+.trial-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.trial-header i {
+    font-size: 1.5rem;
+    color: var(--color-success, #2ecc71);
+}
+
+.trial-header h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--color-texto, #333);
+}
+
+.trial-box p {
+    color: var(--color-texto-secundario, #666);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.trial-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.trial-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--color-success, #2ecc71);
+}
+

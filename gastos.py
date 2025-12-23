@@ -15,7 +15,7 @@ gastos_bp = Blueprint('gastos', __name__)
 @gastos_bp.route('/ingresos_gastos_mes', methods=['GET'])
 @gastos_bp.route('/api/ingresos_gastos_mes', methods=['GET'])
 def ingresos_gastos_mes():
-    """Devuelve los ingresos y gastos (suma de importes positivos y negativos)
+    """Devuelve los ingresos (facturas + tickets) y gastos (tabla gastos)
     para cada mes de un año concreto. Formato de respuesta:
     {
         "anio": 2025,
@@ -30,33 +30,62 @@ def ingresos_gastos_mes():
 
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Inicializar diccionarios con meses en 0
+        ingresos = {str(m).zfill(2): 0.0 for m in range(1, 13)}
+        gastos_dict = {str(m).zfill(2): 0.0 for m in range(1, 13)}
+        
+        # INGRESOS: Facturas emitidas (formato fecha: YYYY-MM-DD)
+        cur.execute(
+            """
+            SELECT substr(fecha, 6, 2) as mes,
+                   SUM(total) as total_facturas
+            FROM factura
+            WHERE substr(fecha, 1, 4) = ?
+            GROUP BY mes
+            """,
+            (str(anio),)
+        )
+        for r in cur.fetchall():
+            mes = str(r['mes']).zfill(2)
+            ingresos[mes] += float(r['total_facturas'] or 0)
+        
+        # INGRESOS: Tickets (formato fecha: YYYY-MM-DD)
+        cur.execute(
+            """
+            SELECT substr(fecha, 6, 2) as mes,
+                   SUM(total) as total_tickets
+            FROM tickets
+            WHERE substr(fecha, 1, 4) = ?
+            GROUP BY mes
+            """,
+            (str(anio),)
+        )
+        for r in cur.fetchall():
+            mes = str(r['mes']).zfill(2)
+            ingresos[mes] += float(r['total_tickets'] or 0)
+        
+        # GASTOS: Tabla gastos (formato fecha_valor: DD/MM/YYYY)
         cur.execute(
             """
             SELECT substr(fecha_valor, 4, 2) as mes,
-                   SUM(CASE WHEN importe_eur > 0 THEN importe_eur ELSE 0 END) as ingresos,
-                   SUM(CASE WHEN importe_eur < 0 THEN importe_eur ELSE 0 END) as gastos
+                   SUM(CASE WHEN importe_eur < 0 THEN importe_eur ELSE 0 END) as total_gastos
             FROM gastos
             WHERE substr(fecha_valor, 7, 4) = ?
             GROUP BY mes
             """,
             (str(anio),)
         )
-        rows = cur.fetchall()
-        conn.close()
-
-        # Inicializar diccionarios con meses en 0
-        ingresos = {str(m).zfill(2): 0.0 for m in range(1, 13)}
-        gastos = {str(m).zfill(2): 0.0 for m in range(1, 13)}
-
-        for r in rows:
+        for r in cur.fetchall():
             mes = str(r['mes']).zfill(2)
-            ingresos[mes] = float(r['ingresos'] or 0)
-            gastos[mes] = float(r['gastos'] or 0)
+            gastos_dict[mes] = float(r['total_gastos'] or 0)
+        
+        conn.close()
 
         return jsonify({
             'anio': anio,
             'ingresos': ingresos,
-            'gastos': gastos
+            'gastos': gastos_dict
         })
     except Exception as e:
         logger.error(f"ERROR EN /ingresos_gastos_mes: {str(e)}", exc_info=True)

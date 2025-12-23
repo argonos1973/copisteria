@@ -804,10 +804,10 @@ def generar_pdf_presupuesto(id):
         }
         estado_texto = estados.get(presupuesto_dict.get('estado', 'B'), 'Borrador')
         
-        # Calcular totales
-        subtotal = sum(float(d['precio']) * int(d['cantidad']) for d in detalles)
-        total_iva = sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles)
-        total_final = subtotal + total_iva
+        # Calcular totales (redondear antes de sumar para evitar discrepancias de céntimos)
+        subtotal = round(sum(float(d['precio']) * int(d['cantidad']) for d in detalles), 2)
+        total_iva = round(sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles), 2)
+        total_final = round(subtotal + total_iva, 2)
         
         # Generar filas de detalles (sin columna específica de IVA)
         detalles_html = ""
@@ -990,10 +990,10 @@ def enviar_email_presupuesto(id):
         }
         estado_texto = estados.get(presupuesto_dict.get('estado', 'B'), 'Borrador')
         
-        # Calcular totales
-        subtotal = sum(float(d['precio']) * int(d['cantidad']) for d in detalles)
-        total_iva = sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles)
-        total_final = subtotal + total_iva
+        # Calcular totales (redondear antes de sumar para evitar discrepancias de céntimos)
+        subtotal = round(sum(float(d['precio']) * int(d['cantidad']) for d in detalles), 2)
+        total_iva = round(sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles), 2)
+        total_final = round(subtotal + total_iva, 2)
         
         # Generar filas de detalles
         detalles_html = ""

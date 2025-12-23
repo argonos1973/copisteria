@@ -163,8 +163,8 @@ def google_auth():
                     cursor.execute("UPDATE usuarios SET avatar = ? WHERE id = ?", (picture, user_id))
                     conn.commit()
             else:
-                # Usuario no existe, CREARLO
-                logger.info(f"Login Google: Creando nuevo usuario {email}")
+                # Usuario no existe, CREARLO con periodo de prueba de 14 días
+                logger.info(f"Login Google: Creando nuevo usuario {email} con periodo de prueba")
                 
                 # Generar username único
                 username_base = email.split('@')[0]
@@ -181,13 +181,58 @@ def google_auth():
                 password_random = secrets.token_urlsafe(16)
                 password_hash = generate_password_hash(password_random)
                 
+                # Crear usuario con rol admin para su empresa de prueba
                 cursor.execute("""
                     INSERT INTO usuarios (username, password_hash, email, nombre_completo, avatar, rol, activo, fecha_creacion)
-                    VALUES (?, ?, ?, ?, ?, 'consultor', 1, CURRENT_TIMESTAMP)
+                    VALUES (?, ?, ?, ?, ?, 'admin', 1, CURRENT_TIMESTAMP)
                 """, (username, password_hash, email, name, picture))
                 
                 user_id = cursor.lastrowid
+                rol = 'admin'
+                
+                # Crear empresa de prueba para el nuevo usuario
+                from datetime import timedelta
+                import os
+                import shutil
+                
+                fecha_fin_prueba = datetime.now() + timedelta(days=14)
+                empresa_codigo = f"trial_{username}_{user_id}"
+                empresa_nombre = f"Empresa de prueba - {name or username}"
+                
+                # Crear directorio y BD para la empresa de prueba
+                db_dir = f"/var/www/html/db/{empresa_codigo}"
+                db_path = f"{db_dir}/{empresa_codigo}.db"
+                
+                os.makedirs(db_dir, exist_ok=True)
+                
+                # Copiar BD plantilla si existe, sino crear vacía
+                plantilla_db = "/var/www/html/db/plantilla/plantilla.db"
+                if os.path.exists(plantilla_db):
+                    shutil.copy2(plantilla_db, db_path)
+                    logger.info(f"BD de prueba creada desde plantilla: {db_path}")
+                else:
+                    # Crear BD vacía básica
+                    import sqlite3 as sqlite3_local
+                    conn_trial = sqlite3_local.connect(db_path)
+                    conn_trial.close()
+                    logger.info(f"BD de prueba creada vacía: {db_path}")
+                
+                # Insertar empresa en tabla empresas
+                cursor.execute("""
+                    INSERT INTO empresas (codigo, nombre, db_path, fecha_fin_prueba, activa)
+                    VALUES (?, ?, ?, ?, 1)
+                """, (empresa_codigo, empresa_nombre, db_path, fecha_fin_prueba.strftime('%Y-%m-%d %H:%M:%S')))
+                
+                empresa_id = cursor.lastrowid
+                
+                # Asignar usuario a la empresa con rol admin
+                cursor.execute("""
+                    INSERT INTO usuarios_empresas (usuario_id, empresa_id, rol, activo)
+                    VALUES (?, ?, 'admin', 1)
+                """, (user_id, empresa_id))
+                
                 conn.commit()
+                logger.info(f"Empresa de prueba creada: {empresa_codigo} (válida hasta {fecha_fin_prueba})")
         
         # Iniciar sesión
         session.clear()
@@ -255,6 +300,77 @@ def logout():
     except Exception as e:
         logger.error(f"Error en logout: {e}", exc_info=True)
         return jsonify({'error': 'Error cerrando sesión'}), 500
+
+# ============================================================================
+# PREFERENCIAS DEL USUARIO
+# ============================================================================
+
+@auth_bp.route('/preferencias', methods=['GET'])
+@login_required
+def obtener_preferencias():
+    """Obtiene las preferencias del usuario actual"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'No autenticado'}), 401
+        
+        import json
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT preferencias FROM usuarios WHERE id = ?", (user_id,))
+            row = cursor.fetchone()
+            
+            if row and row['preferencias']:
+                try:
+                    prefs = json.loads(row['preferencias'])
+                except:
+                    prefs = {}
+            else:
+                prefs = {}
+        
+        return jsonify(prefs), 200
+    except Exception as e:
+        logger.error(f"Error obteniendo preferencias: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@auth_bp.route('/preferencias', methods=['POST'])
+@login_required
+def guardar_preferencias():
+    """Guarda las preferencias del usuario actual"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'No autenticado'}), 401
+        
+        import json
+        data = request.get_json() or {}
+        
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            cursor = conn.cursor()
+            # Obtener preferencias actuales
+            cursor.execute("SELECT preferencias FROM usuarios WHERE id = ?", (user_id,))
+            row = cursor.fetchone()
+            
+            if row and row['preferencias']:
+                try:
+                    prefs = json.loads(row['preferencias'])
+                except:
+                    prefs = {}
+            else:
+                prefs = {}
+            
+            # Merge con nuevas preferencias
+            prefs.update(data)
+            
+            # Guardar
+            cursor.execute("UPDATE usuarios SET preferencias = ? WHERE id = ?", 
+                          (json.dumps(prefs), user_id))
+            conn.commit()
+        
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        logger.error(f"Error guardando preferencias: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/empresas/<username>', methods=['GET'])
 def obtener_empresas(username):
@@ -337,8 +453,9 @@ def obtener_sesion():
             'email': email,
             'telefono': telefono,
             'empresa': session.get('empresa_nombre'),
+            'empresa_id': session.get('empresa_id'),
             'empresa_codigo': session.get('empresa_codigo'),
-            'logo': f"/static/logos/{session.get('empresa_logo', 'aleph70_default.svg')}",
+            'logo': session.get('empresa_logo', 'aleph70_default.svg') if session.get('empresa_logo', '').startswith('/static/') else f"/static/logos/{session.get('empresa_logo', 'aleph70_default.svg')}",
             'avatar': avatar,
             'rol': rol,
             'es_admin': es_admin_empresa or es_superadmin,
@@ -1819,3 +1936,144 @@ def validate_2fa_login():
     except Exception as e:
         logger.error(f"Error validando 2FA login: {e}", exc_info=True)
         return jsonify({'error': 'Error validando código'}), 500
+
+# ============================================================================
+# REGISTRO PÚBLICO (sin autenticación)
+# ============================================================================
+
+@auth_bp.route('/registro', methods=['POST'])
+def registro_publico():
+    """
+    Registro público: crea usuario + empresa + activa trial de 15 días.
+    No requiere autenticación.
+    """
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Datos incompletos'}), 400
+        
+        # Datos del usuario
+        nombre_completo = data.get('nombre_completo', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        
+        # Datos de la empresa
+        nombre_empresa = data.get('nombre_empresa', '').strip()
+        nif = data.get('nif', '').strip().upper()
+        
+        # Validaciones
+        if not nombre_completo or not email or not password:
+            return jsonify({'error': 'Nombre, email y contraseña son obligatorios'}), 400
+        
+        if not nombre_empresa:
+            return jsonify({'error': 'El nombre de la empresa es obligatorio'}), 400
+        
+        if len(password) < 6:
+            return jsonify({'error': 'La contraseña debe tener al menos 6 caracteres'}), 400
+        
+        # Generar username desde email
+        username = email.split('@')[0].lower().replace('.', '_')[:20]
+        
+        # Generar código de empresa (5 letras del nombre)
+        codigo_empresa = ''.join(c for c in nombre_empresa.upper() if c.isalnum())[:5]
+        if len(codigo_empresa) < 3:
+            codigo_empresa = codigo_empresa + 'EMP'
+        
+        with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Verificar si el email ya existe
+            cursor.execute("SELECT id FROM usuarios WHERE email = ?", (email,))
+            if cursor.fetchone():
+                return jsonify({'error': 'Ya existe una cuenta con este email'}), 400
+            
+            # Verificar si el username ya existe
+            cursor.execute("SELECT id FROM usuarios WHERE username = ?", (username,))
+            if cursor.fetchone():
+                # Añadir número aleatorio
+                username = username + str(secrets.randbelow(1000))
+            
+            # Verificar si el código de empresa ya existe
+            cursor.execute("SELECT id FROM empresas WHERE codigo = ?", (codigo_empresa,))
+            if cursor.fetchone():
+                codigo_empresa = codigo_empresa + str(secrets.randbelow(100))
+            
+            # 1. Crear usuario
+            password_hash = generate_password_hash(password)
+            cursor.execute('''
+                INSERT INTO usuarios (username, password_hash, nombre_completo, email, rol, activo, es_superadmin)
+                VALUES (?, ?, ?, ?, 'admin', 1, 0)
+            ''', (username, password_hash, nombre_completo, email))
+            user_id = cursor.lastrowid
+            
+            # 2. Crear empresa (copiar desde plantilla.db)
+            import shutil
+            plantilla_path = '/var/www/html/db/plantilla.db'
+            empresa_db_dir = f'/var/www/html/db/{codigo_empresa}'
+            empresa_db_path = f'{empresa_db_dir}/{codigo_empresa}.db'
+            
+            os.makedirs(empresa_db_dir, exist_ok=True)
+            if os.path.exists(plantilla_path):
+                shutil.copy2(plantilla_path, empresa_db_path)
+                os.chmod(empresa_db_path, 0o664)
+                try:
+                    import pwd
+                    import grp
+                    uid = pwd.getpwnam('www-data').pw_uid
+                    gid = grp.getgrnam('www-data').gr_gid
+                    os.chown(empresa_db_path, uid, gid)
+                    os.chown(empresa_db_dir, uid, gid)
+                except:
+                    pass
+            
+            cursor.execute('''
+                INSERT INTO empresas (codigo, nombre, cif, db_path, activa, logo_header, logo_factura)
+                VALUES (?, ?, ?, ?, 1, 'aleph70_default.svg', 'aleph70_default.svg')
+            ''', (codigo_empresa, nombre_empresa, nif, empresa_db_path))
+            empresa_id = cursor.lastrowid
+            
+            # 3. Asignar usuario a empresa como admin
+            cursor.execute('''
+                INSERT INTO usuario_empresa (usuario_id, empresa_id, es_admin_empresa, fecha_asignacion)
+                VALUES (?, ?, 1, datetime('now'))
+            ''', (user_id, empresa_id))
+            
+            conn.commit()
+        
+        # 4. Activar trial de 15 días
+        try:
+            from subscription_routes import get_subscription_db
+            from datetime import datetime, timedelta
+            
+            trial_start = datetime.now()
+            trial_end = trial_start + timedelta(days=15)
+            
+            sub_conn = get_subscription_db()
+            sub_cursor = sub_conn.cursor()
+            sub_cursor.execute('''
+                INSERT INTO subscriptions (
+                    empresa_id, status, plan, current_period_start, current_period_end
+                ) VALUES (?, 'free_trial', 'trial', ?, ?)
+            ''', (str(empresa_id), trial_start.isoformat(), trial_end.isoformat()))
+            sub_conn.commit()
+            sub_conn.close()
+            
+            logger.info(f"Trial de 15 días activado para empresa {codigo_empresa}")
+        except Exception as trial_error:
+            logger.error(f"Error activando trial: {trial_error}")
+        
+        logger.info(f"Registro exitoso: {email} → empresa {codigo_empresa}")
+        
+        return jsonify({
+            'success': True,
+            'mensaje': '¡Registro completado! Ya puedes iniciar sesión.',
+            'username': username,
+            'empresa': nombre_empresa,
+            'codigo': codigo_empresa,
+            'trial_dias': 15
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Error en registro público: {e}", exc_info=True)
+        return jsonify({'error': 'Error al procesar el registro'}), 500

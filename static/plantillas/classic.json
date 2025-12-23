@@ -1,6 +1,6 @@
 {
   "name": "Classic",
-  "version": 13,
+  "version": 14,
   "meta": {
     "author": "aleph70",
     "icon": "🏛️",
@@ -68,11 +68,11 @@
     "modal": {
       "bg": "{palette.white}",
       "text": "{semantic.text}",
-      "overlay": "transparent",
-      "border": "transparent",
-      "border-width": "0",
+      "overlay": "rgba(0, 0, 0, 0.3)",
+      "border": "{palette.gray800}",
+      "border-width": "2px",
       "border-radius": "8px",
-      "shadow": "0 8px 24px rgba(0, 0, 0, 0.3)",
+      "shadow": "0 8px 24px rgba(0, 0, 0, 0.4)",
       "header-bg": "transparent",
       "header-text": "{semantic.text}",
       "body-bg": "transparent",

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suscripción - Aleph70</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Anton&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        :root {
+            --primary: #2ecc71;
+            --primary-dark: #27ae60;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: rgba(15, 23, 42, 0.10);
+            --font-display: 'Anton', Impact, sans-serif;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            color: var(--text);
+        }
+        
+        .header {
+            background: #0b1220;
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .header-logo {
+            height: 40px;
+        }
+        
+        .header a {
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+        
+        .title {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        .title h1 {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .title p {
+            color: var(--muted);
+            font-size: 1.1rem;
+        }
+        
+        .plans {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .plan {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .plan:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+        }
+        
+                
+        .plan-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .plan-price {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .plan-price span {
+            font-size: 1rem;
+            font-weight: 400;
+            color: var(--muted);
+        }
+        
+        .plan-desc {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 25px;
+        }
+        
+        .plan-features {
+            list-style: none;
+            margin-bottom: 30px;
+        }
+        
+        .plan-features li {
+            padding: 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .plan-features li i {
+            color: var(--primary);
+            width: 20px;
+        }
+        
+        .btn-subscribe {
+            width: 100%;
+            padding: 14px;
+            background: #111827;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: var(--font-display);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-subscribe:hover {
+            background: #0f172a;
+            transform: translateY(-2px);
+        }
+        
+        .btn-subscribe.primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        }
+        
+        .btn-subscribe:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .trial-info {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .trial-info h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+        }
+        
+        .trial-info p {
+            opacity: 0.9;
+        }
+        
+        .faq {
+            background: white;
+            border-radius: 16px;
+            padding: 35px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .faq h2 {
+            margin-bottom: 25px;
+        }
+        
+        .faq-item {
+            border-bottom: 1px solid var(--border);
+            padding: 15px 0;
+        }
+        
+        .faq-item:last-child {
+            border-bottom: none;
+        }
+        
+        .faq-item h4 {
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .faq-item p {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--muted);
+            text-decoration: none;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .back-link:hover {
+            color: var(--text);
+        }
+        
+        @media (max-width: 600px) {
+            .container { padding: 30px 15px; }
+            .title h1 { font-size: 2rem; }
+            .plan { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <svg viewBox="0 0 100 40" class="header-logo">
+            <text x="5" y="32" font-family="Anton, sans-serif" font-size="38" fill="#ffffff">A70</text>
+        </svg>
+        <a href="/api/auth/app"><i class="fas fa-arrow-left"></i> Volver a la app</a>
+    </div>
+    
+    <div class="container">
+        <a href="/api/auth/app" class="back-link">
+            <i class="fas fa-arrow-left"></i> Volver al panel
+        </a>
+        
+        <div class="title">
+            <h1>Suscripción Aleph70</h1>
+            <p>Un único plan con todas las funcionalidades incluidas</p>
+        </div>
+        
+        <div id="trial-banner" class="trial-info" style="display: none;">
+            <h3><i class="fas fa-gift"></i> Estás en periodo de prueba</h3>
+            <p>Te quedan <strong id="trial-days">0</strong> días de prueba gratuita</p>
+        </div>
+        
+        <div id="alertBox" class="alert alert-error"></div>
+        
+        <div class="plans" style="max-width: 400px; margin: 0 auto;">
+            <div class="plan">
+                <div class="plan-name">Aleph70</div>
+                <div class="plan-price">20€ <span>/mes</span></div>
+                <div class="plan-desc">Todo lo que necesitas para gestionar tu negocio</div>
+                <ul class="plan-features">
+                    <li><i class="fas fa-check"></i> Facturas ilimitadas</li>
+                    <li><i class="fas fa-check"></i> Presupuestos ilimitados</li>
+                    <li><i class="fas fa-check"></i> Clientes ilimitados</li>
+                    <li><i class="fas fa-check"></i> Productos y servicios</li>
+                    <li><i class="fas fa-check"></i> Estadísticas y gráficos</li>
+                    <li><i class="fas fa-check"></i> Exportación PDF</li>
+                    <li><i class="fas fa-check"></i> Soporte por email</li>
+                    <li><i class="fas fa-check"></i> Sin permanencia</li>
+                    <li><i class="fas fa-check"></i> Mejoras continuas incluidas</li>
+                </ul>
+                <button class="btn-subscribe primary" onclick="iniciarSuscripcion()">
+                    Suscribirse ahora
+                </button>
+            </div>
+        </div>
+        
+        <div class="faq">
+            <h2><i class="fas fa-question-circle"></i> Preguntas frecuentes</h2>
+            
+            <div class="faq-item">
+                <h4>¿Qué incluye la suscripción?</h4>
+                <p>Todas las funcionalidades de Aleph70 sin límites. Además, todas las mejoras y nuevas funciones se añaden automáticamente a tu cuenta sin coste adicional.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h4>¿Qué métodos de pago aceptáis?</h4>
+                <p>Aceptamos todas las tarjetas de crédito y débito principales (Visa, Mastercard, American Express).</p>
+            </div>
+            
+            <div class="faq-item">
+                <h4>¿Puedo cancelar en cualquier momento?</h4>
+                <p>Sí, puedes cancelar tu suscripción cuando quieras. Seguirás teniendo acceso hasta el final del periodo facturado.</p>
+            </div>
+            
+            <div class="faq-item">
+                <h4>¿Hay compromiso de permanencia?</h4>
+                <p>No, no hay permanencia mínima. Puedes cancelar cuando quieras sin penalizaciones.</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let empresaId = null;
+        let userEmail = null;
+        
+        // Cargar datos de sesión
+        async function cargarDatosSesion() {
+            try {
+                const cached = sessionStorage.getItem('aleph70_session_data');
+                let sessionData = cached ? JSON.parse(cached) : null;
+                
+                if (!sessionData) {
+                    const response = await fetch('/api/auth/session', { credentials: 'include' });
+                    if (!response.ok) {
+                        window.location.href = '/LOGIN.html';
+                        return;
+                    }
+                    sessionData = await response.json();
+                }
+                
+                empresaId = sessionData.empresa_id;
+                userEmail = sessionData.email;
+                
+                // Verificar suscripción
+                if (empresaId) {
+                    const subResponse = await fetch(`/api/subscription/status/${empresaId}`, { credentials: 'include' });
+                    if (subResponse.ok) {
+                        const sub = await subResponse.json();
+                        if (sub.status === 'free_trial' && sub.days_remaining > 0) {
+                            document.getElementById('trial-banner').style.display = 'block';
+                            document.getElementById('trial-days').textContent = sub.days_remaining;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Error cargando sesión:', e);
+            }
+        }
+        
+        async function iniciarSuscripcion() {
+            if (!empresaId) {
+                mostrarError('No se pudo identificar la empresa. Por favor, inicia sesión de nuevo.');
+                return;
+            }
+            
+            // Deshabilitar botón
+            document.querySelectorAll('.btn-subscribe').forEach(btn => {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            });
+            
+            try {
+                const response = await fetch('/api/subscription/create-checkout-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        empresa_id: empresaId,
+                        email: userEmail
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.url) {
+                    // Redirigir a Stripe Checkout
+                    window.location.href = data.url;
+                } else {
+                    mostrarError(data.error || 'Error al iniciar el pago');
+                    resetearBotones();
+                }
+            } catch (e) {
+                console.error('Error:', e);
+                mostrarError('Error de conexión. Inténtalo de nuevo.');
+                resetearBotones();
+            }
+        }
+        
+        function mostrarError(mensaje) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + mensaje;
+            alertBox.style.display = 'block';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function resetearBotones() {
+            document.querySelectorAll('.btn-subscribe').forEach(btn => {
+                btn.disabled = false;
+                if (btn.classList.contains('primary')) {
+                    btn.innerHTML = 'Suscribirse';
+                } else {
+                    btn.innerHTML = btn.textContent.includes('ventas') ? 'Contactar ventas' : 'Suscribirse';
+                }
+            });
+        }
+        
+        // Inicializar
+        cargarDatosSesion();
+    </script>
+</body>
+</html>

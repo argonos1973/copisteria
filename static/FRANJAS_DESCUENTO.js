@@ -6,6 +6,8 @@ const productoSelect = document.getElementById('productoSelect');
 const productoSearch = document.getElementById('productoSearch');
 const btnAñadir = document.getElementById('btnAñadir');
 const btnGuardar = document.getElementById('btnGuardar');
+const btnExportar = document.getElementById('btnExportar');
+if (btnExportar) btnExportar.style.display = 'none'; // Ocultar por defecto hasta que haya datos
 const statusSpan = document.getElementById('status');
 const btnVolver = document.getElementById('btnVolver');
 if (btnVolver) {
@@ -145,6 +147,11 @@ function renderFranjas() {
   // Normalizar antes de renderizar para evitar huecos/solapes
   franjas = normalizeFranjasArray(franjas);
   tbody.innerHTML = franjas.map(f => filaHTML(f)).join('');
+  
+  // Mostrar/ocultar botón exportar según haya datos
+  if (btnExportar) {
+    btnExportar.style.display = franjas.length > 0 ? 'inline-flex' : 'none';
+  }
   tbody.querySelectorAll('.btn-icon').forEach((btn, idx) => {
     btn.addEventListener('click', async () => {
       const ok = await mostrarConfirmacion('¿Eliminar esta franja?');
@@ -472,6 +479,62 @@ async function cargarFranjasSeleccionado() {
 btnAñadir.addEventListener('click', () => {
   añadirFranja();
 });
+
+// Exportar franjas a CSV
+if (btnExportar) {
+  btnExportar.addEventListener('click', () => {
+    const id = getSelectedProductoId();
+    if (!id) { 
+      setStatus('Seleccione un producto válido', false); 
+      return; 
+    }
+    
+    if (franjas.length === 0) {
+      setStatus('No hay franjas para exportar', false);
+      return;
+    }
+    
+    // Obtener nombre del producto
+    const producto = (productosCache || []).find(p => Number(p.id) === Number(id));
+    const nombreProducto = producto?.nombre || `producto_${id}`;
+    const año = new Date().getFullYear();
+    
+    // Limpiar nombre para el fichero (quitar caracteres especiales)
+    const nombreLimpio = nombreProducto
+      .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
+      .replace(/\s+/g, '_')
+      .substring(0, 50);
+    
+    const subtotal = getSelectedProductoSubtotal();
+    const impuestos = getSelectedProductoImpuestos();
+    
+    // Generar CSV con cabecera
+    let csv = 'Min Cantidad;Max Cantidad;% Descuento;Precio con %;Precio con IVA;IVA unitario\n';
+    
+    for (const f of franjas) {
+      const desc = Math.max(0, Math.min(60, Number(f.descuento) || 0));
+      const aplicado = subtotal > 0 ? Math.max(0, subtotal * (1 - desc / 100)) : 0;
+      const ivaUnit = aplicado * (impuestos / 100);
+      const totalConIva = aplicado + ivaUnit;
+      
+      // Formato español con coma decimal
+      const fmt = (n) => n.toFixed(5).replace('.', ',');
+      const fmt3 = (n) => n.toFixed(3).replace('.', ',');
+      
+      csv += `${f.min};${f.max};${fmt(desc)};${fmt(aplicado)};${fmt3(totalConIva)};${fmt(ivaUnit)}\n`;
+    }
+    
+    // Crear y descargar archivo
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${nombreLimpio}_${año}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    
+    setStatus(`Exportadas ${franjas.length} franjas`);
+  });
+}
 
 btnGuardar.addEventListener('click', async () => {
   try {

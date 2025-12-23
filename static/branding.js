@@ -307,6 +307,12 @@ async function cargarColoresEmpresa(force = false) {
     try {
         console.log('[BRANDING] Cargando colores...');
         
+        // Si estamos en la página de login, no cargar branding autenticado
+        if (window.location.pathname.toLowerCase().includes('login')) {
+            console.log('[BRANDING] ⚠️ Página de login detectada, saltando carga de branding');
+            return;
+        }
+        
         let branding = null;
         
         // 1. Intentar cargar de caché (sessionStorage)
@@ -322,10 +328,11 @@ async function cargarColoresEmpresa(force = false) {
         if (!branding) {
             const response = await fetch('/api/auth/branding', { credentials: 'include' });
             
-            if (!response.ok) {
-                console.error('[BRANDING] ❌ No se pudo obtener branding (posiblemente sin empresa)');
+            // Verificar si la respuesta es JSON válido (no redirect a login)
+            const contentType = response.headers.get('content-type');
+            if (!response.ok || !contentType || !contentType.includes('application/json')) {
+                console.error('[BRANDING] ❌ No se pudo obtener branding (posiblemente sin sesión)');
                 console.log('[BRANDING] ⚠️ Aplicando tema Minimal por defecto');
-                // Forzar tema Minimal si no hay empresa asignada
                 branding = { 
                     plantilla: 'minimal',
                     logo_header: 'aleph70_default.svg'
@@ -342,11 +349,18 @@ async function cargarColoresEmpresa(force = false) {
         
         // Actualizar logo inmediatamente antes de cargar plantilla
         const logoEmpresa = document.getElementById('logo-empresa');
-        if (logoEmpresa && branding.logo_header) {
-            // Construir URL completa del logo
-            const logoUrl = branding.logo_header.startsWith('/') 
-                ? branding.logo_header 
-                : `/static/logos/${branding.logo_header}`;
+        if (logoEmpresa) {
+            // Determinar URL del logo (de empresa o por defecto)
+            let logoUrl;
+            if (branding.logo_header) {
+                logoUrl = branding.logo_header.startsWith('/') 
+                    ? branding.logo_header 
+                    : `/static/logos/${branding.logo_header}`;
+            } else {
+                // Sin empresa o sin logo configurado -> usar logo por defecto
+                logoUrl = '/static/logos/aleph70_default.svg';
+                console.log('[BRANDING] ℹ️ Sin logo de empresa, usando logo por defecto');
+            }
             // Agregar timestamp para evitar caché
             const timestamp = new Date().getTime();
             logoEmpresa.src = logoUrl + '?t=' + timestamp;
@@ -354,13 +368,12 @@ async function cargarColoresEmpresa(force = false) {
             logoEmpresa.onerror = function() {
                 console.error('[BRANDING] ❌ Error cargando logo:', logoUrl);
                 this.src = '/static/logos/aleph70_default.svg';
+                this.style.display = 'block';
             };
             logoEmpresa.onload = function() {
                 console.log('[BRANDING] ✅ Logo cargado exitosamente:', logoUrl);
             };
             console.log('[BRANDING] 🖼️ Logo configurado a:', logoUrl);
-        } else {
-            console.warn('[BRANDING] ⚠️ Logo no disponible en branding:', branding);
         }
         
         if (!branding || !branding.plantilla) {

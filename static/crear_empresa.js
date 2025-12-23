@@ -165,6 +165,32 @@ document.getElementById('createCompanyForm').addEventListener('submit', async (e
         const result = await response.json();
         
         if (response.ok && result.success) {
+            // Activar prueba gratuita si está marcado el checkbox
+            const activarTrial = document.getElementById('activarTrial');
+            let trialMessage = '';
+            
+            if (activarTrial && activarTrial.checked && result.empresa_id) {
+                try {
+                    const trialResponse = await fetch('/api/subscription/start-free-trial', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            empresa_id: result.empresa_id,
+                            email: document.getElementById('email').value.trim()
+                        })
+                    });
+                    const trialResult = await trialResponse.json();
+                    if (trialResult.success) {
+                        trialMessage = `<div class="alert alert-info mt-2">
+                            <i class="fas fa-gift"></i> <strong>Prueba gratuita activada:</strong> 15 días sin compromiso
+                        </div>`;
+                        console.log('[CREAR EMPRESA] Trial activado:', trialResult);
+                    }
+                } catch (trialError) {
+                    console.error('[CREAR EMPRESA] Error activando trial:', trialError);
+                }
+            }
+            
             // Mostrar mensaje de éxito
             document.getElementById('formContainer').style.display = 'none';
             const successDiv = document.getElementById('successMessage');
@@ -177,6 +203,7 @@ document.getElementById('createCompanyForm').addEventListener('submit', async (e
                     <strong><i class="fas fa-code"></i> Código:</strong> ${result.codigo}<br>
                     <strong><i class="fas fa-user"></i> Usuario:</strong> ${result.usuario}
                 </div>
+                ${trialMessage}
                 <p class="mt-3">Redirigiendo al Panel de Control...</p>
                 <div class="spinner-border text-primary mt-3" role="status">
                     <span class="sr-only">Cargando...</span>

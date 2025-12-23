@@ -517,7 +517,12 @@ def generar_datos_verifactu_para_ticket(ticket_id: int, push_notif=None, empresa
             det_cols = [d[0] for d in cursor.description]
             detalles_rows = [dict(zip(det_cols, r)) for r in det_rows]
 
+            # Obtener empresa_id de la sesión
+            from flask import session
+            empresa_id = session.get('empresa_seleccionada', session.get('empresa', 'default'))
+            
             datos_facturae = {
+                'empresa_id': empresa_id,
                 'emisor': cargar_datos_emisor(),
                 'receptor': {
                     'nif': 'B00000000',

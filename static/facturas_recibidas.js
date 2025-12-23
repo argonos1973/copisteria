@@ -1490,6 +1490,9 @@ window.abrirModal = function(modalId) {
     if (modal) {
         modal.classList.add('show');
         modal.style.display = 'flex';
+        // Reducir z-index del menú para que el overlay lo cubra
+        const menu = document.querySelector('.menu, nav.menu');
+        if (menu) menu.style.zIndex = '1';
     }
 };
 
@@ -1499,6 +1502,12 @@ window.cerrarModal = function(modalId) {
         modal.classList.remove('show');
         setTimeout(() => {
             modal.style.display = 'none';
+            // Restaurar z-index del menú si no hay otros modales abiertos
+            const modalesAbiertos = document.querySelectorAll('.modal.show, .modal[style*="display: flex"], .modal[style*="display:flex"]');
+            if (modalesAbiertos.length === 0) {
+                const menu = document.querySelector('.menu, nav.menu');
+                if (menu) menu.style.zIndex = '';
+            }
         }, 300);
     }
 };

@@ -296,3 +296,146 @@ def actualizar_producto_legacy():
     except Exception as e:
         logger.error(f"Error en actualizar_producto_legacy: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@productos_bp.route('/api/productos/importar-csv', methods=['POST'])
+@login_required
+def importar_productos_csv():
+    """
+    Importa productos desde un archivo CSV.
+    Formato CSV (separador ;):
+    nombre;subtotal;iva%;descripcion
+    
+    Ejemplo:
+    XAPA 25MM;0.70;21;
+    Las franjas se generan automáticamente.
+    """
+    import csv
+    import io
+    
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No se envió ningún archivo'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'Nombre de archivo vacío'}), 400
+        
+        if not file.filename.endswith('.csv'):
+            return jsonify({'error': 'El archivo debe ser CSV'}), 400
+        
+        # Leer contenido del archivo
+        content = file.read().decode('utf-8-sig')  # utf-8-sig para manejar BOM
+        reader = csv.reader(io.StringIO(content), delimiter=';')
+        
+        productos_creados = 0
+        productos_actualizados = 0
+        errores = []
+        
+        # Configuración por defecto para franjas
+        default_config = {
+            'franja_inicial': 1,
+            'numero_franjas': 50,
+            'ancho_franja': 10,
+            'descuento_inicial': 5.0,
+            'incremento_franja': 5.0
+        }
+        
+        logger.info(f"[CSV] Iniciando procesamiento de CSV")
+        
+        for i, row in enumerate(reader, 1):
+            logger.info(f"[CSV] Fila {i}: {row}")
+            
+            # Saltar cabecera si existe
+            if i == 1 and row and row[0].lower() in ['nombre', 'producto', 'name']:
+                logger.info(f"[CSV] Saltando cabecera")
+                continue
+            
+            if not row or len(row) < 2:
+                logger.info(f"[CSV] Fila vacía o insuficiente, saltando")
+                continue
+            
+            try:
+                nombre = row[0].strip().upper()
+                if not nombre:
+                    logger.info(f"[CSV] Nombre vacío, saltando")
+                    continue
+                
+                subtotal = float(row[1].replace(',', '.')) if row[1] else 0.0
+                logger.info(f"[CSV] Procesando: {nombre}, subtotal={subtotal}")
+                iva_porcentaje = int(row[2]) if len(row) > 2 and row[2] else 21
+                descripcion = row[3].strip() if len(row) > 3 else ''
+                
+                # Calcular IVA y total
+                iva_importe = round(subtotal * iva_porcentaje / 100, 2)
+                total = round(subtotal + iva_importe, 2)
+                
+                # Verificar si el producto ya existe
+                producto_id = None
+                with get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT id FROM productos WHERE UPPER(nombre) = ?", (nombre,))
+                    existing = cursor.fetchone()
+                    
+                    if existing:
+                        # Actualizar producto existente
+                        producto_id = existing[0]
+                        cursor.execute("""
+                            UPDATE productos 
+                            SET subtotal=?, iva=?, impuestos=?, total=?, descripcion=?, no_generar_franjas=0, calculo_automatico=1
+                            WHERE id=?
+                        """, (subtotal, iva_importe, iva_porcentaje, total, descripcion, producto_id))
+                        productos_actualizados += 1
+                    else:
+                        # Crear nuevo producto (incluir ejercicio actual)
+                        from datetime import datetime
+                        ejercicio_actual = datetime.now().year
+                        cursor.execute("""
+                            INSERT INTO productos (nombre, descripcion, subtotal, iva, impuestos, total, calculo_automatico, no_generar_franjas, ejercicio)
+                            VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?)
+                        """, (nombre, descripcion, subtotal, iva_importe, iva_porcentaje, total, ejercicio_actual))
+                        producto_id = cursor.lastrowid
+                        productos_creados += 1
+                    
+                    conn.commit()
+                
+                # Generar y guardar franjas automáticas (fuera del with para evitar lock)
+                if producto_id:
+                    try:
+                        franjas = productos_franjas_utils.generar_franjas_automaticas(producto_id, default_config)
+                        productos.reemplazar_franjas_descuento_producto(producto_id, franjas)
+                    except Exception as fe:
+                        logger.warning(f"Error generando franjas para producto {producto_id}: {fe}")
+                    
+            except Exception as row_e:
+                errores.append(f"Fila {i}: {str(row_e)}")
+                logger.warning(f"Error en fila {i}: {row_e}")
+        
+        return jsonify({
+            'success': True,
+            'productos_creados': productos_creados,
+            'productos_actualizados': productos_actualizados,
+            'errores': errores[:10]  # Limitar errores mostrados
+        })
+        
+    except Exception as e:
+        logger.error(f"Error importando CSV: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@productos_bp.route('/api/productos/plantilla-csv', methods=['GET'])
+@login_required
+def descargar_plantilla_csv():
+    """Descarga una plantilla CSV de ejemplo para importación"""
+    from flask import Response
+    
+    plantilla = """nombre;subtotal;iva%;descripcion
+PRODUCTO EJEMPLO;10.00;21;Descripción opcional
+XAPA 25MM;0.70;21;
+"""
+    
+    return Response(
+        plantilla,
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=plantilla_productos.csv'}
+    )

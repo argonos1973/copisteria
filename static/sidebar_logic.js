@@ -46,4 +46,31 @@ document.addEventListener('DOMContentLoaded', () => {
             menu.classList.remove('mobile-active');
         }
     });
+
+    // === MODAL Z-INDEX FIX ===
+    // Observar cambios en el DOM para detectar modales abiertos
+    const ajustarZIndexMenu = () => {
+        const modalesVisibles = document.querySelectorAll('.modal.show, .modal.active, .modal[style*="display: block"], .modal[style*="display:block"], .modal-perfil[style*="display: block"]');
+        if (modalesVisibles.length > 0) {
+            menu.style.zIndex = '1';
+        } else {
+            menu.style.zIndex = '';
+        }
+    };
+
+    // MutationObserver para detectar cambios en modales
+    const observer = new MutationObserver((mutations) => {
+        ajustarZIndexMenu();
+    });
+
+    // Observar todo el body para cambios en atributos style y class
+    observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['style', 'class'],
+        subtree: true,
+        childList: true
+    });
+
+    // También verificar periódicamente (backup)
+    setInterval(ajustarZIndexMenu, 500);
 });

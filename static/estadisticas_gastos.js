@@ -35,27 +35,40 @@ function initGastosTabs() {
     console.log('[GASTOS] Pestañas inicializadas correctamente');
 }
 
-function initCollapseControlsGastos() {
+async function initCollapseControlsGastos() {
+    // Cargar preferencias del usuario
+    let prefs = {};
+    try {
+        const res = await fetch('/api/auth/preferencias');
+        if (res.ok) prefs = await res.json();
+    } catch (e) {}
+    
     document.querySelectorAll('#tab-gastos .toggle-card').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+        const card = btn.closest('.stats-card');
+        const key = `statsHidden_${card.id}`;
+        
+        // Aplicar estado guardado - ocultar completamente
+        if (prefs[key] === '1') {
+            card.style.display = 'none';
+        }
+        
+        btn.addEventListener('click', async (e) => {
             e.preventDefault();
-            const card = btn.closest('.stats-card');
-            const isCollapsed = card.classList.contains('collapsed');
+            // Ocultar la tarjeta
+            card.style.display = 'none';
             
-            if (isCollapsed) {
-                card.classList.remove('collapsed');
-                card.style.opacity = '1';
-                card.style.borderLeft = '';
-                btn.querySelector('i').classList.remove('fa-eye');
-                btn.querySelector('i').classList.add('fa-eye-slash');
-                btn.title = 'Ocultar';
-            } else {
-                card.classList.add('collapsed');
-                card.style.opacity = '0.85';
-                card.style.borderLeft = '4px solid #ccc';
-                btn.querySelector('i').classList.remove('fa-eye-slash');
-                btn.querySelector('i').classList.add('fa-eye');
-                btn.title = 'Mostrar';
+            // Guardar preferencia
+            try {
+                await fetch('/api/auth/preferencias', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [key]: '1' })
+                });
+            } catch (e) {}
+            
+            // Actualizar menú de tarjetas ocultas (si existe la función)
+            if (typeof actualizarMenuTarjetasOcultas === 'function') {
+                actualizarMenuTarjetasOcultas();
             }
         });
     });
@@ -177,29 +190,16 @@ async function cargarTop10Gastos(anio) {
                 diferenciaHTML = `<span class="stats-percentage ${pctClass}">${pctSymbol} ${formatearPorcentaje(Math.abs(gasto.porcentaje_diferencia))}</span>`;
             }
             
-            // Determinar si es gasto puntual (excluido del promedio)
-            const esPuntual = gasto.es_puntual === true;
-            const estiloFondo = esPuntual ? 'background-color:#fff3cd;border-left:4px solid #ffc107;' : '';
-            const etiquetaPuntual = esPuntual ? '<span style="display:inline-block;margin-left:0.5rem;font-size:0.65rem;background:#ffc107;color:#000;padding:0.1rem 0.4rem;border-radius:0.2rem;font-weight:600;" title="Excluido del promedio mensual">PUNTUAL</span>' : '';
-            
             tr.innerHTML = `
-                <td style="font-size:0.8rem;padding:0.5rem 0.3rem;${estiloFondo}">
+                <td style="font-size:0.8rem;padding:0.5rem 0.3rem;">
                     <span style="color:#999;font-weight:600;margin-right:0.5rem;">${index + 1}.</span>
                     ${escaparHtml(gasto.concepto)}
-                    ${etiquetaPuntual}
                 </td>
-                <td style="text-align:right;font-size:0.85rem;font-weight:600;padding:0.5rem 0.3rem;${estiloFondo}">${formatearImporte(gasto.total)}</td>
-                <td style="text-align:center;font-size:0.75rem;padding:0.5rem 0.3rem;${estiloFondo}">
+                <td style="text-align:right;font-size:0.85rem;font-weight:600;padding:0.5rem 0.3rem;">${formatearImporte(gasto.total)}</td>
+                <td style="text-align:center;font-size:0.75rem;padding:0.5rem 0.3rem;">
                     ${diferenciaHTML}
                 </td>
             `;
-            
-            // Aplicar estilo de fondo si es puntual
-            if (esPuntual) {
-                tr.style.backgroundColor = '#fff3cd';
-                tr.style.borderLeft = '4px solid #ffc107';
-                tr.title = 'Este gasto es puntual (>1000€ no recurrente) y está excluido del cálculo del promedio mensual';
-            }
             
             // Agregar evento click para abrir modal con detalles
             tr.style.cursor = 'pointer';
@@ -212,13 +212,11 @@ async function cargarTop10Gastos(anio) {
             });
             
             // Hover effect
-            const colorHoverOriginal = esPuntual ? '#ffe8a1' : '#f5f5f5';
-            const colorFondoOriginal = esPuntual ? '#fff3cd' : '';
             tr.addEventListener('mouseenter', () => {
-                tr.style.backgroundColor = colorHoverOriginal;
+                tr.style.backgroundColor = '#f5f5f5';
             });
             tr.addEventListener('mouseleave', () => {
-                tr.style.backgroundColor = colorFondoOriginal;
+                tr.style.backgroundColor = '';
             });
             
             tbody.appendChild(tr);

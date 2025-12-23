@@ -98,14 +98,63 @@
           @input="handleSearch"
         />
       </div>
-      <div class="form-group">
+      <div style="display:flex; gap:5px; padding-bottom:1px;">
         <button 
           class="btn-icon"
           id="btn-nuevo-producto"
           data-modulo="productos" 
           data-accion="crear"
           @click="nuevoProducto"
+          style="width:38px !important; height:38px !important; padding:0 !important; display:inline-flex !important; align-items:center; justify-content:center; margin:0 !important;"
           title="Nuevo Producto"><i class="fas fa-plus"></i></button>
+        <button 
+          class="btn-icon"
+          id="btn-importar-csv"
+          data-modulo="productos" 
+          data-accion="crear"
+          @click="abrirImportarCSV"
+          style="width:38px !important; height:38px !important; padding:0 !important; display:inline-flex !important; align-items:center; justify-content:center; margin:0 !important;"
+          title="Importar CSV"><i class="fas fa-file-import"></i></button>
+        <button 
+          class="btn-icon"
+          id="btn-exportar-csv"
+          v-if="productos.length > 0"
+          @click="exportarProductosCSV"
+          style="width:38px !important; height:38px !important; padding:0 !important; display:inline-flex !important; align-items:center; justify-content:center; margin:0 !important;"
+          title="Exportar Productos CSV"><i class="fas fa-download"></i></button>
+      </div>
+    </div>
+
+    <!-- Modal Importar CSV -->
+    <div id="modal-importar-csv" class="modal" style="display:none;">
+      <div class="modal-content" style="max-width:500px; background:var(--surface-color, #1a1a1a); color:var(--text-color, #e0e0e0); border:1px solid var(--border-color, #333);">
+        <div class="modal-header" style="background:var(--header-bg, #252525); border-bottom:1px solid var(--border-color, #333);">
+          <h3 style="color:var(--text-color, #e0e0e0);">Importar Productos desde CSV</h3>
+          <button class="btn-close" @click="cerrarImportarCSV" style="color:var(--text-color, #e0e0e0);">✕</button>
+        </div>
+        <div class="modal-body" style="background:var(--surface-color, #1a1a1a);">
+          <p style="margin-bottom:15px;font-size:13px;color:var(--text-color, #e0e0e0);">
+            <strong>Formato CSV</strong> (separador <code style="background:var(--input-bg, #2a2a2a);padding:2px 4px;border-radius:3px;">;</code>):<br>
+            <code style="background:var(--input-bg, #2a2a2a);padding:2px 4px;border-radius:3px;">nombre;subtotal;iva%;descripcion</code><br><br>
+            Las franjas de descuento se calcularán <strong>automáticamente</strong>.
+          </p>
+          <div style="margin-bottom:15px;">
+            <a href="/api/productos/plantilla-csv" download class="btn btn-secondary" style="font-size:12px;">
+              Descargar Plantilla
+            </a>
+          </div>
+          <div class="form-group">
+            <label style="color:var(--text-color, #e0e0e0);">Archivo CSV:</label>
+            <input type="file" id="csv-file-input" accept=".csv" style="width:100%;background:var(--input-bg, #2a2a2a);color:var(--text-color, #e0e0e0);border:1px solid var(--border-color, #333);padding:8px;border-radius:4px;">
+          </div>
+          <div id="import-result" style="margin-top:10px;font-size:13px;"></div>
+        </div>
+        <div class="modal-footer" style="background:var(--surface-color, #1a1a1a); border-top:1px solid var(--border-color, #333);">
+          <button class="btn btn-secondary" @click="cerrarImportarCSV">Cancelar</button>
+          <button class="btn btn-primary" @click="importarCSV" :disabled="importando">
+            {{ importando ? 'Importando...' : 'Importar' }}
+          </button>
+        </div>
       </div>
     </div>
 

@@ -9,20 +9,16 @@ import { IP_SERVER, PORT, IS_PROD } from './constantes.js';
 // EVENTOS INICIALES
 // ==============================
 // ---- Toggle visibility of card content ----
+// Cache local de preferencias para evitar llamadas excesivas
+let _prefsCache = null;
+let _prefsCacheLoaded = false;
+
 function setCardVisibility(card, hide) {
-  const content = card.querySelector('.stats-content');
-  // Limpiar cualquier .hidden residual de versiones previas
-  if(content) content.classList.remove('hidden');
-  
   if(hide) {
-    card.classList.add('collapsed');
-    // Añadir un indicador visual para tarjetas colapsadas
-    card.style.opacity = '0.85';
-    card.style.borderLeft = '4px solid #ccc';
+    // Ocultar completamente la tarjeta para que se reorganicen
+    card.style.display = 'none';
   } else {
-    card.classList.remove('collapsed');
-    card.style.opacity = '1';
-    card.style.borderLeft = '';
+    card.style.display = '';
   }
   
   const btn = card.querySelector('.toggle-card');
@@ -34,23 +30,241 @@ function setCardVisibility(card, hide) {
   }
 }
 
+// Guarda preferencia de tarjeta oculta en el perfil del usuario
+async function guardarPreferenciaCard(cardId, hidden) {
+  try {
+    const key = `statsHidden_${cardId}`;
+    // Actualizar cache local
+    if (!_prefsCache) _prefsCache = {};
+    _prefsCache[key] = hidden ? '1' : '0';
+    
+    // Guardar en servidor
+    await fetch('/api/auth/preferencias', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: hidden ? '1' : '0' })
+    });
+  } catch (e) {
+    console.warn('No se pudo guardar preferencia:', e);
+  }
+}
+
+// Carga preferencias del usuario desde el servidor
+async function cargarPreferenciasUsuario() {
+  if (_prefsCacheLoaded) return _prefsCache || {};
+  try {
+    const res = await fetch('/api/auth/preferencias');
+    if (res.ok) {
+      _prefsCache = await res.json();
+      _prefsCacheLoaded = true;
+      return _prefsCache;
+    }
+  } catch (e) {
+    console.warn('No se pudieron cargar preferencias:', e);
+  }
+  return {};
+}
+
+// Mapa de nombres amigables para las tarjetas
+const cardNames = {
+  'card-tickets': 'Tickets',
+  'card-facturas': 'Facturas', 
+  'card-global': 'Total Global',
+  'card-ingresos-gastos-totales': 'Ingresos y Gastos',
+  'card-top-clientes': 'Top 10 Clientes',
+  'card-top-productos': 'Top 10 Productos',
+  'card-gastos-mes': 'Gastos Trimestre',
+  'card-gastos-anio': 'Gastos Año',
+  'card-top-gastos': 'Top 10 Gastos'
+};
+
+// Actualiza el menú de tarjetas ocultas
+function actualizarMenuTarjetasOcultas() {
+  const hiddenCards = document.querySelectorAll('.stats-card[style*="display: none"]');
+  const btn = document.getElementById('btn-tarjetas-ocultas');
+  const countSpan = document.getElementById('hidden-count');
+  const list = document.getElementById('hidden-cards-list');
+  
+  if (!btn || !list) return;
+  
+  if (hiddenCards.length === 0) {
+    btn.style.display = 'none';
+    return;
+  }
+  
+  btn.style.display = 'inline-flex';
+  countSpan.textContent = hiddenCards.length;
+  
+  list.innerHTML = '';
+  hiddenCards.forEach(card => {
+    const name = cardNames[card.id] || card.id;
+    const item = document.createElement('div');
+    item.style.cssText = 'padding:0.5rem 0.75rem; cursor:pointer; display:flex; align-items:center; gap:0.5rem; border-bottom:1px solid var(--border-color, #333);';
+    item.innerHTML = `<i class="fas fa-eye" style="color:#2ecc71;"></i> ${name}`;
+    item.addEventListener('click', async () => {
+      // Mover la tarjeta al final del contenedor para que aparezca donde hay espacio
+      const container = card.parentElement;
+      container.appendChild(card);
+      
+      setCardVisibility(card, false);
+      await guardarPreferenciaCard(card.id, false);
+      actualizarMenuTarjetasOcultas();
+      document.getElementById('hidden-cards-dropdown').style.display = 'none';
+    });
+    item.addEventListener('mouseenter', () => item.style.background = 'var(--hover-bg, #333)');
+    item.addEventListener('mouseleave', () => item.style.background = '');
+    list.appendChild(item);
+  });
+}
+
 // Inicializa los controles de colapso para todas las tarjetas de estadísticas
-function initCollapseControls() {
+async function initCollapseControls() {
+  // Cargar preferencias del usuario primero
+  const prefs = await cargarPreferenciasUsuario();
+  
   document.querySelectorAll('.toggle-card').forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
       e.preventDefault();
       const card = btn.closest('.stats-card');
-      // toggle state
-      const currentlyHidden = sessionStorage.getItem('statsHidden_'+card.id) === '1';
-      const newHidden = !currentlyHidden;
-      setCardVisibility(card, newHidden);
-      sessionStorage.setItem('statsHidden_'+card.id, newHidden ? '1' : '0');
+      // toggle state - ocultar
+      setCardVisibility(card, true);
+      await guardarPreferenciaCard(card.id, true);
+      actualizarMenuTarjetasOcultas();
     });
     
     // aplicar estado guardado al cargar
     const card = btn.closest('.stats-card');
-    const hiddenSaved = sessionStorage.getItem('statsHidden_'+card.id) === '1';
+    const key = `statsHidden_${card.id}`;
+    const hiddenSaved = prefs[key] === '1';
     setCardVisibility(card, hiddenSaved);
+  });
+  
+  // Actualizar menú inicial
+  actualizarMenuTarjetasOcultas();
+  
+  // Toggle dropdown de tarjetas ocultas
+  const btnOcultas = document.getElementById('btn-tarjetas-ocultas');
+  const dropdown = document.getElementById('hidden-cards-dropdown');
+  if (btnOcultas && dropdown) {
+    btnOcultas.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    });
+    document.addEventListener('click', () => dropdown.style.display = 'none');
+  }
+  
+  // Inicializar drag & drop
+  initDragAndDrop();
+  
+  // Aplicar orden guardado
+  aplicarOrdenTarjetas(prefs);
+}
+
+// ============================================================================
+// DRAG & DROP PARA REORGANIZAR TARJETAS
+// ============================================================================
+let draggedCard = null;
+
+function initDragAndDrop() {
+  document.querySelectorAll('.stats-card').forEach(card => {
+    card.setAttribute('draggable', 'true');
+    card.style.cursor = 'grab';
+    
+    card.addEventListener('dragstart', handleDragStart);
+    card.addEventListener('dragend', handleDragEnd);
+    card.addEventListener('dragover', handleDragOver);
+    card.addEventListener('dragenter', handleDragEnter);
+    card.addEventListener('dragleave', handleDragLeave);
+    card.addEventListener('drop', handleDrop);
+  });
+}
+
+function handleDragStart(e) {
+  draggedCard = this;
+  this.style.opacity = '0.4';
+  this.style.cursor = 'grabbing';
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/html', this.id);
+}
+
+function handleDragEnd(e) {
+  this.style.opacity = '1';
+  this.style.cursor = 'grab';
+  document.querySelectorAll('.stats-card').forEach(card => {
+    card.classList.remove('drag-over');
+  });
+}
+
+function handleDragOver(e) {
+  if (e.preventDefault) e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+
+function handleDragEnter(e) {
+  if (this !== draggedCard) {
+    this.classList.add('drag-over');
+  }
+}
+
+function handleDragLeave(e) {
+  this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+  if (e.stopPropagation) e.stopPropagation();
+  
+  if (draggedCard !== this && draggedCard && this.classList.contains('stats-card')) {
+    const container = this.parentNode;
+    const allCards = [...container.querySelectorAll('.stats-card')];
+    const draggedIdx = allCards.indexOf(draggedCard);
+    const targetIdx = allCards.indexOf(this);
+    
+    if (draggedIdx < targetIdx) {
+      container.insertBefore(draggedCard, this.nextSibling);
+    } else {
+      container.insertBefore(draggedCard, this);
+    }
+    
+    // Guardar nuevo orden
+    guardarOrdenTarjetas(container);
+  }
+  
+  this.classList.remove('drag-over');
+  return false;
+}
+
+async function guardarOrdenTarjetas(container) {
+  const orden = [...container.querySelectorAll('.stats-card')].map(c => c.id);
+  const containerId = container.closest('.tab-content')?.id || 'ventas';
+  const key = `cardOrder_${containerId}`;
+  
+  try {
+    await fetch('/api/auth/preferencias', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [key]: orden.join(',') })
+    });
+  } catch (e) {
+    console.warn('No se pudo guardar orden:', e);
+  }
+}
+
+function aplicarOrdenTarjetas(prefs) {
+  ['tab-ventas', 'tab-gastos'].forEach(tabId => {
+    const key = `cardOrder_${tabId}`;
+    if (prefs[key]) {
+      const orden = prefs[key].split(',');
+      const container = document.querySelector(`#${tabId} .stats-container`);
+      if (!container) return;
+      
+      orden.forEach(cardId => {
+        const card = document.getElementById(cardId);
+        if (card && card.parentNode === container) {
+          container.appendChild(card);
+        }
+      });
+    }
   });
 }
 
