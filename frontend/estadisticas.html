@@ -151,7 +151,7 @@
     };
     </script>
     
-    <script src="/static/estadisticas_facturas.js?v=1766141400" type="module"></script>
+    <script src="/static/estadisticas_facturas.js?v=20251224c" type="module"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css?v=1763897790_1052">
     <link rel="stylesheet" href="/static/css/page_header.css">
     <link rel="stylesheet" href="/static/css/styles.css?v=1763897790?v=1763897790_1052">
@@ -233,6 +233,47 @@
         
         .stats-card[draggable="true"]:hover {
             box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        
+        /* Dropdown tarjetas ocultas - usa variables CSS de branding.js */
+        #hidden-cards-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: var(--card-bg, var(--bg, #2d2d2d));
+            color: var(--text, #e0e0e0);
+            border: 1px solid var(--border, #444);
+            border-radius: 6px;
+            min-width: 200px;
+            z-index: 1000;
+            box-shadow: var(--shadow, 0 4px 12px rgba(0,0,0,0.4));
+        }
+        
+        #hidden-cards-dropdown .dropdown-header {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border, #444);
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--text, #e0e0e0);
+        }
+        
+        #hidden-cards-list > div {
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 1px solid var(--border, #444);
+            color: var(--text, #e0e0e0);
+        }
+        
+        #hidden-cards-list > div:hover {
+            background: var(--hover, rgba(128,128,128,0.2));
+        }
+        
+        #hidden-cards-list > div:last-child {
+            border-bottom: none;
         }
         
         .stats-card {
@@ -521,24 +562,25 @@
     .header-icons button{margin:0;border:1px solid var(--button-card-border, var(--button-card-bg, var(--button-bg, var(--primary, #2c3e50)))) !important;border-radius:4px;padding:8px 12px;background:var(--button-card-bg, var(--button-bg, var(--primary, #2c3e50))) !important;color:var(--button-card-text, var(--button-text, #ffffff)) !important;}
     .header-icons button:hover{background:var(--button-card-hover-bg, var(--button-hover-bg, var(--secondary, #34495e))) !important;color:var(--button-card-text, var(--button-text, #ffffff)) !important;}
     .header-icons i{font-size:14px;}
-    .header-controls{display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;}
+    .header-controls{display:flex;align-items:center;gap:0.5rem;}
 </style>
+    <link rel="stylesheet" href="/static/css/mobile.css?v=20251224">
 </head>
 <body>
     <div class="container">
         <div class="stats-header">
             <div class="header-top">
                 <h1 style=" margin: 0;"><i class="fas fa-chart-line"></i> Estadísticas <span id="year-indicator" style="font-size:0.6em;"></span></h1>
+                <div class="header-controls">
+                    <label for="selector-fecha">Mes:</label>
+                    <input type="month" id="selector-fecha" style="padding:4px;">
+                </div>
                 <div class="header-icons">
                     <button id="btn-descargar-csv" class="btn-descargar" title="Descargar CSV"><i class="fas fa-download"></i></button>
                     <button id="btn-graficos" class="btn-descargar" title="Ver Gráficos"><i class="fas fa-chart-bar"></i></button>
                     <button id="btn-informe-situacion" class="btn-descargar" title="Informe de Situación"><i class="fas fa-file-alt"></i></button>
                     <button id="btn-simulador" class="btn-descargar" title="Simulador Financiero (Solo Desarrollo)" style="display:none;"><i class="fas fa-calculator"></i></button>
                 </div>
-            </div>
-            <div class="header-controls">
-                <label for="selector-fecha">Mes:</label>
-                <input type="month" id="selector-fecha" style="padding:4px;">
             </div>
         </div>
         
@@ -551,8 +593,8 @@
             <button id="btn-tarjetas-ocultas" class="btn btn-secondary" style="font-size:0.85rem; padding:0.4rem 0.8rem; display:none;" title="Tarjetas ocultas">
                 <i class="fas fa-eye-slash"></i> <span id="hidden-count">0</span> ocultas
             </button>
-            <div id="hidden-cards-dropdown" style="display:none; position:absolute; right:0; top:100%; background:var(--surface-color, #1a1a1a); border:1px solid var(--border-color, #333); border-radius:6px; min-width:200px; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
-                <div style="padding:0.5rem; border-bottom:1px solid var(--border-color, #333); font-weight:600; font-size:0.85rem;">Tarjetas ocultas</div>
+            <div id="hidden-cards-dropdown">
+                <div class="dropdown-header">Tarjetas ocultas</div>
                 <div id="hidden-cards-list" style="max-height:300px; overflow-y:auto;"></div>
             </div>
         </div>
@@ -959,10 +1001,10 @@
 <!-- Modal Simulador Financiero -->
 <div id="modal-simulador" class="modal" style="display:none;">
     <div class="modal-content" style="max-width: 950px; max-height: 95vh; overflow-y: auto; padding: 1rem;">
-        <span class="cerrar-modal" onclick="cerrarModalSimulador()">&times;</span>
-        <h2 style="margin-top: 0; text-align: center; font-size: 1.2rem;">
-            <i class="fas fa-calculator"></i> Simulador Financiero
-        </h2>
+        <div class="modal-header">
+            <h2 style="margin: 0;"><i class="fas fa-calculator"></i> Simulador Financiero</h2>
+            <span class="close" onclick="cerrarModalSimulador()">&times;</span>
+        </div>
         <p style="text-align: center; font-size: 0.75rem; font-weight: 600; margin-bottom: 0.8rem;">
             🔧 HERRAMIENTA DE DESARROLLO - Simula escenarios para ver cómo cuadrar los números
         </p>
@@ -1111,10 +1153,10 @@
     <div class="modal-content" style="max-width: 900px; max-height: 85vh; padding: 0; display: flex; flex-direction: column;">
         <!-- Header sticky -->
         <div style="position: sticky; top: 0; background: var(--modal-bg, #1a1a2e); padding: 1rem; border-bottom: 1px solid var(--border, #333); z-index: 10;">
-            <span class="cerrar-modal" onclick="document.getElementById('modal-productos-precio').style.display='none'">&times;</span>
-            <h2 style="margin: 0; text-align: center; font-size: 1.1rem;">
-                📋 Productos más vendidos - Nuevo precio
-            </h2>
+            <div class="modal-header" style="padding: 0; border: none;">
+                <h2 style="margin: 0;">📋 Productos más vendidos - Nuevo precio</h2>
+                <span class="close" onclick="document.getElementById('modal-productos-precio').style.display='none'">&times;</span>
+            </div>
             <p id="productos-precio-info" style="text-align: center; font-size: 0.8rem; margin: 0.5rem 0 0 0;"></p>
         </div>
         <!-- Body con scroll -->
@@ -1153,10 +1195,10 @@
 <!-- Modal Informe de Situación -->
 <div id="modal-informe-situacion" class="modal" style="display:none;">
     <div class="modal-content" style="max-width: 1100px; max-height: 95vh; overflow-y: auto; padding: 1rem;">
-        <span class="cerrar-modal" onclick="cerrarModalInformeSituacion()">&times;</span>
-        <h2 style="margin-top: 0; text-align: center; font-size: 1.3rem;">
-            <i class="fas fa-chart-line"></i> Informe de Situación Financiera
-        </h2>
+        <div class="modal-header">
+            <h2 style="margin: 0;"><i class="fas fa-chart-line"></i> Informe de Situación Financiera</h2>
+            <span class="close" onclick="cerrarModalInformeSituacion()">&times;</span>
+        </div>
         <p id="informe-periodo" style="text-align: center; font-size: 0.85rem; margin-bottom: 1rem;"></p>
         
         <!-- Estado General -->

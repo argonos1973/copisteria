@@ -2,9 +2,106 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleBtn = document.getElementById('sidebar-toggle');
     const layout = document.querySelector('.layout-container');
     const menu = document.querySelector('.menu');
+    
+    // Elementos móviles
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const mobileOverlay = document.getElementById('mobile-overlay');
+    const mobileNotifBtn = document.getElementById('mobile-notif-btn');
+    const mobileLogo = document.getElementById('mobile-logo');
 
     // Función para detectar móvil
     const isMobile = () => window.innerWidth <= 768;
+    
+    // ============================================================================
+    // MENÚ MÓVIL
+    // ============================================================================
+    
+    // Función para abrir menú móvil
+    const openMobileMenu = () => {
+        menu.classList.add('mobile-open');
+        mobileOverlay?.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    };
+    
+    // Función para cerrar menú móvil
+    const closeMobileMenu = () => {
+        menu.classList.remove('mobile-open');
+        mobileOverlay?.classList.remove('active');
+        document.body.style.overflow = '';
+    };
+    
+    // Toggle menú móvil con hamburger
+    if (mobileMenuToggle) {
+        mobileMenuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (menu.classList.contains('mobile-open')) {
+                closeMobileMenu();
+            } else {
+                openMobileMenu();
+            }
+        });
+    }
+    
+    // Cerrar menú al click en overlay
+    if (mobileOverlay) {
+        mobileOverlay.addEventListener('click', closeMobileMenu);
+    }
+    
+    // Cerrar menú al seleccionar opción del menú
+    menu?.querySelectorAll('.menu-link, .submenu-item').forEach(link => {
+        link.addEventListener('click', () => {
+            if (isMobile()) {
+                closeMobileMenu();
+            }
+        });
+    });
+    
+    // Sincronizar logo móvil con logo del menú
+    const syncMobileLogo = () => {
+        const logoEmpresa = document.getElementById('logo-empresa');
+        if (logoEmpresa && mobileLogo && logoEmpresa.src) {
+            mobileLogo.src = logoEmpresa.src;
+            mobileLogo.style.display = logoEmpresa.style.display;
+        }
+    };
+    
+    // Observar cambios en el logo
+    const logoEmpresa = document.getElementById('logo-empresa');
+    if (logoEmpresa) {
+        const logoObserver = new MutationObserver(syncMobileLogo);
+        logoObserver.observe(logoEmpresa, { attributes: true, attributeFilter: ['src', 'style'] });
+    }
+    syncMobileLogo();
+    
+    // Sincronizar badge de notificaciones móvil
+    const syncMobileNotifBadge = () => {
+        const desktopBadge = document.getElementById('notificaciones-badge');
+        const mobileBadge = document.getElementById('mobile-notif-badge');
+        if (desktopBadge && mobileBadge) {
+            mobileBadge.textContent = desktopBadge.textContent;
+            mobileBadge.style.display = desktopBadge.style.display;
+        }
+    };
+    
+    // Notificaciones móvil
+    if (mobileNotifBtn) {
+        mobileNotifBtn.addEventListener('click', () => {
+            const notifIcon = document.getElementById('notificaciones-icon');
+            notifIcon?.click();
+        });
+    }
+    
+    // Observar badge de notificaciones
+    const desktopBadge = document.getElementById('notificaciones-badge');
+    if (desktopBadge) {
+        const badgeObserver = new MutationObserver(syncMobileNotifBadge);
+        badgeObserver.observe(desktopBadge, { attributes: true, childList: true, characterData: true });
+    }
+    syncMobileNotifBadge();
+
+    // ============================================================================
+    // SIDEBAR DESKTOP
+    // ============================================================================
 
     // Restaurar estado en escritorio
     if (!isMobile()) {
@@ -19,8 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             e.stopPropagation();
             
             if (isMobile()) {
-                // Móvil: Cerrar menú (el botón interno actúa como cierre)
-                menu.classList.remove('mobile-active');
+                closeMobileMenu();
             } else {
                 // Escritorio: toggle clase para colapsar
                 layout.classList.toggle('sidebar-hidden');
@@ -31,19 +127,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Cerrar menú móvil al hacer click fuera
     document.addEventListener('click', (e) => {
-        if (isMobile() && menu && menu.classList.contains('mobile-active')) {
-            // Si click fuera del menú y no en el botón toggle
+        if (isMobile() && menu && menu.classList.contains('mobile-open')) {
             if (!menu.contains(e.target) && 
-                e.target !== toggleBtn && !toggleBtn?.contains(e.target)) {
-                menu.classList.remove('mobile-active');
+                e.target !== mobileMenuToggle && !mobileMenuToggle?.contains(e.target)) {
+                closeMobileMenu();
             }
         }
     });
     
     // Ajustar al redimensionar ventana
     window.addEventListener('resize', () => {
-        if (!isMobile() && menu.classList.contains('mobile-active')) {
-            menu.classList.remove('mobile-active');
+        if (!isMobile()) {
+            closeMobileMenu();
         }
     });
 

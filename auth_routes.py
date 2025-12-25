@@ -878,6 +878,32 @@ def servir_aplicacion():
             
         with open(app_path, 'r', encoding='utf-8') as f:
             content = f.read()
+        
+        # Si es móvil y NO tiene empresa, inyectar CSS para ocultar elementos
+        empresa_codigo = session.get('empresa_codigo')
+        if (is_mobile or is_tablet) and not empresa_codigo:
+            logger.info(f"[MOBILE] Usuario sin empresa - inyectando CSS para ocultar elementos")
+            # Inyectar CSS y JS antes del </head>
+            hide_css = """
+<style id="no-empresa-style">
+    .bottom-nav { display: none !important; }
+    .summary-card { display: none !important; }
+    .quick-actions { display: none !important; }
+    .section-title { display: none !important; }
+    #ultimos-tickets-list { display: none !important; }
+</style>
+<script>
+    window._sinEmpresa = true;
+    document.addEventListener('DOMContentLoaded', function() {
+        var dashboard = document.querySelector('.dashboard-mobile');
+        if (dashboard) {
+            dashboard.innerHTML = '<div style="text-align:center; padding: 60px 20px;"><i class="fas fa-building" style="font-size: 64px; color: #ccc; margin-bottom: 24px; display: block;"></i><h2 style="margin-bottom: 12px; color: #333;">Bienvenido</h2><p style="color:#666; margin-bottom: 24px; font-size: 16px;">No tienes ninguna empresa asociada.</p><p style="color:#888; margin-bottom: 32px; font-size: 14px;">Contacta con tu administrador para que te asigne una empresa.</p><button onclick="location.href=\\'/crear_empresa\\'" style="background: #e74c3c; color: white; padding: 14px 28px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">+ Crear Empresa</button></div>';
+        }
+    });
+</script>
+"""
+            content = content.replace('</head>', hide_css + '</head>')
+        
         return Response(content, mimetype='text/html')
     except Exception as e:
         logger.error(f"Error sirviendo aplicación: {e}", exc_info=True)

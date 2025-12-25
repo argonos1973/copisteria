@@ -1,9 +1,26 @@
 document.addEventListener('DOMContentLoaded', () => {
-    initDashboard();
+    // Esperar un poco para que app.js verifique la empresa primero
+    setTimeout(initDashboard, 100);
 });
 
 async function initDashboard() {
-    const hasPermission = await checkStatsPermission();
+    // Verificar si tiene empresa (variable global de app.js)
+    const sessionData = await checkStatsPermission();
+    
+    if (!sessionData) {
+        console.log('[Dashboard] No hay sesión válida');
+        return;
+    }
+    
+    // Si no tiene empresa, no cargar nada
+    const sinEmpresa = !sessionData.empresa_codigo || sessionData.empresa_codigo === 'null' || sessionData.empresa_codigo === '';
+    if (sinEmpresa) {
+        console.log('[Dashboard] Usuario sin empresa - no cargando datos');
+        return;
+    }
+    
+    // Solo cargar si tiene permisos
+    const hasPermission = sessionData.es_admin_empresa || sessionData.es_superadmin || sessionData.rol === 'admin';
     if (hasPermission) {
         cargarResumen();
         cargarTickets();
@@ -22,14 +39,13 @@ async function checkStatsPermission() {
             // Actualizar UI con datos de sesión
             updateSessionUI(data);
 
-            // Permiso para estadísticas
-            // Permitir si es admin de empresa, superadmin O si tiene rol 'admin'
-            return data.es_admin_empresa || data.es_superadmin || data.rol === 'admin';
+            // Devolver datos completos para verificar empresa y permisos
+            return data;
         }
-        return false;
+        return null;
     } catch(e) {
         console.error('Error verificando permisos:', e);
-        return false;
+        return null;
     }
 }
 

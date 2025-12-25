@@ -564,6 +564,7 @@ def actualizar_factura_endpoint(factura_id):
             return jsonify({'error': 'No hay empresa seleccionada'}), 400
             
         datos = request.json
+        logger.info(f"[PUT FACTURA] ID={factura_id}, datos recibidos: {datos}")
         if not datos:
             return jsonify({'error': 'No se enviaron datos'}), 400
             

@@ -107,6 +107,14 @@ async function verificarSesionYCargarMenu() {
         const esAdmin = sessionData && sessionData.es_admin_empresa;
         const paginaInicial = (tieneEmpresa && esAdmin) ? '/estadisticas.html' : '/bienvenida.html';
         
+        // Mostrar icono de notificaciones solo para admins
+        const notifIcon = document.getElementById('notificaciones-icon');
+        const mobileNotifBtn = document.getElementById('mobile-notif-btn');
+        if (esAdmin) {
+            if (notifIcon) notifIcon.style.display = 'block';
+            if (mobileNotifBtn) mobileNotifBtn.style.display = 'flex';
+        }
+        
         console.log('[MENU] sessionData completo:', sessionData);
         console.log('[MENU] empresa:', sessionData?.empresa);
         console.log('[MENU] tiene empresa:', tieneEmpresa);

@@ -1384,22 +1384,52 @@ function _setEditarPreviewVisible(visible) {
 function mostrarModalEditar(factura) {
     document.getElementById('editar-factura-id').value = factura.id;
     
-    // Llenar y seleccionar proveedor
-    const selectProveedor = document.getElementById('editar-proveedor');
-    if (selectProveedor) {
-        selectProveedor.innerHTML = '<option value="">Seleccionar proveedor...</option>';
+    // Llenar datalist de proveedores y mostrar el actual
+    const inputProveedor = document.getElementById('editar-proveedor');
+    const datalist = document.getElementById('editar-proveedores-list');
+    const hiddenId = document.getElementById('editar-proveedor-id');
+    
+    if (inputProveedor && datalist) {
+        datalist.innerHTML = '';
         if (typeof proveedores !== 'undefined' && proveedores.length > 0) {
             proveedores.forEach(prov => {
                 const option = document.createElement('option');
-                option.value = prov.id;
-                option.textContent = `${prov.nombre} (${prov.nif})`;
-                selectProveedor.appendChild(option);
+                option.value = `${prov.nombre} (${prov.nif})`;
+                option.dataset.id = prov.id;
+                datalist.appendChild(option);
             });
-            // Seleccionar el proveedor actual
-            if (factura.proveedor_id) {
-                selectProveedor.value = factura.proveedor_id;
-            }
         }
+        
+        // Mostrar proveedor actual (nombre o lo que venga de la factura)
+        if (factura.proveedor_nombre) {
+            inputProveedor.value = factura.proveedor_nif 
+                ? `${factura.proveedor_nombre} (${factura.proveedor_nif})`
+                : factura.proveedor_nombre;
+        } else {
+            inputProveedor.value = '';
+        }
+        hiddenId.value = factura.proveedor_id || '';
+        
+        // Listener para actualizar ID oculto cuando se selecciona del datalist
+        inputProveedor.oninput = function() {
+            const val = this.value;
+            const opts = datalist.querySelectorAll('option');
+            let found = false;
+            opts.forEach(opt => {
+                if (opt.value === val) {
+                    hiddenId.value = opt.dataset.id;
+                    found = true;
+                    console.log('[Editar] Proveedor seleccionado del datalist, ID:', opt.dataset.id);
+                }
+            });
+            if (!found) {
+                hiddenId.value = ''; // Proveedor escrito manualmente
+                console.log('[Editar] Proveedor escrito manualmente:', val);
+            }
+        };
+        
+        // También detectar cambios cuando se sale del campo (blur)
+        inputProveedor.onchange = inputProveedor.oninput;
     }
 
     document.getElementById('editar-numero').value = factura.numero_factura;
@@ -1579,8 +1609,16 @@ window.confirmarPago = async function() {
 window.guardarEdicion = async function() {
     const facturaId = document.getElementById('editar-factura-id').value;
     
+    // Proveedor: usar ID si existe, o el texto escrito manualmente
+    const proveedorIdRaw = document.getElementById('editar-proveedor-id').value;
+    const proveedorId = proveedorIdRaw ? parseInt(proveedorIdRaw) : null;
+    const proveedorTexto = document.getElementById('editar-proveedor').value.trim();
+    
+    console.log('[Editar Factura] proveedorIdRaw:', proveedorIdRaw, 'proveedorId:', proveedorId, 'proveedorTexto:', proveedorTexto);
+    
     const datos = {
-        proveedor_id: document.getElementById('editar-proveedor').value,
+        proveedor_id: proveedorId,
+        proveedor_nombre_manual: proveedorId ? null : proveedorTexto, // Solo si no hay ID
         numero_factura: document.getElementById('editar-numero').value,
         fecha_emision: document.getElementById('editar-fecha-emision').value,
         fecha_vencimiento: document.getElementById('editar-fecha-vencimiento').value,

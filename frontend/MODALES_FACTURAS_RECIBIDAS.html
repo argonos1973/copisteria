@@ -194,9 +194,10 @@
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label for="editar-proveedor" style="display: block; font-weight: bold; margin-bottom: 5px;">Proveedor</label>
                         <div style="display: flex; gap: 10px;">
-                            <select id="editar-proveedor" class="form-control" style="flex: 1;" required>
-                                <option value="">Cargando proveedores...</option>
-                            </select>
+                            <input type="text" id="editar-proveedor" class="form-control" style="flex: 1;" 
+                                   list="editar-proveedores-list" placeholder="Seleccionar o escribir proveedor..." autocomplete="off">
+                            <datalist id="editar-proveedores-list"></datalist>
+                            <input type="hidden" id="editar-proveedor-id">
                         </div>
                     </div>
 

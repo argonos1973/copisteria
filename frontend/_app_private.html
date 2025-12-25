@@ -16,9 +16,30 @@
     <link rel="stylesheet" href="/static/css/footer.css">
     <link rel="stylesheet" href="/static/css/page_header.css">
     <link rel="stylesheet" href="/static/css/app_private.css?v=FIX_TABS_PREVIEW_20251213J">
+    <link rel="stylesheet" href="/static/css/mobile.css?v=20251224">
     <!-- CSS inline eliminado - movido a app_private.css -->
 </head>
 <body>
+    <!-- Header móvil fijo -->
+    <header class="mobile-header">
+        <button class="hamburger-btn" id="mobile-menu-toggle" aria-label="Abrir menú">
+            <i class="fas fa-bars"></i>
+        </button>
+        <img class="mobile-logo" id="mobile-logo" src="" alt="Logo" style="display:none;">
+        <div class="mobile-actions">
+            <button id="mobile-notif-btn" aria-label="Notificaciones" style="display:none;">
+                <i class="fas fa-bell"></i>
+                <span id="mobile-notif-badge" style="display:none; position:absolute; top:2px; right:2px; background:#e74c3c; color:white; border-radius:50%; width:18px; height:18px; font-size:10px; line-height:18px; text-align:center;">0</span>
+            </button>
+            <button onclick="cerrarSesion()" aria-label="Cerrar sesión">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </header>
+    
+    <!-- Overlay para cerrar menú móvil -->
+    <div class="mobile-overlay" id="mobile-overlay"></div>
+    
     <div class="layout-container">
         <nav class="menu">
             <!-- Botón Toggle Sidebar (Dentro del menú) -->
@@ -32,7 +53,7 @@
             
             <!-- Iconos de notificaciones y cerrar sesión -->
             <div class="user-actions-container" style="padding: 0.5rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 15px;">
-                <div id="notificaciones-icon" style="position: relative; cursor: pointer;">
+                <div id="notificaciones-icon" style="position: relative; cursor: pointer; display: none;">
                     <i class="fas fa-bell" style="font-size: 20px; color: white;"></i>
                     <span id="notificaciones-badge" style="display: none; position: absolute; top: -8px; right: -8px; background: #e74c3c; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: bold; text-align: center; line-height: 20px;">0</span>
                 </div>

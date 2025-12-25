@@ -1,3 +1,6 @@
+// Variable global para saber si tiene empresa
+window.tieneEmpresa = false;
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Mobile App Loaded');
     
@@ -5,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupDrawer();
     setupNavigation();
     
-    // Cargar datos
+    // Cargar datos - primero usuario para saber si tiene empresa
     cargarUsuario();
     cargarMenu();
 });
@@ -67,51 +70,52 @@ async function cargarUsuario() {
             
             console.log("[Mobile] Check Empresa:", { 
                 codigo: data.empresa_codigo, 
-                nombre: data.empresa 
+                nombre: data.empresa,
+                tipo: typeof data.empresa_codigo
             });
             
-            // Lógica para usuarios sin empresa
-            if (!data.empresa_codigo || data.empresa_codigo === 'null') {
-                console.log("[Mobile] Usuario SIN empresa, ocultando elementos...");
+            // Lógica para usuarios sin empresa - verificar todos los casos posibles
+            const sinEmpresa = !data.empresa_codigo || 
+                               data.empresa_codigo === 'null' || 
+                               data.empresa_codigo === '' || 
+                               data.empresa_codigo === null ||
+                               data.empresa_codigo === undefined;
+            
+            console.log("[Mobile] sinEmpresa:", sinEmpresa);
+            window.tieneEmpresa = !sinEmpresa;
+            
+            if (sinEmpresa) {
+                console.log("[Mobile] Usuario SIN empresa, ocultando TODO...");
                 
-                // Ocultar acciones rápidas
-                const quickActions = document.querySelector('.quick-actions');
-                if (quickActions) quickActions.style.display = 'none';
-
-                // Ocultar resumen de ventas
-                const summaryCard = document.querySelector('.summary-card');
-                if (summaryCard) summaryCard.style.display = 'none';
+                // Ocultar TODO el bottom nav
+                const bottomNav = document.querySelector('.bottom-nav');
+                if (bottomNav) bottomNav.style.display = 'none';
                 
-                // Ocultar items del bottom nav excepto Inicio
-                const navItems = document.querySelectorAll('.bottom-nav .nav-item');
-                navItems.forEach(item => {
-                    // Si no es el home (primer hijo usualmente, o check href)
-                    if (!item.getAttribute('href').includes('/api/auth/app')) {
-                        item.style.display = 'none';
-                    }
-                });
-                
-                // Mostrar mensaje
+                // Ocultar todo el contenido del dashboard
                 const dashboard = document.querySelector('.dashboard-mobile');
-                if(dashboard && !document.getElementById('no-company-msg')) {
-                    // Limpiar contenido previo del dashboard para que se vea limpio
-                    // (Opcional, pero mejor dejar solo el mensaje)
-                    // dashboard.innerHTML = ''; 
-                    
-                    const msg = document.createElement('div');
-                    msg.id = 'no-company-msg';
-                    msg.innerHTML = `
-                        <div style="text-align:center; padding: 40px 20px;">
-                            <i class="fas fa-building" style="font-size: 48px; color: #ddd; margin-bottom: 20px;"></i>
-                            <h3>Bienvenido</h3>
-                            <p style="color:#666; margin-bottom: 20px;">No tienes ninguna empresa seleccionada.</p>
-                            <button class="btn-mobile" onclick="window.location.href='/crear_empresa'" style="background: var(--color-primary);">
-                                <i class="fas fa-plus"></i> Crear Empresa
+                if(dashboard) {
+                    dashboard.innerHTML = `
+                        <div id="no-company-msg" style="text-align:center; padding: 60px 20px;">
+                            <i class="fas fa-building" style="font-size: 64px; color: #ccc; margin-bottom: 24px; display: block;"></i>
+                            <h2 style="margin-bottom: 12px; color: #333;">Bienvenido</h2>
+                            <p style="color:#666; margin-bottom: 24px; font-size: 16px;">No tienes ninguna empresa asociada.</p>
+                            <p style="color:#888; margin-bottom: 32px; font-size: 14px;">Contacta con tu administrador para que te asigne una empresa, o crea una nueva.</p>
+                            <button class="btn-mobile" onclick="window.location.href='/frontend/crear_empresa.html'" style="background: var(--color-primary); color: white; padding: 14px 28px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer;">
+                                + Crear Empresa
                             </button>
                         </div>
                     `;
-                    dashboard.appendChild(msg);
                 }
+                
+                // Ocultar sección de últimos tickets
+                const ticketsList = document.getElementById('ultimos-tickets-list');
+                if (ticketsList) ticketsList.style.display = 'none';
+                
+                const sectionTitle = document.querySelector('.section-title');
+                if (sectionTitle) sectionTitle.style.display = 'none';
+            } else {
+                window.tieneEmpresa = true;
+                console.log("[Mobile] Usuario CON empresa:", data.empresa);
             }
         }
     } catch(e) { console.error('Error cargando usuario', e); }

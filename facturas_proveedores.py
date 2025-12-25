@@ -1658,6 +1658,32 @@ def actualizar_factura_proveedor(factura_id, empresa_id, datos, usuario='sistema
         
         if not factura_anterior:
             raise Exception("Factura no encontrada")
+        
+        # Si hay proveedor_nombre_manual y no hay proveedor_id, crear proveedor nuevo
+        logger.info(f"[UPDATE FACTURA] proveedor_id={datos.get('proveedor_id')}, proveedor_nombre_manual={datos.get('proveedor_nombre_manual')}")
+        if datos.get('proveedor_nombre_manual') and not datos.get('proveedor_id'):
+            nombre_manual = datos['proveedor_nombre_manual'].strip()
+            if nombre_manual:
+                # Verificar si ya existe un proveedor con ese nombre
+                cursor.execute("SELECT id FROM proveedores WHERE UPPER(nombre) = UPPER(?) AND empresa_id = ?", 
+                              (nombre_manual, empresa_id))
+                existente = cursor.fetchone()
+                if existente:
+                    datos['proveedor_id'] = existente[0]
+                    logger.info(f"Proveedor existente encontrado: {nombre_manual} (ID: {datos['proveedor_id']})")
+                else:
+                    # Crear proveedor con el nombre manual
+                    cursor.execute("""
+                        INSERT INTO proveedores (nombre, nif, empresa_id, fecha_alta)
+                        VALUES (?, '', ?, datetime('now'))
+                    """, (nombre_manual, empresa_id))
+                    datos['proveedor_id'] = cursor.lastrowid
+                    logger.info(f"Creado proveedor manual: {nombre_manual} (ID: {datos['proveedor_id']})")
+        
+        # Si proveedor_id es None, eliminarlo de los datos para no actualizarlo a NULL
+        if 'proveedor_id' in datos and datos['proveedor_id'] is None:
+            del datos['proveedor_id']
+            logger.info("[UPDATE FACTURA] Eliminado proveedor_id=None de los datos")
             
         # Campos permitidos para actualizar
         campos_permitidos = [

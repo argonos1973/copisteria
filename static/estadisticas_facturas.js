@@ -80,7 +80,13 @@ const cardNames = {
 
 // Actualiza el menú de tarjetas ocultas
 function actualizarMenuTarjetasOcultas() {
-  const hiddenCards = document.querySelectorAll('.stats-card[style*="display: none"]');
+  // Buscar tarjetas realmente ocultas (display: none)
+  const allCards = document.querySelectorAll('.stats-card');
+  const hiddenCards = [...allCards].filter(card => {
+    const style = window.getComputedStyle(card);
+    return style.display === 'none';
+  });
+  
   const btn = document.getElementById('btn-tarjetas-ocultas');
   const countSpan = document.getElementById('hidden-count');
   const list = document.getElementById('hidden-cards-list');
@@ -99,20 +105,15 @@ function actualizarMenuTarjetasOcultas() {
   hiddenCards.forEach(card => {
     const name = cardNames[card.id] || card.id;
     const item = document.createElement('div');
-    item.style.cssText = 'padding:0.5rem 0.75rem; cursor:pointer; display:flex; align-items:center; gap:0.5rem; border-bottom:1px solid var(--border-color, #333);';
     item.innerHTML = `<i class="fas fa-eye" style="color:#2ecc71;"></i> ${name}`;
     item.addEventListener('click', async () => {
-      // Mover la tarjeta al final del contenedor para que aparezca donde hay espacio
       const container = card.parentElement;
       container.appendChild(card);
-      
       setCardVisibility(card, false);
       await guardarPreferenciaCard(card.id, false);
       actualizarMenuTarjetasOcultas();
       document.getElementById('hidden-cards-dropdown').style.display = 'none';
     });
-    item.addEventListener('mouseenter', () => item.style.background = 'var(--hover-bg, #333)');
-    item.addEventListener('mouseleave', () => item.style.background = '');
     list.appendChild(item);
   });
 }
@@ -148,7 +149,24 @@ async function initCollapseControls() {
   if (btnOcultas && dropdown) {
     btnOcultas.addEventListener('click', (e) => {
       e.stopPropagation();
-      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+      const isHidden = dropdown.style.display === 'none' || !dropdown.style.display;
+      if (isHidden) {
+        // Aplicar estilos del tema al dropdown
+        const bodyStyles = getComputedStyle(document.body);
+        const cardBg = bodyStyles.getPropertyValue('--card-bg').trim() || 
+                       bodyStyles.getPropertyValue('--bg').trim() || 
+                       bodyStyles.backgroundColor || '#2d2d2d';
+        const textColor = bodyStyles.getPropertyValue('--text').trim() || 
+                          bodyStyles.color || '#e0e0e0';
+        const borderColor = bodyStyles.getPropertyValue('--border').trim() || '#444';
+        
+        dropdown.style.background = cardBg;
+        dropdown.style.color = textColor;
+        dropdown.style.borderColor = borderColor;
+        dropdown.style.display = 'block';
+      } else {
+        dropdown.style.display = 'none';
+      }
     });
     document.addEventListener('click', () => dropdown.style.display = 'none');
   }

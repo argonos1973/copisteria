@@ -1,0 +1,1031 @@
+/* ============================================================================
+   VERSIÓN MÓVIL - COPISTERIA APP
+   Estilos responsive para dispositivos móviles y tablets
+   ============================================================================ */
+
+/* Variables móviles */
+:root {
+    --mobile-header-height: 56px;
+    --mobile-menu-width: 280px;
+    --touch-target-min: 44px;
+}
+
+/* ============================================================================
+   HEADER MÓVIL FIJO
+   ============================================================================ */
+@media (max-width: 768px) {
+    /* Header fijo en móvil */
+    .mobile-header {
+        display: flex !important;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--mobile-header-height);
+        background: var(--menu-bg, #2c3e50);
+        z-index: 1000;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .mobile-header .hamburger-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 24px;
+        padding: 10px;
+        cursor: pointer;
+        min-width: var(--touch-target-min);
+        min-height: var(--touch-target-min);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .mobile-header .mobile-logo {
+        height: 36px;
+        max-width: 120px;
+        object-fit: contain;
+    }
+    
+    .mobile-header .mobile-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .mobile-header .mobile-actions button {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 20px;
+        padding: 10px;
+        cursor: pointer;
+        min-width: var(--touch-target-min);
+        min-height: var(--touch-target-min);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background 0.2s;
+    }
+    
+    .mobile-header .mobile-actions button:active {
+        background: rgba(255,255,255,0.2);
+    }
+}
+
+/* Ocultar header móvil en desktop */
+@media (min-width: 769px) {
+    .mobile-header {
+        display: none !important;
+    }
+}
+
+/* ============================================================================
+   MENÚ LATERAL MÓVIL (DRAWER)
+   ============================================================================ */
+@media (max-width: 768px) {
+    .layout-container {
+        flex-direction: column;
+    }
+    
+    .menu {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        bottom: 0 !important;
+        width: var(--mobile-menu-width) !important;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 1001;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .menu.mobile-open {
+        transform: translateX(0);
+        box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+    }
+    
+    /* Overlay oscuro cuando menú está abierto */
+    .mobile-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .mobile-overlay.active {
+        display: block;
+        opacity: 1;
+    }
+    
+    /* Contenido principal */
+    .content-container {
+        margin-top: var(--mobile-header-height) !important;
+        height: calc(100vh - var(--mobile-header-height)) !important;
+        width: 100% !important;
+    }
+    
+    /* Ocultar toggle del sidebar en móvil (usamos hamburger) */
+    #sidebar-toggle {
+        display: none !important;
+    }
+    
+    /* Ajustar logo container en menú móvil */
+    .menu .logo-container {
+        padding: 1rem !important;
+        margin-top: 0.5rem;
+    }
+    
+    .menu .logo-container img {
+        max-width: 160px !important;
+    }
+    
+    /* Enlaces del menú más grandes para touch */
+    .menu .menu-link {
+        padding: 14px 16px !important;
+        font-size: 16px !important;
+        min-height: var(--touch-target-min);
+        display: flex !important;
+        align-items: center !important;
+    }
+    
+    .menu .submenu-item {
+        padding: 12px 16px 12px 40px !important;
+        font-size: 15px !important;
+        min-height: 40px;
+    }
+}
+
+/* ============================================================================
+   IFRAME Y CONTENIDO
+   ============================================================================ */
+@media (max-width: 768px) {
+    #content-frame {
+        width: 100% !important;
+        height: 100% !important;
+    }
+}
+
+/* ============================================================================
+   FORMULARIOS MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    /* Inputs más grandes para touch */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="date"],
+    input[type="tel"],
+    input[type="search"],
+    input[type="url"],
+    select,
+    textarea {
+        font-size: 16px !important; /* Evita zoom en iOS */
+        padding: 12px !important;
+        min-height: var(--touch-target-min);
+        border-radius: 8px !important;
+    }
+    
+    /* Botones táctiles */
+    button,
+    .btn,
+    input[type="submit"],
+    input[type="button"] {
+        min-height: var(--touch-target-min);
+        padding: 12px 20px !important;
+        font-size: 16px !important;
+        border-radius: 8px !important;
+        touch-action: manipulation;
+    }
+    
+    /* Grid de formularios en una columna */
+    .form-row,
+    .form-grid,
+    .form-row.cols-2,
+    .form-row.cols-3,
+    .form-row.cols-4 {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    .form-group {
+        width: 100% !important;
+        margin-bottom: 12px !important;
+    }
+    
+    label {
+        font-size: 14px !important;
+        margin-bottom: 6px !important;
+        display: block !important;
+    }
+}
+
+/* ============================================================================
+   TABLAS RESPONSIVE
+   ============================================================================ */
+@media (max-width: 768px) {
+    /* Tablas con scroll horizontal */
+    .table-container,
+    .tabla-container,
+    .grid-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -12px;
+        padding: 0 12px;
+    }
+    
+    table {
+        min-width: 600px;
+    }
+    
+    th, td {
+        padding: 10px 8px !important;
+        font-size: 14px !important;
+        white-space: nowrap;
+    }
+    
+    /* Ocultar columnas menos importantes en móvil */
+    .hide-mobile {
+        display: none !important;
+    }
+}
+
+/* ============================================================================
+   MODALES MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    .modal {
+        padding: 0 !important;
+    }
+    
+    .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+    }
+    
+    .modal-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 16px !important;
+        border-radius: 0 !important;
+    }
+    
+    .modal-header h2 {
+        font-size: 18px !important;
+    }
+    
+    .modal-body {
+        padding: 16px !important;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .modal-footer {
+        position: sticky;
+        bottom: 0;
+        padding: 16px !important;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .modal-footer button {
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    /* Cerrar modal con X más grande */
+    .modal .close,
+    .modal-header .close {
+        font-size: 28px !important;
+        padding: 10px !important;
+        min-width: var(--touch-target-min);
+        min-height: var(--touch-target-min);
+    }
+}
+
+/* ============================================================================
+   CARDS Y ESTADÍSTICAS MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    .stats-container {
+        gap: 12px !important;
+        padding: 12px !important;
+    }
+    
+    .stats-card {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: unset !important;
+    }
+    
+    .stats-card h3 {
+        font-size: 16px !important;
+    }
+    
+    .stats-value {
+        font-size: 24px !important;
+    }
+}
+
+/* ============================================================================
+   PESTAÑAS (TABS) MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    .tabs-container,
+    .tab-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 8px;
+    }
+    
+    .tabs,
+    .tab-list {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        min-width: max-content;
+    }
+    
+    .tab {
+        flex-shrink: 0;
+        padding: 12px 16px !important;
+        font-size: 14px !important;
+        white-space: nowrap;
+        min-height: var(--touch-target-min);
+    }
+}
+
+/* ============================================================================
+   FILTROS Y CONTROLES MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    .filters-container,
+    .controles-container,
+    .header-controls {
+        flex-direction: column !important;
+        gap: 12px !important;
+        align-items: stretch !important;
+    }
+    
+    .filter-group,
+    .control-group {
+        width: 100% !important;
+    }
+    
+    .search-box,
+    .search-input {
+        width: 100% !important;
+    }
+    
+    /* Botones de acción en fila */
+    .action-buttons,
+    .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .action-buttons button,
+    .btn-group button {
+        flex: 1;
+        min-width: 100px;
+    }
+}
+
+/* ============================================================================
+   HEADER DE PÁGINA MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column !important;
+        gap: 12px !important;
+        padding: 12px !important;
+        align-items: flex-start !important;
+    }
+    
+    .page-header h1,
+    .page-header h2 {
+        font-size: 20px !important;
+        margin: 0 !important;
+    }
+    
+    .page-header .header-actions {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+}
+
+/* ============================================================================
+   NOTIFICACIONES MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    #notificaciones-panel {
+        width: 100% !important;
+        max-width: 100% !important;
+        right: 0 !important;
+        left: 0 !important;
+        top: var(--mobile-header-height) !important;
+        max-height: calc(100vh - var(--mobile-header-height)) !important;
+        border-radius: 0 !important;
+    }
+}
+
+/* ============================================================================
+   UTILIDADES MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    /* Padding general reducido */
+    .container,
+    .content-wrapper,
+    .main-content {
+        padding: 12px !important;
+    }
+    
+    /* Texto más legible */
+    body {
+        font-size: 16px;
+        line-height: 1.5;
+    }
+    
+    /* Espaciado entre secciones */
+    section,
+    .section {
+        margin-bottom: 16px !important;
+    }
+    
+    /* Scroll suave */
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    /* Prevenir zoom en inputs */
+    input, select, textarea {
+        font-size: 16px;
+    }
+    
+    /* Forzar ancho completo en ciertos elementos */
+    .full-width-mobile {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Ocultar en móvil */
+    .desktop-only {
+        display: none !important;
+    }
+}
+
+/* Mostrar solo en móvil */
+@media (min-width: 769px) {
+    .mobile-only {
+        display: none !important;
+    }
+}
+
+/* ============================================================================
+   TOASTS Y ALERTAS MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    .toast,
+    .alert-toast,
+    .notification-toast {
+        left: 12px !important;
+        right: 12px !important;
+        width: auto !important;
+        max-width: none !important;
+        bottom: 12px !important;
+    }
+}
+
+/* ============================================================================
+   DRAG & DROP MÓVIL (Deshabilitado)
+   ============================================================================ */
+@media (max-width: 768px) {
+    .stats-card[draggable="true"] {
+        cursor: default !important;
+    }
+    
+    /* En móvil el drag se hace con touch hold */
+    .stats-card {
+        -webkit-user-select: none;
+        user-select: none;
+    }
+}
+
+/* ============================================================================
+   MEJORAS TOUCH
+   ============================================================================ */
+@media (max-width: 768px) {
+    /* Mejora de áreas táctiles */
+    a, button, [role="button"], .clickable {
+        -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+    }
+    
+    /* Evitar selección accidental de texto */
+    .no-select {
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    /* Smooth scrolling containers */
+    .scroll-container {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+    }
+}
+
+/* ============================================================================
+   FIXES ESPECÍFICOS iOS
+   ============================================================================ */
+@supports (-webkit-touch-callout: none) {
+    @media (max-width: 768px) {
+        /* Fix para iOS Safari */
+        body {
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        input, textarea {
+            -webkit-appearance: none;
+            border-radius: 8px;
+        }
+        
+        /* Fix altura 100vh en iOS */
+        .layout-container {
+            min-height: -webkit-fill-available;
+        }
+    }
+}
+
+/* ============================================================================
+   TABLAS RESPONSIVE - VISTA CARDS EN MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    /* Convertir tabla en cards */
+    table.mobile-cards {
+        display: block !important;
+    }
+    
+    table.mobile-cards thead {
+        display: none !important;
+    }
+    
+    table.mobile-cards tbody {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    table.mobile-cards tr {
+        display: flex !important;
+        flex-direction: column !important;
+        background: var(--card-bg, #fff) !important;
+        border-radius: 12px !important;
+        padding: 16px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        border: 1px solid var(--border, #eee) !important;
+        position: relative;
+    }
+    
+    table.mobile-cards td {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 8px 0 !important;
+        border: none !important;
+        border-bottom: 1px solid var(--border, #eee) !important;
+    }
+    
+    table.mobile-cards td:last-child {
+        border-bottom: none !important;
+    }
+    
+    table.mobile-cards td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        font-size: 12px;
+        color: var(--text-muted, #666);
+        text-transform: uppercase;
+        flex-shrink: 0;
+        margin-right: 12px;
+    }
+    
+    /* Acciones en cards */
+    table.mobile-cards td.acciones,
+    table.mobile-cards td:last-child {
+        display: flex !important;
+        justify-content: flex-end !important;
+        gap: 8px !important;
+        padding-top: 12px !important;
+        margin-top: 8px !important;
+        border-top: 1px solid var(--border, #eee) !important;
+        border-bottom: none !important;
+    }
+}
+
+/* ============================================================================
+   GRIDS DE DOCUMENTOS (FACTURAS, TICKETS, ETC.) MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    /* Grid de facturas/tickets como cards */
+    #tabla-facturas,
+    #tabla-tickets,
+    #tabla-presupuestos,
+    #tabla-proformas,
+    #tabla-contactos,
+    #tabla-productos,
+    #tabla-gastos,
+    #tabla-facturas-recibidas {
+        display: block !important;
+    }
+    
+    #tabla-facturas thead,
+    #tabla-tickets thead,
+    #tabla-presupuestos thead,
+    #tabla-proformas thead,
+    #tabla-contactos thead,
+    #tabla-productos thead,
+    #tabla-gastos thead,
+    #tabla-facturas-recibidas thead {
+        display: none !important;
+    }
+    
+    #tabla-facturas tbody,
+    #tabla-tickets tbody,
+    #tabla-presupuestos tbody,
+    #tabla-proformas tbody,
+    #tabla-contactos tbody,
+    #tabla-productos tbody,
+    #tabla-gastos tbody,
+    #tabla-facturas-recibidas tbody {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    #tabla-facturas tr,
+    #tabla-tickets tr,
+    #tabla-presupuestos tr,
+    #tabla-proformas tr,
+    #tabla-contactos tr,
+    #tabla-productos tr,
+    #tabla-gastos tr,
+    #tabla-facturas-recibidas tr {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 8px !important;
+        background: var(--card-bg, #fff) !important;
+        border-radius: 12px !important;
+        padding: 16px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        border: 1px solid var(--border, #eee) !important;
+    }
+    
+    #tabla-facturas td,
+    #tabla-tickets td,
+    #tabla-presupuestos td,
+    #tabla-proformas td,
+    #tabla-contactos td,
+    #tabla-productos td,
+    #tabla-gastos td,
+    #tabla-facturas-recibidas td {
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 4px 0 !important;
+        border: none !important;
+        font-size: 14px !important;
+    }
+    
+    /* Primera celda (número) ocupa toda la fila */
+    #tabla-facturas td:first-child,
+    #tabla-tickets td:first-child,
+    #tabla-presupuestos td:first-child,
+    #tabla-proformas td:first-child {
+        grid-column: 1 / -1 !important;
+        font-weight: 700 !important;
+        font-size: 16px !important;
+        color: var(--primary, #007bff) !important;
+        border-bottom: 1px solid var(--border, #eee) !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 4px !important;
+    }
+    
+    /* Última celda (acciones) ocupa toda la fila */
+    #tabla-facturas td:last-child,
+    #tabla-tickets td:last-child,
+    #tabla-presupuestos td:last-child,
+    #tabla-proformas td:last-child,
+    #tabla-contactos td:last-child,
+    #tabla-productos td:last-child,
+    #tabla-gastos td:last-child,
+    #tabla-facturas-recibidas td:last-child {
+        grid-column: 1 / -1 !important;
+        flex-direction: row !important;
+        justify-content: flex-end !important;
+        gap: 8px !important;
+        padding-top: 12px !important;
+        margin-top: 8px !important;
+        border-top: 1px solid var(--border, #eee) !important;
+    }
+    
+    /* Importe destacado */
+    #tabla-facturas td[data-label="Total"],
+    #tabla-tickets td[data-label="Total"],
+    #tabla-facturas td:nth-child(5),
+    #tabla-tickets td:nth-child(4) {
+        font-weight: 700 !important;
+        font-size: 18px !important;
+        color: var(--success, #28a745) !important;
+    }
+}
+
+/* ============================================================================
+   PÁGINA DE GESTIÓN (NUEVO/EDITAR) MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    /* Contenedor de gestión */
+    .gestion-container,
+    .form-container,
+    .documento-container {
+        padding: 12px !important;
+    }
+    
+    /* Secciones del formulario */
+    .form-section,
+    .documento-section,
+    .seccion-datos {
+        background: var(--card-bg, #fff) !important;
+        border-radius: 12px !important;
+        padding: 16px !important;
+        margin-bottom: 16px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+    }
+    
+    .form-section h3,
+    .seccion-datos h3 {
+        font-size: 16px !important;
+        margin-bottom: 16px !important;
+        padding-bottom: 8px !important;
+        border-bottom: 1px solid var(--border, #eee) !important;
+    }
+    
+    /* Grid de campos */
+    .campos-grid,
+    .form-grid,
+    .datos-grid {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    /* Selector de cliente/proveedor más grande */
+    .selector-cliente,
+    .selector-contacto,
+    #cliente-selector {
+        min-height: 60px !important;
+        padding: 16px !important;
+        font-size: 16px !important;
+    }
+    
+    /* Líneas de documento */
+    .lineas-container,
+    .tabla-lineas-container {
+        overflow-x: auto !important;
+        margin: 0 -12px !important;
+        padding: 0 12px !important;
+    }
+    
+    /* Tabla de líneas en cards */
+    #tabla-lineas,
+    .tabla-lineas {
+        min-width: unset !important;
+    }
+    
+    #tabla-lineas thead,
+    .tabla-lineas thead {
+        display: none !important;
+    }
+    
+    #tabla-lineas tbody tr,
+    .tabla-lineas tbody tr {
+        display: flex !important;
+        flex-direction: column !important;
+        background: var(--bg-elevated, #f8f9fa) !important;
+        border-radius: 8px !important;
+        padding: 12px !important;
+        margin-bottom: 8px !important;
+        border: 1px solid var(--border, #eee) !important;
+    }
+    
+    #tabla-lineas td,
+    .tabla-lineas td {
+        display: flex !important;
+        justify-content: space-between !important;
+        padding: 6px 0 !important;
+        border: none !important;
+    }
+    
+    /* Footer de totales */
+    .totales-container,
+    .documento-totales {
+        position: sticky !important;
+        bottom: 0 !important;
+        background: var(--card-bg, #fff) !important;
+        padding: 16px !important;
+        margin: 0 -12px !important;
+        border-top: 1px solid var(--border, #eee) !important;
+        box-shadow: 0 -2px 8px rgba(0,0,0,0.1) !important;
+    }
+    
+    /* Botones de acción fijos abajo */
+    .acciones-documento,
+    .form-actions {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        background: var(--card-bg, #fff) !important;
+        padding: 12px 16px !important;
+        display: flex !important;
+        gap: 12px !important;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1) !important;
+        z-index: 100 !important;
+    }
+    
+    .acciones-documento button,
+    .form-actions button {
+        flex: 1 !important;
+    }
+}
+
+/* ============================================================================
+   CONTACTOS Y PRODUCTOS MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    /* Cards de contactos */
+    #tabla-contactos tr {
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* Avatar de contacto */
+    #tabla-contactos td:first-child {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 12px !important;
+        font-size: 16px !important;
+    }
+    
+    /* Productos - mostrar imagen y nombre juntos */
+    #tabla-productos tr {
+        grid-template-columns: 1fr 1fr !important;
+    }
+    
+    #tabla-productos td:first-child {
+        grid-column: 1 / -1 !important;
+    }
+}
+
+/* ============================================================================
+   ESTADÍSTICAS MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    .stats-page body,
+    .estadisticas-page {
+        padding: 12px !important;
+    }
+    
+    /* Tabs de estadísticas */
+    .stats-tabs {
+        display: flex !important;
+        overflow-x: auto !important;
+        gap: 8px !important;
+        padding-bottom: 12px !important;
+        margin-bottom: 16px !important;
+    }
+    
+    .stats-tabs .tab {
+        flex-shrink: 0 !important;
+        padding: 10px 16px !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Cards de estadísticas en columna */
+    .stats-container {
+        flex-direction: column !important;
+    }
+    
+    .stats-card {
+        width: 100% !important;
+        min-width: unset !important;
+    }
+    
+    /* Gráficos responsive */
+    .chart-container,
+    canvas {
+        max-width: 100% !important;
+        height: auto !important;
+        min-height: 250px !important;
+    }
+}
+
+/* ============================================================================
+   BIENVENIDA MÓVIL
+   ============================================================================ */
+@media (max-width: 768px) {
+    .welcome-container,
+    .bienvenida-container {
+        padding: 20px !important;
+        text-align: center !important;
+    }
+    
+    .welcome-container h1 {
+        font-size: 24px !important;
+    }
+    
+    .welcome-actions {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    
+    .welcome-actions button,
+    .welcome-actions a {
+        width: 100% !important;
+    }
+}
+
+/* ============================================================================
+   MEJORAS ADICIONALES TÁCTILES
+   ============================================================================ */
+@media (max-width: 768px) {
+    /* Checkboxes más grandes */
+    input[type="checkbox"] {
+        width: 22px !important;
+        height: 22px !important;
+        margin-right: 8px !important;
+    }
+    
+    /* Radio buttons más grandes */
+    input[type="radio"] {
+        width: 22px !important;
+        height: 22px !important;
+    }
+    
+    /* Select con flecha visible */
+    select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 12px center !important;
+        padding-right: 36px !important;
+    }
+    
+    /* Links más tocables */
+    a:not(.btn) {
+        padding: 4px 0 !important;
+    }
+    
+    /* Iconos de acción más grandes */
+    .btn-icon,
+    .action-icon,
+    [class*="btn-"] i {
+        font-size: 18px !important;
+    }
+    
+    /* Paginación táctil */
+    .pagination {
+        display: flex !important;
+        justify-content: center !important;
+        gap: 4px !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .pagination button,
+    .pagination a {
+        min-width: 44px !important;
+        min-height: 44px !important;
+        padding: 8px 12px !important;
+    }
+}
