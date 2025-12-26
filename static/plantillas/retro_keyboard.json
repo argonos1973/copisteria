@@ -1,0 +1,137 @@
+{
+  "name": "8BitDo Retro",
+  "version": 1,
+  "meta": {
+    "author": "aleph70",
+    "icon": "⌨️",
+    "dark": false,
+    "description": "Inspirado en el teclado 8BitDo Retro - beige vintage con acentos rojos"
+  },
+  "palette": {
+    "white": "#ffffff",
+    "cream": "#d4d0c8",
+    "cream-light": "#e8e4dc",
+    "cream-dark": "#c8c4bc",
+    "gray-key": "#9a9590",
+    "gray-dark": "#5a5856",
+    "gray-darker": "#3d3b3a",
+    "sidebar": "#3d4654",
+    "red-accent": "#e63946",
+    "red-dark": "#c1121f",
+    "red-text": "#cf6679",
+    "green": "#2a9d8f",
+    "yellow": "#e9c46a",
+    "text-dark": "#2b2b2b"
+  },
+  "semantic": {
+    "bg": "{palette.cream}",
+    "bg-elevated": "{palette.cream-light}",
+    "text": "{palette.text-dark}",
+    "text-muted": "{palette.gray-key}",
+    "primary": "{palette.red-accent}",
+    "secondary": "{palette.red-dark}",
+    "success": "{palette.green}",
+    "warning": "{palette.yellow}",
+    "danger": "{palette.red-accent}",
+    "info": "{palette.sidebar}",
+    "border": "{palette.gray-key}",
+    "hover": "{palette.cream-dark}"
+  },
+  "components": {
+    "button": {
+      "bg": "{palette.red-accent}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.red-dark}",
+      "border": "{palette.red-accent}"
+    },
+    "button-secondary": {
+      "bg": "{palette.cream-dark}",
+      "text": "{palette.text-dark}",
+      "hover-bg": "{palette.gray-key}",
+      "border": "{palette.gray-key}"
+    },
+    "input": {
+      "bg": "{palette.cream-light}",
+      "text": "{palette.text-dark}",
+      "border": "{palette.gray-key}",
+      "placeholder": "{palette.gray-key}",
+      "readonly-bg": "{palette.cream-dark}",
+      "readonly-text": "{palette.text-dark}",
+      "focus-border": "{palette.red-accent}"
+    },
+    "select": {
+      "bg": "{palette.cream-light}",
+      "text": "{palette.text-dark}",
+      "border": "{palette.gray-key}"
+    },
+    "modal": {
+      "bg": "{palette.cream-light}",
+      "text": "{palette.text-dark}",
+      "overlay": "rgba(61, 70, 84, 0.5)",
+      "border": "{palette.gray-dark}",
+      "border-width": "3px",
+      "border-radius": "4px",
+      "shadow": "0 8px 24px rgba(0, 0, 0, 0.3)",
+      "header-bg": "{palette.sidebar}",
+      "header-text": "{palette.white}",
+      "body-bg": "transparent",
+      "body-text": "{palette.text-dark}",
+      "label-color": "{palette.text-dark}",
+      "input-bg": "{palette.cream-light}",
+      "input-text": "{palette.text-dark}",
+      "input-border": "{palette.gray-key}",
+      "button-bg": "{palette.red-accent}",
+      "button-text": "{palette.white}",
+      "button-hover-bg": "{palette.red-dark}"
+    },
+    "table": {
+      "bg": "{palette.cream-light}",
+      "text": "{palette.text-dark}",
+      "header-bg": "{palette.sidebar}",
+      "header-text": "{palette.white}",
+      "row-hover": "{palette.cream-dark}"
+    },
+    "menu": {
+      "bg": "{palette.sidebar}",
+      "text": "{palette.cream-light}",
+      "hover": "{palette.gray-darker}",
+      "icon": "{palette.red-accent}"
+    },
+    "header": {
+      "bg": "{palette.cream-dark}",
+      "text": "{palette.text-dark}"
+    },
+    "icon": {
+      "color": "{palette.red-accent}",
+      "light": "{palette.white}"
+    },
+    "spinner": {
+      "border": "{palette.red-accent}"
+    },
+    "tab": {
+      "active-bg": "{palette.red-accent}",
+      "active-text": "{palette.white}",
+      "border": "{palette.red-accent}"
+    },
+    "disabled": {
+      "bg": "{palette.cream-dark}",
+      "text": "{palette.gray-key}"
+    },
+    "amount": {
+      "positive": "{palette.green}",
+      "negative": "{palette.red-accent}"
+    },
+    "button-card": {
+      "bg": "{palette.gray-dark}",
+      "text": "{palette.cream-light}",
+      "hover-bg": "{palette.gray-darker}",
+      "border": "{palette.gray-dark}"
+    },
+    "button-table": {
+      "bg": "{palette.red-accent}",
+      "text": "{palette.white}",
+      "hover-bg": "{palette.red-dark}",
+      "border": "{palette.red-accent}"
+    }
+  }
+}

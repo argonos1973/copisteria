@@ -260,6 +260,28 @@ def eliminar_plantilla_personalizada(plantilla_id):
         logger.error(f"Error eliminando plantilla personalizada: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@plantillas_bp.route('/<string:nombre_plantilla>', methods=['DELETE'])
+def eliminar_plantilla_json(nombre_plantilla):
+    """
+    Eliminar un archivo JSON de plantilla
+    """
+    try:
+        # Construir ruta del archivo
+        ruta_plantilla = f'/var/www/html/static/plantillas/{nombre_plantilla}.json'
+        
+        if not os.path.exists(ruta_plantilla):
+            return jsonify({'success': False, 'error': f'Plantilla "{nombre_plantilla}" no encontrada'}), 404
+        
+        # Eliminar el archivo
+        os.remove(ruta_plantilla)
+        
+        logger.info(f"Plantilla JSON eliminada: {nombre_plantilla}")
+        return jsonify({'success': True, 'message': f'Plantilla "{nombre_plantilla}" eliminada correctamente'})
+        
+    except Exception as e:
+        logger.error(f"Error eliminando plantilla JSON: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @plantillas_bp.route('/listar', methods=['GET'])
 def listar_todas_plantillas():
     """

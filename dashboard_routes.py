@@ -63,9 +63,10 @@ def estadisticas_gastos():
             total_ingresos = total_tickets_anio + total_facturas_anio
             logger.info(f"[DASHBOARD] Total Ingresos Calculado: {total_ingresos}")
 
-            # Gastos siguen siendo los movimientos negativos de la tabla gastos
-            cur.execute("SELECT COALESCE(SUM(importe_eur),0) FROM gastos WHERE importe_eur < 0 AND substr(COALESCE(fecha_operacion_iso, substr(fecha_operacion, 7, 4) || '-' || substr(fecha_operacion, 4, 2) || '-' || substr(fecha_operacion, 1, 2)), 1, 4) = ?", (str(año),))
+            # Gastos desde facturas_proveedores (facturas recibidas)
+            cur.execute("SELECT COALESCE(SUM(total), 0) FROM facturas_proveedores WHERE año = ?", (año,))
             total_gastos = cur.fetchone()[0] or 0
+            total_gastos = -abs(total_gastos)  # Convertir a negativo para mantener compatibilidad con balance
             
             balance = total_ingresos + total_gastos  # Balance total anual
 
@@ -91,11 +92,13 @@ def estadisticas_gastos():
             
             ingresos_mes_actual = tickets_mes + facturas_mes
 
+            # Gastos del mes desde facturas_proveedores
             cur.execute("""
-                SELECT COALESCE(SUM(importe_eur),0) FROM gastos 
-                WHERE importe_eur < 0 AND substr(fecha_operacion, 4, 2) = ? AND substr(fecha_operacion, 7, 4) = ?
-            """, (str(mes).zfill(2), str(año)))
+                SELECT COALESCE(SUM(total), 0) FROM facturas_proveedores 
+                WHERE año = ? AND substr(fecha_emision, 6, 2) = ?
+            """, (año, str(mes).zfill(2)))
             gastos_mes_actual = cur.fetchone()[0] or 0
+            gastos_mes_actual = -abs(gastos_mes_actual)  # Negativo para balance
     
             balance_mes = gastos_mes_actual + ingresos_mes_actual
     

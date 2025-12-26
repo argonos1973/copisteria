@@ -3,6 +3,68 @@
 let datosUsuarioActual = {};
 let twoFactorEnabled = false;
 
+// Función para eliminar plantilla con confirmación
+async function eliminarPlantillaPerfil(idPlantilla, nombrePlantilla) {
+    // Crear overlay de confirmación
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100000; display: flex; align-items: center; justify-content: center;';
+    
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'background: white; padding: 25px; border-radius: 8px; max-width: 400px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
+    dialog.innerHTML = `
+        <div style="color: #e74c3c; font-size: 48px; margin-bottom: 15px;">⚠️</div>
+        <h3 style="margin: 0 0 10px 0; color: #333;">¿Eliminar plantilla?</h3>
+        <p style="color: #666; margin-bottom: 20px;">¿Estás seguro de que deseas eliminar la plantilla <strong>"${nombrePlantilla}"</strong>?<br><small>Esta acción no se puede deshacer.</small></p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btn-cancelar-eliminar-plantilla" style="padding: 10px 25px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 5px; cursor: pointer; font-size: 14px;">Cancelar</button>
+            <button id="btn-confirmar-eliminar-plantilla" style="padding: 10px 25px; border: none; background: #e74c3c; color: white; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Eliminar</button>
+        </div>
+    `;
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    return new Promise((resolve) => {
+        document.getElementById('btn-cancelar-eliminar-plantilla').onclick = () => {
+            overlay.remove();
+            resolve(false);
+        };
+        
+        document.getElementById('btn-confirmar-eliminar-plantilla').onclick = async () => {
+            overlay.remove();
+            
+            try {
+                const response = await fetch(`/api/plantillas/${idPlantilla}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    mostrarNotificacion(`Plantilla "${nombrePlantilla}" eliminada`, 'success');
+                    // Recargar plantillas
+                    await cargarPlantillasModal();
+                } else {
+                    const data = await response.json();
+                    mostrarNotificacion(data.error || 'Error al eliminar', 'error');
+                }
+            } catch (error) {
+                console.error('Error eliminando plantilla:', error);
+                mostrarNotificacion('Error de conexión', 'error');
+            }
+            
+            resolve(true);
+        };
+        
+        // Cerrar con click fuera
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                overlay.remove();
+                resolve(false);
+            }
+        };
+    });
+}
+
 async function abrirModalPerfil() {
     try {
         // Cargar datos del usuario
@@ -361,7 +423,18 @@ async function cargarPlantillasModal() {
             return `
                 <div class="plantilla-card-perfil ${isActive ? 'active' : ''}" 
                      data-plantilla="${p.id}"
-                     onclick="cambiarPlantillaUsuario('${p.id}', this)">
+                     onclick="cambiarPlantillaUsuario('${p.id}', this)"
+                     style="position: relative;">
+                    <button type="button" class="btn-eliminar-plantilla" 
+                        onclick="event.stopPropagation(); eliminarPlantillaPerfil('${p.id}', '${p.nombre.replace(/'/g, "\\'")}');"
+                        style="position: absolute; top: -8px; right: -8px; width: 22px; height: 22px;
+                        border-radius: 50%; background: #e74c3c; color: white; border: 2px solid white;
+                        cursor: pointer; font-size: 10px; font-weight: bold; z-index: 10;
+                        display: flex; align-items: center; justify-content: center;
+                        box-shadow: 0 2px 6px rgba(0,0,0,0.3); padding: 0;"
+                        title="Eliminar plantilla ${p.nombre}">
+                        ✕
+                    </button>
                     <div class="plantilla-mini-ui" aria-hidden="true">
                         <div class="plantilla-mini-header"></div>
                         <div class="plantilla-mini-body">

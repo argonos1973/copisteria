@@ -977,16 +977,20 @@
             <span class="close" id="cerrar-modal-gastos">&times;</span>
         </div>
         <div class="modal-body">
-            <div class="chart-controls" style="margin-bottom: 1rem;">
-                <label for="categoria-gastos" style="margin-right: 10px; font-weight: 600;">Categoría:</label>
-                <select id="categoria-gastos" class="form-select">
-                    <option value="global">📈 Total Global</option>
-                    <option value="Recibos">🧾 Recibos</option>
-                    <option value="Liquidaciones TPV">💳 Liquidaciones TPV</option>
-                    <option value="Transferencias">💸 Transferencias</option>
-                    <option value="Bizum">📱 Bizum</option>
-                    <option value="Compras Tarjeta">🛒 Compras Tarjeta</option>
-                </select>
+            <div class="chart-controls" style="margin-bottom: 1rem; display: flex; gap: 20px; align-items: center;">
+                <div>
+                    <label for="vista-gastos" style="margin-right: 10px; font-weight: 600;">Vista:</label>
+                    <select id="vista-gastos" class="form-select">
+                        <option value="mensual">📅 Por Meses</option>
+                        <option value="trimestral">📊 Por Trimestres</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="categoria-gastos" style="margin-right: 10px; font-weight: 600;">Categoría:</label>
+                    <select id="categoria-gastos" class="form-select">
+                        <option value="global">📈 Total Global</option>
+                    </select>
+                </div>
             </div>
             <div style="background: var(--bg-elevated); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
                 <canvas id="chart-gastos-meses" style="max-height: 450px;"></canvas>
@@ -1931,7 +1935,7 @@ window.abrirModalGraficosGastos = async function() {
     await cargarGraficoGastosMensual('global');
 };
 
-async function cargarGraficoGastosMensual(categoria) {
+async function cargarGraficoGastosMensual(categoria, vista = 'mensual') {
     try {
         const selectorFecha = document.getElementById('selector-fecha');
         let anio;
@@ -1942,9 +1946,15 @@ async function cargarGraficoGastosMensual(categoria) {
             anio = new Date().getFullYear();
         }
         
-        // console.log('[GRAFICO MENSUAL] Cargando para:', categoria, anio);
+        // Usar endpoint según vista
+        let url;
+        if (vista === 'trimestral') {
+            url = `${API_BASE}/api/gastos/evolucion-trimestral?anio=${anio}`;
+        } else {
+            url = `${API_BASE}/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
+        }
         
-        const response = await fetch(`${API_BASE}/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`);
+        const response = await fetch(url);
         
         if (!response.ok) {
             // console.error('[GRAFICO MENSUAL] Error en respuesta:', response.status);
@@ -2045,11 +2055,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Cambiar vista (mensual/trimestral)
+    const selectorVista = document.getElementById('vista-gastos');
+    if (selectorVista) {
+        selectorVista.addEventListener('change', function() {
+            const categoria = document.getElementById('categoria-gastos')?.value || 'global';
+            cargarGraficoGastosMensual(categoria, this.value);
+        });
+    }
+    
     // Cambiar categoría
     const selectorCategoria = document.getElementById('categoria-gastos');
     if (selectorCategoria) {
         selectorCategoria.addEventListener('change', function() {
-            cargarGraficoGastosMensual(this.value);
+            const vista = document.getElementById('vista-gastos')?.value || 'mensual';
+            cargarGraficoGastosMensual(this.value, vista);
         });
     }
     

@@ -1432,24 +1432,46 @@ function mostrarModalEditar(factura) {
         inputProveedor.onchange = inputProveedor.oninput;
     }
 
-    document.getElementById('editar-numero').value = factura.numero_factura;
-    document.getElementById('editar-fecha-emision').value = factura.fecha_emision;
+    document.getElementById('editar-numero').value = factura.numero_factura || '';
+    document.getElementById('editar-fecha-emision').value = factura.fecha_emision || '';
     document.getElementById('editar-fecha-vencimiento').value = factura.fecha_vencimiento || '';
-    document.getElementById('editar-base').value = factura.base_imponible;
-    document.getElementById('editar-iva-porcentaje').value = factura.iva_porcentaje;
-    document.getElementById('editar-iva-importe').value = factura.iva_importe;
-    document.getElementById('editar-total').value = factura.total;
+    
+    // Asegurar que los campos numéricos tengan valores válidos (incluso si son 0)
+    const baseInput = document.getElementById('editar-base');
+    const ivaPctInput = document.getElementById('editar-iva-porcentaje');
+    const ivaImpInput = document.getElementById('editar-iva-importe');
+    const totalInput = document.getElementById('editar-total');
+    
+    // Formatear valores para campos de texto
+    const baseVal = parseFloat(factura.base_imponible) || 0;
+    const ivaPctVal = parseFloat(factura.iva_porcentaje) || 21;
+    const ivaImpVal = parseFloat(factura.iva_importe) || 0;
+    const totalVal = parseFloat(factura.total) || 0;
+    
+    baseInput.value = baseVal.toFixed(2);
+    ivaPctInput.value = ivaPctVal.toString();
+    ivaImpInput.value = ivaImpVal.toFixed(2);
+    totalInput.value = totalVal.toFixed(2);
+    
+    // Asegurar que los campos editables no estén readonly/disabled
+    baseInput.removeAttribute('readonly');
+    baseInput.removeAttribute('disabled');
+    ivaPctInput.removeAttribute('readonly');
+    ivaPctInput.removeAttribute('disabled');
+    
+    // Focus test - hacer el campo clickeable
+    baseInput.style.pointerEvents = 'auto';
+    ivaPctInput.style.pointerEvents = 'auto';
+    
+    console.log('[Editar] Campos de importes configurados:', {base: baseInput.value, iva: ivaPctInput.value});
     document.getElementById('editar-concepto').value = factura.concepto || '';
     document.getElementById('editar-notas').value = factura.notas || '';
     // Checkbox eliminado: document.getElementById('editar-revisado').checked = factura.revisado === 1;
     
-    // Event listeners para cálculo automático
-    const baseInput = document.getElementById('editar-base');
-    const ivaSelect = document.getElementById('editar-iva-porcentaje');
-    
+    // Event listeners para cálculo automático (reutilizar baseInput e ivaPctInput ya declarados)
     const calcular = () => {
         const base = parseFloat(baseInput.value) || 0;
-        const ivaPorcentaje = parseFloat(ivaSelect.value) || 0;
+        const ivaPorcentaje = parseFloat(ivaPctInput.value) || 0;
         const ivaImporte = base * (ivaPorcentaje / 100);
         const total = base + ivaImporte;
         
@@ -1458,7 +1480,8 @@ function mostrarModalEditar(factura) {
     };
     
     baseInput.addEventListener('input', calcular);
-    ivaSelect.addEventListener('change', calcular);
+    ivaPctInput.addEventListener('change', calcular);
+    ivaPctInput.addEventListener('input', calcular);
     
     // Cargar previsualización en iframe
     const previewFrame = document.getElementById('editar-preview-frame');

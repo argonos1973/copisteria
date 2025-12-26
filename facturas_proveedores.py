@@ -1723,11 +1723,12 @@ def actualizar_factura_proveedor(factura_id, empresa_id, datos, usuario='sistema
         
         conn.commit()
         
-        # Registrar en historial
-        registrar_historial(factura_id, 'actualizacion', usuario, 
-                           datos_anteriores=dict(factura_anterior), 
-                           datos_nuevos=datos)
+        # TODO: Implementar registrar_historial si se necesita auditoría
+        # registrar_historial(factura_id, 'actualizacion', usuario, 
+        #                    datos_anteriores=dict(factura_anterior), 
+        #                    datos_nuevos=datos)
         
+        logger.info(f"[UPDATE FACTURA] Factura {factura_id} actualizada correctamente")
         return True
         
     except Exception as e:

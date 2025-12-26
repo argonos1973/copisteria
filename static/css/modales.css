@@ -145,6 +145,7 @@
     border: 2px solid rgba(255, 255, 255, 0.55);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset;
     pointer-events: none;
+    z-index: -1;
 }
 
 /* Header: asegurar contraste y que el título se renderice como el resto de modales */
@@ -230,6 +231,7 @@
     border: 2px solid rgba(255, 255, 255, 0.55);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset;
     pointer-events: none;
+    z-index: -1;
 }
 
 #modalEditar .modal-content {
@@ -308,6 +310,20 @@
 #modalEditar #formEditar #editar-iva-importe,
 #modalEditar #formEditar #editar-total {
     text-align: right !important;
+}
+
+/* Asegurar que los campos de importes editables sean interactivos */
+#modalEditar #formEditar #editar-base,
+#modalEditar #formEditar #editar-iva-porcentaje {
+    pointer-events: auto !important;
+    cursor: text !important;
+    background-color: var(--input-bg, #fff) !important;
+    color: var(--input-text, #000) !important;
+    opacity: 1 !important;
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    position: relative;
+    z-index: 10;
 }
 
 @media (max-width: 900px) {

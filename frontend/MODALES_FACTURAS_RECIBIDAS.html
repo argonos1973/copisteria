@@ -221,16 +221,16 @@
                     
                     <!-- Fila 2: Importes (Con fondo diferenciado y borde) -->
                     <div class="form-row" style="background: var(--bg-elevated, rgba(0,0,0,0.05)); padding: 15px; border-radius: 6px; border: 1px solid var(--border, #ccc); display: flex; flex-wrap: nowrap; gap: 10px; justify-content: space-between; align-items: flex-end;">
-                        <div class="form-group" style="flex: 1; min-width: 100px;">
+                        <div class="form-group" style="flex: 1; min-width: 100px; position: relative; z-index: 100;">
                             <label for="editar-base" style="display: block; text-align: right;">Base Imp.</label>
-                            <input type="number" id="editar-base" class="form-control" 
-                                   step="0.01" min="0" required style="text-align: right;">
+                            <input type="text" inputmode="decimal" id="editar-base" class="form-control" 
+                                   style="text-align: right; pointer-events: auto !important; cursor: text !important; position: relative; z-index: 101;">
                         </div>
                         
-                        <div class="form-group" style="flex: 0 0 70px;">
+                        <div class="form-group" style="flex: 0 0 70px; position: relative; z-index: 100;">
                             <label for="editar-iva-porcentaje" style="display: block; text-align: right;">IVA %</label>
-                            <input type="number" id="editar-iva-porcentaje" class="form-control" 
-                                   min="0" max="100" step="1" style="text-align: right;">
+                            <input type="text" inputmode="numeric" id="editar-iva-porcentaje" class="form-control" 
+                                   style="text-align: right; pointer-events: auto !important; cursor: text !important; position: relative; z-index: 101;">
                         </div>
                         
                         <div class="form-group" style="flex: 1; min-width: 100px;">

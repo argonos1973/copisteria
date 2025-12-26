@@ -30,6 +30,72 @@ function mostrarAlerta(mensaje, tipo = 'info') {
     }, 3000);
 }
 
+// Función para eliminar plantilla con confirmación
+async function eliminarPlantilla(nombrePlantilla) {
+    const plantilla = window.plantillasColores[nombrePlantilla];
+    const nombreMostrar = plantilla?.nombre || nombrePlantilla;
+    
+    // Crear overlay de confirmación
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100000; display: flex; align-items: center; justify-content: center;';
+    
+    const dialog = document.createElement('div');
+    dialog.style.cssText = 'background: white; padding: 25px; border-radius: 8px; max-width: 400px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3);';
+    dialog.innerHTML = `
+        <div style="color: #e74c3c; font-size: 48px; margin-bottom: 15px;"><i class="fas fa-exclamation-triangle"></i></div>
+        <h3 style="margin: 0 0 10px 0; color: #333;">¿Eliminar plantilla?</h3>
+        <p style="color: #666; margin-bottom: 20px;">¿Estás seguro de que deseas eliminar la plantilla <strong>"${nombreMostrar}"</strong>?<br><small>Esta acción no se puede deshacer.</small></p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btn-cancelar-eliminar" style="padding: 10px 25px; border: 1px solid #ccc; background: #f5f5f5; border-radius: 5px; cursor: pointer; font-size: 14px;">Cancelar</button>
+            <button id="btn-confirmar-eliminar" style="padding: 10px 25px; border: none; background: #e74c3c; color: white; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold;">Eliminar</button>
+        </div>
+    `;
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    return new Promise((resolve) => {
+        document.getElementById('btn-cancelar-eliminar').onclick = () => {
+            overlay.remove();
+            resolve(false);
+        };
+        
+        document.getElementById('btn-confirmar-eliminar').onclick = async () => {
+            overlay.remove();
+            
+            try {
+                // Llamar al API para eliminar la plantilla
+                const response = await fetch(`/api/plantillas/${nombrePlantilla}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (response.ok) {
+                    mostrarAlerta(`Plantilla "${nombreMostrar}" eliminada correctamente`, 'success');
+                    // Recargar plantillas
+                    setTimeout(cargarPlantillasEnModal, 500);
+                } else {
+                    const data = await response.json();
+                    mostrarAlerta(data.error || 'Error al eliminar la plantilla', 'error');
+                }
+            } catch (error) {
+                console.error('Error eliminando plantilla:', error);
+                mostrarAlerta('Error de conexión al eliminar la plantilla', 'error');
+            }
+            
+            resolve(true);
+        };
+        
+        // Cerrar con click fuera
+        overlay.onclick = (e) => {
+            if (e.target === overlay) {
+                overlay.remove();
+                resolve(false);
+            }
+        };
+    });
+}
+
 // Helper para convertir hex a rgba
 function hexToRgba(hex, alpha) {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -1230,6 +1296,9 @@ async function editarEmpresa(empresaId) {
                                         }
                                         
                                         let html = '';
+                                        // Lista de plantillas protegidas que no se pueden eliminar
+                                        const plantillasProtegidas = ['classic', 'dark', 'minimal'];
+                                        
                                         Object.keys(window.plantillasColores).forEach(key => {
                                             const plantilla = window.plantillasColores[key];
                                             const bgColor = plantilla.color_app_bg || '#ffffff';
@@ -1238,19 +1307,34 @@ async function editarEmpresa(empresaId) {
                                             
                                             const icon = key === 'minimal' ? 'fas fa-palette' : 'fas fa-moon';
                                             const desc = plantilla.descripcion || '';
+                                            const esProtegida = plantillasProtegidas.includes(key);
                                             
                                             html += \`
-                                                <button type="button" data-plantilla="\${key}" 
-                                                    onclick="aplicarPlantillaConPreview('\${key}', 'edit_'); marcarPlantillaActiva('\${key}');" 
-                                                    style="padding: 20px; border: 3px solid \${borderColor}; border-radius: 8px; 
-                                                    background: \${bgColor}; color: \${textColor}; cursor: pointer; 
-                                                    font-weight: bold; font-size: 14px; transition: transform 0.2s; 
-                                                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);" 
-                                                    onmouseover="this.style.transform='scale(1.05)'" 
-                                                    onmouseout="this.style.transform='scale(1)'">
-                                                    <i class="\${icon}"></i> \${plantilla.nombre}<br>
-                                                    <small style="opacity: 0.9; font-size: 11px;">\${desc}</small>
-                                                </button>
+                                                <div style="position: relative;">
+                                                    \${!esProtegida ? \`
+                                                    <button type="button" class="btn-eliminar-plantilla" 
+                                                        onclick="event.stopPropagation(); eliminarPlantilla('\${key}');"
+                                                        style="position: absolute; top: -8px; right: -8px; width: 24px; height: 24px;
+                                                        border-radius: 50%; background: #e74c3c; color: white; border: 2px solid white;
+                                                        cursor: pointer; font-size: 12px; font-weight: bold; z-index: 10;
+                                                        display: flex; align-items: center; justify-content: center;
+                                                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);"
+                                                        title="Eliminar plantilla \${plantilla.nombre}">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                    \` : ''}
+                                                    <button type="button" data-plantilla="\${key}" 
+                                                        onclick="aplicarPlantillaConPreview('\${key}', 'edit_'); marcarPlantillaActiva('\${key}');" 
+                                                        style="padding: 20px; border: 3px solid \${borderColor}; border-radius: 8px; 
+                                                        background: \${bgColor}; color: \${textColor}; cursor: pointer; 
+                                                        font-weight: bold; font-size: 14px; transition: transform 0.2s; 
+                                                        box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 100%;" 
+                                                        onmouseover="this.style.transform='scale(1.05)'" 
+                                                        onmouseout="this.style.transform='scale(1)'">
+                                                        <i class="\${icon}"></i> \${plantilla.nombre}<br>
+                                                        <small style="opacity: 0.9; font-size: 11px;">\${desc}</small>
+                                                    </button>
+                                                </div>
                                             \`;
                                         });
                                         

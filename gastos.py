@@ -65,20 +65,21 @@ def ingresos_gastos_mes():
             mes = str(r['mes']).zfill(2)
             ingresos[mes] += float(r['total_tickets'] or 0)
         
-        # GASTOS: Tabla gastos (formato fecha_valor: DD/MM/YYYY)
+        # GASTOS: Desde facturas_proveedores (formato fecha_emision: YYYY-MM-DD)
         cur.execute(
             """
-            SELECT substr(fecha_valor, 4, 2) as mes,
-                   SUM(CASE WHEN importe_eur < 0 THEN importe_eur ELSE 0 END) as total_gastos
-            FROM gastos
-            WHERE substr(fecha_valor, 7, 4) = ?
+            SELECT substr(fecha_emision, 6, 2) as mes,
+                   SUM(total) as total_gastos
+            FROM facturas_proveedores
+            WHERE año = ?
             GROUP BY mes
             """,
-            (str(anio),)
+            (anio,)
         )
         for r in cur.fetchall():
             mes = str(r['mes']).zfill(2)
-            gastos_dict[mes] = float(r['total_gastos'] or 0)
+            # Negativo para mantener compatibilidad con gráficos
+            gastos_dict[mes] = -abs(float(r['total_gastos'] or 0))
         
         conn.close()
 
@@ -191,19 +192,18 @@ def ingresos_gastos_totales():
                 
                 ingresos = t_tickets + t_facturas
 
-                # 2. Calcular Gastos: Suma de importes negativos en tabla gastos
+                # 2. Calcular Gastos: Suma de totales de facturas_proveedores
                 cur.execute(
                     """
-                    SELECT 
-                        SUM(CASE WHEN importe_eur < 0 THEN importe_eur ELSE 0 END)
-                    FROM gastos
-                    WHERE substr(fecha_operacion, 7, 4) = ?
+                    SELECT COALESCE(SUM(total), 0)
+                    FROM facturas_proveedores
+                    WHERE año = ?
                     """,
-                    (str(anio),)
+                    (anio,)
                 )
                 row = cur.fetchone()
-                # Acceso por índice 0 porque solo pedimos una columna
-                gastos = float(row[0] or 0) if row else 0.0
+                # Convertir a negativo para mantener compatibilidad con balance
+                gastos = -abs(float(row[0] or 0)) if row else 0.0
                 
                 return float(ingresos), gastos
 
