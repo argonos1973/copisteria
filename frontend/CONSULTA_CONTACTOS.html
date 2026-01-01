@@ -298,18 +298,23 @@
         tdAcciones.style.whiteSpace = 'nowrap';
 
         if (contacto.identificador) {
-          const btnProforma = document.createElement('button');
-          btnProforma.className = 'btn-icon';
-          btnProforma.dataset.modulo = 'proformas';
-          btnProforma.dataset.accion = 'crear';
-          btnProforma.title = contacto.numero_proforma_abierta ? 'Modificar Proforma' : 'Crear Proforma';
-          btnProforma.style.marginRight = '5px';
-          btnProforma.textContent = '✎';
-          btnProforma.addEventListener('click', (e) => {
-            e.stopPropagation();
-            crearProforma(contacto.idContacto);
-          });
+          // Solo mostrar botón proforma si tiene permiso
+          if (typeof tienePermiso === 'undefined' || tienePermiso('proformas', 'crear')) {
+            const btnProforma = document.createElement('button');
+            btnProforma.className = 'btn-icon';
+            btnProforma.dataset.modulo = 'proformas';
+            btnProforma.dataset.accion = 'crear';
+            btnProforma.title = contacto.numero_proforma_abierta ? 'Modificar Proforma' : 'Crear Proforma';
+            btnProforma.style.marginRight = '5px';
+            btnProforma.textContent = '✎';
+            btnProforma.addEventListener('click', (e) => {
+              e.stopPropagation();
+              crearProforma(contacto.idContacto);
+            });
+            tdAcciones.appendChild(btnProforma);
+          }
 
+          // Botón factura siempre visible
           const btnFactura = document.createElement('button');
           btnFactura.className = 'btn-icon';
           btnFactura.dataset.modulo = 'facturas';
@@ -321,22 +326,23 @@
             e.stopPropagation();
             crearFactura(contacto.idContacto);
           });
-
-          tdAcciones.appendChild(btnProforma);
           tdAcciones.appendChild(btnFactura);
         }
 
-        const btnEliminar = document.createElement('button');
-        btnEliminar.className = 'btn-icon';
-        btnEliminar.dataset.modulo = 'contactos';
-        btnEliminar.dataset.accion = 'eliminar';
-        btnEliminar.title = 'Eliminar';
-        btnEliminar.textContent = '✕';
-        btnEliminar.addEventListener('click', (e) => {
-          e.stopPropagation();
-          deleteContacto(contacto.idContacto);
-        });
-        tdAcciones.appendChild(btnEliminar);
+        // Solo mostrar botón eliminar si tiene permiso para anular
+        if (typeof tienePermiso === 'undefined' || tienePermiso('contactos', 'anular')) {
+          const btnEliminar = document.createElement('button');
+          btnEliminar.className = 'btn-icon';
+          btnEliminar.dataset.modulo = 'contactos';
+          btnEliminar.dataset.accion = 'eliminar';
+          btnEliminar.title = 'Eliminar';
+          btnEliminar.textContent = '✕';
+          btnEliminar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteContacto(contacto.idContacto);
+          });
+          tdAcciones.appendChild(btnEliminar);
+        }
 
         tr.appendChild(tdRazon);
         tr.appendChild(tdNif);

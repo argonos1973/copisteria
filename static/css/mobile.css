@@ -569,6 +569,7 @@
         
         input, textarea {
             -webkit-appearance: none;
+            appearance: none;
             border-radius: 8px;
         }
         
