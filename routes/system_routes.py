@@ -238,7 +238,7 @@ def exportar():
                 cursor = conn.cursor()
                 
                 query_facturas = '''
-                    SELECT f.fecha, f.numero, f.nif, c.razonsocial,
+                    SELECT f.fecha, f.numero, c.identificador, c.razonsocial,
                            f.importe_bruto, f.importe_impuestos, 
                            f.importe_cobrado, f.total
                     FROM factura f
@@ -388,99 +388,56 @@ def exportar_recibidas():
             fecha_inicio = f"{ejercicio}-01-01"
             fecha_fin = f"{ejercicio}-12-31"
         
-        # Consultar gastos (facturas recibidas)
+        # Consultar facturas_proveedores (facturas recibidas)
         logger.info(f"Exportando facturas recibidas: {fecha_inicio} a {fecha_fin}")
         gastos_data = []
         try:
             with get_db_connection() as conn:
                 cursor = conn.cursor()
                 
-                # Detectar estructura de tabla gastos
-                cursor.execute("PRAGMA table_info(gastos)")
-                columnas = [col[1] for col in cursor.fetchall()]
-                
-                if 'fecha_operacion' in columnas:
-                    # Estructura con fecha_operacion (formato DD/MM/YYYY)
-                    # JOIN con facturas_proveedores y proveedores para obtener NIF e IVA
-                    query = '''
-                        SELECT g.fecha_operacion, g.concepto, g.razon_social, ABS(g.importe_eur), p.nif,
-                               COALESCE(fp.base_imponible, 0) as base, COALESCE(fp.iva_importe, 0) as iva
-                        FROM gastos g
-                        LEFT JOIN facturas_proveedores fp ON g.factura_proveedor_id = fp.id
-                        LEFT JOIN proveedores p ON fp.proveedor_id = p.id
-                        WHERE substr(g.fecha_operacion, 7, 4) || '-' || substr(g.fecha_operacion, 4, 2) || '-' || substr(g.fecha_operacion, 1, 2) BETWEEN ? AND ?
-                        ORDER BY substr(g.fecha_operacion, 7, 4) || '-' || substr(g.fecha_operacion, 4, 2) || '-' || substr(g.fecha_operacion, 1, 2)
-                    '''
-                    cursor.execute(query, (fecha_inicio, fecha_fin))
-                    for row in cursor.fetchall():
-                        base = float(row[5]) if row[5] else 0.0
-                        iva = float(row[6]) if row[6] else 0.0
-                        total = float(row[3]) if row[3] else 0.0
-                        # Si no hay base/iva de factura_proveedor, usar el total como base
-                        if base == 0 and iva == 0 and total > 0:
-                            base = total
-                        gastos_data.append({
-                            'fecha': row[0] if row[0] else '',
-                            'numero': '',
-                            'nif': row[4] or '',
-                            'razonSocial': row[2] or row[1] or '',
-                            'importe_bruto': round(base, 2),
-                            'importe_impuestos': round(iva, 2),
-                            'total': round(total, 2)
-                        })
-                elif 'fecha_operacion_iso' in columnas:
-                    # Estructura con fecha ISO
-                    query = '''
-                        SELECT fecha_operacion_iso, concepto, razon_social, importe_eur
-                        FROM gastos 
-                        WHERE fecha_operacion_iso BETWEEN ? AND ?
-                        ORDER BY fecha_operacion_iso
-                    '''
-                    cursor.execute(query, (fecha_inicio, fecha_fin))
-                    for row in cursor.fetchall():
-                        gastos_data.append({
-                            'fecha': format_date(row[0]) if row[0] else '',
-                            'numero': '',
-                            'nif': '',
-                            'razonSocial': row[2] or row[1] or '',
-                            'importe_bruto': float(row[3]) if row[3] else 0.0,
-                            'importe_impuestos': 0.0,
-                            'total': float(row[3]) if row[3] else 0.0
-                        })
-                elif 'fecha' in columnas:
-                    # Estructura simple
-                    query = '''
-                        SELECT fecha, concepto, proveedor, importe
-                        FROM gastos 
-                        WHERE fecha BETWEEN ? AND ?
-                        ORDER BY fecha
-                    '''
-                    cursor.execute(query, (fecha_inicio, fecha_fin))
-                    for row in cursor.fetchall():
-                        gastos_data.append({
-                            'fecha': format_date(row[0]) if row[0] else '',
-                            'numero': '',
-                            'nif': '',
-                            'razonSocial': row[2] or row[1] or '',
-                            'importe_bruto': float(row[3]) if row[3] else 0.0,
-                            'importe_impuestos': 0.0,
-                            'total': float(row[3]) if row[3] else 0.0
-                        })
+                # Consultar desde facturas_proveedores (tabla principal de facturas recibidas)
+                query = '''
+                    SELECT 
+                        fp.fecha_emision,
+                        fp.numero_factura,
+                        p.nif,
+                        p.nombre as proveedor_nombre,
+                        fp.concepto,
+                        COALESCE(fp.base_imponible, 0) as base,
+                        COALESCE(fp.iva_importe, 0) as iva,
+                        COALESCE(fp.total, 0) as total
+                    FROM facturas_proveedores fp
+                    LEFT JOIN proveedores p ON fp.proveedor_id = p.id
+                    WHERE fp.fecha_emision BETWEEN ? AND ?
+                    ORDER BY fp.fecha_emision
+                '''
+                cursor.execute(query, (fecha_inicio, fecha_fin))
+                for row in cursor.fetchall():
+                    base = float(row[5]) if row[5] else 0.0
+                    iva = float(row[6]) if row[6] else 0.0
+                    total = float(row[7]) if row[7] else 0.0
+                    gastos_data.append({
+                        'fecha': format_date(row[0]) if row[0] else '',
+                        'nif': row[2] or '',
+                        'razonSocial': row[3] or row[4] or '',
+                        'importe_bruto': round(base, 2),
+                        'importe_impuestos': round(iva, 2),
+                        'total': round(total, 2)
+                    })
                         
         except Exception as e:
-            logger.error(f"Error consultando gastos: {e}")
+            logger.error(f"Error consultando facturas recibidas: {e}")
             gastos_data = []
         
         # Generar CSV
         output = []
-        cabeceras = ['fecha', 'numero', 'nif', 'razonSocial', 
+        cabeceras = ['fecha', 'nif', 'razonSocial', 
                      'importe_bruto', 'importe_impuestos', 'total']
         output.append(cabeceras)
         
         for item in gastos_data:
             fila = [
                 item['fecha'],
-                item['numero'],
                 item['nif'],
                 item['razonSocial'],
                 item['importe_bruto'],

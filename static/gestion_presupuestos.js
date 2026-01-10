@@ -194,8 +194,11 @@ async function seleccionarProducto() {
   await seleccionarProductoCommon(formElements, productosOriginales, 'presupuesto');
 
   const productoId = formElements.conceptoDetalle.value;
+  const optPres = formElements.conceptoDetalle.options[formElements.conceptoDetalle.selectedIndex];
+  const nombrePres = optPres ? optPres.textContent.toUpperCase().trim() : '';
+  const esLibrePres = String(productoId) === String(PRODUCTO_ID_LIBRE) || nombrePres === 'LIBRE' || nombrePres.includes('LIBRE');
 
-  if (productoId === PRODUCTO_ID_LIBRE) {
+  if (esLibrePres) {
     formElements.precioDetalle.readOnly = false;
     formElements.precioDetalle.classList.remove('readonly-field');
 
@@ -346,7 +349,10 @@ async function filtrarProductos() {
 function validarYAgregarDetalle() {
   const select = document.getElementById('concepto-detalle');
   const productoId = select.value;
-  let productoSeleccionado = productoId === PRODUCTO_ID_LIBRE 
+  const optValP = select.options[select.selectedIndex];
+  const nombreValP = optValP ? optValP.textContent.toUpperCase().trim() : '';
+  const esLibreValP = String(productoId) === String(PRODUCTO_ID_LIBRE) || nombreValP === 'LIBRE' || nombreValP.includes('LIBRE');
+  let productoSeleccionado = esLibreValP 
     ? document.getElementById('descripcion-detalle').value.trim()
     : select.options[select.selectedIndex].textContent;
   let descripcion = document.getElementById('descripcion-detalle').value.trim();
@@ -354,7 +360,7 @@ function validarYAgregarDetalle() {
   let precioOriginal = parseFloat(select.options[select.selectedIndex].dataset.precioOriginal) || 0;
   let precioDetalle = parseFloat(document.getElementById('precio-detalle').value);
 
-  if (productoId === PRODUCTO_ID_LIBRE) {
+  if (esLibreValP) {
     precioOriginal = precioDetalle;
     if (!productoSeleccionado) {
       mostrarNotificacion("Debe ingresar un concepto para el producto", "warning");

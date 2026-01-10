@@ -730,7 +730,13 @@ export async function calcularTotalDetalle() {
     return;
   }
 
-  if (productoId === PRODUCTO_ID_LIBRE) {
+  // Detectar producto libre por ID o por nombre que CONTENGA "LIBRE"
+  const nombreProducto = selectedOption ? selectedOption.textContent.toUpperCase().trim() : '';
+  const esProductoLibre = String(productoId) === String(PRODUCTO_ID_LIBRE) || 
+                          nombreProducto === 'LIBRE' ||
+                          nombreProducto.includes('LIBRE');
+
+  if (esProductoLibre) {
     registrarFranjaAplicada(null);
 
     if (document.activeElement === totalElem) {

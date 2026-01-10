@@ -95,6 +95,11 @@ def _fetch_run_log_lines(conn, run_id: int, limit: int = 60):
 
 def _send_admin_email_for_run(conn, run: dict, empresa_codigo: str, status: str, duration_ms: int, error_summary: str, log_path: str):
     try:
+        # No enviar emails para procesos de optimización de BD
+        job_code = (run.get('job_code') or run.get('handler') or '').lower()
+        if job_code in ('batchoptimizar', 'batchreindex'):
+            return
+        
         empresa_id = int(run.get('empresa_id') or 0)
         if not empresa_id:
             return
@@ -322,6 +327,8 @@ def _execute_handler(run, log_path: str):
         handler = 'batchScanFacturasRecibidas'
     elif handler_lc == 'batchoptimizar':
         handler = 'batchOptimizar'
+    elif handler_lc == 'batchgenerico':
+        handler = 'batchGenerico'
 
     py = _python_bin()
     if handler == 'batchFacturasVencidas':
@@ -334,6 +341,8 @@ def _execute_handler(run, log_path: str):
         cmd = [py, '/var/www/html/batchScanFacturasRecibidas.py']
     elif handler == 'batchOptimizar':
         cmd = [py, '/var/www/html/batchOptimizar.py']
+    elif handler == 'batchGenerico':
+        cmd = [py, '/var/www/html/batchGenerico.py']
     else:
         raise RuntimeError(f"Handler no soportado: {handler}")
 

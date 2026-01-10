@@ -554,13 +554,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           total: tktMesTotal,
           cantidad: (tktMesCant && tktMesCant > 0) ? tktMesCant : (datos.tickets.actual.mes_actual?.cantidad || 0)
         };
-        // Tickets (año anterior hasta el mismo mes)
+        // Tickets (año anterior - NO sobrescribir total anual, solo usar YTD para porcentaje)
         const tktTotalHastaPrev = sumHasta(totalesPrev.tickets, 'total');
         const tktCantHastaPrev  = sumHasta(totalesPrev.tickets, 'cantidad');
-        datos.tickets.anterior.total = tktTotalHastaPrev;
+        // NO sobrescribir datos.tickets.anterior.total - mantener total ANUAL del backend
         if (tktCantHastaPrev > 0) {
-          datos.tickets.anterior.cantidad = tktCantHastaPrev;
-          datos.tickets.anterior.media = tktTotalHastaPrev / tktCantHastaPrev;
+          // datos.tickets.anterior.cantidad = tktCantHastaPrev; // Mantener cantidad anual
+          datos.tickets.anterior.media = tktCantHastaPrev > 0 ? (tktTotalHastaPrev / tktCantHastaPrev) : (datos.tickets.anterior.media || 0);
         }
         datos.tickets.porcentaje_diferencia = tktTotalHastaPrev > 0 ? ((tktTotalHasta - tktTotalHastaPrev) / tktTotalHastaPrev) * 100 : 0;
 
@@ -580,13 +580,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           total: facMesTotal,
           cantidad: (facMesCant && facMesCant > 0) ? facMesCant : (datos.facturas.actual.mes_actual?.cantidad || 0)
         };
-        // Facturas (año anterior hasta el mismo mes)
+        // Facturas (año anterior - NO sobrescribir total anual, solo usar YTD para porcentaje)
         const facTotalHastaPrev = sumHasta(totalesPrev.facturas, 'total');
         const facCantHastaPrev  = sumHasta(totalesPrev.facturas, 'cantidad');
-        datos.facturas.anterior.total = facTotalHastaPrev;
+        // NO sobrescribir datos.facturas.anterior.total - mantener total ANUAL del backend
         if (facCantHastaPrev > 0) {
-          datos.facturas.anterior.cantidad = facCantHastaPrev;
-          datos.facturas.anterior.media = facTotalHastaPrev / facCantHastaPrev;
+          // datos.facturas.anterior.cantidad = facCantHastaPrev; // Mantener cantidad anual
+          datos.facturas.anterior.media = facCantHastaPrev > 0 ? (facTotalHastaPrev / facCantHastaPrev) : (datos.facturas.anterior.media || 0);
         }
         datos.facturas.porcentaje_diferencia = facTotalHastaPrev > 0 ? ((facTotalHasta - facTotalHastaPrev) / facTotalHastaPrev) * 100 : 0;
 
@@ -606,11 +606,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           datos.global.actual.mes_actual = { total: globMesTotal, cantidad: globMesCant };
           const globTotalHastaPrev = tktTotalHastaPrev + facTotalHastaPrev;
           const globCantHastaPrev  = tktCantHastaPrev + facCantHastaPrev;
-          datos.global.anterior.total    = globTotalHastaPrev;
+          // NO sobrescribir datos.global.anterior.total - mantener el total ANUAL del backend
+          // Solo usar YTD para el porcentaje de comparación
           if (globCantHastaPrev > 0) {
-            datos.global.anterior.cantidad = globCantHastaPrev;
+            // datos.global.anterior.cantidad = globCantHastaPrev; // Mantener cantidad anual
             datos.global.anterior.media    = globCantHastaPrev > 0 ? (globTotalHastaPrev / globCantHastaPrev) : (datos.global.anterior.media || 0);
           }
+          // Porcentaje: comparar YTD actual vs YTD anterior (comparación justa)
           datos.global.porcentaje_diferencia = globTotalHastaPrev > 0 ? ((globTotalHasta - globTotalHastaPrev) / globTotalHastaPrev) * 100 : 0;
         }
       }
@@ -1070,7 +1072,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         <td>${formatearImporte(p.total_actual)}</td>
         <td class="${p.porcentaje_diferencia>=0?'positive':'negative'}">${formatearPorcentaje(p.porcentaje_diferencia)}</td>`;
       tr.style.cursor = 'pointer';
-      tr.addEventListener('click', () => abrirGraficoProducto(prodId, p.nombre));
+      tr.addEventListener('click', () => {
+        console.log('[TOP PRODUCTOS] Click en producto:', prodId, p.nombre);
+        abrirGraficoProducto(prodId, p.nombre);
+      });
       tbody.appendChild(tr);
     });
   }
@@ -1186,7 +1191,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ==============================
   // GRAFICO PRODUCTO
   async function abrirGraficoProducto(productoId, nombre){
-    if(!productoId) return;
+    console.log('[GRAFICO PRODUCTO] Abriendo gráfico para:', productoId, nombre);
+    if(!productoId) { console.log('[GRAFICO PRODUCTO] productoId vacío, saliendo'); return; }
     await asegurarChartJs();
     const { anio } = getFechaSeleccionada();
     const cc = document.querySelector('.chart-controls');

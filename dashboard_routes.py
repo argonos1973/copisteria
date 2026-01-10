@@ -755,7 +755,8 @@ def ventas_cliente_mes():
 @dashboard_bp.route('/productos/ventas_mes', methods=['GET'])
 @dashboard_bp.route('/api/productos/ventas_mes', methods=['GET'])
 def ventas_producto_mes():
-    """Devuelve la cantidad vendida (unidades) de un producto para cada mes del año dado."""
+    """Devuelve la cantidad vendida (unidades) de un producto para cada mes del año dado.
+    Busca por NOMBRE del producto para evitar problemas con IDs duplicados."""
     try:
         producto_id = request.args.get('producto_id') or request.args.get('id')
         if not producto_id:
@@ -767,6 +768,16 @@ def ventas_producto_mes():
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
+            
+            # Primero obtener el nombre del producto
+            cursor.execute('SELECT nombre FROM productos WHERE id = ?', (producto_id,))
+            prod_row = cursor.fetchone()
+            if not prod_row:
+                return jsonify({'error': 'Producto no encontrado'}), 404
+            
+            nombre_producto = prod_row['nombre'].strip().upper()
+            
+            # Buscar por NOMBRE (TRIM UPPER) para incluir productos duplicados
             cursor.execute(
                 '''
                 SELECT mes,
@@ -778,7 +789,7 @@ def ventas_producto_mes():
                            SUM(df.total)    AS euros
                     FROM detalle_factura df
                     JOIN factura f ON f.id = df.id_factura AND f.estado = 'C'
-                    WHERE df.productoId = ?
+                    WHERE TRIM(UPPER(df.concepto)) = ?
                       AND strftime('%Y', f.fecha) = ?
                     GROUP BY mes
                     UNION ALL
@@ -787,13 +798,13 @@ def ventas_producto_mes():
                            SUM(dt.total)    AS euros
                     FROM detalle_tickets dt
                     JOIN tickets t ON t.id = dt.id_ticket AND t.estado = 'C'
-                    WHERE dt.productoId = ?
+                    WHERE TRIM(UPPER(dt.concepto)) = ?
                       AND strftime('%Y', t.fecha) = ?
                     GROUP BY mes
                 )
                 GROUP BY mes
                 ''',
-                (producto_id, str(año), producto_id, str(año))
+                (nombre_producto, str(año), nombre_producto, str(año))
             )
             filas = cursor.fetchall()
             cantidades = {row['mes']: float(row['cantidad'] or 0) for row in filas}
@@ -874,47 +885,41 @@ def top_productos_ventas():
         # Año comparativo: mismo periodo del año anterior
         año_anterior = año_actual - 1
 
+        # Consulta que agrupa por NOMBRE (TRIM) para comparar entre años
+        # Usa UNION para evitar producto cartesiano entre facturas y tickets
         cursor.execute('''
-            WITH ventas_facturas AS (
-                SELECT 
-                    p.id as producto_id,
-                    p.nombre as producto_nombre,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_actual_f,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_actual_f,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.cantidad ELSE 0 END), 0) as cantidad_anterior_f,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', f.fecha) = ? THEN df.total ELSE 0 END), 0) as total_anterior_f
-                FROM productos p
-                LEFT JOIN detalle_factura df ON p.id = df.productoId
-                LEFT JOIN factura f ON df.id_factura = f.id AND f.estado = 'C'
-                GROUP BY p.id, p.nombre
-            ),
-            ventas_tickets AS (
-                SELECT 
-                    p.id as producto_id,
-                    p.nombre as producto_nombre,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.cantidad ELSE 0 END), 0) as cantidad_actual_t,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.total ELSE 0 END), 0) as total_actual_t,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.cantidad ELSE 0 END), 0) as cantidad_anterior_t,
-                    COALESCE(SUM(CASE WHEN strftime('%Y', t.fecha) = ? THEN dt.total ELSE 0 END), 0) as total_anterior_t
-                FROM productos p
-                LEFT JOIN detalle_tickets dt ON p.id = dt.productoId
-                LEFT JOIN tickets t ON dt.id_ticket = t.id AND t.estado = 'C'
-                GROUP BY p.id, p.nombre
+            WITH ventas AS (
+                SELECT TRIM(dt.concepto) as producto_nombre, 
+                       strftime('%Y', t.fecha) as anio,
+                       SUM(dt.cantidad) as cantidad,
+                       SUM(dt.total) as total
+                FROM detalle_tickets dt
+                JOIN tickets t ON dt.id_ticket = t.id AND t.estado = 'C'
+                WHERE strftime('%Y', t.fecha) IN (?, ?)
+                GROUP BY TRIM(dt.concepto), strftime('%Y', t.fecha)
+                UNION ALL
+                SELECT TRIM(df.concepto) as producto_nombre,
+                       strftime('%Y', f.fecha) as anio,
+                       SUM(df.cantidad) as cantidad,
+                       SUM(df.total) as total
+                FROM detalle_factura df
+                JOIN factura f ON df.id_factura = f.id AND f.estado = 'C'
+                WHERE strftime('%Y', f.fecha) IN (?, ?)
+                GROUP BY TRIM(df.concepto), strftime('%Y', f.fecha)
             )
             SELECT 
-                vf.producto_id,
-                vf.producto_nombre,
-                (vf.cantidad_actual_f + COALESCE(vt.cantidad_actual_t, 0)) as cantidad_actual,
-                (vf.total_actual_f + COALESCE(vt.total_actual_t, 0)) as total_actual,
-                (vf.cantidad_anterior_f + COALESCE(vt.cantidad_anterior_t, 0)) as cantidad_anterior,
-                (vf.total_anterior_f + COALESCE(vt.total_anterior_t, 0)) as total_anterior
-            FROM ventas_facturas vf
-            LEFT JOIN ventas_tickets vt ON vf.producto_id = vt.producto_id
-            WHERE (vf.total_actual_f + COALESCE(vt.total_actual_t, 0)) > 0
+                producto_nombre,
+                SUM(CASE WHEN anio = ? THEN cantidad ELSE 0 END) as cantidad_actual,
+                SUM(CASE WHEN anio = ? THEN total ELSE 0 END) as total_actual,
+                SUM(CASE WHEN anio = ? THEN cantidad ELSE 0 END) as cantidad_anterior,
+                SUM(CASE WHEN anio = ? THEN total ELSE 0 END) as total_anterior
+            FROM ventas
+            GROUP BY producto_nombre
+            HAVING total_actual > 0
             ORDER BY total_actual DESC
             LIMIT 10
-        ''', (str(año_actual), str(año_actual), str(año_anterior), str(año_anterior), 
-             str(año_actual), str(año_actual), str(año_anterior), str(año_anterior)))
+        ''', (str(año_actual), str(año_anterior), str(año_actual), str(año_anterior),
+              str(año_actual), str(año_actual), str(año_anterior), str(año_anterior)))
         
         productos = []
         for row in cursor.fetchall():
@@ -927,9 +932,17 @@ def top_productos_ventas():
             elif total_actual > 0:
                 porcentaje = 100
             
+            # Buscar el ID del producto más reciente (ejercicio actual) en la tabla productos
+            producto_id = 0
+            nombre_producto = row['producto_nombre']
+            cursor.execute('SELECT MAX(id) as id FROM productos WHERE TRIM(UPPER(nombre)) = TRIM(UPPER(?))', (nombre_producto,))
+            prod_row = cursor.fetchone()
+            if prod_row and prod_row['id']:
+                producto_id = prod_row['id']
+            
             productos.append({
-                'id': row['producto_id'],
-                'nombre': row['producto_nombre'],
+                'id': producto_id,
+                'nombre': nombre_producto,
                 'cantidad_actual': row['cantidad_actual'],
                 'total_actual': redondear_importe(total_actual),
                 'cantidad_anterior': row['cantidad_anterior'],

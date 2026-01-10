@@ -59,6 +59,7 @@ from routes.presupuestos_routes import presupuestos_bp
 from routes.proformas_routes import proformas_bp
 from routes.facturas_recibidas_routes import facturas_recibidas_bp
 from routes.batch_routes import batch_bp
+from routes.ia_chat_routes import ia_chat_bp
 from public_routes import public_bp
 from subscription_routes import subscription_bp
 
@@ -138,6 +139,7 @@ def create_app():
         csrf.exempt(avatares_bp)
         csrf.exempt(plantillas_bp)
         csrf.exempt(subscription_bp)
+        csrf.exempt(ia_chat_bp)
         logger.info("✅ CSRF + XSS Protection activado (APIs exentas)")
     
     @application.route('/favicon.ico')
@@ -263,6 +265,7 @@ def register_blueprints(app):
     app.register_blueprint(proformas_bp)       # Rutas de proformas
     app.register_blueprint(facturas_recibidas_bp) # Rutas de facturas recibidas y proveedores
     app.register_blueprint(batch_bp)           # Rutas de procesos batch (admin)
+    app.register_blueprint(ia_chat_bp)         # Rutas de chat con IA local
     
     logger.info("✅ Todos los blueprints registrados correctamente")
 

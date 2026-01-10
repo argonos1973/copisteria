@@ -369,9 +369,14 @@ def actualizar_facturas_vencidas(dias_para_vencer: int = 15, dias_para_carta: in
             factura_numero = factura['numero']
             factura_fecha = factura['fecha']
             
-            # Calcular días transcurridos desde la creación/emisión
-            fecha_emision = datetime.strptime(factura_fecha, '%Y-%m-%d')
-            dias_vencidos = (datetime.now() - fecha_emision).days
+            # Calcular días transcurridos desde la fecha de VENCIMIENTO (no emisión)
+            fecha_vencimiento_str = factura.get('fvencimiento') or factura_fecha
+            try:
+                fecha_vencimiento = datetime.strptime(fecha_vencimiento_str, '%Y-%m-%d')
+            except (ValueError, TypeError):
+                # Fallback a fecha de emisión + 30 días si fvencimiento no es válida
+                fecha_vencimiento = datetime.strptime(factura_fecha, '%Y-%m-%d') + timedelta(days=30)
+            dias_vencidos = (datetime.now() - fecha_vencimiento).days
             
             try:
                 # Actualizar estado a Vencida solo si está en Pendiente

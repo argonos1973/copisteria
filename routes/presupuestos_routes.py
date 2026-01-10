@@ -78,6 +78,36 @@ def convertir_a_ticket(id):
 def imprimir_presupuesto(id):
     return presupuesto.generar_pdf_presupuesto(id)
 
+@presupuestos_bp.route('/api/presupuestos/<int:id>/enviar_email', methods=['POST'])
+@login_required
+def enviar_email_presupuesto(id):
+    return presupuesto.enviar_email_presupuesto(id)
+
+@presupuestos_bp.route('/api/presupuestos/<int:id>', methods=['DELETE'])
+@login_required
+def eliminar_presupuesto(id):
+    """Elimina un presupuesto por ID"""
+    try:
+        from db_utils import get_db_connection
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Primero eliminar detalles
+        cursor.execute('DELETE FROM detalle_presupuesto WHERE id_presupuesto = ?', (id,))
+        # Luego el presupuesto
+        cursor.execute('DELETE FROM presupuesto WHERE id = ?', (id,))
+        
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'Presupuesto no encontrado'}), 404
+            
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'mensaje': 'Presupuesto eliminado correctamente'})
+    except Exception as e:
+        logger.error(f"Error eliminando presupuesto {id}: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
 # Endpoints de compatibilidad (Legacy)
 @presupuestos_bp.route('/api/presupuestos/guardar', methods=['POST'])
 @login_required

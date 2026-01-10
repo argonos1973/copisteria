@@ -108,7 +108,7 @@ def enviar_factura_por_email(destinatario, asunto, cuerpo, archivo_adjunto, nume
         return False, f"Error al enviar el correo: {str(e)}"
 
 
-def enviar_email_texto(destinatarios, asunto, cuerpo):
+def enviar_email_texto(destinatarios, asunto, cuerpo, html=False):
     try:
         cfg = _get_smtp_config()
 
@@ -125,7 +125,8 @@ def enviar_email_texto(destinatarios, asunto, cuerpo):
         msg['From'] = cfg.get('smtp_from')
         msg['To'] = ", ".join(destinatarios_list)
         msg['Subject'] = str(Header(asunto, 'utf-8'))
-        msg.attach(MIMEText(cuerpo or '', 'plain', 'utf-8'))
+        content_type = 'html' if html else 'plain'
+        msg.attach(MIMEText(cuerpo or '', content_type, 'utf-8'))
 
         _send_smtp_message(cfg, msg, destinatarios_list)
         return True, 'Correo enviado correctamente'

@@ -105,8 +105,8 @@
     }
 
     function jobSupportsParams(jobCode) {
-        const code = (jobCode || '').trim();
-        return code === 'batchfacturasVencidas' || code === 'batchPol' || code === 'batchTotalDia' || code === 'batchScanFacturasRecibidas';
+        // Todos los procesos soportan params (especialmente los genéricos creados por IA)
+        return true;
     }
 
     function currentJobSupportsParams() {

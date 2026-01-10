@@ -42,7 +42,7 @@ import {
   limpiarCamposDetalle,
   seleccionarProducto as seleccionarProductoCommon,
   validarDetalle
-} from './common.js?v=1762757322';
+} from './common.js?v=1767983710';
 
 // Variable global para detectar cambios
 let totalInicial = 0;
@@ -756,8 +756,17 @@ export async function cargarDetalleParaEditar(fila) {
   const impuestoDetalleElem = document.getElementById('impuesto-detalle');
   const cantidadDetalleElem = document.getElementById('cantidad-detalle');
 
+  // Detectar producto libre por ID o por nombre que CONTENGA "LIBRE"
+  const optionSeleccionada = selectProducto.options[selectProducto.selectedIndex];
+  const nombreProducto = optionSeleccionada ? optionSeleccionada.textContent.toUpperCase().trim() : '';
+  const esProductoLibre = String(productoId) === String(PRODUCTO_ID_LIBRE) || 
+                          nombreProducto === 'LIBRE' ||
+                          nombreProducto.includes('LIBRE');
+  
+  console.log('[EDITAR DETALLE] Producto libre check:', { productoId, PRODUCTO_ID_LIBRE, nombreProducto, esProductoLibre });
+
   // Ajustar readOnly según tipo de producto
-  if (String(productoId) === String(PRODUCTO_ID_LIBRE)) {
+  if (esProductoLibre) {
     precioDetalleElem.readOnly = false;
     precioDetalleElem.classList.remove('readonly-field');
     totalDetalleElem.readOnly = false;
@@ -777,7 +786,7 @@ export async function cargarDetalleParaEditar(fila) {
   cantidadDetalleElem.removeEventListener('input', calcularTotalDetalle);
   totalDetalleElem.removeEventListener('input', calcularTotalDetalle);
   cantidadDetalleElem.addEventListener('input', calcularTotalDetalle);
-  if (String(productoId) === String(PRODUCTO_ID_LIBRE)) {
+  if (esProductoLibre) {
     precioDetalleElem.addEventListener('input', calcularTotalDetalle);
     totalDetalleElem.addEventListener('input', calcularTotalDetalle);
   }
