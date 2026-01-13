@@ -536,6 +536,23 @@ document.addEventListener('DOMContentLoaded', async () => {
           return s;
         };
         const valMes = (serie, campo) => getCampoVal(serie?.[keySel], campo);
+        
+        // Función para calcular total del trimestre del mes seleccionado
+        const getTrimestreMeses = (mes) => {
+          const trimestre = Math.ceil(mes / 3);
+          const inicio = (trimestre - 1) * 3 + 1;
+          const fin = trimestre * 3;
+          return { inicio, fin: Math.min(fin, mes) }; // Solo hasta el mes actual si estamos en trimestre en curso
+        };
+        const sumTrimestre = (serie, campo) => {
+          const { inicio, fin } = getTrimestreMeses(mesNum);
+          let s = 0;
+          for (let i = inicio; i <= fin; i++) {
+            const k = String(i).padStart(2, '0');
+            s += getCampoVal(serie?.[k], campo);
+          }
+          return s;
+        };
 
         // Tickets (año actual hasta el mes seleccionado)
         const tktTotalHasta = sumHasta(totales.tickets, 'total');
@@ -554,6 +571,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           total: tktMesTotal,
           cantidad: (tktMesCant && tktMesCant > 0) ? tktMesCant : (datos.tickets.actual.mes_actual?.cantidad || 0)
         };
+        // Tickets trimestre
+        const tktTrimestreTotal = sumTrimestre(totales.tickets, 'total');
+        const tktTrimestreTotalPrev = sumTrimestre(totalesPrev.tickets, 'total');
+        datos.tickets.actual.trimestre = { total: tktTrimestreTotal };
+        datos.tickets.anterior.mismo_trimestre = { total: tktTrimestreTotalPrev };
+        datos.tickets.porcentaje_diferencia_trimestre = tktTrimestreTotalPrev > 0 ? ((tktTrimestreTotal - tktTrimestreTotalPrev) / tktTrimestreTotalPrev) * 100 : 0;
         // Tickets (año anterior - NO sobrescribir total anual, solo usar YTD para porcentaje)
         const tktTotalHastaPrev = sumHasta(totalesPrev.tickets, 'total');
         const tktCantHastaPrev  = sumHasta(totalesPrev.tickets, 'cantidad');
@@ -580,6 +603,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           total: facMesTotal,
           cantidad: (facMesCant && facMesCant > 0) ? facMesCant : (datos.facturas.actual.mes_actual?.cantidad || 0)
         };
+        // Facturas trimestre
+        const facTrimestreTotal = sumTrimestre(totales.facturas, 'total');
+        const facTrimestreTotalPrev = sumTrimestre(totalesPrev.facturas, 'total');
+        datos.facturas.actual.trimestre = { total: facTrimestreTotal };
+        datos.facturas.anterior.mismo_trimestre = { total: facTrimestreTotalPrev };
+        datos.facturas.porcentaje_diferencia_trimestre = facTrimestreTotalPrev > 0 ? ((facTrimestreTotal - facTrimestreTotalPrev) / facTrimestreTotalPrev) * 100 : 0;
         // Facturas (año anterior - NO sobrescribir total anual, solo usar YTD para porcentaje)
         const facTotalHastaPrev = sumHasta(totalesPrev.facturas, 'total');
         const facCantHastaPrev  = sumHasta(totalesPrev.facturas, 'cantidad');
@@ -604,6 +633,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           datos.global.actual.cantidad = globCantHasta;
           datos.global.actual.media = globCantHasta > 0 ? (globTotalHasta / globCantHasta) : (datos.global.actual.media || 0);
           datos.global.actual.mes_actual = { total: globMesTotal, cantidad: globMesCant };
+          // Global trimestre
+          const globTrimestreTotal = tktTrimestreTotal + facTrimestreTotal;
+          const globTrimestreTotalPrev = tktTrimestreTotalPrev + facTrimestreTotalPrev;
+          datos.global.actual.trimestre = { total: globTrimestreTotal };
+          datos.global.anterior.mismo_trimestre = { total: globTrimestreTotalPrev };
+          datos.global.porcentaje_diferencia_trimestre = globTrimestreTotalPrev > 0 ? ((globTrimestreTotal - globTrimestreTotalPrev) / globTrimestreTotalPrev) * 100 : 0;
           const globTotalHastaPrev = tktTotalHastaPrev + facTotalHastaPrev;
           const globCantHastaPrev  = tktCantHastaPrev + facCantHastaPrev;
           // NO sobrescribir datos.global.anterior.total - mantener el total ANUAL del backend
@@ -916,6 +951,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     safeSetAmount(`${prefijo}TotalMes`, formatearImporte(totalMes), totalMes);
     const mesAnteriorTotal = data.anterior?.mismo_mes?.total ?? 0;
     safeSet(`${prefijo}MesAnterior`, `Mismo mes año anterior: ${formatearImporte(mesAnteriorTotal)}`);
+    
+    // Total Trimestre
+    const totalTrimestre = data.actual?.trimestre?.total ?? 0;
+    const trimestreAnteriorTotal = data.anterior?.mismo_trimestre?.total ?? 0;
+    safeSetAmount(`${prefijo}TotalTrimestre`, formatearImporte(totalTrimestre), totalTrimestre);
+    safeSet(`${prefijo}TrimestreAnterior`, `Mismo trimestre año anterior: ${formatearImporte(trimestreAnteriorTotal)}`);
+    actualizarPorcentaje(`${prefijo}PorcentajeTrimestre`, data.porcentaje_diferencia_trimestre);
 
     if (cantMes) {
       safeSetAmount(`${prefijo}TotalMes`, formatearImporte(data.actual.mes_actual.total), data.actual.mes_actual.total);
@@ -968,6 +1010,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('globalCantidad').textContent = global.actual.cantidad;
     document.getElementById('globalAnterior').textContent = `Año anterior: ${formatearImporte(global.anterior.total)}`;
     actualizarPorcentaje('globalPorcentaje', global.porcentaje_diferencia);
+    
+    // Total Trimestre Global
+    const totalTrimestreGlobal = global.actual?.trimestre?.total ?? 0;
+    const trimestreAnteriorGlobal = global.anterior?.mismo_trimestre?.total ?? 0;
+    safeSetAmount('globalTotalTrimestre', formatearImporte(totalTrimestreGlobal), totalTrimestreGlobal);
+    safeSet('globalTrimestreAnterior', `Mismo trimestre año anterior: ${formatearImporte(trimestreAnteriorGlobal)}`);
+    actualizarPorcentaje('globalPorcentajeTrimestre', global.porcentaje_diferencia_trimestre);
   
     const mediaMensual = parsearImporte(global.actual.media_mensual);
     // Usar siempre el mes seleccionado para que el cálculo de previsto sea coherente con el periodo mostrado
