@@ -718,8 +718,22 @@ async function guardarPresupuesto(formaPago, importeCobrado, estado='B') {
       body: JSON.stringify(datos)
     });
 
-    if (!response.ok) throw new Error('Error al guardar presupuesto');
+    // Detectar sesión expirada (redirect a login o respuesta HTML)
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html') || response.url.includes('LOGIN')) {
+      mostrarNotificacion('Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.', 'error');
+      setTimeout(() => { window.top.location.href = '/LOGIN.html'; }, 1500);
+      return;
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || 'Error al guardar presupuesto');
+    }
     const resData = await response.json();
+    if (!resData.id && !idPresupuesto) {
+      throw new Error('El servidor no devolvió el ID del presupuesto');
+    }
     if (!idPresupuesto) idPresupuesto = resData.id;
 
     // Invalidar cachés globales tras guardar
@@ -855,16 +869,53 @@ function cerrarModalContactos() {
 }
 
 function seleccionarContactoModal(contactoData) {
+  console.log('[PRESUPUESTOS] seleccionarContactoModal llamado con:', contactoData);
   idContacto = parseInt(contactoData.id, 10) || null;
+  console.log('[PRESUPUESTOS] idContacto asignado:', idContacto);
   
   // Actualizar campos del contacto
-  document.getElementById('razonSocial').textContent = contactoData.razon || '';
-  document.getElementById('identificador').textContent = contactoData.nif || '';
-  document.getElementById('direccion').textContent = contactoData.direccion || '';
+  const razonEl = document.getElementById('razonSocial');
+  const identEl = document.getElementById('identificador');
+  const dirEl = document.getElementById('direccion');
+  const cpLocEl = document.getElementById('cp-localidad');
+  const provEl = document.getElementById('provincia');
+  
+  console.log('[PRESUPUESTOS] Elementos encontrados:', {
+    razonSocial: !!razonEl,
+    identificador: !!identEl,
+    direccion: !!dirEl,
+    cpLocalidad: !!cpLocEl,
+    provincia: !!provEl
+  });
+  
+  if (razonEl) razonEl.textContent = contactoData.razon || '';
+  if (identEl) identEl.textContent = contactoData.nif || '';
+  if (dirEl) dirEl.textContent = contactoData.direccion || '';
   const cp = contactoData.cp || '';
   const localidad = contactoData.localidad || '';
-  document.getElementById('cp-localidad').textContent = cp && localidad ? `${cp} ${localidad}` : (cp || localidad);
-  document.getElementById('provincia').textContent = contactoData.provincia || '';
+  if (cpLocEl) cpLocEl.textContent = cp && localidad ? `${cp} ${localidad}` : (cp || localidad);
+  if (provEl) provEl.textContent = contactoData.provincia || '';
+  
+  // Verificación: mostrar valores reales después de asignar
+  console.log('[PRESUPUESTOS] Valores asignados:', {
+    razonSocial: razonEl ? razonEl.textContent : 'N/A',
+    identificador: identEl ? identEl.textContent : 'N/A',
+    direccion: dirEl ? dirEl.textContent : 'N/A',
+    cpLocalidad: cpLocEl ? cpLocEl.textContent : 'N/A',
+    provincia: provEl ? provEl.textContent : 'N/A'
+  });
+  
+  // Verificar visibilidad CSS
+  if (razonEl) {
+    const style = window.getComputedStyle(razonEl);
+    console.log('[PRESUPUESTOS] CSS de razonSocial:', {
+      display: style.display,
+      visibility: style.visibility,
+      color: style.color,
+      backgroundColor: style.backgroundColor,
+      opacity: style.opacity
+    });
+  }
   
   cerrarModalContactos();
   mostrarNotificacion('Contacto asignado correctamente', 'success');

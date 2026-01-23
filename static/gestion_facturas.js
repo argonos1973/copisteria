@@ -288,6 +288,14 @@ async function guardarFactura(formaPago = 'E', totalPago = 0, estado = 'C') {
             body: JSON.stringify(factura)
         });
 
+        // Detectar sesión expirada (redirect a login o respuesta HTML)
+        const contentTypeCheck = response.headers.get('content-type') || '';
+        if (contentTypeCheck.includes('text/html') || response.url.includes('LOGIN')) {
+            mostrarNotificacion('Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.', 'error');
+            setTimeout(() => { window.top.location.href = '/LOGIN.html'; }, 1500);
+            return;
+        }
+
         if (!response.ok) {
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
@@ -634,10 +642,11 @@ function validarYAgregarDetalle() {
   // Reset detalleEnEdicion después de agregar/actualizar
   detalleEnEdicion = null;
   
-  // Cambiar el texto del botón de vuelta a "Agregar"
+  // Cambiar el icono del botón de vuelta a "+"
   const btnAgregar = document.getElementById('btn-agregar-detalle');
   if (btnAgregar) {
-    btnAgregar.textContent = 'Agregar';
+    btnAgregar.innerHTML = '<i class="fas fa-plus"></i>';
+    btnAgregar.title = 'Agregar detalle';
     btnAgregar.classList.remove('editando');
   }
   
@@ -1835,7 +1844,8 @@ async function cargarDetalleParaEditar(fila) {
 
   const btnAgregar = document.getElementById('btn-agregar-detalle');
   if (btnAgregar) {
-    btnAgregar.textContent = 'Actualizar';
+    btnAgregar.innerHTML = '<i class="fas fa-check"></i>';
+    btnAgregar.title = 'Actualizar detalle';
     btnAgregar.classList.add('editando');
   }
 

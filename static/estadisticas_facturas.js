@@ -1050,10 +1050,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     safeSetAmount('globalTotalPrevisto', formatearImporte(previsto), previsto);
   
-    const p = (acumulado / previsto) * 100;
+    // Evitar división por cero que causa NaN
+    let p = 0;
+    if (previsto > 0) {
+        p = (acumulado / previsto) * 100;
+    } else if (acumulado > 0) {
+        p = 100; // Si hay acumulado pero no previsto, mostrar 100%
+    }
     const diff = p >= 100 ? p - 100 : 100 - p;
-    document.getElementById('globalPorcentajePrevistoAnyo').textContent = `${p >= 100 ? '+' : '-'}${diff.toFixed(1)}%`;
-    document.getElementById('globalPorcentajePrevistoAnyo').className = 'stats-percentage ' + (p >= 100 ? 'positive' : 'negative');
+    const porcentajeElem = document.getElementById('globalPorcentajePrevistoAnyo');
+    if (porcentajeElem) {
+        porcentajeElem.textContent = `${p >= 100 ? '+' : '-'}${diff.toFixed(1)}%`;
+        porcentajeElem.className = 'stats-percentage ' + (p >= 100 ? 'positive' : 'negative');
+    }
   
     // Mostrar SIEMPRE los valores del mes, aunque la cantidad sea 0
     safeSetAmount('globalTotalMes', formatearImporte(global.actual.mes_actual?.total || 0), global.actual.mes_actual?.total || 0);

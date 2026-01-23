@@ -178,7 +178,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Convertir el presupuesto ${item.numero} a factura?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/convertir-factura`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/convertir-factura`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
               if (!resp.ok) throw new Error('Error al convertir presupuesto a factura');
               const result = await resp.json();
               mostrarNotificacion(`Presupuesto ${item.numero} convertido a factura ${result.numero_factura}`, 'success');
@@ -206,7 +206,7 @@ async function buscarPresupuestos() {
             const confirmado = await mostrarConfirmacion(`¿Convertir el presupuesto ${item.numero} a ticket?`);
             if (confirmado) {
               showOverlay();
-              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/convertir-ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+              const resp = await fetch(`${API_URL}/api/presupuestos/${item.id}/convertir-ticket`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
               if (!resp.ok) throw new Error('Error al convertir presupuesto a ticket');
               const result = await resp.json();
               mostrarNotificacion(`Presupuesto ${item.numero} convertido a ticket ${result.numero_ticket}`, 'success');

@@ -1055,6 +1055,15 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
       body: JSON.stringify(ticketData)
     });
 
+    // Detectar sesión expirada (redirect a login o respuesta HTML)
+    const contentTypeCheck = response.headers.get('content-type') || '';
+    if (contentTypeCheck.includes('text/html') || response.url.includes('LOGIN')) {
+      mostrarNotificacion('Tu sesión ha expirado. Por favor, vuelve a iniciar sesión.', 'error');
+      window.isTicketSaving = false;
+      setTimeout(() => { window.top.location.href = '/LOGIN.html'; }, 1500);
+      return;
+    }
+
     // Log de la respuesta completa para depuración
     const responseData = await response.json();
     console.log('Respuesta completa del servidor:', {

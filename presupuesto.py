@@ -523,13 +523,19 @@ def convertir_presupuesto_a_factura(id_presupuesto):
             conn.rollback()
             return jsonify({'error': 'Este presupuesto ya ha sido facturado'}), 400
 
-        numerador, _ = obtener_numerador('F', conn)
-        if numerador is None:
+        # Validar que el presupuesto tenga un contacto asignado
+        if not pres['idcontacto']:
+            conn.rollback()
+            return jsonify({'error': 'El presupuesto debe tener un contacto asignado para convertirlo a factura'}), 400
+
+        # Obtener el numerador actual e incrementarlo para la nueva factura
+        numerador_actual, _ = obtener_numerador('F', conn)
+        if numerador_actual is None:
             conn.rollback()
             return jsonify({'error': 'Error al obtener el numerador de facturas'}), 500
-        numero_core = formatear_numero_documento('F', conn)
+        nuevo_numero = int(numerador_actual) + 1
         anno = datetime.now().year % 100
-        numero_formateado = f"F{anno:02}{numero_core}"
+        numero_formateado = f"F{anno:02}{nuevo_numero:04}"
 
         cursor.execute('SELECT * FROM detalle_presupuesto WHERE id_presupuesto = ?', (id_presupuesto,))
         detalles_pres = cursor.fetchall()
@@ -580,10 +586,8 @@ def convertir_presupuesto_a_factura(id_presupuesto):
 
         cursor.execute('UPDATE presupuesto SET estado = ? WHERE id = ?', ('AP', id_presupuesto))
 
-        numerador_actual, _ = actualizar_numerador('F', conn, commit=False)
-        if numerador_actual is None:
-            conn.rollback()
-            return jsonify({'error': 'Error al actualizar el numerador de facturas'}), 500
+        # Actualizar el numerador después de insertar exitosamente
+        actualizar_numerador('F', conn, commit=False)
 
         conn.commit()
         return jsonify({

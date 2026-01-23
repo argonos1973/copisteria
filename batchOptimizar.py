@@ -52,16 +52,16 @@ def ejecutar_optimizacion(modo: str):
         conn.execute('PRAGMA busy_timeout = 5000')
 
         if modo == 'reindex':
-            _notify('🧹 Reindexar BD: inicio', tipo='info')
+            # _notify('🧹 Reindexar BD: inicio', tipo='info')  # Notificación desactivada
             _run_sql(conn, 'REINDEX')
             _run_sql(conn, 'ANALYZE')
             try:
                 _run_sql(conn, 'PRAGMA optimize')
             except Exception:
                 pass
-            _notify('🧹 Reindexar BD: finalizado', tipo='success')
+            # _notify('🧹 Reindexar BD: finalizado', tipo='success')  # Notificación desactivada
         else:
-            _notify('🧽 Optimizar BD: inicio', tipo='info')
+            # _notify('🧽 Optimizar BD: inicio', tipo='info')  # Notificación desactivada
             # ANALYZE recalcula estadísticas
             _run_sql(conn, 'ANALYZE')
             # PRAGMA optimize (si existe)
@@ -71,7 +71,7 @@ def ejecutar_optimizacion(modo: str):
                 pass
             # VACUUM compacta
             _run_sql(conn, 'VACUUM')
-            _notify('🧽 Optimizar BD: finalizado', tipo='success')
+            # _notify('🧽 Optimizar BD: finalizado', tipo='success')  # Notificación desactivada
 
     finally:
         try:

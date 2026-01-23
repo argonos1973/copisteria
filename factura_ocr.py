@@ -8,6 +8,7 @@ import os
 import json
 import io
 import re
+from datetime import datetime
 from PIL import Image, ImageEnhance
 from dotenv import load_dotenv
 
@@ -147,6 +148,11 @@ EXTRAER DATOS EN JSON:
 - Email: Email del emisor.
 - Website: Web del emisor.
 
+⚠️ **IMPORTANTE SOBRE FECHAS**:
+- Estamos en el año {datetime.now().year}. Las facturas recientes deberían ser de este año o del mes anterior.
+- Si ves una fecha como "09/01/25" o "09/01/2025", verifica si tiene sentido. Si el documento parece reciente, probablemente es {datetime.now().year}.
+- Presta especial atención al AÑO. Un error común es confundir 2025 con 2026.
+
 ESTRUCTURA JSON REQUERIDA:
 {{
   "proveedor": {{
@@ -250,6 +256,31 @@ ESTRUCTURA JSON REQUERIDA:
         }
         
         logger.info(f"✅ GPT-4 Vision extrajo datos de factura correctamente")
+        
+        # Validación y corrección de fechas (evitar años incorrectos)
+        fecha_emision = datos_limpios['factura'].get('fecha_emision', '')
+        if fecha_emision:
+            try:
+                fecha_obj = datetime.strptime(fecha_emision, '%Y-%m-%d')
+                hoy = datetime.now()
+                diff_dias = (hoy - fecha_obj).days
+                
+                # Si la fecha es de hace más de 6 meses, probablemente el año está mal
+                if diff_dias > 180:
+                    # Intentar con el año actual
+                    fecha_corregida = fecha_obj.replace(year=hoy.year)
+                    diff_corregido = (hoy - fecha_corregida).days
+                    
+                    # Si con el año actual la fecha es razonable (últimos 60 días), usar esa
+                    if 0 <= diff_corregido <= 60:
+                        datos_limpios['factura']['fecha_emision'] = fecha_corregida.strftime('%Y-%m-%d')
+                        logger.warning(f"📅 Fecha corregida: {fecha_emision} → {datos_limpios['factura']['fecha_emision']} (año probablemente incorrecto)")
+                    # Si la fecha corregida es en el futuro pero razonable (próximos 30 días), también usar
+                    elif -30 <= diff_corregido < 0:
+                        datos_limpios['factura']['fecha_emision'] = fecha_corregida.strftime('%Y-%m-%d')
+                        logger.warning(f"📅 Fecha corregida: {fecha_emision} → {datos_limpios['factura']['fecha_emision']} (año probablemente incorrecto)")
+            except ValueError:
+                logger.warning(f"⚠️ No se pudo parsear fecha: {fecha_emision}")
         
         # Validación inteligente del nombre del proveedor
         nombre_prov = datos_limpios['proveedor']['nombre']

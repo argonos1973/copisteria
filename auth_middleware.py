@@ -245,13 +245,13 @@ def autenticar_usuario(username, password, empresa_codigo):
         conn = sqlite3.connect(DB_USUARIOS_PATH)
         cursor = conn.cursor()
         
-        # Verificar usuario (incluir campos 2FA)
+        # Verificar usuario por username O email (incluir campos 2FA)
         cursor.execute('''
             SELECT id, password_hash, nombre_completo, activo, es_superadmin, intentos_fallidos,
                    totp_enabled, totp_secret
             FROM usuarios
-            WHERE username = ?
-        ''', (username,))
+            WHERE username = ? OR email = ?
+        ''', (username, username))
         
         usuario = cursor.fetchone()
         
@@ -284,12 +284,13 @@ def autenticar_usuario(username, password, empresa_codigo):
             conn.close()
             return None
         
-        # Si empresa_codigo es None o vacío, intentar autoseleccionar si tiene una única empresa
+        # Si empresa_codigo es None o vacío, autoseleccionar la primera empresa disponible
         if not empresa_codigo:
             empresas_usuario = obtener_empresas_usuario(username)
-            if len(empresas_usuario) == 1:
+            if len(empresas_usuario) >= 1:
+                # Seleccionar la primera empresa (ordenadas por rol admin primero en obtener_empresas_usuario)
                 empresa_codigo = empresas_usuario[0]['codigo']
-                logger.info(f"Autoseleccionando empresa única para {username}: {empresa_codigo}")
+                logger.info(f"Autoseleccionando empresa para {username}: {empresa_codigo} (de {len(empresas_usuario)} disponibles)")
 
         # Si sigue siendo None o vacío, permitir login sin empresa (modo gestión)
         if not empresa_codigo:
@@ -413,9 +414,9 @@ def obtener_empresas_usuario(username):
             FROM empresas e
             JOIN usuario_empresa ue ON e.id = ue.empresa_id
             JOIN usuarios u ON ue.usuario_id = u.id
-            WHERE u.username = ? AND e.activa = 1
-            ORDER BY e.nombre
-        ''', (username,))
+            WHERE (u.username = ? OR u.email = ?) AND e.activa = 1
+            ORDER BY e.id ASC
+        ''', (username, username))
         
         empresas = []
         for row in cursor.fetchall():

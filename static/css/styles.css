@@ -1622,11 +1622,114 @@ td .fas {
 /* -------------------------------------------------------------------------
    ESTILOS PARA PROFORMAS
    ------------------------------------------------------------------------- */
+
+/* Contenedor de cabecera de presupuesto - posicionado arriba a la derecha */
+#cabecera-presupuesto {
+    position: absolute !important;
+    top: 60px !important;
+    right: 20px !important;
+    z-index: 100;
+    display: block !important;
+}
+
+#cabecera-presupuesto .contact-info {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 10px 15px !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border-radius: 0;
+    border: none !important;
+    text-align: right;
+    max-width: 350px;
+}
+
+#cabecera-presupuesto .contact-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#cabecera-presupuesto .contact-field label {
+    font-size: 9px;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #7f8c8d);
+    font-weight: 600;
+    text-align: right;
+}
+
+#cabecera-presupuesto .contact-text {
+    font-size: 13px;
+    color: var(--color-text, #c6d0dc);
+    margin: 0;
+    padding: 0;
+    text-align: right;
+}
+
+#cabecera-presupuesto #razonSocial {
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--color-text, #fff);
+}
+
+/* Contenedor de cabecera de proforma/factura - posicionado arriba a la derecha */
+#cabecera-proforma {
+    position: absolute !important;
+    top: 60px !important;
+    right: 20px !important;
+    z-index: 100;
+    display: block !important;
+}
+
+#cabecera-proforma .contact-info {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 10px 15px !important;
+    margin: 0 !important;
+    background: transparent !important;
+    border-radius: 0;
+    border: none !important;
+    text-align: right;
+    max-width: 350px;
+}
+
+#cabecera-proforma .contact-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+#cabecera-proforma .contact-field label {
+    font-size: 9px;
+    text-transform: uppercase;
+    color: var(--color-text-muted, #7f8c8d);
+    font-weight: 600;
+    text-align: right;
+}
+
+#cabecera-proforma .contact-text {
+    font-size: 13px;
+    color: var(--color-text, #c6d0dc);
+    margin: 0;
+    padding: 0;
+    text-align: right;
+}
+
+#cabecera-proforma #razonSocial {
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--color-text, #fff);
+}
+
 /* Información de contacto */
 .contact-info {
-    position: absolute;
-    top: 10px;
-    right: 40px;
+    position: relative;
+    top: auto;
+    right: auto;
     font-size: 1em;
     display: flex;
     flex-direction: column;

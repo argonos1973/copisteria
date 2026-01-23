@@ -229,14 +229,19 @@ def get_subscription_status(empresa_id):
                 'message': 'Sin suscripción'
             })
         
-        # Verificar si está activa (incluye free_trial)
-        is_active = row['status'] in ['active', 'trialing', 'free_trial']
-        
-        # Calcular días restantes
+        # Calcular días restantes PRIMERO
         days_remaining = None
         if row['current_period_end']:
             end_date = datetime.fromisoformat(row['current_period_end'].replace('Z', '+00:00'))
             days_remaining = (end_date - datetime.now()).days
+        
+        # Verificar si está activa
+        # IMPORTANTE: free_trial con días <= 0 NO está activo (expirado)
+        is_active = False
+        if row['status'] in ['active', 'trialing']:
+            is_active = True
+        elif row['status'] == 'free_trial':
+            is_active = days_remaining is not None and days_remaining > 0
         
         return jsonify({
             'active': is_active,

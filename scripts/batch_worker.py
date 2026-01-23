@@ -97,7 +97,11 @@ def _send_admin_email_for_run(conn, run: dict, empresa_codigo: str, status: str,
     try:
         # No enviar emails para procesos de optimización de BD
         job_code = (run.get('job_code') or run.get('handler') or '').lower()
-        if job_code in ('batchoptimizar', 'batchreindex'):
+        handler = (run.get('handler') or '').lower()
+        # Excluir cualquier proceso que contenga 'optim' o 'reindex'
+        if any(x in job_code for x in ('optim', 'reindex', 'vacuum', 'analyze')):
+            return
+        if any(x in handler for x in ('optim', 'reindex', 'vacuum', 'analyze')):
             return
         
         empresa_id = int(run.get('empresa_id') or 0)
