@@ -67,7 +67,9 @@ def obtener_esquema_tablas():
             'formaPago': "'E'=Efectivo, 'T'=Tarjeta, 'B'=Transferencia",
             'tipo': "'N'=Normal, 'R'=Rectificativa",
             'fechaCobro': "fecha de cobro",
-            'observaciones': "notas adicionales"
+            'observaciones': "notas adicionales",
+            'carta_enviada': "1=carta de reclamación enviada por email, 0=no enviada",
+            'fecha_ultima_carta': "fecha de última carta de reclamación generada (YYYY-MM-DD)"
         },
         'tickets': {
             'id': "ID único del ticket",
@@ -90,7 +92,8 @@ def obtener_esquema_tablas():
             'direccion': "dirección",
             'localidad': "ciudad/localidad",
             'cp': "código postal",
-            'provincia': "provincia"
+            'provincia': "provincia",
+            'facturacion_automatica': "1=envío automático de facturas y cartas por email, 0=no enviar"
         },
         'productos': {
             'id': "ID único del producto",
@@ -321,8 +324,19 @@ SISTEMA DE FRANJAS (descuentos por cantidad):
 - IMPORTANTE: Para impresiones usa patrones específicos como 'IMPRESSIO A4 BN%' o 'IMPRESSIO A4 COLOR%'
 - NO uses '%B/N%' porque coincide con otros productos (tarjetas, etc)
 
+SISTEMA DE CARTAS DE RECLAMACIÓN:
+- Las cartas de reclamación se generan automáticamente para facturas vencidas (estado='V')
+- Para que se ENVÍE el email, el cliente debe tener facturacion_automatica=1 en contactos
+- Si facturacion_automatica=0, la carta se genera (PDF) pero NO se envía por email
+- Campos relevantes en factura: carta_enviada (1=enviada, 0=no), fecha_ultima_carta
+- Para saber por qué una factura no envía carta:
+  SELECT f.numero, f.estado, f.carta_enviada, f.fecha_ultima_carta, c.razonsocial, c.mail, c.facturacion_automatica
+  FROM factura f JOIN contactos c ON f.idContacto = c.idContacto WHERE f.numero = 'FXXXXXX'
+- Si carta_enviada=0 y facturacion_automatica=0: el cliente no tiene activado el envío automático
+- Si carta_enviada=0 y facturacion_automatica=1 y fecha_ultima_carta IS NULL: la factura aún no ha sido procesada
+
 PROCESOS DISPONIBLES:
-- batchFacturasVencidas: Revisar facturas vencidas y enviar recordatorios
+- batchFacturasVencidas: Revisar facturas vencidas y enviar recordatorios (genera cartas)
 - batchTotalDia: Generar resumen del día
 - batchScanFacturasRecibidas: Escanear facturas recibidas
 

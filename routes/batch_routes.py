@@ -177,14 +177,20 @@ def list_definitions():
     conn = _get_conn()
     try:
         _ensure_batch_job_definitions(conn)
+        
+        # Solo mostrar procesos que la empresa tiene asignados
+        empresa_id = session.get('empresa_id')
         rows = conn.execute(
             """
-            SELECT id, code, name, handler, schema_json, timeout_sec, concurrency_mode, active
-            FROM batch_job_definitions
-            WHERE active = 1
-              AND code NOT IN ('batchOptimizar', 'batchReindex')
-            ORDER BY name
-            """
+            SELECT DISTINCT d.id, d.code, d.name, d.handler, d.schema_json, d.timeout_sec, d.concurrency_mode, d.active
+            FROM batch_job_definitions d
+            JOIN batch_job_schedules s ON s.job_definition_id = d.id
+            WHERE d.active = 1
+              AND s.empresa_id = ?
+              AND d.code NOT IN ('batchOptimizar', 'batchReindex')
+            ORDER BY d.name
+            """,
+            (empresa_id,)
         ).fetchall()
 
         out = []

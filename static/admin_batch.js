@@ -900,7 +900,7 @@
     }
 
     async function loadRuns() {
-        const data = await apiJson('/api/batch/runs?limit=50');
+        const data = await apiJson('/api/batch/runs?limit=5');
         lastRuns = data.runs || [];
         const tbody = $('batch-runs-table').querySelector('tbody');
         tbody.innerHTML = '';

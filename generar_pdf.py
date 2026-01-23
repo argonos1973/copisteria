@@ -295,7 +295,7 @@ def generar_factura_pdf(id_factura):
 
             # Modificar la ruta del logo para usar ruta absoluta del sistema de archivos
             # Obtener logo de la empresa desde la sesión
-            empresa_logo = session.get('empresa_logo', 'aleph70_default.svg')
+            empresa_logo = session.get('empresa_logo', 'default_logo.svg')
             logo_factura = f'/static/logos/{empresa_logo}'
             # Convertir ruta web a ruta absoluta del sistema de archivos
             logo_path = logo_factura.replace('/static/logos/', '/var/www/html/static/logos/')

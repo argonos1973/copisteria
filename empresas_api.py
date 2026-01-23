@@ -210,7 +210,7 @@ def _ensure_batch_job_definitions(conn):
 def _ensure_default_batch_schedules_for_empresa(conn, empresa_id: int, user_id: int = None):
     defaults = [
         ('batchfacturasVencidas', '0 9 * * *', 0),
-        ('batchPol', '*/15 * * * *', 0),
+        # batchPol excluido - es un proceso personalizado
         ('batchTotalDia', '0 23 * * *', 0),
         ('batchScanFacturasRecibidas', '*/15 * * * *', 0),
         ('batchReindex', '0 2 * * *', 1),
@@ -716,11 +716,21 @@ def crear_empresa():
                     logger.info(f"Numerador inicializado: Tipo {tipo}, Año {anio_actual} -> 0")
             
             conn_nueva.commit()
+            
+            # Añadir producto LIBRE con año en curso
+            cursor_nueva = conn_nueva.cursor()
+            cursor_nueva.execute('''
+                INSERT INTO productos (nombre, descripcion, subtotal, iva, impuestos, total, calculo_automatico, ejercicio)
+                VALUES ('LIBRE', '', 0, 0, 21, 0, 0, ?)
+            ''', (anio_actual,))
+            conn_nueva.commit()
+            logger.info(f"Producto LIBRE añadido para empresa {codigo}, ejercicio {anio_actual}")
+            
             conn_nueva.close()
             logger.info(f"Numeradores inicializados para empresa {codigo}")
             
         except Exception as e:
-            logger.error(f"Error inicializando numeradores: {e}")
+            logger.error(f"Error inicializando numeradores/productos: {e}")
             # No bloqueamos la creación de la empresa, pero dejamos constancia
         
         # Insertar empresa en BD de usuarios (SIN COMMIT todavía)
@@ -734,7 +744,7 @@ def crear_empresa():
         ''', (
             codigo, nombre, razon_social, cif, direccion, codigo_postal, ciudad, provincia,
             telefono, email, web,
-            logo_filename or 'aleph70_default.svg', logo_filename or 'aleph70_default.svg',
+            logo_filename or '/public/assets/logo.svg', logo_filename or '/public/assets/logo.svg',
             bd_destino
         ))
         empresa_id = cursor.lastrowid
@@ -821,7 +831,7 @@ def crear_empresa():
         session['empresa_db'] = bd_destino
         session['es_admin_empresa'] = True
         session['rol'] = 'admin'
-        session['empresa_logo'] = logo_filename or 'aleph70_default.svg'
+        session['empresa_logo'] = logo_filename or '/public/assets/logo.svg'
         
         # Forzar persistencia de sesión
         session.permanent = True

@@ -301,7 +301,7 @@ def autenticar_usuario(username, password, empresa_codigo):
             empresa_id = None
             empresa_nombre = 'Sin Empresa'
             db_path = None
-            logo_header = 'aleph70_default.svg'  # Logo por defecto A70 (igual al login)
+            logo_header = '/public/assets/logo.svg'  # Logo por defecto A70 (igual al login)
         else:
             # Verificar acceso a empresa
             cursor.execute('''

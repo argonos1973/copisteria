@@ -455,7 +455,7 @@ def obtener_sesion():
             'empresa': session.get('empresa_nombre'),
             'empresa_id': session.get('empresa_id'),
             'empresa_codigo': session.get('empresa_codigo'),
-            'logo': session.get('empresa_logo', 'aleph70_default.svg') if session.get('empresa_logo', '').startswith('/static/') else f"/static/logos/{session.get('empresa_logo', 'aleph70_default.svg')}",
+            'logo': session.get('empresa_logo') or '/public/assets/logo.svg',
             'avatar': avatar,
             'rol': rol,
             'es_admin': es_admin_empresa or es_superadmin,
@@ -1211,8 +1211,8 @@ def obtener_branding():
             logger.info("[BRANDING] Usuario sin empresa - devolviendo tema minimal por defecto")
             return jsonify({
                 'empresa_id': None,
-                'logo_header': 'aleph70_default.svg',
-                'logo_factura': 'aleph70_default.svg',
+                'logo_header': '/public/assets/logo.svg',
+                'logo_factura': '/public/assets/logo.svg',
                 'plantilla': 'minimal',
                 'datos': {
                     'nombre': 'Mi Empresa',
@@ -1232,8 +1232,8 @@ def obtener_branding():
         
         return jsonify({
             'empresa_id': empresa_id,  # ← Agregar empresa_id
-            'logo_header': empresa['logo_header'],
-            'logo_factura': empresa['logo_factura'],
+            'logo_header': empresa['logo_header'] or '/public/assets/logo.svg',
+            'logo_factura': empresa['logo_factura'] or '/public/assets/logo.svg',
             'plantilla': plantilla_base,  # ← Solo nombre de plantilla
             'datos': {
                 'nombre': empresa['nombre'],
@@ -1929,7 +1929,7 @@ def validate_2fa_login():
         empresa_codigo = empresa_row['codigo'] if empresa_row else None
         empresa_nombre = empresa_row['nombre'] if empresa_row else 'Sin empresa'
         db_path = empresa_row['db_path'] if empresa_row else None
-        logo_header = empresa_row['logo_header'] if empresa_row else 'aleph70_default.svg'
+        logo_header = (empresa_row['logo_header'] or '/public/assets/logo.svg') if empresa_row else '/public/assets/logo.svg'
         es_admin_empresa = empresa_row['es_admin_empresa'] if empresa_row else 0
         
         # Establecer sesión completa
@@ -2055,7 +2055,7 @@ def registro_publico():
             
             cursor.execute('''
                 INSERT INTO empresas (codigo, nombre, cif, db_path, activa, logo_header, logo_factura)
-                VALUES (?, ?, ?, ?, 1, 'aleph70_default.svg', 'aleph70_default.svg')
+                VALUES (?, ?, ?, ?, 1, '/public/assets/logo.svg', '/public/assets/logo.svg')
             ''', (codigo_empresa, nombre_empresa, nif, empresa_db_path))
             empresa_id = cursor.lastrowid
             
