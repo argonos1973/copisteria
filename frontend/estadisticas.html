@@ -113,9 +113,10 @@
                     onClick: (event, elements) => {
                         if (elements.length > 0) {
                             const index = elements[0].index;
-                            const categoria = labels[index];
-                            // console.log('[GRAFICO ANIO] Click en:', categoria);
-                            abrirModalDetallesGastoAnio(categoria);
+                            const proveedor = labels[index];
+                            if (typeof window.abrirModalDetallesProveedor === 'function') {
+                                window.abrirModalDetallesProveedor(proveedor, anio);
+                            }
                         }
                     },
                     plugins: {
@@ -151,7 +152,7 @@
     };
     </script>
     
-    <script src="/static/estadisticas_facturas.js?v=1768390594" type="module"></script>
+    <script src="/static/estadisticas_facturas.js?v=1768390595" type="module"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css?v=1763897790_1052">
     <link rel="stylesheet" href="/static/css/page_header.css">
     <link rel="stylesheet" href="/static/css/styles.css?v=1763897790?v=1763897790_1052">
@@ -215,6 +216,14 @@
             width: 320px;
             max-width: 320px;
             min-width: 280px;
+        }
+
+        #card-top-productos,
+        #card-top-clientes {
+            flex: 0 0 480px;
+            width: 480px;
+            max-width: 480px;
+            min-width: 380px;
         }
         
         .stats-container .stats-card table {
@@ -612,6 +621,10 @@
                         <div class="stats-label">Total Año Actual</div>
                         <div class="stats-value" id="ticketsTotal">0,00 €</div>
                         <div class="stats-comparison">
+                            <span class="stats-percentage" id="ticketsPorcentajeAnioHastaFecha">0%</span>
+                            <span class="stats-previous" id="ticketsAnioAnteriorHastaFecha">Año anterior (hasta fecha): 0,00 €</span>
+                        </div>
+                        <div class="stats-comparison">
                             <span class="stats-percentage" id="ticketsPorcentaje">0%</span>
                             <span class="stats-previous" id="ticketsAnterior">Año anterior: 0,00 €</span>
                         </div>
@@ -619,6 +632,10 @@
                     <div class="stats-row">
                         <div class="stats-label">Total Mes Actual</div>
                         <div class="stats-value" id="ticketsTotalMes">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="ticketsPorcentajeMesHastaDia">0%</span>
+                            <span class="stats-previous" id="ticketsMesAnteriorHastaDia">Mismo mes año anterior (hasta día): 0,00 €</span>
+                        </div>
                         <div class="stats-comparison">
                             <span class="stats-percentage" id="ticketsPorcentajeMes">0%</span>
                             <span class="stats-previous" id="ticketsMesAnterior">Mismo mes año anterior: 0,00 €</span>
@@ -665,13 +682,24 @@
                         <div class="stats-label">Total Año Actual</div>
                         <div class="stats-value" id="facturasTotal">0,00 €</div>
                         <div class="stats-comparison">
+                            <span class="stats-percentage" id="facturasPorcentajeAnioHastaFecha">0%</span>
+                            <span class="stats-previous" id="facturasAnioAnteriorHastaFecha">Año anterior (hasta fecha): 0,00 €</span>
+                        </div>
+                        <div class="stats-comparison">
                             <span class="stats-percentage" id="facturasPorcentaje">0%</span>
                             <span class="stats-previous" id="facturasAnterior">Año anterior: 0,00 €</span>
+                        </div>
+                        <div class="stats-note" style="font-size: 0.7rem; opacity: 0.7; margin-top: 0.2rem;">
+                            <i class="fas fa-info-circle"></i> Incluye pendientes y vencidas
                         </div>
                     </div>
                     <div class="stats-row">
                         <div class="stats-label">Total Mes Actual</div>
                         <div class="stats-value" id="facturasTotalMes">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="facturasPorcentajeMesHastaDia">0%</span>
+                            <span class="stats-previous" id="facturasMesAnteriorHastaDia">Mismo mes año anterior (hasta día): 0,00 €</span>
+                        </div>
                         <div class="stats-comparison">
                             <span class="stats-percentage" id="facturasPorcentajeMes">0%</span>
                             <span class="stats-previous" id="facturasMesAnterior">Mismo mes año anterior: 0,00 €</span>
@@ -719,6 +747,10 @@
                         <div class="stats-label">Total Año Actual</div>
                         <div class="stats-value" id="globalTotal">0,00 €</div>
                         <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalPorcentajeAnioHastaFecha">0%</span>
+                            <span class="stats-previous" id="globalAnioAnteriorHastaFecha">Año anterior (hasta fecha): 0,00 €</span>
+                        </div>
+                        <div class="stats-comparison">
                             <span class="stats-percentage" id="globalPorcentaje">0%</span>
                             <span class="stats-previous" id="globalAnterior">Año anterior: 0,00 €</span>
                         </div>
@@ -733,6 +765,10 @@
                     <div class="stats-row">
                         <div class="stats-label">Total Mes Actual</div>
                         <div class="stats-value" id="globalTotalMes">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalPorcentajeMesHastaDia">0%</span>
+                            <span class="stats-previous" id="globalMesAnteriorHastaDia">Mismo mes año anterior (hasta día): 0,00 €</span>
+                        </div>
                         <div class="stats-comparison">
                             <span class="stats-percentage" id="globalPorcentajeMes">0%</span>
                             <span class="stats-previous" id="globalMesAnterior">Mismo mes año anterior: 0,00 €</span>
@@ -820,6 +856,12 @@
             <h3>Top 10 Productos <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
             <div class="stats-content">
                 <table class="stats-table">
+                    <colgroup>
+                        <col style="width:50%">
+                        <col style="width:12%">
+                        <col style="width:22%">
+                        <col style="width:16%">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Producto</th>
@@ -840,7 +882,33 @@
 <!-- Contenido Gastos -->
 <div class="tab-content" id="tab-gastos">
     <div class="stats-container">
-                <!-- Gastos Mes Actual -->
+                <!-- Gastos del Mes Seleccionado -->
+                <div class="stats-card" id="card-gastos-mes-solo">
+                    <h3>Gastos del Mes <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
+                    <div class="stats-content">
+                        <div class="stats-row">
+                            <div class="stats-label">Total Mes Actual</div>
+                            <div class="stats-value importe-negativo" id="gastos-total-mes-solo">0,00 €</div>
+                            <div class="stats-comparison">
+                                <span class="stats-percentage" id="gastos-pct-mes-previo">0%</span>
+                                <span class="stats-previous" id="gastos-mes-previo">Mes anterior: 0,00 €</span>
+                            </div>
+                            <div class="stats-comparison">
+                                <span class="stats-percentage" id="gastos-pct-mes-solo">0%</span>
+                                <span class="stats-previous" id="gastos-mes-solo-anterior">Mismo mes año anterior: 0,00 €</span>
+                            </div>
+                        </div>
+                        <div class="stats-row">
+                            <div class="stats-label">Cantidad Gastos</div>
+                            <div class="stats-value" id="gastos-cantidad-mes-solo">0</div>
+                        </div>
+                        <div class="stats-row" style="margin-top: 1rem;">
+                            <canvas id="grafico-gastos-mes-solo" style="max-height: 250px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gastos Trimestre Actual -->
                 <div class="stats-card" id="card-gastos-mes">
                     <h3>Gastos Trimestre Actual <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
                     <div class="stats-content">
@@ -977,14 +1045,24 @@
             <span class="close" id="cerrar-modal">&times;</span>
         </div>
         <div class="modal-body">
-            <div class="chart-controls" style="margin-bottom: 1rem;">
-                <label for="tipo-datos" class="label-spacing" style="font-weight: 600;">Mostrar:</label>
-                <select id="tipo-datos" class="form-select">
-                    <option value="global">Total Global</option>
-                    <option value="tickets">Tickets</option>
-                    <option value="facturas">Facturas</option>
-                    <option value="ingresos_gastos">Ingresos vs Gastos</option>
-                </select>
+            <div class="chart-controls" style="margin-bottom: 1rem; display: flex; gap: 20px; align-items: center;">
+                <div>
+                    <label for="vista-ventas" style="margin-right: 10px; font-weight: 600;">Vista:</label>
+                    <select id="vista-ventas" class="form-select">
+                        <option value="mensual">📅 Por Meses</option>
+                        <option value="trimestral">📊 Por Trimestres</option>
+                        <option value="dia_semana">📆 Por Días del Mes</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="tipo-datos" class="label-spacing" style="font-weight: 600;">Mostrar:</label>
+                    <select id="tipo-datos" class="form-select">
+                        <option value="global">Total Global</option>
+                        <option value="tickets">Tickets</option>
+                        <option value="facturas">Facturas</option>
+                        <option value="ingresos_gastos">Ingresos vs Gastos</option>
+                    </select>
+                </div>
             </div>
             <div style="background: var(--bg-elevated); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
                 <canvas id="chart-estadisticas" style="max-height: 450px;"></canvas>
@@ -1893,16 +1971,11 @@ async function cargarGraficoGastosMes() {
                 onClick: (event, elements) => {
                     if (elements.length > 0) {
                         const index = elements[0].index;
-                        const categoria = labels[index];
-                        // console.log('[GRAFICO MES] Click en:', categoria);
-                        abrirModalDetallesGastoMes(categoria);
-                    } else {
-                        try {
-                            if (typeof window.mostrarNotificacion === 'function') {
-                                window.mostrarNotificacion('Selecciona una categoría del gráfico', 'info');
-                            }
-                        } catch (e) {
-                            // noop
+                        const proveedor = labels[index];
+                        const mesNum = parseInt(mes);
+                        const trim = Math.ceil(mesNum / 3);
+                        if (typeof window.abrirModalDetallesProveedor === 'function') {
+                            window.abrirModalDetallesProveedor(proveedor, anio, null, trim);
                         }
                     }
                 },

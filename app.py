@@ -62,6 +62,7 @@ from routes.batch_routes import batch_bp
 from routes.ia_chat_routes import ia_chat_bp
 from public_routes import public_bp
 from subscription_routes import subscription_bp
+from facturas_recurrentes_routes import facturas_recurrentes_bp
 
 # Middlewares
 from auth_middleware import login_required, require_admin, require_permission
@@ -266,6 +267,7 @@ def register_blueprints(app):
     app.register_blueprint(facturas_recibidas_bp) # Rutas de facturas recibidas y proveedores
     app.register_blueprint(batch_bp)           # Rutas de procesos batch (admin)
     app.register_blueprint(ia_chat_bp)         # Rutas de chat con IA local
+    app.register_blueprint(facturas_recurrentes_bp)  # Facturas recurrentes mensuales
     
     logger.info("✅ Todos los blueprints registrados correctamente")
 

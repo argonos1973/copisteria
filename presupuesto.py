@@ -389,7 +389,8 @@ def consultar_presupuestos():
                 p.total,
                 p.idContacto AS idcontacto,
                 c.razonsocial,
-                c.mail
+                c.mail,
+                (SELECT CASE WHEN dp.descripcion IS NOT NULL AND dp.descripcion != '' AND dp.descripcion NOT GLOB '[0-9][0-9]/[0-9][0-9]/[0-9][0-9][0-9][0-9]' THEN dp.descripcion ELSE dp.concepto END FROM detalle_presupuesto dp WHERE dp.id_presupuesto = p.id ORDER BY dp.id ASC LIMIT 1) AS primer_concepto
             FROM presupuesto p
             LEFT JOIN contactos c ON p.idContacto = c.idContacto
             WHERE 1=1
@@ -435,6 +436,9 @@ def consultar_presupuestos():
         result = []
         for row in rows:
             raw = dict(zip(columnas, row))
+            razon = raw.get('razonsocial') or ''
+            if not razon.strip() or not raw.get('idcontacto'):
+                razon = raw.get('primer_concepto') or ''
             result.append({
                 'id': raw.get('id'),
                 'fecha': raw.get('fecha'),
@@ -446,7 +450,7 @@ def consultar_presupuestos():
                 'importe_cobrado': format_currency_es_two(raw.get('importe_cobrado')),
                 'total': format_currency_es_two(raw.get('total')),
                 'idcontacto': raw.get('idcontacto'),
-                'razonsocial': raw.get('razonsocial'),
+                'razonsocial': razon,
                 'mail': raw.get('mail')
             })
 
@@ -813,22 +817,22 @@ def generar_pdf_presupuesto(id):
         total_iva = round(sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles), 2)
         total_final = round(subtotal + total_iva, 2)
         
-        # Generar filas de detalles (sin columna específica de IVA)
+        # Generar filas de detalles (Concepto + Descripción en una sola columna)
         detalles_html = ""
         for detalle in detalles:
             precio_unitario = float(detalle['precio'])
             cantidad = int(detalle['cantidad'])
             impuestos = float(detalle['impuestos'])
             subtotal_linea = precio_unitario * cantidad
-            precio_unitario_fmt = format_number_es_max5(detalle.get('precio'))
+            precio_unitario_fmt = format_currency_es_two(precio_unitario)
+            descripcion = detalle['descripcion'] or ''
+            desc_html = f'<div class="detalle-descripcion">{descripcion}</div>' if descripcion else ''
             
             detalles_html += f"""
             <tr>
-                <td>{detalle['concepto']}</td>
-                <td>{detalle['descripcion'] or ''}</td>
+                <td><div class="detalle-concepto">{detalle['concepto']}</div>{desc_html}</td>
                 <td style="text-align: center;">{cantidad}</td>
-                <td style="text-align: right;">{precio_unitario_fmt}€</td>
-                <td style="text-align: right;">{format_currency_es_two(subtotal_linea)}€</td>
+                <td style="text-align: right;">{format_currency_es_two(subtotal_linea)} €</td>
             </tr>
             """
         
@@ -999,7 +1003,7 @@ def enviar_email_presupuesto(id):
         total_iva = round(sum((float(d['precio']) * int(d['cantidad'])) * (float(d['impuestos']) / 100) for d in detalles), 2)
         total_final = round(subtotal + total_iva, 2)
         
-        # Generar filas de detalles
+        # Generar filas de detalles (Concepto + Descripción en una sola columna)
         detalles_html = ""
         for detalle in detalles:
             precio_unitario = float(detalle['precio'])
@@ -1009,15 +1013,15 @@ def enviar_email_presupuesto(id):
             subtotal_raw = precio_unitario * cantidad
             iva_linea = round(subtotal_raw * (impuestos / 100), 2)
             total_linea = round(subtotal_raw + iva_linea, 2)
+            descripcion = detalle['descripcion'] or ''
+            desc_html = f'<div class="detalle-descripcion">{descripcion}</div>' if descripcion else ''
             
             detalles_html += f"""
             <tr>
-                <td>{detalle['concepto']}</td>
-                <td>{detalle['descripcion'] or ''}</td>
+                <td><div class="detalle-concepto">{detalle['concepto']}</div>{desc_html}</td>
                 <td style="text-align: center;">{cantidad}</td>
-                <td style="text-align: right;">{precio_unitario:.2f}€</td>
                 <td style="text-align: center;">{impuestos:.0f}%</td>
-                <td style="text-align: right;">{total_linea:.2f}€</td>
+                <td style="text-align: right;">{format_currency_es_two(total_linea)} €</td>
             </tr>
             """
         

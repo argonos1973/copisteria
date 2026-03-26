@@ -95,6 +95,16 @@ def reset_password_page():
 
     return send_from_directory(os.path.join(os.path.dirname(__file__), 'frontend'), 'reset-password.html')
 
+@public_bp.route('/robots.txt')
+def robots_txt():
+    """Servir robots.txt desde la raíz"""
+    return send_from_directory(PUBLIC_DIR, 'robots.txt', mimetype='text/plain')
+
+@public_bp.route('/sitemap.xml')
+def sitemap_xml():
+    """Servir sitemap.xml desde la raíz"""
+    return send_from_directory(PUBLIC_DIR, 'sitemap.xml', mimetype='application/xml')
+
 @public_bp.route('/public/<path:filename>')
 def serve_public(filename):
     """Servir archivos estáticos del sitio público"""

@@ -1,0 +1,17 @@
+# Robots.txt - Aleph70
+# https://app.wwwaleph-70.com/
+
+User-agent: *
+Allow: /
+Allow: /public/
+Disallow: /api/
+Disallow: /frontend/
+Disallow: /static/
+Disallow: /db/
+Disallow: /LOGIN.html
+Disallow: /REGISTRO.html
+Disallow: /forgot-password.html
+Disallow: /reset-password
+
+# Sitemap
+Sitemap: https://app.wwwaleph-70.com/sitemap.xml

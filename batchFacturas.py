@@ -273,9 +273,14 @@ def generar_factura_pdf(id_factura):
                 # Añadir reemplazo para la forma de pago
                 logger.info(f"Forma de pago: {forma_pago}")
                 if forma_pago == 'R':
-                    replacements['<p id="forma-pago">Tarjeta</p>'] = '<p id="forma-pago">Pago por transferencia bancaria al siguiente número de cuenta ES4200494752902216156784</p>'
+                    cuenta = emisor.get('cuenta_transferencias', '')
+                    if cuenta:
+                        replacements['<p id="forma-pago">Tarjeta</p>'] = f'<p id="forma-pago">Pago por transferencia bancaria al siguiente número de cuenta {cuenta}</p>'
+                    else:
+                        replacements['<p id="forma-pago">Tarjeta</p>'] = '<p id="forma-pago">Pago por transferencia bancaria</p>'
                 else:
-                    forma_pago_texto = obtener_forma_pago(forma_pago)
+                    cuenta = emisor.get('cuenta_transferencias', '')
+                    forma_pago_texto = obtener_forma_pago(forma_pago, cuenta)
                     replacements['<p id="forma-pago">Tarjeta</p>'] = f'<p id="forma-pago">{forma_pago_texto}</p>'
                 
                 # Aplicar todos los reemplazos
@@ -373,13 +378,15 @@ def obtener_estado_formateado(estado_codigo):
     }
     return estados.get(estado_codigo, 'Desconocido')
 
-def obtener_forma_pago(forma_pago_codigo):
+def obtener_forma_pago(forma_pago_codigo, cuenta_transferencias=''):
     """
     Convierte códigos de forma de pago en texto legible 
     """
-    # Si es transferencia, mostrar el número de cuenta
+    # Si es transferencia, mostrar el número de cuenta si está disponible
     if forma_pago_codigo == 'R':
-        return 'Pago por transferencia bancaria al siguiente número de cuenta ES4200494752902216156784'
+        if cuenta_transferencias:
+            return f'Pago por transferencia bancaria al siguiente número de cuenta {cuenta_transferencias}'
+        return 'Pago por transferencia bancaria'
     
     formas_pago = {
         'T': 'Tarjeta',

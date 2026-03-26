@@ -14,6 +14,27 @@ from multiempresa_config import DB_USUARIOS_PATH
 logger = get_logger(__name__)
 
 
+def _sanitize_params(job_code: str, params_json: str):
+    code = (job_code or '').strip()
+    if not params_json:
+        return params_json
+    if code != 'batchTotalDia':
+        return params_json
+    try:
+        import json
+        obj = json.loads(params_json)
+        if not isinstance(obj, dict):
+            return '{}'
+        out = {}
+        if obj.get('correo'):
+            out['correo'] = str(obj.get('correo')).strip()
+        if obj.get('db_path'):
+            out['db_path'] = str(obj.get('db_path')).strip()
+        return json.dumps(out, ensure_ascii=False)
+    except Exception:
+        return params_json
+
+
 def _now():
     return datetime.now()
 
@@ -57,6 +78,15 @@ def _parse_cron_simple(cron_expr: str):
         if 0 <= minute <= 59 and 0 <= hour <= 23:
             return {'kind': 'daily', 'hour': hour, 'minute': minute}
 
+    # Mensual: M H D * * (día D de cada mes a las H:M)
+    m = re.fullmatch(r"(\d{1,2}) (\d{1,2}) (\d{1,2}) \* \*", expr)
+    if m:
+        minute = int(m.group(1))
+        hour = int(m.group(2))
+        day = int(m.group(3))
+        if 0 <= minute <= 59 and 0 <= hour <= 23 and 1 <= day <= 28:
+            return {'kind': 'monthly', 'hour': hour, 'minute': minute, 'day': day}
+
     return None
 
 
@@ -81,6 +111,31 @@ def _next_run_from_cron(cron_expr: str, last: Optional[datetime]):
         if candidate > now:
             return candidate
         return candidate + timedelta(days=1)
+
+    if parsed['kind'] == 'monthly':
+        from dateutil.relativedelta import relativedelta
+        hour = parsed['hour']
+        minute = parsed['minute']
+        day = parsed['day']
+        # Intentar este mes
+        try:
+            candidate = now.replace(day=day, hour=hour, minute=minute, second=0, microsecond=0)
+        except ValueError:
+            # Día inválido para este mes (ej: 31 en febrero)
+            candidate = now.replace(day=1, hour=hour, minute=minute, second=0, microsecond=0) + relativedelta(months=1)
+            try:
+                candidate = candidate.replace(day=day)
+            except ValueError:
+                candidate = candidate.replace(day=28)
+        if candidate > now:
+            return candidate
+        # Siguiente mes
+        candidate = candidate + relativedelta(months=1)
+        try:
+            candidate = candidate.replace(day=day)
+        except ValueError:
+            candidate = candidate.replace(day=28)
+        return candidate
 
     if parsed['kind'] == 'hourly':
         minute = parsed['minute']
@@ -143,8 +198,10 @@ def main():
             schedules = cur.execute(
                 """
                 SELECT s.id, s.empresa_id, s.job_definition_id, s.enabled, s.cron_expr, s.params_json,
-                       s.next_run_at, s.last_run_at, s.days_of_week
+                       s.next_run_at, s.last_run_at, s.days_of_week,
+                       d.code as job_code
                 FROM batch_job_schedules s
+                JOIN batch_job_definitions d ON d.id = s.job_definition_id
                 WHERE s.enabled = 1
                 """
             ).fetchall()
@@ -220,7 +277,12 @@ def main():
                     INSERT INTO batch_job_runs (empresa_id, schedule_id, job_definition_id, trigger, status, params_snapshot)
                     VALUES (?, ?, ?, 'schedule', 'queued', ?)
                     """,
-                    (s['empresa_id'], s['id'], s['job_definition_id'], s['params_json']),
+                    (
+                        s['empresa_id'],
+                        s['id'],
+                        s['job_definition_id'],
+                        _sanitize_params(s['job_code'] if 'job_code' in s.keys() else None, s['params_json']),
+                    ),
                 )
 
                 nxt = _next_run_from_cron(s['cron_expr'], last_run_at)

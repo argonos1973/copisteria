@@ -1573,11 +1573,14 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             fecha_cobro = datetime.now().strftime('%Y-%m-%d')
         
         # Función para decodificar forma de pago
-        def decodificar_forma_pago(forma_pago):
+        def decodificar_forma_pago(forma_pago, cuenta_transferencias=''):
+            if forma_pago == 'R':
+                if cuenta_transferencias:
+                    return f'Pago por transferencia bancaria al siguiente número de cuenta {cuenta_transferencias}'
+                return 'Pago por transferencia bancaria'
             formas_pago = {
                 'T': 'Tarjeta',
-                'E': 'Efectivo',
-                'R': 'Pago por transferencia bancaria al siguiente número de cuenta ES4200494752902216156784'
+                'E': 'Efectivo'
             }
             return formas_pago.get(forma_pago, 'No especificada')
 
@@ -1716,6 +1719,12 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             emisor = cargar_datos_emisor()
             logger.info(f"[FACTURA.PY] Datos del emisor cargados: {emisor.get('nombre')} - {emisor.get('nif')}")
             
+            # Reemplazar forma de pago con cuenta de transferencias del emisor
+            html_modificado = html_modificado.replace(
+                '<p id="forma-pago">Tarjeta</p>',
+                f'<p>{decodificar_forma_pago(factura_dict.get("formaPago", "T"), emisor.get("cuenta_transferencias", ""))}</p>'
+            )
+            
             # Reemplazar datos del emisor con los valores del JSON
             html_modificado = html_modificado.replace(
                 '<p id="emisor-nombre"></p>',
@@ -1756,9 +1765,6 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             ).replace(
                 'id="total"></strong>',
                 f'id="total">{_fmt_euro(total)}€</strong>'
-            ).replace(
-                '<p id="forma-pago">Tarjeta</p>',
-                f'<p>{decodificar_forma_pago(factura_dict.get("formaPago", "T"))}</p>'
             )
 
             # Reemplazos adicionales robustos usando regex por si la plantilla difiere en espacios/atributos

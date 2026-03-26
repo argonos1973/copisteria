@@ -6,18 +6,50 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.header import Header
 
-from dotenv import load_dotenv
 from logger_config import get_logger
 
 # Inicializar logger
 logger = get_logger(__name__)
 
+def _load_env_file_fallback(path: str):
+    try:
+        if not path or not os.path.exists(path):
+            return
+        with open(path, 'r', encoding='utf-8') as f:
+            for raw in f:
+                line = raw.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                k = k.strip()
+                v = v.strip().strip('"').strip("'")
+                if k and k not in os.environ:
+                    os.environ[k] = v
+    except Exception:
+        pass
+
+
 try:
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    load_dotenv(dotenv_path=os.path.join(base_dir, '.env'))
+    from dotenv import load_dotenv  # type: ignore
+
+    try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        load_dotenv(dotenv_path=os.path.join(base_dir, '.env'))
+    except Exception:
+        pass
+    try:
+        load_dotenv()
+    except Exception:
+        pass
 except Exception:
-    pass
-load_dotenv()
+    # Sin python-dotenv: cargar .env manualmente para procesos batch
+    try:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        _load_env_file_fallback(os.path.join(base_dir, '.env'))
+    except Exception:
+        pass
 
 
 def _get_smtp_config():
@@ -63,33 +95,57 @@ def _send_smtp_message(cfg, msg, destinatarios):
     if not cfg.get('smtp_username') or not cfg.get('smtp_password') or not cfg.get('smtp_from'):
         raise RuntimeError('Configuración SMTP incompleta (SMTP_USERNAME/SMTP_PASSWORD/SMTP_FROM)')
 
-    server = None
     context = ssl.create_default_context()
-    if int(cfg['smtp_port']) == 465:
-        server = smtplib.SMTP_SSL(cfg['smtp_server'], cfg['smtp_port'], context=context)
-    else:
-        server = smtplib.SMTP(cfg['smtp_server'], cfg['smtp_port'])
-    try:
-        if int(cfg['smtp_port']) != 465:
-            server.starttls(context=context)
-        server.login(cfg['smtp_username'], cfg['smtp_password'])
-        from email import policy
-        msg_bytes = msg.as_bytes(policy=policy.SMTP)
 
-        # OVERRIDE DE SEGURIDAD: Redirigir todo a elssons@gmail.com
-        # Solicitado para el entorno .55
-        redirect_to = (os.getenv('SMTP_REDIRECT_ALL_TO') or '').strip()
-        if redirect_to:
-            logger.warning(f"Interceptando envío a {destinatarios}. Redirigiendo a {redirect_to}")
-            destinatarios = [redirect_to]
-        
-        server.sendmail(cfg['smtp_from'], destinatarios, msg_bytes)
-    finally:
-        if server:
+    def _send_with(port: int, use_ssl: bool):
+        server = None
+        try:
+            if use_ssl:
+                server = smtplib.SMTP_SSL(cfg['smtp_server'], port, context=context, timeout=20)
+            else:
+                server = smtplib.SMTP(cfg['smtp_server'], port, timeout=20)
+                server.starttls(context=context)
+            server.login(cfg['smtp_username'], cfg['smtp_password'])
+            from email import policy
+            msg_bytes = msg.as_bytes(policy=policy.SMTP)
+
+            redirect_to = (os.getenv('SMTP_REDIRECT_ALL_TO') or '').strip()
+            if redirect_to:
+                logger.warning(f"Interceptando envío a {destinatarios}. Redirigiendo a {redirect_to}")
+                send_to = [redirect_to]
+            else:
+                send_to = destinatarios
+
+            server.sendmail(cfg['smtp_from'], send_to, msg_bytes)
+            return True
+        finally:
+            if server:
+                try:
+                    server.quit()
+                except Exception:
+                    pass
+
+    try:
+        smtp_port = int(cfg['smtp_port'])
+    except Exception:
+        smtp_port = 465
+
+    try:
+        if smtp_port == 465:
+            if _send_with(465, True):
+                return
+        else:
+            if _send_with(smtp_port, False):
+                return
+    except ssl.SSLError as e:
+        if smtp_port == 465 and 'UNEXPECTED_EOF_WHILE_READING' in str(e):
+            logger.warning(f"Fallo SMTP SSL ({cfg['smtp_server']}:{smtp_port}): {e}. Reintentando con STARTTLS en 587")
             try:
-                server.quit()
+                if _send_with(587, False):
+                    return
             except Exception:
                 pass
+        raise
 
 def enviar_factura_por_email(destinatario, asunto, cuerpo, archivo_adjunto, numero_factura):
     try:

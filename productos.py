@@ -873,11 +873,13 @@ def crear_producto(data):
         
         # Insertar el nuevo producto incluyendo configuración de franjas
         # Usar directamente los campos del data en lugar de config_franjas anidado
+        ejercicio_actual = datetime.now().year
         cursor.execute('''
             INSERT INTO productos (nombre, descripcion, subtotal, iva, impuestos, total,
                                  calculo_automatico, franja_inicial, numero_franjas, 
-                                 ancho_franja, descuento_inicial, incremento_franja, no_generar_franjas)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                 ancho_franja, descuento_inicial, incremento_franja, no_generar_franjas,
+                                 ejercicio)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             nombre,
             data.get('descripcion', ''),
@@ -891,7 +893,8 @@ def crear_producto(data):
             data.get('ancho_franja', 10),
             data.get('descuento_inicial', 5.0),
             data.get('incremento_franja', 5.0),
-            data.get('no_generar_franjas', 0)
+            data.get('no_generar_franjas', 0),
+            ejercicio_actual
         ))
         
         conn.commit()
@@ -975,13 +978,14 @@ def actualizar_producto(id_producto, data):
                 "message": f"No existe un producto con el ID {id_producto}."
             }
         
-        # Verificar si el nuevo nombre ya existe para otro producto
-        cursor.execute('SELECT id FROM productos WHERE LOWER(nombre) = LOWER(?) AND id != ?', (nombre, id_producto))
+        # Verificar si el nuevo nombre ya existe para otro producto EN EL MISMO EJERCICIO
+        anio_actual = datetime.now().year
+        cursor.execute('SELECT id FROM productos WHERE LOWER(nombre) = LOWER(?) AND id != ? AND ejercicio = ?', (nombre, id_producto, anio_actual))
         existente = cursor.fetchone()
         if existente:
             return {
                 "success": False,
-                "message": f"Ya existe otro producto con el nombre '{nombre}'. Por favor, utilice otro nombre."
+                "message": f"Ya existe otro producto con el nombre '{nombre}' en el ejercicio {anio_actual}. Por favor, utilice otro nombre."
             }
         
         # Calcular campos derivados si no están presentes

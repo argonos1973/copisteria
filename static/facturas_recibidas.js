@@ -1468,6 +1468,31 @@ function mostrarModalEditar(factura) {
     document.getElementById('editar-notas').value = factura.notas || '';
     // Checkbox eliminado: document.getElementById('editar-revisado').checked = factura.revisado === 1;
     
+    // Configurar recurrencia
+    const checkRecurrente = document.getElementById('editar-recurrente');
+    const configRecurrencia = document.getElementById('recurrencia-config');
+    const selectDiaRecurrencia = document.getElementById('editar-dia-recurrencia');
+    
+    if (checkRecurrente && configRecurrencia && selectDiaRecurrencia) {
+        // Cargar estado actual de recurrencia
+        fetch(`/api/facturas-proveedores/${factura.id}/recurrencia`)
+            .then(resp => resp.json())
+            .then(data => {
+                checkRecurrente.checked = data.recurrente || false;
+                selectDiaRecurrencia.value = data.dia_recurrencia || 1;
+                configRecurrencia.style.display = data.recurrente ? 'block' : 'none';
+            })
+            .catch(() => {
+                checkRecurrente.checked = false;
+                configRecurrencia.style.display = 'none';
+            });
+        
+        // Toggle configuración al cambiar checkbox
+        checkRecurrente.onchange = function() {
+            configRecurrencia.style.display = this.checked ? 'block' : 'none';
+        };
+    }
+    
     // Event listeners para cálculo automático (reutilizar baseInput e ivaPctInput ya declarados)
     const calcular = () => {
         const base = parseFloat(baseInput.value) || 0;
@@ -1666,6 +1691,25 @@ window.guardarEdicion = async function() {
         const data = await response.json();
         
         if (data.success) {
+            // Guardar configuración de recurrencia
+            const checkRecurrente = document.getElementById('editar-recurrente');
+            const selectDiaRecurrencia = document.getElementById('editar-dia-recurrencia');
+            
+            if (checkRecurrente) {
+                try {
+                    await fetch(`/api/facturas-proveedores/${facturaId}/recurrencia`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            recurrente: checkRecurrente.checked,
+                            dia_recurrencia: parseInt(selectDiaRecurrencia?.value || 1)
+                        })
+                    });
+                } catch (e) {
+                    console.warn('[Facturas] Error guardando recurrencia:', e);
+                }
+            }
+            
             mostrarNotificacion('✅ Factura actualizada correctamente', 'success');
             cerrarModal('modalEditar');
             cargarFacturas(); // Recargar tabla

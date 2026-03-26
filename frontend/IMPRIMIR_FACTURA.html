@@ -7,18 +7,17 @@
     <style>
         /* Ocultar URL/IP en encabezado y pie de página del navegador */
         @page {
-            margin: 10mm;
-            /* Elimina encabezado y pie de página del navegador */
-            @top-left { content: none; }
-            @top-center { content: none; }
-            @top-right { content: none; }
-            @bottom-left { content: none; }
-            @bottom-center { content: none; }
-            @bottom-right { content: none; }
+            margin: 0;
         }
         
         /* Reglas específicas para impresión */
         @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                margin: 0;
+                padding: 10mm;
+            }
             #loading-overlay {
                 display: none !important;
             }
@@ -78,17 +77,14 @@
             display: flex;
             justify-content: space-between;
             margin: 20px 0;
-            position: relative;
         }
 
         .emisor {
-            width: 40%;
+            width: 45%;
         }
 
         .cliente {
-            width: 40%;
-            position: absolute;
-            right: 0;
+            width: 45%;
             text-align: right;
         }
 

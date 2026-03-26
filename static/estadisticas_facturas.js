@@ -73,6 +73,7 @@ const cardNames = {
   'card-ingresos-gastos-totales': 'Ingresos y Gastos',
   'card-top-clientes': 'Top 10 Clientes',
   'card-top-productos': 'Top 10 Productos',
+  'card-gastos-mes-solo': 'Gastos del Mes',
   'card-gastos-mes': 'Gastos Trimestre',
   'card-gastos-anio': 'Gastos Año',
   'card-top-gastos': 'Top 10 Gastos'
@@ -324,6 +325,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (modal) modal.style.display = 'none';
   });
   document.getElementById('tipo-datos')?.addEventListener('change', abrirModalGraficos);
+  document.getElementById('vista-ventas')?.addEventListener('change', abrirModalGraficos);
 
   initModalDrag();
   initCollapseControls(); // Inicializar controles de colapso
@@ -538,14 +540,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const valMes = (serie, campo) => getCampoVal(serie?.[keySel], campo);
         
         // Función para calcular total del trimestre del mes seleccionado
-        const getTrimestreMeses = (mes) => {
+        const getTrimestreMeses = (mes, completo = false) => {
           const trimestre = Math.ceil(mes / 3);
           const inicio = (trimestre - 1) * 3 + 1;
           const fin = trimestre * 3;
-          return { inicio, fin: Math.min(fin, mes) }; // Solo hasta el mes actual si estamos en trimestre en curso
+          // completo=true para año anterior (trimestre completo), false para año actual (hasta mes actual)
+          return { inicio, fin: completo ? fin : Math.min(fin, mes) };
         };
-        const sumTrimestre = (serie, campo) => {
-          const { inicio, fin } = getTrimestreMeses(mesNum);
+        const sumTrimestre = (serie, campo, completo = false) => {
+          const { inicio, fin } = getTrimestreMeses(mesNum, completo);
           let s = 0;
           for (let i = inicio; i <= fin; i++) {
             const k = String(i).padStart(2, '0');
@@ -573,7 +576,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         // Tickets trimestre
         const tktTrimestreTotal = sumTrimestre(totales.tickets, 'total');
-        const tktTrimestreTotalPrev = sumTrimestre(totalesPrev.tickets, 'total');
+        const tktTrimestreTotalPrev = sumTrimestre(totalesPrev.tickets, 'total', true); // trimestre completo para año anterior
         datos.tickets.actual.trimestre = { total: tktTrimestreTotal };
         datos.tickets.anterior.mismo_trimestre = { total: tktTrimestreTotalPrev };
         datos.tickets.porcentaje_diferencia_trimestre = tktTrimestreTotalPrev > 0 ? ((tktTrimestreTotal - tktTrimestreTotalPrev) / tktTrimestreTotalPrev) * 100 : 0;
@@ -585,7 +588,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           // datos.tickets.anterior.cantidad = tktCantHastaPrev; // Mantener cantidad anual
           datos.tickets.anterior.media = tktCantHastaPrev > 0 ? (tktTotalHastaPrev / tktCantHastaPrev) : (datos.tickets.anterior.media || 0);
         }
-        datos.tickets.porcentaje_diferencia = tktTotalHastaPrev > 0 ? ((tktTotalHasta - tktTotalHastaPrev) / tktTotalHastaPrev) * 100 : 0;
+        // Porcentaje: % completado del objetivo anual (año anterior total)
+        const tktTotalAnualPrev = datos.tickets.anterior?.total || tktTotalHastaPrev;
+        datos.tickets.porcentaje_diferencia = tktTotalAnualPrev > 0 ? ((tktTotalHasta / tktTotalAnualPrev) * 100) - 100 : 0;
 
         // Facturas (año actual hasta el mes seleccionado)
         const facTotalHasta = sumHasta(totales.facturas, 'total');
@@ -605,7 +610,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
         // Facturas trimestre
         const facTrimestreTotal = sumTrimestre(totales.facturas, 'total');
-        const facTrimestreTotalPrev = sumTrimestre(totalesPrev.facturas, 'total');
+        const facTrimestreTotalPrev = sumTrimestre(totalesPrev.facturas, 'total', true); // trimestre completo para año anterior
         datos.facturas.actual.trimestre = { total: facTrimestreTotal };
         datos.facturas.anterior.mismo_trimestre = { total: facTrimestreTotalPrev };
         datos.facturas.porcentaje_diferencia_trimestre = facTrimestreTotalPrev > 0 ? ((facTrimestreTotal - facTrimestreTotalPrev) / facTrimestreTotalPrev) * 100 : 0;
@@ -617,7 +622,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           // datos.facturas.anterior.cantidad = facCantHastaPrev; // Mantener cantidad anual
           datos.facturas.anterior.media = facCantHastaPrev > 0 ? (facTotalHastaPrev / facCantHastaPrev) : (datos.facturas.anterior.media || 0);
         }
-        datos.facturas.porcentaje_diferencia = facTotalHastaPrev > 0 ? ((facTotalHasta - facTotalHastaPrev) / facTotalHastaPrev) * 100 : 0;
+        // Porcentaje: % completado del objetivo anual (año anterior total)
+        const facTotalAnualPrev = datos.facturas.anterior?.total || facTotalHastaPrev;
+        datos.facturas.porcentaje_diferencia = facTotalAnualPrev > 0 ? ((facTotalHasta / facTotalAnualPrev) * 100) - 100 : 0;
 
         // Global (recalculado con los valores ajustados)
         if (datos.global) {
@@ -647,8 +654,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             // datos.global.anterior.cantidad = globCantHastaPrev; // Mantener cantidad anual
             datos.global.anterior.media    = globCantHastaPrev > 0 ? (globTotalHastaPrev / globCantHastaPrev) : (datos.global.anterior.media || 0);
           }
-          // Porcentaje: comparar YTD actual vs YTD anterior (comparación justa)
-          datos.global.porcentaje_diferencia = globTotalHastaPrev > 0 ? ((globTotalHasta - globTotalHastaPrev) / globTotalHastaPrev) * 100 : 0;
+          // Porcentaje: % completado del objetivo anual (año anterior total)
+          const globTotalAnualPrev = datos.global.anterior?.total || globTotalHastaPrev;
+          datos.global.porcentaje_diferencia = globTotalAnualPrev > 0 ? ((globTotalHasta / globTotalAnualPrev) * 100) - 100 : 0;
         }
       }
     } catch (e) {
@@ -889,10 +897,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   
   function restaurarEstadoColapso() {
+    const prefs = _prefsCache || {};
     document.querySelectorAll('.stats-card').forEach(card => {
-      const hiddenSaved = sessionStorage.getItem('statsHidden_'+card.id) === '1';
+      const key = `statsHidden_${card.id}`;
+      const hiddenSaved = prefs[key] === '1';
       setCardVisibility(card, hiddenSaved);
     });
+    actualizarMenuTarjetasOcultas();
   }
   
   function actualizarStats(prefijo, data, cardId) {
@@ -927,6 +938,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     safeSet(`${prefijo}Cantidad`, cantidadMes);
     safeSet(`${prefijo}Anterior`, `Año anterior: ${formatearImporte(data.anterior.total)}`);
     actualizarPorcentaje(`${prefijo}Porcentaje`, data.porcentaje_diferencia);
+    // Año anterior hasta la misma fecha
+    const anioHastaFechaTotal = data.anio_anterior_hasta_fecha?.total ?? 0;
+    const anioHastaFechaDia = data.anio_anterior_hasta_fecha?.dia ?? '';
+    safeSet(`${prefijo}AnioAnteriorHastaFecha`, `Año anterior (hasta fecha): ${formatearImporte(anioHastaFechaTotal)}`);
+    actualizarPorcentaje(`${prefijo}PorcentajeAnioHastaFecha`, data.porcentaje_diferencia_anio_hasta_fecha);
 
     // Siempre actualizamos la fila del mes para evitar valores residuales
     const totalMes = totalMesSeleccionado;
@@ -951,6 +967,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     safeSetAmount(`${prefijo}TotalMes`, formatearImporte(totalMes), totalMes);
     const mesAnteriorTotal = data.anterior?.mismo_mes?.total ?? 0;
     safeSet(`${prefijo}MesAnterior`, `Mismo mes año anterior: ${formatearImporte(mesAnteriorTotal)}`);
+    // Mismo mes año anterior hasta el día actual
+    const hastaDiaTotal = data.mismo_mes_hasta_dia?.total ?? 0;
+    const hastaDiaDia = data.mismo_mes_hasta_dia?.dia ?? '';
+    safeSet(`${prefijo}MesAnteriorHastaDia`, `Mismo mes año anterior (hasta día ${hastaDiaDia}): ${formatearImporte(hastaDiaTotal)}`);
+    actualizarPorcentaje(`${prefijo}PorcentajeMesHastaDia`, data.porcentaje_diferencia_mes_hasta_dia);
     
     // Total Trimestre
     const totalTrimestre = data.actual?.trimestre?.total ?? 0;
@@ -1010,6 +1031,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('globalCantidad').textContent = global.actual.cantidad;
     document.getElementById('globalAnterior').textContent = `Año anterior: ${formatearImporte(global.anterior.total)}`;
     actualizarPorcentaje('globalPorcentaje', global.porcentaje_diferencia);
+    // Año anterior hasta la misma fecha (global)
+    const globalAnioHastaFechaTotal = global.anio_anterior_hasta_fecha?.total ?? 0;
+    safeSet('globalAnioAnteriorHastaFecha', `Año anterior (hasta fecha): ${formatearImporte(globalAnioHastaFechaTotal)}`);
+    actualizarPorcentaje('globalPorcentajeAnioHastaFecha', global.porcentaje_diferencia_anio_hasta_fecha);
     
     // Total Trimestre Global
     const totalTrimestreGlobal = global.actual?.trimestre?.total ?? 0;
@@ -1068,6 +1093,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     safeSetAmount('globalTotalMes', formatearImporte(global.actual.mes_actual?.total || 0), global.actual.mes_actual?.total || 0);
     document.getElementById('globalMesAnterior').textContent = `Mismo mes año anterior: ${formatearImporte(global.anterior.mismo_mes?.total || 0)}`;
     actualizarPorcentaje('globalPorcentajeMes', global.porcentaje_diferencia_mes);
+    // Mismo mes año anterior hasta el día actual (global)
+    const globalHastaDiaTotal = global.mismo_mes_hasta_dia?.total ?? 0;
+    const globalHastaDiaDia = global.mismo_mes_hasta_dia?.dia ?? '';
+    safeSet('globalMesAnteriorHastaDia', `Mismo mes año anterior (hasta día ${globalHastaDiaDia}): ${formatearImporte(globalHastaDiaTotal)}`);
+    actualizarPorcentaje('globalPorcentajeMesHastaDia', global.porcentaje_diferencia_mes_hasta_dia);
     actualizarPorcentajeFaltaMediaMensual(
       'globalFaltaMediaMensual',
       'globalPorcentajeFalta',
@@ -1125,7 +1155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const prodId = p.id ?? p.producto_id ?? '';
       tr.dataset.id = prodId;
       tr.dataset.nombre = p.nombre;
-      tr.innerHTML = `<td title="${p.nombre}">${p.nombre.slice(0,12)}${p.nombre.length>12?'...':''}</td>
+      tr.innerHTML = `<td title="${p.nombre}">${p.nombre.slice(0,28)}${p.nombre.length>28?'...':''}</td>
         <td>${p.cantidad_actual}</td>
         <td>${formatearImporte(p.total_actual)}</td>
         <td class="${p.porcentaje_diferencia>=0?'positive':'negative'}">${formatearPorcentaje(p.porcentaje_diferencia)}</td>`;
@@ -1446,7 +1476,133 @@ document.addEventListener('DOMContentLoaded', async () => {
     await asegurarChartJs();
     const { anio, mes } = getFechaSeleccionada();
     const tipo = document.getElementById('tipo-datos').value;
+    const vista = document.getElementById('vista-ventas')?.value || 'mensual';
     const anioAnterior = anio - 1;
+
+    // === Vista por Días del Mes (líneas) ===
+    if (vista === 'dia_semana') {
+      const datosDia = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_dia_semana?anio=${anio}&mes=${mes}`));
+      const diaHasta = datosDia.dia_hasta;
+      const diasMesAnterior = datosDia.dias_mes_anterior;
+      const maxDias = Math.max(diaHasta, diasMesAnterior);
+      const diasLabels = Array.from({length: maxDias}, (_, i) => String(i + 1));
+      const mesesNombres = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      const mesNombre = mesesNombres[parseInt(mes, 10)] || '';
+
+      let serieActual, serieAnterior, labelActual, labelAnterior, colorActual, colorAnterior;
+      if (tipo === 'tickets') {
+        serieActual = datosDia.tickets.actual;
+        serieAnterior = datosDia.tickets.anterior;
+        labelActual = `Tickets ${mesNombre} ${anio}`;
+        labelAnterior = `Tickets ${mesNombre} ${anioAnterior}`;
+        colorActual = '#2ecc71'; colorAnterior = '#a9dfbf';
+      } else if (tipo === 'facturas') {
+        serieActual = datosDia.facturas.actual;
+        serieAnterior = datosDia.facturas.anterior;
+        labelActual = `Facturas ${mesNombre} ${anio}`;
+        labelAnterior = `Facturas ${mesNombre} ${anioAnterior}`;
+        colorActual = '#f1c40f'; colorAnterior = '#e5a100';
+      } else {
+        serieActual = datosDia.global.actual;
+        serieAnterior = datosDia.global.anterior;
+        labelActual = `Global ${mesNombre} ${anio}`;
+        labelAnterior = `Global ${mesNombre} ${anioAnterior}`;
+        colorActual = '#3498db'; colorAnterior = '#9b59b6';
+      }
+
+      // Totales diarios (no acumulados)
+      const diaActualVals = diasLabels.map((_, i) => {
+        const d = i + 1;
+        return d <= diaHasta ? (serieActual[String(d)]?.total ?? 0) : null;
+      });
+      const diaAnteriorVals = diasLabels.map((_, i) => {
+        const d = i + 1;
+        return d <= diasMesAnterior ? (serieAnterior[String(d)]?.total ?? 0) : null;
+      });
+
+      // Acumulados día a día
+      let acumActual = 0, acumAnterior = 0;
+      const valActual = diasLabels.map((_, i) => {
+        const d = i + 1;
+        if (d <= diaHasta) acumActual += serieActual[String(d)]?.total ?? 0;
+        return d <= diaHasta ? acumActual : null;
+      });
+      const valAnterior = diasLabels.map((_, i) => {
+        const d = i + 1;
+        if (d <= diasMesAnterior) acumAnterior += serieAnterior[String(d)]?.total ?? 0;
+        return d <= diasMesAnterior ? acumAnterior : null;
+      });
+
+      const datasets = [
+        {
+          label: `${labelAnterior} (día)`,
+          data: diaAnteriorVals,
+          borderColor: colorAnterior,
+          backgroundColor: colorAnterior + '33',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          tension: 0.3,
+          pointRadius: 1,
+          fill: false,
+          spanGaps: false,
+          yAxisID: 'y1'
+        },
+        {
+          label: `${labelActual} (día)`,
+          data: diaActualVals,
+          borderColor: colorActual,
+          backgroundColor: colorActual + '33',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          tension: 0.3,
+          pointRadius: 1,
+          fill: false,
+          spanGaps: false,
+          yAxisID: 'y1'
+        },
+        {
+          label: `${labelAnterior} (acum.)`,
+          data: valAnterior,
+          borderColor: colorAnterior,
+          backgroundColor: colorAnterior + '33',
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 1,
+          fill: false,
+          spanGaps: false
+        },
+        {
+          label: `${labelActual} (acum.)`,
+          data: valActual,
+          borderColor: colorActual,
+          backgroundColor: colorActual + '33',
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 2,
+          fill: false,
+          spanGaps: false
+        }
+      ];
+
+      if (chartEstadisticas) chartEstadisticas.destroy();
+      chartEstadisticas = new Chart(document.getElementById('chart-estadisticas').getContext('2d'), {
+        type: 'line',
+        data: { labels: diasLabels, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: { title: { display: true, text: 'Día del mes' } },
+            y: { beginAtZero: true, title: { display: true, text: 'Acumulado (€)' } },
+            y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Día (€)' } }
+          }
+        }
+      });
+      document.getElementById('modal-graficos').style.display = 'block';
+      chartCliente = null;
+      return;
+    }
+
     const [datosActual, datosAnterior] = await Promise.all([
       fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anio}`)),
       fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_mes?anio=${anioAnterior}`))
@@ -1459,63 +1615,107 @@ document.addEventListener('DOMContentLoaded', async () => {
       cantidadesActual = null;
     }
   
+    // Función para agrupar datos mensuales en trimestres
+    const agruparPorTrimestre = (datosMensuales) => {
+      const trimestres = [0, 0, 0, 0];
+      for (let i = 0; i < 12; i++) {
+        const mes = String(i + 1).padStart(2, '0');
+        const valor = parseFloat(datosMensuales[mes]) || 0;
+        trimestres[Math.floor(i / 3)] += valor;
+      }
+      return trimestres;
+    };
+
     const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const trimestresLabels = ['T1 (Ene-Mar)', 'T2 (Abr-Jun)', 'T3 (Jul-Sep)', 'T4 (Oct-Dic)'];
+    const labels = vista === 'trimestral' ? trimestresLabels : meses;
     const datasets = [];
     // Valores mensuales según el tipo seleccionado
     let valoresAnioActual = []; let ingresosData = null; let gastosData = null;
 
     if (tipo === 'global') {
-      valoresAnioActual = meses.map((_, i) => datosActual.global[String(i+1).padStart(2,'0')]);
-      datasets.push({ label: `Global ${anioAnterior}`, data: meses.map((_, i) => datosAnterior.global[String(i+1).padStart(2,'0')]), backgroundColor: '#9b59b6' });
+      if (vista === 'trimestral') {
+        valoresAnioActual = agruparPorTrimestre(datosActual.global);
+        datasets.push({ label: `Global ${anioAnterior}`, data: agruparPorTrimestre(datosAnterior.global), backgroundColor: '#9b59b6' });
+      } else {
+        valoresAnioActual = meses.map((_, i) => datosActual.global[String(i+1).padStart(2,'0')]);
+        datasets.push({ label: `Global ${anioAnterior}`, data: meses.map((_, i) => datosAnterior.global[String(i+1).padStart(2,'0')]), backgroundColor: '#9b59b6' });
+      }
       datasets.push({ label: `Global ${anio}`, data: valoresAnioActual, backgroundColor: '#3498db' });
     } else if (tipo === 'tickets') {
-      valoresAnioActual = meses.map((_, i) => datosActual.tickets[String(i+1).padStart(2,'0')]);
+      if (vista === 'trimestral') {
+        valoresAnioActual = agruparPorTrimestre(datosActual.tickets);
+      } else {
+        valoresAnioActual = meses.map((_, i) => datosActual.tickets[String(i+1).padStart(2,'0')]);
+      }
       datasets.push({ label: `Tickets ${anio}`, data: valoresAnioActual, backgroundColor: '#2ecc71' });
     } else if (tipo === 'ingresos_gastos') {
       const [datosIG, datosIGAnterior] = await Promise.all([
         fetchConManejadorErrores(buildApiUrl(`/api/ingresos_gastos_mes?anio=${anio}`)),
         fetchConManejadorErrores(buildApiUrl(`/api/ingresos_gastos_mes?anio=${anioAnterior}`))
       ]);
-      ingresosData = meses.map((_, i) => parsearImporte(datosIG.ingresos[String(i+1).padStart(2,'0')]));
-      gastosData = meses.map((_, i) => Math.abs(parsearImporte(datosIG.gastos[String(i+1).padStart(2,'0')] )));
-      const ingresosPrevData = meses.map((_, i) => parsearImporte(datosIGAnterior.ingresos[String(i+1).padStart(2,'0')]));
-      const gastosPrevData = meses.map((_, i) => Math.abs(parsearImporte(datosIGAnterior.gastos[String(i+1).padStart(2,'0')] )));
-      // Año anterior primero para que quede detrás en la superposición
-      datasets.push({ label: `Ingresos ${anioAnterior}`, data: ingresosPrevData, backgroundColor: '#a9dfbf' });
-      datasets.push({ label: `Gastos ${anioAnterior}`, data: gastosPrevData, backgroundColor: '#f5b7b1' });
+      const ingresosDataMes = meses.map((_, i) => parsearImporte(datosIG.ingresos[String(i+1).padStart(2,'0')]));
+      const gastosDataMes = meses.map((_, i) => Math.abs(parsearImporte(datosIG.gastos[String(i+1).padStart(2,'0')] )));
+      const ingresosPrevDataMes = meses.map((_, i) => parsearImporte(datosIGAnterior.ingresos[String(i+1).padStart(2,'0')]));
+      const gastosPrevDataMes = meses.map((_, i) => Math.abs(parsearImporte(datosIGAnterior.gastos[String(i+1).padStart(2,'0')] )));
+      
+      // Agrupar por trimestre si es necesario
+      const agruparArrayTrimestre = (arr) => {
+        const t = [0, 0, 0, 0];
+        for (let i = 0; i < 12; i++) t[Math.floor(i / 3)] += arr[i] || 0;
+        return t;
+      };
+      
+      if (vista === 'trimestral') {
+        ingresosData = agruparArrayTrimestre(ingresosDataMes);
+        gastosData = agruparArrayTrimestre(gastosDataMes);
+        datasets.push({ label: `Ingresos ${anioAnterior}`, data: agruparArrayTrimestre(ingresosPrevDataMes), backgroundColor: '#a9dfbf' });
+        datasets.push({ label: `Gastos ${anioAnterior}`, data: agruparArrayTrimestre(gastosPrevDataMes), backgroundColor: '#f5b7b1' });
+      } else {
+        ingresosData = ingresosDataMes;
+        gastosData = gastosDataMes;
+        datasets.push({ label: `Ingresos ${anioAnterior}`, data: ingresosPrevDataMes, backgroundColor: '#a9dfbf' });
+        datasets.push({ label: `Gastos ${anioAnterior}`, data: gastosPrevDataMes, backgroundColor: '#f5b7b1' });
+      }
       // Año actual
       datasets.push({ label: `Ingresos ${anio}`, data: ingresosData, backgroundColor: '#2ecc71' });
       datasets.push({ label: `Gastos ${anio}`, data: gastosData, backgroundColor: '#e74c3c' });
-      // Líneas de media para ingresos y gastos
-      const monthSelNum = parseInt(mes, 10);
-      let ingresosConsiderados = ingresosData.slice(0, monthSelNum - 1).filter(v => v !== 0);
-      const mediaIngresos = ingresosConsiderados.length ? ingresosConsiderados.reduce((a,b)=>a+b,0)/ingresosConsiderados.length : 0;
-      let gastosConsiderados = gastosData.slice(0, monthSelNum - 1).filter(v => v !== 0);
-      const mediaGastos = gastosConsiderados.length ? gastosConsiderados.reduce((a,b)=>a+b,0)/gastosConsiderados.length : 0;
-      datasets.push({
-        label: `Media ingresos (${formatearImporte(mediaIngresos)})`,
-        type: 'line',
-        data: Array(12).fill(mediaIngresos),
-        borderColor: '#27ae60',
-        backgroundColor: 'rgba(46,204,113,0.15)',
-        borderWidth: 2,
-        tension: 0.1,
-        pointRadius: 0,
-        fill: false
-      });
-      datasets.push({
-        label: `Media gastos (${formatearImporte(mediaGastos)})`,
-        type: 'line',
-        data: Array(12).fill(mediaGastos),
-        borderColor: '#c0392b',
-        backgroundColor: 'rgba(192,57,43,0.15)',
-        borderWidth: 2,
-        tension: 0.1,
-        pointRadius: 0,
-        fill: false
-      });
+      // Líneas de media (solo en vista mensual)
+      if (vista === 'mensual') {
+        const monthSelNum = parseInt(mes, 10);
+        let ingresosConsiderados = ingresosData.slice(0, monthSelNum - 1).filter(v => v !== 0);
+        const mediaIngresos = ingresosConsiderados.length ? ingresosConsiderados.reduce((a,b)=>a+b,0)/ingresosConsiderados.length : 0;
+        let gastosConsiderados = gastosData.slice(0, monthSelNum - 1).filter(v => v !== 0);
+        const mediaGastos = gastosConsiderados.length ? gastosConsiderados.reduce((a,b)=>a+b,0)/gastosConsiderados.length : 0;
+        datasets.push({
+          label: `Media ingresos (${formatearImporte(mediaIngresos)})`,
+          type: 'line',
+          data: Array(12).fill(mediaIngresos),
+          borderColor: '#27ae60',
+          backgroundColor: 'rgba(46,204,113,0.15)',
+          borderWidth: 2,
+          tension: 0.1,
+          pointRadius: 0,
+          fill: false
+        });
+        datasets.push({
+          label: `Media gastos (${formatearImporte(mediaGastos)})`,
+          type: 'line',
+          data: Array(12).fill(mediaGastos),
+          borderColor: '#c0392b',
+          backgroundColor: 'rgba(192,57,43,0.15)',
+          borderWidth: 2,
+          tension: 0.1,
+          pointRadius: 0,
+          fill: false
+        });
+      }
     } else {
-      valoresAnioActual = meses.map((_, i) => datosActual.facturas[String(i+1).padStart(2,'0')]);
+      if (vista === 'trimestral') {
+        valoresAnioActual = agruparPorTrimestre(datosActual.facturas);
+      } else {
+        valoresAnioActual = meses.map((_, i) => datosActual.facturas[String(i+1).padStart(2,'0')]);
+      }
       datasets.push({ label: `Facturas ${anio}`, data: valoresAnioActual, backgroundColor: '#f1c40f' });
     }
 
@@ -1631,7 +1831,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (chartEstadisticas) chartEstadisticas.destroy();
     chartEstadisticas = new Chart(document.getElementById('chart-estadisticas').getContext('2d'), {
       type: 'bar',
-      data: { labels: meses, datasets },
+      data: { labels: labels, datasets },
       options: {
         responsive: true,
         scales: {

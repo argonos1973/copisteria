@@ -14,6 +14,24 @@ logger = get_logger(__name__)
 
 batch_bp = Blueprint('batch', __name__, url_prefix='/api/batch')
 
+_MISSING = object()  # sentinel para distinguir params ausentes de null explícito
+
+
+def _sanitize_params(job_code: str, params):
+    code = (job_code or '').strip()
+    if params is None:
+        return None
+    if code == 'batchTotalDia':
+        if not isinstance(params, dict):
+            return {}
+        out = {}
+        if params.get('correo'):
+            out['correo'] = str(params.get('correo')).strip()
+        if params.get('db_path'):
+            out['db_path'] = str(params.get('db_path')).strip()
+        return out
+    return params
+
 
 def _get_conn():
     conn = sqlite3.connect(DB_USUARIOS_PATH, timeout=30)
@@ -58,6 +76,7 @@ def _ensure_batch_job_definitions(conn):
         ('batchPol', 'Batch POL (Proformas)', 'batchPol', 900),
         ('batchTotalDia', 'Total del día (Tickets + Facturas)', 'batchTotalDia', 300),
         ('batchScanFacturasRecibidas', 'Scanear Facturas Recibidas (OCR)', 'batchScanFacturasRecibidas', 1800),
+        ('batchFacturasRecurrentes', 'Facturas Recurrentes (Proveedores)', 'batchFacturasRecurrentes', 600),
         ('batchOptimizar', 'Optimizar BD (VACUUM/ANALYZE)', 'batchOptimizar', 1800),
         ('batchReindex', 'Reindexar BD (REINDEX)', 'batchOptimizar', 1800),
     ]
@@ -237,6 +256,12 @@ def run_job_now():
         if not job:
             return jsonify({'success': False, 'error': 'Job no encontrado'}), 404
 
+        params = _sanitize_params(job_code, params)
+        if job_code == 'batchTotalDia':
+            correo = (params or {}).get('correo') if isinstance(params, dict) else None
+            if not correo or not str(correo).strip():
+                return jsonify({'success': False, 'error': 'Parámetro "correo" requerido'}), 400
+
         params_snapshot = None
         if params is not None:
             params_snapshot = json.dumps(params, ensure_ascii=False)
@@ -317,7 +342,7 @@ def create_schedule():
     cron_expr = (payload.get('cron_expr') or '').strip()
     enabled = 1 if payload.get('enabled', True) else 0
     timezone = payload.get('timezone')
-    params = payload.get('params')
+    params = _sanitize_params(job_code, payload.get('params'))
     days_of_week = (payload.get('days_of_week') or '0,1,2,3,4,5,6').strip()
 
     if job_code in ('batchOptimizar', 'batchReindex'):
@@ -414,8 +439,23 @@ def update_schedule(schedule_id: int):
             values.append(payload.get('timezone'))
 
         if 'params' in payload:
+            job_code = None
+            try:
+                row = conn.execute(
+                    """
+                    SELECT d.code as job_code
+                    FROM batch_job_schedules s
+                    JOIN batch_job_definitions d ON d.id = s.job_definition_id
+                    WHERE s.id = ?
+                    """,
+                    (schedule_id,),
+                ).fetchone()
+                job_code = row['job_code'] if row else None
+            except Exception:
+                job_code = None
+            params_obj = _sanitize_params(job_code, payload.get('params'))
             fields.append('params_json = ?')
-            values.append(json.dumps(payload.get('params'), ensure_ascii=False) if payload.get('params') is not None else None)
+            values.append(json.dumps(params_obj, ensure_ascii=False) if params_obj is not None else None)
 
         if 'days_of_week' in payload:
             fields.append('days_of_week = ?')
@@ -462,10 +502,35 @@ def run_schedule_now(schedule_id: int):
         if not _ensure_admin_access_to_empresa(conn, empresa_id):
             return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
 
+        # Sanitizar params para evitar que se hereden params antiguos (ej: batchTotalDia)
         params_snapshot = s['params_json']
-        if 'params' in payload:
-            params_obj = payload.get('params')
+        job_code = None
+        try:
+            job_row = conn.execute(
+                """
+                SELECT d.code as job_code
+                FROM batch_job_definitions d
+                WHERE d.id = ?
+                """,
+                (s['job_definition_id'],),
+            ).fetchone()
+            job_code = job_row['job_code'] if job_row else None
+        except Exception:
+            job_code = None
+
+        incoming_params = payload.get('params') if 'params' in payload else _MISSING
+        # Solo sobreescribir params del schedule si el frontend manda params con contenido real
+        if incoming_params is not _MISSING and incoming_params:
+            params_obj = _sanitize_params(job_code, incoming_params)
             params_snapshot = json.dumps(params_obj, ensure_ascii=False) if params_obj is not None else None
+        else:
+            # Usar params_json del schedule (sanitizando por si tiene campos viejos)
+            if params_snapshot:
+                try:
+                    params_obj = _sanitize_params(job_code, json.loads(params_snapshot))
+                    params_snapshot = json.dumps(params_obj, ensure_ascii=False) if params_obj is not None else None
+                except Exception:
+                    pass
 
         cur = conn.execute(
             """

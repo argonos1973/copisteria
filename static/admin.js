@@ -30,6 +30,46 @@ function mostrarAlerta(mensaje, tipo = 'info') {
     }, 3000);
 }
 
+/**
+ * Valida un IBAN español o internacional
+ * @param {string} iban - El IBAN a validar (sin espacios)
+ * @returns {boolean} - true si es válido
+ */
+function validarIBAN(iban) {
+    if (!iban || typeof iban !== 'string') return false;
+    
+    // Limpiar: quitar espacios y convertir a mayúsculas
+    iban = iban.replace(/\s/g, '').toUpperCase();
+    
+    // Verificar longitud mínima y formato básico
+    if (iban.length < 15 || iban.length > 34) return false;
+    if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]+$/.test(iban)) return false;
+    
+    // Para IBAN español, verificar longitud exacta de 24
+    if (iban.startsWith('ES') && iban.length !== 24) return false;
+    
+    // Mover los 4 primeros caracteres al final
+    const reordenado = iban.slice(4) + iban.slice(0, 4);
+    
+    // Convertir letras a números (A=10, B=11, ..., Z=35)
+    let numerico = '';
+    for (const char of reordenado) {
+        if (char >= 'A' && char <= 'Z') {
+            numerico += (char.charCodeAt(0) - 55).toString();
+        } else {
+            numerico += char;
+        }
+    }
+    
+    // Calcular módulo 97 (para números grandes, hacerlo por partes)
+    let resto = 0;
+    for (let i = 0; i < numerico.length; i++) {
+        resto = (resto * 10 + parseInt(numerico[i])) % 97;
+    }
+    
+    return resto === 1;
+}
+
 // Función para eliminar plantilla con confirmación
 async function eliminarPlantilla(nombrePlantilla) {
     const plantilla = window.plantillasColores[nombrePlantilla];
@@ -3362,6 +3402,11 @@ async function cargarConfiguracionEmpresa() {
                                     <label class="empresa-form-label">Email:</label>
                                     <input type="email" id="empresa-email" value="${empresa.email || ''}" class="empresa-form-input">
                                 </div>
+                                <div class="empresa-form-group full-width">
+                                    <label class="empresa-form-label">Cuenta Transferencias (IBAN):</label>
+                                    <input type="text" id="empresa-cuenta-transferencias" value="${empresa.cuenta_transferencias || ''}" class="empresa-form-input" placeholder="ES00 0000 0000 0000 0000 0000">
+                                    <small class="empresa-form-help">Se mostrará en facturas con forma de pago "Transferencia"</small>
+                                </div>
                                 <div class="empresa-form-group">
                                     <label class="empresa-form-label">VeriFactu:</label>
                                     <div style="display:flex; align-items:center; gap:8px; height: 32px;">
@@ -3698,6 +3743,19 @@ async function guardarDatosEmpresa(empresaId) {
             return;
         }
 
+        // Validar IBAN si se ha introducido
+        const ibanInput = document.getElementById('empresa-cuenta-transferencias');
+        const ibanValue = ibanInput ? (ibanInput.value || '').trim().replace(/\s/g, '').toUpperCase() : '';
+        if (ibanValue && !validarIBAN(ibanValue)) {
+            mostrarAlerta('❌ El IBAN introducido no es válido', 'error');
+            if (ibanInput) ibanInput.focus();
+            return;
+        }
+        // Normalizar IBAN (sin espacios, mayúsculas)
+        if (ibanInput && ibanValue) {
+            ibanInput.value = ibanValue;
+        }
+
         // Usar FormData para enviar archivos
         const formData = new FormData();
         formData.append('nombre', document.getElementById('empresa-nombre').value);
@@ -3709,6 +3767,7 @@ async function guardarDatosEmpresa(empresaId) {
         formData.append('provincia', document.getElementById('empresa-provincia').value);
         formData.append('telefono', document.getElementById('empresa-telefono').value);
         formData.append('email', document.getElementById('empresa-email').value);
+        formData.append('cuenta_transferencias', document.getElementById('empresa-cuenta-transferencias')?.value || '');
 
         const verifactuCb = document.getElementById('empresa-verifactu-enabled');
         if (verifactuCb) {

@@ -774,14 +774,25 @@ def buscar_proveedor_similar(empresa_id, nombre, nif, telefono=None, direccion=N
         match_encontrado = False
         motivo = ""
 
-        # 1. COINCIDENCIA POR TELÉFONO (Muy fuerte)
-        # Si tienen el mismo teléfono (y es válido > 8 dígitos), son el mismo casi seguro
+        # 1. COINCIDENCIA POR TELÉFONO (requiere también algo de similitud en nombre)
+        # El teléfono solo no es suficiente porque puede venir de datos incorrectos del OCR
         if tel_norm and p_tel and len(tel_norm) > 8 and len(p_tel) > 8:
             if tel_norm == p_tel or tel_norm in p_tel or p_tel in tel_norm:
-                match_encontrado = True
-                motivo = f"Teléfono coincidente ({p['telefono']})"
-                # Prioridad máxima
-                return (dict(p), motivo)
+                # Calcular similitud de nombre antes de aceptar match por teléfono
+                if nombre_norm and p_nombre:
+                    score_nombre_tel = SequenceMatcher(None, nombre_norm, p_nombre).ratio()
+                    # Solo aceptar si hay ALGO de similitud en nombre (>30%) o nombre muy corto
+                    if score_nombre_tel >= 0.30 or len(nombre_norm) < 4:
+                        match_encontrado = True
+                        motivo = f"Teléfono coincidente ({p['telefono']}) + nombre similar ({score_nombre_tel:.0%})"
+                        return (dict(p), motivo)
+                    else:
+                        logger.debug(f"⚠️ Teléfono coincide pero nombres muy diferentes: '{nombre_norm}' vs '{p_nombre}' ({score_nombre_tel:.0%})")
+                else:
+                    # Si no hay nombre para comparar, aceptar solo por teléfono
+                    match_encontrado = True
+                    motivo = f"Teléfono coincidente ({p['telefono']})"
+                    return (dict(p), motivo)
 
         # 2. COINCIDENCIA POR DIRECCIÓN (Fuerte)
         # IMPORTANTE: la dirección puede venir mal del OCR (p.ej. la del CLIENTE),
@@ -1461,6 +1472,23 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
             fecha_obj = datetime.now()
             fecha_emision = fecha_obj.strftime('%Y-%m-%d')
 
+        # Si la fecha de emisión no es del mes en curso, ajustar al primer día del mes actual
+        # Solo para subidas manuales y escaneos (no para batch recurrentes)
+        ahora = datetime.now()
+        if usuario != 'sistema_recurrente' and (fecha_obj.year != ahora.year or fecha_obj.month != ahora.month):
+            fecha_emision_original = fecha_emision
+            fecha_emision = ahora.strftime('%Y-%m-') + fecha_obj.strftime('%d')
+            # Validar que el día existe en el mes actual
+            try:
+                fecha_obj = datetime.strptime(fecha_emision, '%Y-%m-%d')
+            except ValueError:
+                # Si el día no existe (ej: 31 en un mes de 30), usar último día del mes
+                import calendar
+                ultimo_dia = calendar.monthrange(ahora.year, ahora.month)[1]
+                fecha_emision = ahora.strftime(f'%Y-%m-{ultimo_dia:02d}')
+                fecha_obj = datetime.strptime(fecha_emision, '%Y-%m-%d')
+            logger.info(f"Fecha emisión ajustada al mes en curso: {fecha_emision_original} → {fecha_emision}")
+
         mes = fecha_obj.month
         año = fecha_obj.year
         trimestre = f"Q{(mes - 1) // 3 + 1}"
@@ -1486,7 +1514,7 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
         
         estado = (datos_factura.get('estado') or 'pagada')
         if estado == 'pagada':
-            fecha_pago = datos_factura.get('fecha_pago') or (fecha_emision if fecha_emision else datetime.now().strftime('%Y-%m-%d'))
+            fecha_pago = datos_factura.get('fecha_pago') or fecha_emision or datetime.now().strftime('%Y-%m-%d')
             metodo_pago = datos_factura.get('metodo_pago') or 'transferencia'
         else:
             fecha_pago = None

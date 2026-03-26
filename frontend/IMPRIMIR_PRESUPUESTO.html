@@ -5,155 +5,168 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Presupuesto</title>
     <script src="/static/auto_branding.js?v=1764787007"></script>
-    <link rel="stylesheet" href="file:///var/www/html/static/css/imprimir_documento.css">
-    <style>/*
+    <style>
         @page {
             size: A4;
-            margin: 2cm;
+            margin: 0;
         }
-        
+        @media print {
+            body {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+                margin: 0;
+                padding: 15mm;
+            }
+        }
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             margin: 20px;
             padding: 0;
             background-color: #fff;
             font-size: 12px;
-            line-height: 1.4;
+            line-height: 1.5;
             color: #333;
         }
-        
         .header {
-            border-bottom: 3px solid #007bff;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
             position: relative;
         }
-        
         #logo {
             position: absolute;
             top: 0;
             right: 0;
-            max-width: 150px;
-            max-height: 80px;
+            max-width: 120px;
+            max-height: 70px;
         }
-        
-        .company-info {
-            margin-bottom: 20px;
-        }
-        
+        .company-info { padding-right: 140px; }
         .company-name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+        .company-info div { font-size: 11px; color: #555; line-height: 1.4; }
+        .document-title {
             font-size: 24px;
             font-weight: bold;
-            color: #007bff;
-            margin-bottom: 5px;
-        }
-        
-        .document-title {
-            font-size: 28px;
-            font-weight: bold;
-            color: #007bff;
+            color: #2c3e50;
             text-align: center;
-            margin: 20px 0;
+            margin: 15px 0;
+            letter-spacing: 2px;
         }
-        
         .document-info {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
+            gap: 20px;
         }
-        
-        .client-info, .document-details {
-            width: 48%;
-        }
-        
+        .document-info > * { width: 48%; }
         .info-box {
             border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
-            background-color: #f9f9f9;
+            padding: 12px 15px;
+            border-radius: 4px;
+            background-color: #fafafa;
         }
-        
         .info-title {
             font-weight: bold;
-            font-size: 14px;
-            color: #007bff;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #007bff;
-            padding-bottom: 5px;
+            font-size: 12px;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            border-bottom: 2px solid #2c3e50;
+            padding-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        
+        .info-box div { font-size: 11px; margin: 3px 0; }
         .details-table {
             width: 100%;
             border-collapse: collapse;
             margin: 20px 0;
         }
-        
         .details-table th {
-            background-color: #f8f8f8;
-            color: #000;
-            padding: 8px;
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 10px 8px;
             text-align: left;
-            font-weight: bold;
-            border-bottom: 1px solid #ddd;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
-        
         .details-table td {
             padding: 10px 8px;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 11px;
         }
-        
-        .details-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        
+        .details-table tbody tr:nth-child(even) { background-color: #f8f9fa; }
+        .details-table tbody tr:hover { background-color: #eef2f7; }
+        .detalle-concepto { font-weight: 600; color: #2c3e50; }
+        .detalle-descripcion { font-size: 10px; color: #777; margin-top: 2px; }
         .totals-section {
-            margin-top: 30px;
+            margin-top: 25px;
             text-align: right;
         }
-        
         .totals-table {
             margin-left: auto;
             border-collapse: collapse;
-            width: 300px;
+            width: 280px;
         }
-        
         .totals-table td {
-            padding: 8px 15px;
-            border: 1px solid #ddd;
+            padding: 8px 12px;
+            font-size: 12px;
         }
-        
         .totals-table .label {
-            background-color: #f5f5f5;
-            font-weight: bold;
             text-align: right;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 1px solid #e9ecef;
         }
-        
-        .totals-table .total-final {
-            background-color: #007bff;
-            color: white;
+        .totals-table .value {
+            text-align: right;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .totals-table .total-final td {
+            background-color: #2c3e50;
+            color: #fff;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px;
+            border: none;
+            padding: 10px 12px;
         }
-        
-        .footer {
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-            text-align: center;
-            font-size: 10px;
-            color: #666;
-        }
-        
         .status {
             display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
+            padding: 3px 12px;
+            border-radius: 12px;
             font-weight: bold;
-            font-size: 12px;
-            background-color: #28a745;
+            font-size: 10px;
+            background-color: #27ae60;
             color: white;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-    */
+        .footer {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 2px solid #e9ecef;
+            font-size: 10px;
+            color: #777;
+        }
+        .footer p { margin: 3px 0; }
+        .footer .footer-title {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 11px;
+            margin-bottom: 5px;
+        }
+        .footer .thanks {
+            margin-top: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #2c3e50;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -162,10 +175,8 @@
         <div class="company-info">
             <div class="company-name">{{EMISOR_NOMBRE}}</div>
             <div>{{EMISOR_DIRECCION}}</div>
-            <div>{{EMISOR_CP}} {{EMISOR_CIUDAD}}</div>
-            <div>{{EMISOR_PROVINCIA}}</div>
-            <div>Email: {{EMISOR_EMAIL}}</div>
-            <div>NIF: {{EMISOR_NIF}}</div>
+            <div>{{EMISOR_CP}} {{EMISOR_CIUDAD}} — {{EMISOR_PROVINCIA}}</div>
+            <div>NIF: {{EMISOR_NIF}} | Email: {{EMISOR_EMAIL}}</div>
         </div>
     </div>
     
@@ -176,7 +187,7 @@
         
         <div class="document-details">
             <div class="info-box">
-                <div class="info-title">DATOS DEL PRESUPUESTO</div>
+                <div class="info-title">Datos del Presupuesto</div>
                 <div><strong>Número:</strong> {{NUMERO_PRESUPUESTO}}</div>
                 <div><strong>Fecha:</strong> {{FECHA_PRESUPUESTO}}</div>
                 <div><strong>Estado:</strong> <span class="status">{{ESTADO_TEXTO}}</span></div>
@@ -189,9 +200,7 @@
         <thead>
             <tr>
                 <th>Concepto</th>
-                <th>Descripción</th>
                 <th style="text-align: center;">Cant.</th>
-                <th style="text-align: right;">Precio Unit.</th>
                 <th style="text-align: right;">Importe</th>
             </tr>
         </thead>
@@ -204,25 +213,25 @@
         <table class="totals-table">
             <tr>
                 <td class="label">Subtotal:</td>
-                <td style="text-align: right;">{{SUBTOTAL}}€</td>
+                <td class="value">{{SUBTOTAL}} €</td>
             </tr>
             <tr>
                 <td class="label">IVA:</td>
-                <td style="text-align: right;">{{TOTAL_IVA}}€</td>
+                <td class="value">{{TOTAL_IVA}} €</td>
             </tr>
             <tr class="total-final">
-                <td class="label">TOTAL:</td>
-                <td style="text-align: right;">{{TOTAL_FINAL}}€</td>
+                <td>TOTAL:</td>
+                <td style="text-align: right;">{{TOTAL_FINAL}} €</td>
             </tr>
         </table>
     </div>
     
     <div class="footer">
-        <p><strong>Condiciones:</strong></p>
+        <p class="footer-title">Condiciones:</p>
         <p>• Este presupuesto tiene una validez de 30 días desde la fecha de emisión.</p>
         <p>• Los precios incluyen IVA cuando se especifica.</p>
         <p>• Para cualquier consulta, no dude en contactarnos.</p>
-        <p><strong>Gracias por confiar en nosotros.</strong></p>
+        <p class="thanks">Gracias por confiar en nosotros.</p>
     </div>
 </body>
 </html>

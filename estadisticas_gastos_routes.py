@@ -382,7 +382,7 @@ def obtener_estadisticas_gastos():
             gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
             _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
     
-            # Gastos totales del año actual HASTA el mes seleccionado (inclusive)
+            # Gastos totales del año actual (año completo)
             # AHORA USA facturas_proveedores en lugar de gastos
             cursor.execute('''
                 SELECT
@@ -390,17 +390,55 @@ def obtener_estadisticas_gastos():
                     COUNT(*) as cantidad_gastos_anio
                 FROM facturas_proveedores
                 WHERE año = ?
-                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) <= ?
-            ''', (anio, mes))
+            ''', (anio,))
     
             datos_anio = cursor.fetchone()
             total_gastos_anio = float(datos_anio['total_gastos_anio'] or 0)
             cantidad_gastos_anio = int(datos_anio['cantidad_gastos_anio'] or 0)
 
+            # Gastos del MES seleccionado (por fecha_emision)
+            cursor.execute('''
+                SELECT
+                    COALESCE(SUM(total), 0) as total,
+                    COUNT(*) as cantidad
+                FROM facturas_proveedores
+                WHERE año = ?
+                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) = ?
+            ''', (anio, mes))
+            datos_mes_solo = cursor.fetchone()
+            total_gastos_mes_solo = float(datos_mes_solo['total'] or 0)
+            cantidad_gastos_mes_solo = int(datos_mes_solo['cantidad'] or 0)
+
+            # Gastos del mismo mes del año anterior (por fecha_emision)
+            anio_anterior = anio - 1
+            cursor.execute('''
+                SELECT COALESCE(SUM(total), 0) as total
+                FROM facturas_proveedores
+                WHERE año = ?
+                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) = ?
+            ''', (anio_anterior, mes))
+            total_gastos_mes_solo_anterior = float(cursor.fetchone()['total'] or 0)
+
+            # Gastos del mes anterior (mes-1) para comparación mes a mes
+            mes_prev = mes - 1
+            anio_prev = anio
+            if mes_prev < 1:
+                mes_prev = 12
+                anio_prev = anio - 1
+            cursor.execute('''
+                SELECT COALESCE(SUM(total), 0) as total
+                FROM facturas_proveedores
+                WHERE año = ?
+                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) = ?
+            ''', (anio_prev, mes_prev))
+            total_gastos_mes_previo = float(cursor.fetchone()['total'] or 0)
+            pct_mes_previo = ((total_gastos_mes_solo - total_gastos_mes_previo) / total_gastos_mes_previo * 100) if total_gastos_mes_previo > 0 else 0
+
             # Gastos del TRIMESTRE actual (según el mes seleccionado)
+            # Limitar al mes actual para no incluir meses futuros
             trimestre = ((mes - 1) // 3) + 1
             mes_inicio_trimestre = (trimestre - 1) * 3 + 1
-            mes_fin_trimestre = mes_inicio_trimestre + 2
+            mes_fin_trimestre = min(mes_inicio_trimestre + 2, mes)  # No pasar del mes actual
             cursor.execute('''
                 SELECT
                     COALESCE(SUM(total), 0) as total_gastos_mes,
@@ -415,7 +453,6 @@ def obtener_estadisticas_gastos():
             cantidad_gastos_mes = int(datos_mes['cantidad_gastos_mes'] or 0)
     
             # Gastos del año anterior HASTA el mismo mes (para comparación justa)
-            anio_anterior = anio - 1
             cursor.execute('''
                 SELECT COALESCE(SUM(total), 0) as total_gastos_anio_anterior
                 FROM facturas_proveedores
@@ -445,6 +482,7 @@ def obtener_estadisticas_gastos():
             # Calcular porcentajes
             pct_anio = ((total_gastos_anio - total_gastos_anio_anterior) / total_gastos_anio_anterior * 100) if total_gastos_anio_anterior > 0 else 0
             pct_mes = ((total_gastos_mes - total_gastos_mes_anterior) / total_gastos_mes_anterior * 100) if total_gastos_mes_anterior > 0 else 0
+            pct_mes_solo = ((total_gastos_mes_solo - total_gastos_mes_solo_anterior) / total_gastos_mes_solo_anterior * 100) if total_gastos_mes_solo_anterior > 0 else 0
         
         return jsonify({
             'anio': anio,
@@ -453,6 +491,12 @@ def obtener_estadisticas_gastos():
             'cantidad_gastos_anio': cantidad_gastos_anio,
             'total_gastos_mes': total_gastos_mes,
             'cantidad_gastos_mes': cantidad_gastos_mes,
+            'total_gastos_mes_solo': total_gastos_mes_solo,
+            'cantidad_gastos_mes_solo': cantidad_gastos_mes_solo,
+            'total_gastos_mes_solo_anterior': total_gastos_mes_solo_anterior,
+            'total_gastos_mes_previo': total_gastos_mes_previo,
+            'porcentaje_mes_solo': round(pct_mes_solo, 2),
+            'porcentaje_mes_previo': round(pct_mes_previo, 2),
             'total_gastos_anio_anterior': total_gastos_anio_anterior,
             'total_gastos_mes_anterior': total_gastos_mes_anterior,
             'media_mensual': media_mensual,
@@ -655,24 +699,44 @@ def obtener_detalles_gasto():
                 'maximo': round(maximo, 2)
             }
             
-            # Agrupar para la vista de "gastos_agrupados" que espera el frontend
-            # El usuario ha pedido VER EL DETALLE COMPLETO (sin agrupar por concepto original)
-            # Así que devolvemos cada transacción individualmente
+            # Agrupar por TRIMESTRE para mejor visualización
+            trimestres = {}
+            for g in gastos_filtrados:
+                fecha = g['fecha']
+                if fecha:
+                    mes = int(fecha[5:7])
+                    trimestre = f"Q{(mes - 1) // 3 + 1}"
+                else:
+                    trimestre = "Q?"
+                
+                if trimestre not in trimestres:
+                    trimestres[trimestre] = {
+                        'conceptos': [],
+                        'importes': [],
+                        'fechas': []
+                    }
+                
+                trimestres[trimestre]['conceptos'].append(g['concepto_real'])
+                trimestres[trimestre]['importes'].append(g['importe'])
+                trimestres[trimestre]['fechas'].append(fecha)
             
             gastos_view = []
-            for g in gastos_filtrados:
-                gastos_view.append({
-                    'concepto': g['concepto_real'], # Concepto original del banco/factura
-                    'cantidad': 1,
-                    'total': g['importe'],
-                    'promedio': g['importe'],
-                    'primera_fecha': g['fecha'],
-                    'ultima_fecha': g['fecha'], # Al ser individual, inicio y fin es la misma fecha
-                    'conceptos_originales': [g['concepto_real']]
-                })
+            for trimestre in sorted(trimestres.keys()):
+                data = trimestres[trimestre]
+                total_trim = sum(data['importes'])
+                cantidad_trim = len(data['importes'])
+                promedio_trim = total_trim / cantidad_trim if cantidad_trim > 0 else 0
+                fechas_ordenadas = sorted([f for f in data['fechas'] if f])
                 
-            # Ordenar por fecha descendente (lo más reciente primero) para ver el detalle cronológico
-            gastos_view.sort(key=lambda x: x['primera_fecha'], reverse=True)
+                gastos_view.append({
+                    'concepto': trimestre,
+                    'cantidad': cantidad_trim,
+                    'total': round(total_trim, 2),
+                    'promedio': round(promedio_trim, 2),
+                    'primera_fecha': fechas_ordenadas[0] if fechas_ordenadas else '',
+                    'ultima_fecha': fechas_ordenadas[-1] if fechas_ordenadas else '',
+                    'conceptos_originales': data['conceptos'][:5]  # Max 5 ejemplos
+                })
 
         return jsonify({
             'concepto': concepto_buscado,
@@ -742,11 +806,11 @@ def obtener_evolucion_trimestral():
         logger.error(f"Error en evolución trimestral: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@estadisticas_gastos_bp.route('/api/gastos/por-categoria-mes', methods=['GET'])
-def obtener_gastos_por_categoria_mes():
+@estadisticas_gastos_bp.route('/api/gastos/por-categoria-mes-solo', methods=['GET'])
+def obtener_gastos_por_categoria_mes_solo():
     """
-    Devuelve gastos del mes actual agrupados por CONCEPTO NORMALIZADO para gráfico de pastel
-    EXCLUYENDO gastos puntuales (>1000€ no recurrentes)
+    Devuelve gastos del mes seleccionado agrupados por PROVEEDOR para gráfico de pastel
+    Basado en facturas_proveedores (facturas recibidas)
     """
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
@@ -754,74 +818,104 @@ def obtener_gastos_por_categoria_mes():
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            conn.row_factory = sqlite3.Row
+
+            # Obtener gastos del mes desde facturas_proveedores agrupados por proveedor
+            # Criterio: fecha_emision
+            cursor.execute('''
+                SELECT 
+                    COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as categoria,
+                    COALESCE(SUM(fp.total), 0) as total
+                FROM facturas_proveedores fp
+                LEFT JOIN proveedores p ON fp.proveedor_id = p.id
+                WHERE fp.año = ?
+                AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) = ?
+                GROUP BY categoria
+                HAVING total > 0
+                ORDER BY total DESC
+            ''', (anio, mes))
             
-            # Identificar y marcar gastos puntuales
-            _inicializar_campo_puntual(conn)
-            gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
-            _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
+            lista_categorias = [{'categoria': row['categoria'], 'total': float(row['total'])} for row in cursor.fetchall()]
             
-            # Verificar columna razon_social
-            cursor.execute("PRAGMA table_info(gastos)")
-            cols = [c['name'] for c in cursor.fetchall()]
-            col_razon = "razon_social" if "razon_social" in cols else "NULL as razon_social"
+            # "Otros" solo para facturas sin proveedor identificado
+            nombres_genericos = {'Sin proveedor', 'GASTOS VARIOS', 'SIN NOMBRE', 'NO IDENTIFICADO', ''}
+            
+            final_categorias = []
+            total_otros = 0.0
+            
+            for c in lista_categorias:
+                if c['categoria'] in nombres_genericos or not c['categoria'] or len(c['categoria'].strip()) < 2:
+                    total_otros += c['total']
+                else:
+                    final_categorias.append(c)
+            
+            if total_otros > 0:
+                final_categorias.append({'categoria': 'Otros', 'total': round(total_otros, 2)})
+            
+            resultado = []
+            for c in final_categorias:
+                resultado.append({
+                    'categoria': c['categoria'],
+                    'total': round(c['total'], 2)
+                })
+        
+        return jsonify({
+            'anio': anio,
+            'mes': mes,
+            'categorias': resultado
+        })
+        
+    except Exception as e:
+        logger.error(f"Error al obtener gastos por categoría del mes: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@estadisticas_gastos_bp.route('/api/gastos/por-categoria-mes', methods=['GET'])
+def obtener_gastos_por_categoria_mes():
+    """
+    Devuelve gastos del trimestre actual agrupados por PROVEEDOR para gráfico de pastel
+    Basado en facturas_proveedores (facturas recibidas)
+    """
+    try:
+        anio = request.args.get('anio', datetime.now().year, type=int)
+        mes = request.args.get('mes', datetime.now().month, type=int)
+        
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
 
             trimestre = ((mes - 1) // 3) + 1
             mes_inicio_trimestre = (trimestre - 1) * 3 + 1
-            mes_fin_trimestre = mes_inicio_trimestre + 2
+            mes_fin_trimestre = min(mes_inicio_trimestre + 2, mes)
 
-            # Obtener TODOS los gastos del mes
-            cursor.execute(f'''
+            # Obtener gastos del trimestre desde facturas_proveedores agrupados por proveedor
+            cursor.execute('''
                 SELECT 
-                    concepto, ABS(importe_eur) as importe, puntual, {col_razon}
-                FROM gastos
-                WHERE substr(fecha_valor, 7, 4) = ?
-                AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) BETWEEN ? AND ?
-                AND importe_eur < 0
-            ''', (str(anio), mes_inicio_trimestre, mes_fin_trimestre))
+                    COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as categoria,
+                    COALESCE(SUM(fp.total), 0) as total
+                FROM facturas_proveedores fp
+                LEFT JOIN proveedores p ON fp.proveedor_id = p.id
+                WHERE fp.año = ?
+                AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) BETWEEN ? AND ?
+                GROUP BY categoria
+                HAVING total > 0
+                ORDER BY total DESC
+            ''', (anio, mes_inicio_trimestre, mes_fin_trimestre))
             
-            agrupados = {}
-            total_general = 0.0
+            lista_categorias = [{'categoria': row['categoria'], 'total': float(row['total'])} for row in cursor.fetchall()]
             
-            for row in cursor.fetchall():
-                importe = float(row['importe'] or 0)
-                es_puntual = int(row['puntual'] or 0) == 1
-                
-                # Excluir puntuales automáticos del gráfico mensual (según lógica anterior)
-                # if es_puntual:
-                #    continue
-
-                razon_social = row['razon_social']
-                concepto_raw = row['concepto']
-
-                if razon_social and razon_social.strip():
-                    concepto_norm = razon_social.strip()
+            # "Otros" solo para facturas sin proveedor identificado
+            # Proveedores reales siempre tienen su propia categoría
+            nombres_genericos = {'Sin proveedor', 'GASTOS VARIOS', 'SIN NOMBRE', 'NO IDENTIFICADO', ''}
+            
+            final_categorias = []
+            total_otros = 0.0
+            
+            for c in lista_categorias:
+                if c['categoria'] in nombres_genericos or not c['categoria'] or len(c['categoria'].strip()) < 2:
+                    total_otros += c['total']
                 else:
-                    concepto_norm = _normalizar_concepto(concepto_raw)
-                
-                if concepto_norm not in agrupados:
-                    agrupados[concepto_norm] = 0.0
-                
-                agrupados[concepto_norm] += importe
-                total_general += importe
+                    final_categorias.append(c)
             
-            # Convertir a lista
-            lista_categorias = [{'categoria': k, 'total': v} for k, v in agrupados.items()]
-            
-            # Ordenar por total descendente
-            lista_categorias.sort(key=lambda x: x['total'], reverse=True)
-            
-            # Agrupar en "Otros" si hay muchos (Top 9 + Otros)
-            if len(lista_categorias) > 9:
-                top_9 = lista_categorias[:9]
-                otros = lista_categorias[9:]
-                total_otros = sum(c['total'] for c in otros)
-                
-                final_categorias = top_9
-                if total_otros > 0:
-                    final_categorias.append({'categoria': 'Otros', 'total': round(total_otros, 2)})
-            else:
-                final_categorias = lista_categorias
+            if total_otros > 0:
+                final_categorias.append({'categoria': 'Otros', 'total': round(total_otros, 2)})
             
             # Formatear salida
             resultado = []
@@ -829,8 +923,8 @@ def obtener_gastos_por_categoria_mes():
                 resultado.append({
                     'categoria': c['categoria'],
                     'total': round(c['total'], 2),
-                    'total_bruto': round(c['total'], 2), # Compatibilidad
-                    'total_puntuales': 0 # Ya excluidos
+                    'total_bruto': round(c['total'], 2),
+                    'total_puntuales': 0
                 })
         
         return jsonify({
@@ -846,65 +940,44 @@ def obtener_gastos_por_categoria_mes():
 @estadisticas_gastos_bp.route('/api/gastos/por-categoria-anio', methods=['GET'])
 def obtener_gastos_por_categoria_anio():
     """
-    Devuelve gastos del año completo agrupados por CONCEPTO NORMALIZADO para gráfico de pastel
+    Devuelve gastos del año completo agrupados por PROVEEDOR para gráfico de pastel
+    Basado en facturas_proveedores (facturas recibidas)
     """
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            conn.row_factory = sqlite3.Row
-            
-            # Verificar columna razon_social
-            _inicializar_campo_puntual(conn) # Asegurar columnas
-            
-            cursor.execute("PRAGMA table_info(gastos)")
-            cols = [c['name'] for c in cursor.fetchall()]
-            col_razon = "razon_social" if "razon_social" in cols else "NULL as razon_social"
 
-            # Obtener gastos del año completo
-            cursor.execute(f'''
+            # Obtener gastos del año desde facturas_proveedores agrupados por proveedor
+            cursor.execute('''
                 SELECT 
-                    concepto, ABS(importe_eur) as importe, {col_razon}
-                FROM gastos
-                WHERE substr(fecha_valor, 7, 4) = ?
-                AND importe_eur < 0
-            ''', (str(anio),))
+                    COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as categoria,
+                    COALESCE(SUM(fp.total), 0) as total
+                FROM facturas_proveedores fp
+                LEFT JOIN proveedores p ON fp.proveedor_id = p.id
+                WHERE fp.año = ?
+                GROUP BY categoria
+                HAVING total > 0
+                ORDER BY total DESC
+            ''', (anio,))
             
-            agrupados = {}
+            lista_categorias = [{'categoria': row['categoria'], 'total': float(row['total'])} for row in cursor.fetchall()]
             
-            for row in cursor.fetchall():
-                importe = float(row['importe'] or 0)
-                razon_social = row['razon_social']
-                concepto_raw = row['concepto']
-
-                if razon_social and razon_social.strip():
-                    concepto_norm = razon_social.strip()
+            # "Otros" solo para facturas sin proveedor identificado
+            nombres_genericos = {'Sin proveedor', 'GASTOS VARIOS', 'SIN NOMBRE', 'NO IDENTIFICADO', ''}
+            
+            final_categorias = []
+            total_otros = 0.0
+            
+            for c in lista_categorias:
+                if c['categoria'] in nombres_genericos or not c['categoria'] or len(c['categoria'].strip()) < 2:
+                    total_otros += c['total']
                 else:
-                    concepto_norm = _normalizar_concepto(concepto_raw)
-                
-                if concepto_norm not in agrupados:
-                    agrupados[concepto_norm] = 0.0
-                
-                agrupados[concepto_norm] += importe
+                    final_categorias.append(c)
             
-            # Convertir a lista
-            lista_categorias = [{'categoria': k, 'total': v} for k, v in agrupados.items()]
-            
-            # Ordenar por total descendente
-            lista_categorias.sort(key=lambda x: x['total'], reverse=True)
-            
-            # Agrupar en "Otros" (Top 9 + Otros)
-            if len(lista_categorias) > 9:
-                top_9 = lista_categorias[:9]
-                otros = lista_categorias[9:]
-                total_otros = sum(c['total'] for c in otros)
-                
-                final_categorias = top_9
-                if total_otros > 0:
-                    final_categorias.append({'categoria': 'Otros', 'total': round(total_otros, 2)})
-            else:
-                final_categorias = lista_categorias
+            if total_otros > 0:
+                final_categorias.append({'categoria': 'Otros', 'total': round(total_otros, 2)})
 
             # Formatear
             resultado = []
@@ -921,6 +994,103 @@ def obtener_gastos_por_categoria_anio():
         
     except Exception as e:
         logger.error(f"Error al obtener gastos por categoría del año: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@estadisticas_gastos_bp.route('/api/gastos/detalles-proveedor', methods=['GET'])
+def obtener_detalles_proveedor():
+    """
+    Devuelve las facturas de un proveedor específico para un año, con filtro opcional por mes o trimestre.
+    Basado en facturas_proveedores.
+    """
+    try:
+        proveedor = request.args.get('proveedor', type=str)
+        anio = request.args.get('anio', datetime.now().year, type=int)
+        mes = request.args.get('mes', type=int)
+        trimestre = request.args.get('trimestre', type=int)
+
+        if not proveedor:
+            return jsonify({'error': 'Proveedor requerido'}), 400
+
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Construir query base
+            query = '''
+                SELECT fp.id, fp.numero_factura, fp.fecha_emision, fp.concepto,
+                       fp.base_imponible, fp.iva_porcentaje, fp.total, fp.estado,
+                       COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as proveedor_nombre
+                FROM facturas_proveedores fp
+                LEFT JOIN proveedores p ON fp.proveedor_id = p.id
+                WHERE fp.año = ?
+            '''
+            params = [anio]
+
+            # Filtro por proveedor (puede ser "Otros")
+            # "Otros" = solo facturas sin proveedor identificado
+            nombres_genericos = {'Sin proveedor', 'GASTOS VARIOS', 'SIN NOMBRE', 'NO IDENTIFICADO', ''}
+            
+            if proveedor == 'Otros':
+                # Filtrar solo facturas sin proveedor real
+                query += ''' AND (
+                    p.nombre IS NULL 
+                    OR p.nombre IN ('Sin proveedor', 'GASTOS VARIOS', 'SIN NOMBRE', 'NO IDENTIFICADO', '')
+                    OR LENGTH(TRIM(COALESCE(p.nombre, ''))) < 2
+                )'''
+            else:
+                query += ' AND COALESCE(p.nombre, fp.concepto, \'Sin proveedor\') = ?'
+                params.append(proveedor)
+
+            # Filtro temporal
+            if mes:
+                query += ' AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) = ?'
+                params.append(mes)
+            elif trimestre and 1 <= trimestre <= 4:
+                mes_inicio = (trimestre - 1) * 3 + 1
+                mes_fin = min(mes_inicio + 2, 12)
+                query += ' AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) BETWEEN ? AND ?'
+                params.extend([mes_inicio, mes_fin])
+
+            query += ' ORDER BY fp.fecha_emision DESC'
+            cursor.execute(query, params)
+            rows = cursor.fetchall()
+
+            facturas = []
+            total = 0.0
+            for row in rows:
+                importe = float(row['total'] or 0)
+                total += importe
+                facturas.append({
+                    'numero_factura': row['numero_factura'] or '-',
+                    'fecha': row['fecha_emision'] or '-',
+                    'concepto': row['concepto'] or row['proveedor_nombre'],
+                    'base_imponible': round(float(row['base_imponible'] or 0), 2),
+                    'iva': float(row['iva_porcentaje'] or 0),
+                    'total': round(importe, 2),
+                    'estado': row['estado'] or 'pendiente'
+                })
+
+            cantidad = len(facturas)
+            promedio = total / cantidad if cantidad > 0 else 0
+            minimo = min((f['total'] for f in facturas), default=0)
+            maximo = max((f['total'] for f in facturas), default=0)
+
+        return jsonify({
+            'proveedor': proveedor,
+            'anio': anio,
+            'mes': mes,
+            'trimestre': trimestre,
+            'estadisticas': {
+                'total': round(total, 2),
+                'cantidad': cantidad,
+                'promedio': round(promedio, 2),
+                'minimo': round(minimo, 2),
+                'maximo': round(maximo, 2)
+            },
+            'facturas': facturas
+        })
+
+    except Exception as e:
+        logger.error(f"Error al obtener detalles de proveedor: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
 @estadisticas_gastos_bp.route('/api/gastos/detalles-categoria', methods=['GET'])
@@ -1194,24 +1364,24 @@ def generar_informe_situacion():
             # Total ventas del año hasta el mes actual (FACTURAS + TICKETS)
             mes_str = str(mes).zfill(2)
             
-            # Facturas del año (solo cobradas)
+            # Facturas del año (cobradas + pendientes + vencidas) - usar total para consistencia con dashboard
             cursor.execute('''
                 SELECT 
-                    COALESCE(SUM(importe_cobrado), 0) as total_ventas,
+                    COALESCE(SUM(total), 0) as total_ventas,
                     COUNT(*) as num_facturas
                 FROM factura
                 WHERE CAST(substr(fecha, 1, 4) AS INTEGER) = ?
                 AND CAST(substr(fecha, 6, 2) AS INTEGER) <= ?
-                AND estado = 'C'
+                AND estado IN ('C', 'P', 'V')
             ''', (anio, mes))
             facturas_anio = cursor.fetchone()
             total_facturas = float(facturas_anio['total_ventas'] or 0)
             num_facturas = int(facturas_anio['num_facturas'] or 0)
             
-            # Tickets del año (solo cobrados)
+            # Tickets del año (solo cobrados) - usar total para consistencia
             cursor.execute('''
                 SELECT 
-                    COALESCE(SUM(importe_cobrado), 0) as total_ventas,
+                    COALESCE(SUM(total), 0) as total_ventas,
                     COUNT(*) as num_tickets
                 FROM tickets
                 WHERE CAST(substr(fecha, 1, 4) AS INTEGER) = ?
@@ -1222,49 +1392,40 @@ def generar_informe_situacion():
             total_tickets = float(tickets_anio['total_ventas'] or 0)
             num_tickets = int(tickets_anio['num_tickets'] or 0)
             
-            # Facturas pendientes del año (para incluir en cálculos)
+            # Contadores separados para pendientes/vencidas (solo para mostrar en UI)
             cursor.execute('''
                 SELECT 
-                    COALESCE(SUM(total), 0) as total_pendientes,
-                    COUNT(*) as num_pendientes
+                    COALESCE(SUM(CASE WHEN estado = 'P' THEN total ELSE 0 END), 0) as total_pendientes,
+                    COUNT(CASE WHEN estado = 'P' THEN 1 END) as num_pendientes,
+                    COALESCE(SUM(CASE WHEN estado = 'V' THEN total ELSE 0 END), 0) as total_vencidas,
+                    COUNT(CASE WHEN estado = 'V' THEN 1 END) as num_vencidas
                 FROM factura
-                WHERE estado = 'P'
+                WHERE estado IN ('P', 'V')
                 AND CAST(substr(fecha, 1, 4) AS INTEGER) = ?
             ''', (anio,))
-            facturas_pend = cursor.fetchone()
-            total_fact_pendientes = float(facturas_pend['total_pendientes'] or 0)
-            num_fact_pendientes = int(facturas_pend['num_pendientes'] or 0)
+            fact_pv = cursor.fetchone()
+            total_fact_pendientes = float(fact_pv['total_pendientes'] or 0)
+            num_fact_pendientes = int(fact_pv['num_pendientes'] or 0)
+            total_fact_vencidas = float(fact_pv['total_vencidas'] or 0)
+            num_fact_vencidas = int(fact_pv['num_vencidas'] or 0)
             
-            # Facturas vencidas del año (para incluir en cálculos)
+            # Total ventas (ya incluye todo en total_facturas)
+            total_ventas = total_facturas + total_tickets
+            num_documentos = num_facturas + num_tickets
+            
+            # Ventas del mes actual (facturas C+P+V) - usar total para consistencia
             cursor.execute('''
-                SELECT 
-                    COALESCE(SUM(total), 0) as total_vencidas,
-                    COUNT(*) as num_vencidas
-                FROM factura
-                WHERE estado = 'V'
-                AND CAST(substr(fecha, 1, 4) AS INTEGER) = ?
-            ''', (anio,))
-            facturas_venc = cursor.fetchone()
-            total_fact_vencidas = float(facturas_venc['total_vencidas'] or 0)
-            num_fact_vencidas = int(facturas_venc['num_vencidas'] or 0)
-            
-            # Total ventas (facturas cobradas + tickets + facturas pendientes + facturas vencidas)
-            total_ventas = total_facturas + total_tickets + total_fact_pendientes + total_fact_vencidas
-            num_documentos = num_facturas + num_tickets + num_fact_pendientes + num_fact_vencidas
-            
-            # Ventas del mes actual (facturas cobradas)
-            cursor.execute('''
-                SELECT COALESCE(SUM(importe_cobrado), 0) as total_mes
+                SELECT COALESCE(SUM(total), 0) as total_mes
                 FROM factura
                 WHERE substr(fecha, 1, 4) = ?
                 AND substr(fecha, 6, 2) = ?
-                AND estado = 'C'
+                AND estado IN ('C', 'P', 'V')
             ''', (str(anio), mes_str))
             facturas_mes = float(cursor.fetchone()['total_mes'] or 0)
             
-            # Ventas del mes actual (tickets cobrados)
+            # Ventas del mes actual (tickets cobrados) - usar total para consistencia
             cursor.execute('''
-                SELECT COALESCE(SUM(importe_cobrado), 0) as total_mes
+                SELECT COALESCE(SUM(total), 0) as total_mes
                 FROM tickets
                 WHERE substr(fecha, 1, 4) = ?
                 AND substr(fecha, 6, 2) = ?
@@ -1283,15 +1444,14 @@ def generar_informe_situacion():
             _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
     
             # ===== DATOS DE GASTOS (desde facturas_proveedores) =====
-            # Total gastos del año hasta el mes actual
+            # Total gastos del año completo
             cursor.execute('''
                 SELECT
                     COALESCE(SUM(total), 0) as total_gastos,
                     COUNT(*) as num_gastos
                 FROM facturas_proveedores
                 WHERE año = ?
-                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) <= ?
-            ''', (anio, mes))
+            ''', (anio,))
             gastos_anio = cursor.fetchone()
             total_gastos = float(gastos_anio['total_gastos'] or 0)
             num_gastos = int(gastos_anio['num_gastos'] or 0)
@@ -1314,18 +1474,20 @@ def generar_informe_situacion():
             margen_beneficio_mes = (balance_mes / ventas_mes * 100) if ventas_mes > 0 else 0
             ratio_gastos_ventas = (total_gastos / total_ventas * 100) if total_ventas > 0 else 0
             
-            # Medias mensuales
-            media_ventas_mensual = total_ventas / mes if mes > 0 else 0
+            # Medias mensuales - EXCLUIR mes actual para consistencia con dashboard
+            # Fórmula dashboard: (total - mes_actual) / (mes - 1)
+            ventas_sin_mes_actual = total_ventas - ventas_mes
+            media_ventas_mensual = ventas_sin_mes_actual / (mes - 1) if mes > 1 else 0
             media_gastos_mensual, gastos_sin_puntuales, _ = _calcular_media_mensual_sin_puntuales(conn, anio, mes)
             media_balance_mensual = balance_anio / mes if mes > 0 else 0
             
-            # Proyecciones para fin de año
+            # Proyecciones para fin de año - usar fórmula dashboard
             meses_restantes = 12 - mes
             proyeccion_ventas = total_ventas + (media_ventas_mensual * meses_restantes)
             proyeccion_gastos = total_gastos + (media_gastos_mensual * meses_restantes)
             proyeccion_balance = proyeccion_ventas - proyeccion_gastos
             
-            # Top 10 gastos por proveedor (desde facturas_proveedores)
+            # Top 10 gastos por proveedor (desde facturas_proveedores) - año completo
             cursor.execute('''
                 SELECT 
                     COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as nombre_gasto,
@@ -1334,11 +1496,10 @@ def generar_informe_situacion():
                 FROM facturas_proveedores fp
                 LEFT JOIN proveedores p ON fp.proveedor_id = p.id
                 WHERE fp.año = ?
-                AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) <= ?
                 GROUP BY nombre_gasto
                 ORDER BY total DESC
                 LIMIT 10
-            ''', (anio, mes))
+            ''', (anio,))
             
             top_categorias_gastos = []
             for row in cursor.fetchall():
@@ -1446,37 +1607,43 @@ def simular_escenarios():
         _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
 
         # Obtener datos reales actuales - EXCLUYENDO GASTOS PUNTUALES
-        # Facturas cobradas
+        # Facturas cobradas (año completo)
         cursor.execute('''
             SELECT COALESCE(SUM(importe_cobrado), 0) as total
             FROM factura
             WHERE CAST(substr(fecha, 1, 4) AS INTEGER) = ?
-            AND CAST(substr(fecha, 6, 2) AS INTEGER) <= ?
             AND estado = 'C'
-        ''', (anio, mes))
+        ''', (anio,))
         ventas_facturas = float(cursor.fetchone()['total'] or 0)
 
-        # Tickets cobrados
+        # Facturas pendientes (año completo)
+        cursor.execute('''
+            SELECT COALESCE(SUM(total), 0) as total
+            FROM factura
+            WHERE CAST(substr(fecha, 1, 4) AS INTEGER) = ?
+            AND estado IN ('P', 'V')
+        ''', (anio,))
+        ventas_pendientes = float(cursor.fetchone()['total'] or 0)
+
+        # Tickets cobrados (año completo)
         cursor.execute('''
             SELECT COALESCE(SUM(importe_cobrado), 0) as total
             FROM tickets
             WHERE CAST(substr(fecha, 1, 4) AS INTEGER) = ?
-            AND CAST(substr(fecha, 6, 2) AS INTEGER) <= ?
             AND estado = 'C'
-        ''', (anio, mes))
+        ''', (anio,))
         ventas_tickets = float(cursor.fetchone()['total'] or 0)
 
-        # Gastos (desde facturas_proveedores)
+        # Gastos (desde facturas_proveedores) - año completo
         cursor.execute('''
             SELECT COALESCE(SUM(total), 0) as total
             FROM facturas_proveedores
             WHERE año = ?
-            AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) <= ?
-        ''', (anio, mes))
+        ''', (anio,))
         gastos_totales = float(cursor.fetchone()['total'] or 0)
         
-        # Datos reales
-        ventas_reales = ventas_facturas + ventas_tickets
+        # Datos reales (incluye pendientes)
+        ventas_reales = ventas_facturas + ventas_tickets + ventas_pendientes
         balance_real = ventas_reales - gastos_totales
         margen_real = (balance_real / ventas_reales * 100) if ventas_reales > 0 else 0
         

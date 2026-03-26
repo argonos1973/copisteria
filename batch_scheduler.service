@@ -10,8 +10,8 @@ Environment="PYTHONPATH=/var/www/html"
 ExecStart=/var/www/html/venv/bin/python3 /var/www/html/scripts/batch_scheduler.py
 Restart=always
 RestartSec=10
-StandardOutput=append:/var/www/html/logs/batch_scheduler.log
-StandardError=append:/var/www/html/logs/batch_scheduler.log
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

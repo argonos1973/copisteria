@@ -605,21 +605,23 @@ def convertir_proforma_a_factura(id_proforma):
             return jsonify({'error': 'Proforma no encontrada'}), 404
         
         # Verificar si la proforma ya está facturada
+        logger.info(f"[CONVERTIR] Proforma {id_proforma} estado: {proforma['estado']}")
         if proforma['estado'] == 'F':
             conn.rollback()
+            logger.warning(f"[CONVERTIR] Proforma {id_proforma} ya facturada")
             return jsonify({'error': 'Esta proforma ya ha sido facturada'}), 400
         
-        # Obtener el siguiente número de factura
-        numerador, prefijo = obtener_numerador('F')
-        if numerador is None:
+        # PRIMERO incrementar el numerador para obtener el siguiente número
+        # actualizar_numerador incrementa y devuelve el nuevo valor
+        nuevo_numerador, _ = actualizar_numerador('F', conn, commit=False)
+        if nuevo_numerador is None:
             conn.rollback()
             return jsonify({'error': 'Error al obtener el numerador de facturas'}), 500
         
-        prefijo = 'F'
-        # formatear_numero_documento devuelve NNNN (padded). Construir F+AA+NNNN
-        numero_core = formatear_numero_documento('F', conn)
+        # Formatear el número: F + AÑO(2 dígitos) + NUMERADOR(4 dígitos)
         anno = datetime.now().year % 100
-        numero_formateado = f"{prefijo}{anno:02}{numero_core}"
+        numero_formateado = f"F{anno:02}{nuevo_numerador:04}"
+        logger.info(f"[CONVERTIR] Número de factura generado: {numero_formateado}")
         
         # Obtener los detalles de la proforma
         cursor.execute('SELECT * FROM detalle_proforma WHERE id_proforma = ?', (id_proforma,))
@@ -670,12 +672,7 @@ def convertir_proforma_a_factura(id_proforma):
         # Actualizar el estado de la proforma a 'Facturada'
         cursor.execute('UPDATE proforma SET estado = ? WHERE id = ?', ('F', id_proforma))
         
-        # Actualizar el numerador de facturas
-        numerador_actual, _ = actualizar_numerador('F', conn, commit=False)
-        if numerador_actual is None:
-            conn.rollback()
-            return jsonify({'error': 'Error al actualizar el numerador de facturas'}), 500
-        
+        # El numerador ya fue incrementado al inicio
         conn.commit()
         
         return jsonify({

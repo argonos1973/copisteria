@@ -106,6 +106,12 @@ async function cargarEstadisticasGastos() {
         
         // Actualizar tarjetas
         const elementos = {
+            'gastos-total-mes-solo': formatearImporte(data.total_gastos_mes_solo),
+            'gastos-pct-mes-previo': formatearPorcentaje(data.porcentaje_mes_previo),
+            'gastos-mes-previo': `Mes anterior: ${formatearImporte(data.total_gastos_mes_previo)}`,
+            'gastos-pct-mes-solo': formatearPorcentaje(data.porcentaje_mes_solo),
+            'gastos-mes-solo-anterior': `Mismo mes año anterior: ${formatearImporte(data.total_gastos_mes_solo_anterior)}`,
+            'gastos-cantidad-mes-solo': data.cantidad_gastos_mes_solo,
             'gastos-total-mes': formatearImporte(data.total_gastos_mes),
             'gastos-pct-mes': formatearPorcentaje(data.porcentaje_mes),
             'gastos-mes-anterior': `Mismo trimestre año anterior: ${formatearImporte(data.total_gastos_mes_anterior)}`,
@@ -128,6 +134,16 @@ async function cargarEstadisticasGastos() {
         }
         
         // Actualizar clases de porcentajes
+        const pctMesPrevio = document.getElementById('gastos-pct-mes-previo');
+        if (pctMesPrevio) {
+            pctMesPrevio.className = `stats-percentage ${data.porcentaje_mes_previo > 0 ? 'negative' : 'positive'}`;
+        }
+        
+        const pctMesSolo = document.getElementById('gastos-pct-mes-solo');
+        if (pctMesSolo) {
+            pctMesSolo.className = `stats-percentage ${data.porcentaje_mes_solo > 0 ? 'negative' : 'positive'}`;
+        }
+        
         const pctMes = document.getElementById('gastos-pct-mes');
         if (pctMes) {
             pctMes.className = `stats-percentage ${data.porcentaje_mes > 0 ? 'negative' : 'positive'}`;
@@ -138,7 +154,10 @@ async function cargarEstadisticasGastos() {
             pctAnio.className = `stats-percentage ${data.porcentaje_anio > 0 ? 'negative' : 'positive'}`;
         }
         
-        console.log('[GASTOS] Tarjetas actualizadas, cargando Top 10...');
+        console.log('[GASTOS] Tarjetas actualizadas, cargando gráfico mes y Top 10...');
+        
+        // Cargar gráfico del mes
+        await cargarGraficoGastosMesSolo(anio, parseInt(mes));
         
         // Cargar top 10
         await cargarTop10Gastos(anio);
@@ -148,6 +167,86 @@ async function cargarEstadisticasGastos() {
     } catch (error) {
         console.error('[GASTOS] Error al cargar estadísticas:', error);
         alert('Error al cargar estadísticas de gastos: ' + error.message);
+    }
+}
+
+let graficoGastosMesSolo = null;
+
+async function cargarGraficoGastosMesSolo(anio, mes) {
+    try {
+        const apiHost = window.location.hostname;
+        const protocol = window.location.protocol;
+        const usePort = window.location.port ? `:${window.location.port}` : '';
+        const response = await fetch(`${protocol}//${apiHost}${usePort}/api/gastos/por-categoria-mes-solo?anio=${anio}&mes=${mes}`);
+        
+        if (!response.ok) return;
+        
+        const datos = await response.json();
+        
+        if (!datos.categorias || datos.categorias.length === 0) return;
+        
+        const canvas = document.getElementById('grafico-gastos-mes-solo');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        
+        if (graficoGastosMesSolo) {
+            graficoGastosMesSolo.destroy();
+        }
+        
+        const colores = [
+            '#e74c3c', '#3498db', '#f39c12', '#2ecc71', '#9b59b6',
+            '#1abc9c', '#e67e22', '#34495e', '#16a085', '#c0392b'
+        ];
+        
+        const labels = datos.categorias.map(c => c.categoria);
+        const valores = datos.categorias.map(c => c.total);
+        
+        graficoGastosMesSolo = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: valores,
+                    backgroundColor: colores.slice(0, labels.length),
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                onClick: (event, elements) => {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const proveedor = labels[index];
+                        abrirModalDetallesProveedor(proveedor, anio, mes);
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 10,
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.parsed || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                return `${label}: ${formatearImporte(value)} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('[GASTOS] Error al cargar gráfico del mes:', error);
     }
 }
 
@@ -232,6 +331,79 @@ async function cargarTop10Gastos(anio) {
         }
     }
 }
+
+// ===== MODAL DETALLES PROVEEDOR =====
+async function abrirModalDetallesProveedor(proveedor, anio, mes, trimestre) {
+    const modal = document.getElementById('modal-detalles-gasto');
+    if (!modal) return;
+
+    modal.classList.add('show');
+    modal.style.display = 'flex';
+
+    let titulo = proveedor;
+    if (mes) titulo += ` - Mes ${mes}/${anio}`;
+    else if (trimestre) titulo += ` - T${trimestre}/${anio}`;
+    else titulo += ` - Año ${anio}`;
+
+    document.getElementById('modal-concepto-titulo').textContent = titulo;
+    document.getElementById('modal-detalles-body').innerHTML =
+        '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
+
+    try {
+        const apiHost = window.location.hostname;
+        const protocol = window.location.protocol;
+        const usePort = window.location.port ? `:${window.location.port}` : '';
+        let url = `${protocol}//${apiHost}${usePort}/api/gastos/detalles-proveedor?proveedor=${encodeURIComponent(proveedor)}&anio=${anio}`;
+        if (mes) url += `&mes=${mes}`;
+        if (trimestre) url += `&trimestre=${trimestre}`;
+
+        const respuesta = await fetch(url);
+        if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+
+        const datos = await respuesta.json();
+
+        // Actualizar estadísticas
+        document.getElementById('modal-total').textContent = formatearImporte(datos.estadisticas.total);
+        document.getElementById('modal-cantidad').textContent = datos.estadisticas.cantidad;
+        document.getElementById('modal-promedio').textContent = formatearImporte(datos.estadisticas.promedio);
+        document.getElementById('modal-minimo').textContent = formatearImporte(datos.estadisticas.minimo);
+        document.getElementById('modal-maximo').textContent = formatearImporte(datos.estadisticas.maximo);
+
+        const tbody = document.getElementById('modal-detalles-body');
+        tbody.innerHTML = '';
+
+        if (!datos.facturas || datos.facturas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;">No hay facturas registradas</td></tr>';
+            return;
+        }
+
+        datos.facturas.forEach((f, index) => {
+            const fila = document.createElement('tr');
+            const estadoColor = f.estado === 'pagada' ? '#2ecc71' : (f.estado === 'pendiente' ? '#f39c12' : '#999');
+            fila.innerHTML = `
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; width: 40%;">
+                    <span style="font-weight:600;margin-right:0.3rem;">${index + 1}.</span>
+                    ${escaparHtml(f.concepto || f.numero_factura)}
+                </td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.8rem; text-align: center; width: 15%;">${f.numero_factura}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.85rem; text-align: right; font-weight: 600; width: 15%;">${formatearImporte(f.total)}</td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.8rem; text-align: center; width: 15%;">
+                    <span style="color:${estadoColor};font-weight:500;">${f.estado}</span>
+                </td>
+                <td style="padding: 0.5rem 0.3rem; font-size: 0.8rem; text-align: center; width: 15%;">${f.fecha}</td>
+            `;
+            tbody.appendChild(fila);
+        });
+
+    } catch (error) {
+        console.error('[MODAL PROVEEDOR] Error:', error);
+        document.getElementById('modal-detalles-body').innerHTML =
+            `<tr><td colspan="5" style="text-align:center;padding:2rem;">❌ Error: ${error.message}</td></tr>`;
+    }
+}
+
+// Exponer globalmente para que los gráficos inline puedan usarla
+window.abrirModalDetallesProveedor = abrirModalDetallesProveedor;
 
 // ===== FUNCIONES AUXILIARES =====
 // Las funciones formatearImporte, formatearPorcentaje y escaparHtml 

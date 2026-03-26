@@ -22,6 +22,20 @@ from notificaciones_utils import guardar_notificacion
 logger = get_logger(__name__)
 
 
+def _sanitize_params_for_job(job_code: str, params_obj):
+    code = (job_code or '').strip()
+    if code != 'batchTotalDia':
+        return params_obj
+    if not isinstance(params_obj, dict):
+        return {}
+    out = {}
+    if params_obj.get('correo'):
+        out['correo'] = str(params_obj.get('correo')).strip()
+    if params_obj.get('db_path'):
+        out['db_path'] = str(params_obj.get('db_path')).strip()
+    return out
+
+
 def _get_admin_emails(empresa_id: int):
     try:
         conn = sqlite3.connect(DB_USUARIOS_PATH)
@@ -159,12 +173,16 @@ def _send_admin_email_for_run(conn, run: dict, empresa_codigo: str, status: str,
         if ok:
             _append_run_log(conn, int(run_id), 'info', f"Email de notificación enviado a admin: {', '.join(to_emails)}")
         else:
-            _append_run_log(conn, int(run_id), 'error', f"Error enviando email a admin: {msg}")
+            _append_run_log(conn, int(run_id), 'warning', f"Error enviando email a admin: {msg}")
     except Exception:
         return
 
 
 def _notify_run(run: dict, tipo: str, mensaje: str):
+    """Notifica solo errores, no inicio/fin de procesos batch normales"""
+    # Solo notificar errores, ignorar 'info' (inicio) y 'success' (finalizado OK)
+    if tipo in ('info', 'success'):
+        return
     try:
         db_path = None
         try:
@@ -315,7 +333,7 @@ def _claim_next_run(conn, worker_id: str):
     return dict(row)
 
 
-def _execute_handler(run, log_path: str):
+def _execute_handler(run: dict, log_path: str):
     handler = (run.get('handler') or '').strip()
     if handler.lower().endswith('.py'):
         handler = handler[:-3]
@@ -329,6 +347,8 @@ def _execute_handler(run, log_path: str):
         handler = 'batchTotalDia'
     elif handler_lc == 'batchscanfacturasrecibidas':
         handler = 'batchScanFacturasRecibidas'
+    elif handler_lc == 'batchfacturasrecurrentes':
+        handler = 'batchFacturasRecurrentes'
     elif handler_lc == 'batchoptimizar':
         handler = 'batchOptimizar'
     elif handler_lc == 'batchgenerico':
@@ -343,6 +363,8 @@ def _execute_handler(run, log_path: str):
         cmd = [py, '/var/www/html/batchTotalDia.py']
     elif handler == 'batchScanFacturasRecibidas':
         cmd = [py, '/var/www/html/batchScanFacturasRecibidas.py']
+    elif handler == 'batchFacturasRecurrentes':
+        cmd = [py, '/var/www/html/scripts/batch_facturas_recurrentes.py']
     elif handler == 'batchOptimizar':
         cmd = [py, '/var/www/html/batchOptimizar.py']
     elif handler == 'batchGenerico':
@@ -363,10 +385,32 @@ def _execute_handler(run, log_path: str):
         env['BATCH_JOB_CODE'] = str(run['job_code'])
 
     params_snapshot = run.get('params_snapshot')
+    # Si params vacío/nulo para batchTotalDia, recuperar del schedule asociado
+    if not params_snapshot or params_snapshot.strip() in ('{}', 'null', ''):
+        job_code_check = (run.get('job_code') or '').strip()
+        schedule_id_check = run.get('schedule_id')
+        if job_code_check == 'batchTotalDia' and schedule_id_check:
+            try:
+                conn_fallback = sqlite3.connect(DB_USUARIOS_PATH, timeout=10)
+                conn_fallback.row_factory = sqlite3.Row
+                row_fb = conn_fallback.execute(
+                    "SELECT params_json FROM batch_job_schedules WHERE id=?",
+                    (schedule_id_check,)
+                ).fetchone()
+                conn_fallback.close()
+                if row_fb and row_fb['params_json']:
+                    params_snapshot = row_fb['params_json']
+            except Exception:
+                pass
     if params_snapshot:
-        env['BATCH_PARAMS_JSON'] = str(params_snapshot)
+        try:
+            params_obj = json.loads(str(params_snapshot))
+            params_obj = _sanitize_params_for_job(run.get('job_code'), params_obj)
+            env['BATCH_PARAMS_JSON'] = json.dumps(params_obj, ensure_ascii=False)
+        except Exception:
+            env['BATCH_PARAMS_JSON'] = str(params_snapshot)
 
-    with open(log_path, 'ab') as f:
+    with open(log_path, 'wb') as f:
         proc = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, env=env)
         return proc.returncode
 
@@ -404,6 +448,7 @@ def main():
             if run.get('params_snapshot'):
                 try:
                     params_obj = json.loads(run.get('params_snapshot'))
+                    params_obj = _sanitize_params_for_job(run.get('job_code'), params_obj)
                     _append_run_log(conn, run['id'], 'info', f"Params: {json.dumps(params_obj, ensure_ascii=False)}")
                 except Exception:
                     _append_run_log(conn, run['id'], 'info', f"Params(raw): {str(run.get('params_snapshot'))[:500]}")

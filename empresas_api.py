@@ -450,6 +450,7 @@ def obtener_empresa(empresa_id):
                 empresa['ruta_certificado'] = emisor_data.get('certificado', '')
 
                 empresa['verifactu_enabled'] = emisor_data.get('verifactu_enabled', False)
+                empresa['cuenta_transferencias'] = emisor_data.get('cuenta_transferencias', '')
                 
                 # Incluir emisor_data completo para acceso al logo y otros campos
                 empresa['emisor_data'] = emisor_data
@@ -499,6 +500,7 @@ def crear_empresa():
         telefono = request.form.get('telefono', '')
         email = request.form.get('email', '')
         web = request.form.get('web', '')
+        cuenta_transferencias = request.form.get('cuenta_transferencias', 'ES4200494752902216156784')
         
         logger.info(f"[CREAR EMPRESA] Nombre recibido: '{nombre}'")
         
@@ -772,7 +774,8 @@ def crear_empresa():
             "web": web or "",
             "certificado": ruta_certificado_publico,
             "db_path": bd_destino,
-            "codigo": codigo
+            "codigo": codigo,
+            "cuenta_transferencias": cuenta_transferencias
         }
         
         emisor_path = os.path.join(BASE_DIR, 'emisores', f'{codigo}_emisor.json')
@@ -964,6 +967,16 @@ def actualizar_empresa(empresa_id):
                 conn.close()
                 return jsonify({'error': 'Formato de archivo no permitido'}), 400
         
+        # Leer emisor existente para preservar campos no enviados
+        emisor_json_path = os.path.join(BASE_DIR, 'emisores', f'{codigo_empresa}_emisor.json')
+        emisor_existente = {}
+        if os.path.exists(emisor_json_path):
+            try:
+                with open(emisor_json_path, 'r', encoding='utf-8') as f:
+                    emisor_existente = json.load(f)
+            except:
+                pass
+        
         # Construir datos de emisor para JSON
         emisor_data = {
             'nif': data.get('cif', ''),
@@ -976,7 +989,8 @@ def actualizar_empresa(empresa_id):
             'email': data.get('email', ''),
             'certificado': data.get('ruta_certificado', ''),
             'db_path': db_path_empresa,
-            'codigo': codigo_empresa
+            'codigo': codigo_empresa,
+            'cuenta_transferencias': data.get('cuenta_transferencias', emisor_existente.get('cuenta_transferencias', ''))
         }
 
         if 'verifactu_enabled' in data:
@@ -1174,7 +1188,16 @@ def actualizar_emisor(empresa_id):
         codigo = row[0]
         db_path = row[1]
         
-        # Actualizar emisor.json
+        # Actualizar emisor.json - leer existente para preservar campos
+        emisor_path = os.path.join(BASE_DIR, 'emisores', f'{codigo}_emisor.json')
+        emisor_existente = {}
+        if os.path.exists(emisor_path):
+            try:
+                with open(emisor_path, 'r', encoding='utf-8') as f:
+                    emisor_existente = json.load(f)
+            except:
+                pass
+        
         emisor_data = {
             "nombre": data.get('razon_social', data.get('nombre', '')),
             "nif": data.get('cif', ''),
@@ -1186,10 +1209,9 @@ def actualizar_emisor(empresa_id):
             "email": data.get('email', ''),
             "web": data.get('web', ''),
             "db_path": db_path,
-            "codigo": codigo
+            "codigo": codigo,
+            "cuenta_transferencias": data.get('cuenta_transferencias', emisor_existente.get('cuenta_transferencias', ''))
         }
-        
-        emisor_path = os.path.join(BASE_DIR, 'emisores', f'{codigo}_emisor.json')
         
         with open(emisor_path, 'w', encoding='utf-8') as f:
             json.dump(emisor_data, f, ensure_ascii=False, indent=4)

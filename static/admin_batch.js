@@ -41,7 +41,8 @@
         batchfacturasVencidas: 'Marca facturas emitidas como vencidas según antigüedad y puede generar/enviar cartas de reclamación.',
         batchPol: 'Procesa ficheros CSV de Proformas (POL) y actualiza/importa datos relacionados en la base de datos.',
         batchTotalDia: 'Calcula el total del día (tickets + facturas) y envía un resumen por correo.',
-        batchScanFacturasRecibidas: 'Escanea una carpeta de entrada, aplica OCR a facturas recibidas (PDF/imagen) y las registra igual que “Subir factura”.',
+        batchScanFacturasRecibidas: 'Escanea una carpeta de entrada, aplica OCR a facturas recibidas (PDF/imagen) y las registra igual que "Subir factura".',
+        batchFacturasRecurrentes: 'Genera automáticamente las facturas de proveedores marcadas como recurrentes para el mes actual.',
     };
 
     function isSystemJob(code) {
@@ -63,8 +64,21 @@
     function setBuilderVisibility() {
         const mode = $('batch-schedule-mode')?.value || 'interval';
         const isInterval = mode === 'interval';
+        const isDaily = mode === 'daily';
+        const isMonthly = mode === 'monthly';
+        
         $('batch-interval-wrap').style.display = isInterval ? '' : 'none';
-        $('batch-daily-wrap').style.display = isInterval ? 'none' : '';
+        $('batch-daily-wrap').style.display = isDaily ? '' : 'none';
+        
+        // Controles mensuales
+        const monthlyWrap = $('batch-monthly-wrap');
+        const monthlyTimeWrap = $('batch-monthly-time-wrap');
+        if (monthlyWrap) monthlyWrap.style.display = isMonthly ? '' : 'none';
+        if (monthlyTimeWrap) monthlyTimeWrap.style.display = isMonthly ? '' : 'none';
+        
+        // Días de la semana - ocultar en modo mensual
+        const daysWrap = document.querySelector('.batch-inline:has(#batch-day-0)');
+        if (daysWrap) daysWrap.style.display = isMonthly ? 'none' : '';
 
         const winEnabled = $('batch-window-enabled').checked;
         $('batch-window-wrap').style.display = (isInterval && winEnabled) ? '' : 'none';
@@ -72,6 +86,10 @@
             $('batch-window-enabled').checked = false;
             $('batch-window-wrap').style.display = 'none';
         }
+        
+        // Ocultar franja horaria en modo mensual
+        const winCheck = document.querySelector('.batch-check:has(#batch-window-enabled)');
+        if (winCheck) winCheck.style.display = isMonthly ? 'none' : '';
     }
 
     function resetScheduleBuilderDefaults() {
@@ -211,6 +229,19 @@
         return out;
     }
 
+    function normalizeTotalDiaParams(params) {
+        const out = {};
+        if (params && typeof params === 'object' && !Array.isArray(params)) {
+            if (params.correo) out.correo = String(params.correo).trim();
+            if (params.db_path) out.db_path = String(params.db_path).trim();
+        }
+        if (!out.correo) {
+            const ui = buildTotalDiaParamsFromUI();
+            if (ui.correo) out.correo = ui.correo;
+        }
+        return out;
+    }
+
     function buildVencidasParamsFromUI() {
         const diasVencer = parseInt($('batch-vencidas-dias-vencer')?.value || '15', 10);
         const diasCarta = parseInt($('batch-vencidas-dias-carta')?.value || '30', 10);
@@ -308,6 +339,17 @@
             return `${m} ${h} * * *`;
         }
 
+        if (mode === 'monthly') {
+            const day = parseInt($('batch-monthly-day')?.value || '1', 10);
+            const t = ($('batch-monthly-time')?.value || '06:00').split(':');
+            const hh = parseInt(t[0], 10);
+            const mm = parseInt(t[1], 10);
+            const m = isNaN(mm) ? 0 : mm;
+            const h = isNaN(hh) ? 6 : hh;
+            const d = isNaN(day) || day < 1 || day > 28 ? 1 : day;
+            return `${m} ${h} ${d} * *`;
+        }
+
         const intervalMin = parseInt($('batch-interval-min').value || '15', 10);
         const n = isNaN(intervalMin) || intervalMin < 1 ? 15 : intervalMin;
 
@@ -328,6 +370,12 @@
         if (mode === 'daily') {
             const t = $('batch-daily-time').value || '02:00';
             return `Diario a las ${t}`;
+        }
+
+        if (mode === 'monthly') {
+            const day = parseInt($('batch-monthly-day')?.value || '1', 10);
+            const t = $('batch-monthly-time')?.value || '06:00';
+            return `Mensual, día ${day} a las ${t}`;
         }
 
         const intervalMin = parseInt($('batch-interval-min').value || '15', 10);
@@ -441,6 +489,21 @@
         const c = String(cronExpr || '').trim();
         if (!c) return;
 
+        // Mensual: m h d * * (día específico del mes)
+        const monthly = c.match(/^\s*(\d+)\s+(\d+)\s+(\d+)\s+\*\s+\*\s*$/);
+        if (monthly) {
+            const mm = pad2(parseInt(monthly[1], 10) || 0);
+            const hh = pad2(parseInt(monthly[2], 10) || 0);
+            const day = parseInt(monthly[3], 10) || 1;
+            if ($('batch-schedule-mode')) $('batch-schedule-mode').value = 'monthly';
+            if ($('batch-monthly-day')) $('batch-monthly-day').value = String(day);
+            if ($('batch-monthly-time')) $('batch-monthly-time').value = `${hh}:${mm}`;
+            if ($('batch-window-enabled')) $('batch-window-enabled').checked = false;
+            setBuilderVisibility();
+            return;
+        }
+
+        // Diario: m h * * *
         const daily = c.match(/^\s*(\d+)\s+(\d+)\s+\*\s+\*\s+\*\s*$/);
         if (daily) {
             const mm = pad2(parseInt(daily[1], 10) || 0);
@@ -482,6 +545,11 @@
         if (mode === 'daily') {
             const t = $('batch-daily-time')?.value || '';
             return t ? `Hoy: ${t}` : '';
+        }
+        if (mode === 'monthly') {
+            const day = $('batch-monthly-day')?.value || '1';
+            const t = $('batch-monthly-time')?.value || '06:00';
+            return `Día ${day} de cada mes a las ${t}`;
         }
 
         const intervalMin = parseInt($('batch-interval-min')?.value || '15', 10);
@@ -768,18 +836,7 @@
         }
 
         if (job_code === 'batchTotalDia') {
-            const correoUI = ($('batch-totaldia-email')?.value || '').trim();
-            if (params == null || typeof params !== 'object' || Array.isArray(params)) {
-                params = buildTotalDiaParamsFromUI();
-            }
-            if (correoUI && (!params || !params.correo)) {
-                try {
-                    params.correo = correoUI;
-                } catch (e) {
-                    params = { correo: correoUI };
-                }
-            }
-
+            params = normalizeTotalDiaParams(params);
             const correo = (params && params.correo) ? String(params.correo).trim() : '';
             if (!correo) {
                 showAlert('Correo requerido para Total del día', 'error');
@@ -828,18 +885,7 @@
         }
 
         if (job_code === 'batchTotalDia') {
-            const correoUI = ($('batch-totaldia-email')?.value || '').trim();
-            if (params == null || typeof params !== 'object' || Array.isArray(params)) {
-                params = buildTotalDiaParamsFromUI();
-            }
-            if (correoUI && (!params || !params.correo)) {
-                try {
-                    params.correo = correoUI;
-                } catch (e) {
-                    params = { correo: correoUI };
-                }
-            }
-
+            params = normalizeTotalDiaParams(params);
             const correo = (params && params.correo) ? String(params.correo).trim() : '';
             if (!correo) {
                 showAlert('Correo requerido para Total del día', 'error');
@@ -963,6 +1009,8 @@
             });
             $('batch-interval-min').addEventListener('change', refreshCronPreview);
             $('batch-daily-time').addEventListener('change', refreshCronPreview);
+            if ($('batch-monthly-day')) $('batch-monthly-day').addEventListener('change', refreshCronPreview);
+            if ($('batch-monthly-time')) $('batch-monthly-time').addEventListener('change', refreshCronPreview);
             $('batch-window-enabled').addEventListener('change', () => {
                 setBuilderVisibility();
                 refreshCronPreview();

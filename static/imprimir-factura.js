@@ -289,11 +289,15 @@ async function rellenarFactura(datos, emisor) {
     }
 
     // Forma de pago
-    document.getElementById('forma-pago').textContent = decodificarFormaPago(factura.formaPago || '');
-
     if (factura.formaPago === 'R') {
-        // Pago por transferencia bancaria al siguiente número de cuenta ES4200494752902216156784
-        document.getElementById('forma-pago').textContent = 'Pago por transferencia bancaria al siguiente número de cuenta ES4200494752902216156784';
+        const cuenta = emisor.cuenta_transferencias || '';
+        if (cuenta) {
+            document.getElementById('forma-pago').textContent = `Pago por transferencia bancaria al siguiente número de cuenta ${cuenta}`;
+        } else {
+            document.getElementById('forma-pago').textContent = 'Pago por transferencia bancaria';
+        }
+    } else {
+        document.getElementById('forma-pago').textContent = decodificarFormaPago(factura.formaPago || '');
     }
 
     // Rellenar detalles

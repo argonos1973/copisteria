@@ -214,11 +214,14 @@ def generar_factura_pdf(id_factura):
         total_raw = '' if factura_dict.get('total') is None else str(factura_dict.get('total'))
 
         # Función para decodificar forma de pago
-        def decodificar_forma_pago(forma_pago):
+        def decodificar_forma_pago(forma_pago, cuenta_transferencias=''):
+            if forma_pago == 'R':
+                if cuenta_transferencias:
+                    return f'Pago por transferencia bancaria al siguiente número de cuenta {cuenta_transferencias}'
+                return 'Pago por transferencia bancaria'
             formas_pago = {
                 'T': 'Tarjeta',
-                'E': 'Efectivo',
-                'R': 'Pago por transferencia bancaria al siguiente número de cuenta ES4200494752902216156784'
+                'E': 'Efectivo'
             }
             return formas_pago.get(forma_pago, 'No especificada')
 
@@ -442,7 +445,7 @@ def generar_factura_pdf(id_factura):
                 f'id="total">{total_raw}</strong>'
             ).replace(
                 '<p id="forma-pago">Tarjeta</p>',
-                f'<p>{decodificar_forma_pago(factura_dict.get("formaPago", "T"))}</p>'
+                f'<p>{decodificar_forma_pago(factura_dict.get("formaPago", "T"), emisor.get("cuenta_transferencias", ""))}</p>'
             )
             
             # Enfoque directo para insertar el hash y el QR
