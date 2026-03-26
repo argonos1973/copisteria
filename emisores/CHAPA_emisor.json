@@ -9,5 +9,6 @@
     "email": "aleph70copisteria@gmail.com",
     "web": "",
     "db_path": "/var/www/html/db/CHAPA/CHAPA.db",
-    "codigo": "CHAPA"
+    "codigo": "CHAPA",
+    "cuenta_transferencias": "ES4200494752902216156784"
 }
