@@ -38,6 +38,30 @@ def _to_decimal(val, default='0'):
     except Exception:
         return Decimal(default)
 
+def _normalizar_fecha_param(fecha_str: str) -> str:
+    try:
+        s = (fecha_str or '').strip()
+        if not s:
+            return ''
+        if '-' in s:
+            try:
+                return datetime.strptime(s[:10], '%Y-%m-%d').strftime('%Y-%m-%d')
+            except Exception:
+                return s
+        if '/' in s:
+            try:
+                return datetime.strptime(s[:10], '%d/%m/%Y').strftime('%Y-%m-%d')
+            except Exception:
+                return s
+        if len(s) >= 10 and s[2] == '-' and s[5] == '-':
+            try:
+                return datetime.strptime(s[:10], '%d-%m-%Y').strftime('%Y-%m-%d')
+            except Exception:
+                return s
+        return s
+    except Exception:
+        return (fecha_str or '').strip()
+
 def tickets_paginado():
     """Obtiene tickets con paginación y filtros"""
     try:
@@ -45,8 +69,8 @@ def tickets_paginado():
         cursor = conn.cursor()
 
         # Filtros
-        fecha_inicio = request.args.get('fecha_inicio', '').strip()
-        fecha_fin = request.args.get('fecha_fin', '').strip()
+        fecha_inicio = _normalizar_fecha_param(request.args.get('fecha_inicio', ''))
+        fecha_fin = _normalizar_fecha_param(request.args.get('fecha_fin', ''))
         estado = request.args.get('estado', '').strip()
         numero = request.args.get('numero', '').strip()
         forma_pago = request.args.get('formaPago', '').strip()
@@ -1068,8 +1092,8 @@ def consulta_tickets():
         cursor = conn.cursor()
 
         # Obtener parámetros de la consulta
-        fecha_inicio = request.args.get('fecha_inicio')
-        fecha_fin = request.args.get('fecha_fin')
+        fecha_inicio = _normalizar_fecha_param(request.args.get('fecha_inicio'))
+        fecha_fin = _normalizar_fecha_param(request.args.get('fecha_fin'))
         estado = request.args.get('estado')
         numero = request.args.get('numero')
         forma_pago = request.args.get('formaPago')

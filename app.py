@@ -9,6 +9,8 @@ Versión refactorizada con arquitectura modular basada en Blueprints
 """
 
 import os
+import json
+import sqlite3
 from dotenv import load_dotenv
 # Cargar variables de entorno desde .env
 load_dotenv()
@@ -171,6 +173,95 @@ def setup_logging():
     )
 
 
+def _restore_session_from_header():
+    """
+    Restaura la sesión Flask a partir del header X-Session-Data enviado
+    por SessionManager cuando las cookies no llegan (Cloudflare, cross-origin).
+    Solo se ejecuta si session['user_id'] no existe y el header está presente.
+    """
+    header_raw = request.headers.get('X-Session-Data')
+    if not header_raw:
+        return
+
+    try:
+        data = json.loads(header_raw)
+    except (json.JSONDecodeError, TypeError):
+        logger.warning("[SESSION-RESTORE] X-Session-Data header no es JSON válido")
+        return
+
+    username = (data.get('username') or '').strip()
+    empresa_codigo = (data.get('empresa') or '').strip()
+
+    if not username:
+        logger.warning("[SESSION-RESTORE] X-Session-Data sin username")
+        return
+
+    try:
+        from multiempresa_config import DB_USUARIOS_PATH
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Buscar usuario
+        cursor.execute('SELECT id, username, nombre_completo FROM usuarios WHERE username = ? AND activo = 1', (username,))
+        user_row = cursor.fetchone()
+        if not user_row:
+            logger.warning(f"[SESSION-RESTORE] Usuario '{username}' no encontrado o inactivo")
+            conn.close()
+            return
+
+        user_id = user_row['id']
+
+        # Si no hay empresa_codigo, autoseleccionar la primera
+        if not empresa_codigo:
+            cursor.execute('''
+                SELECT e.codigo FROM usuario_empresa ue
+                JOIN empresas e ON ue.empresa_id = e.id
+                WHERE ue.usuario_id = ? AND e.activa = 1
+                ORDER BY ue.rol DESC LIMIT 1
+            ''', (user_id,))
+            row = cursor.fetchone()
+            empresa_codigo = row['codigo'] if row else ''
+
+        if not empresa_codigo:
+            logger.warning(f"[SESSION-RESTORE] Usuario '{username}' sin empresa asignada")
+            conn.close()
+            return
+
+        # Buscar empresa y verificar acceso
+        cursor.execute('''
+            SELECT ue.rol, ue.es_admin_empresa, e.id, e.nombre, e.db_path, e.logo_header
+            FROM usuario_empresa ue
+            JOIN empresas e ON ue.empresa_id = e.id
+            WHERE ue.usuario_id = ? AND e.codigo = ? AND e.activa = 1
+        ''', (user_id, empresa_codigo))
+        empresa_row = cursor.fetchone()
+        conn.close()
+
+        if not empresa_row:
+            logger.warning(f"[SESSION-RESTORE] Usuario '{username}' sin acceso a empresa '{empresa_codigo}'")
+            return
+
+        # Poblar sesión Flask con los mismos campos que autenticar_usuario
+        session['user_id'] = user_id
+        session['username'] = username
+        session['nombre_completo'] = user_row['nombre_completo'] or username
+        session['empresa_id'] = empresa_row['id']
+        session['empresa_codigo'] = empresa_codigo
+        session['empresa_nombre'] = empresa_row['nombre']
+        session['empresa_db'] = empresa_row['db_path']
+        session['empresa_logo'] = empresa_row['logo_header']
+        session['rol'] = empresa_row['rol']
+        session['es_admin_empresa'] = bool(empresa_row['es_admin_empresa'])
+        session.permanent = True
+        session.modified = True
+
+        logger.info(f"[SESSION-RESTORE] ✅ Sesión restaurada desde X-Session-Data: {username} → {empresa_codigo} (BD: {empresa_row['db_path']})")
+
+    except Exception as e:
+        logger.error(f"[SESSION-RESTORE] Error restaurando sesión: {e}", exc_info=True)
+
+
 def register_middlewares(app):
     """Registra middlewares de la aplicación"""
     
@@ -188,6 +279,10 @@ def register_middlewares(app):
             response.headers.add('Access-Control-Allow-Methods', "*")
             response.headers.add('Access-Control-Allow-Credentials', "true")
             return response
+        
+        # ── Restaurar sesión desde X-Session-Data cuando cookies no llegan ──
+        if 'user_id' not in session and request.path.startswith('/api/'):
+            _restore_session_from_header()
         
         # Log de requests (solo en desarrollo)
         if os.getenv('FLASK_ENV') == 'development':
@@ -219,7 +314,7 @@ def register_middlewares(app):
         if origin in allowed_origins or any(allowed in origin for allowed in ['.trycloudflare.com', 'localhost', '127.0.0.1']):
             response.headers.add('Access-Control-Allow-Origin', origin)
             response.headers.add('Access-Control-Allow-Credentials', 'true')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Session-Data')
             response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
         
         # Headers de seguridad

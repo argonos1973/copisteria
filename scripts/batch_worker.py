@@ -418,6 +418,15 @@ def _execute_handler(run: dict, log_path: str):
 def main():
     poll_seconds = int(os.getenv('BATCH_WORKER_POLL', '5'))
     worker_id = os.getenv('BATCH_WORKER_ID') or f"worker-{socket.gethostname()}-{os.getpid()}"
+    
+    # Solo ejecutar en el servidor .55 (hostname: sami-V-P8H67E)
+    hostname = socket.gethostname()
+    if hostname != 'sami-V-P8H67E':
+        logger.info(f"[BATCH_WORKER] Worker iniciado en {hostname} - No ejecutará jobs (solo .55)")
+        while True:
+            time.sleep(60)  # Loop vacío, no ejecuta nada
+    
+    logger.info(f"[BATCH_WORKER] Worker iniciado en {hostname} - Ejecutando jobs")
 
     while True:
         run = None

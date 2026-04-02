@@ -148,6 +148,11 @@ def _send_smtp_message(cfg, msg, destinatarios):
         raise
 
 def enviar_factura_por_email(destinatario, asunto, cuerpo, archivo_adjunto, numero_factura):
+    # Check if email is disabled on this server
+    if os.getenv('SMTP_DISABLE') == 'true' or os.getenv('EMAIL_ENABLED') == 'false':
+        logger.warning(f"[EMAIL DISABLED] Envío de emails desactivado en este servidor. Factura {numero_factura} no enviada.")
+        return False, "Envío de emails desactivado en este servidor"
+    
     try:
         cfg = _get_smtp_config()
         logger.info(f"Configurando servidor SMTP: {cfg['smtp_server']}:{cfg['smtp_port']}")
@@ -165,6 +170,11 @@ def enviar_factura_por_email(destinatario, asunto, cuerpo, archivo_adjunto, nume
 
 
 def enviar_email_texto(destinatarios, asunto, cuerpo, html=False):
+    # Check if email is disabled on this server
+    if os.getenv('SMTP_DISABLE') == 'true' or os.getenv('EMAIL_ENABLED') == 'false':
+        logger.warning(f"[EMAIL DISABLED] Envío de emails desactivado en este servidor. Email '{asunto}' no enviado.")
+        return False, "Envío de emails desactivado en este servidor"
+    
     try:
         cfg = _get_smtp_config()
 
@@ -193,6 +203,11 @@ def enviar_email_texto(destinatarios, asunto, cuerpo, html=False):
 
 def enviar_presupuesto_por_email(destinatario, asunto, cuerpo, archivo_adjunto, numero_presupuesto):
     """Envía un presupuesto por email con PDF adjunto"""
+    # Check if email is disabled on this server
+    if os.getenv('SMTP_DISABLE') == 'true' or os.getenv('EMAIL_ENABLED') == 'false':
+        logger.warning(f"[EMAIL DISABLED] Envío de emails desactivado en este servidor. Presupuesto {numero_presupuesto} no enviado.")
+        return False, "Envío de emails desactivado en este servidor"
+    
     try:
         cfg = _get_smtp_config()
         logger.info(f"Configurando servidor SMTP para presupuesto: {cfg['smtp_server']}:{cfg['smtp_port']}")

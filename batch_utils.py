@@ -6,14 +6,26 @@ DEFAULT_DB_FALLBACK = "/var/www/html/db/aleph70.db"
 
 
 def load_batch_params():
+    # Primero intentar desde variable de entorno
     raw = os.environ.get("BATCH_PARAMS_JSON")
-    if not raw:
-        return {}
+    if raw:
+        try:
+            obj = json.loads(raw)
+            return obj if isinstance(obj, dict) else {}
+        except Exception:
+            pass
+    
+    # Luego intentar desde archivo batch_params.json
     try:
-        obj = json.loads(raw)
-        return obj if isinstance(obj, dict) else {}
+        params_path = "/var/www/html/batch_params.json"
+        if os.path.exists(params_path):
+            with open(params_path, 'r', encoding='utf-8') as f:
+                obj = json.load(f)
+                return obj if isinstance(obj, dict) else {}
     except Exception:
-        return {}
+        pass
+    
+    return {}
 
 
 def get_batch_db_path(params=None, default_path=None):

@@ -12,6 +12,7 @@ from constantes import *
 from db_utils import get_db_connection
 from notificaciones_utils import guardar_notificacion
 from batch_utils import load_batch_params
+from multiempresa_config import DB_USUARIOS_PATH
 
 # Configurar logging
 from logger_config import get_logger
@@ -329,7 +330,8 @@ def actualizar_facturas_vencidas(dias_para_vencer: int = 15, dias_para_carta: in
         fecha_limite_carta = (datetime.now() - timedelta(days=dias_para_carta)).strftime('%Y-%m-%d')
         logger.info(f"Buscando facturas vencidas antes de {fecha_hoy} (P→V si vencida >= {dias_para_vencer}d, carta si >= {dias_para_carta}d)")
         
-        # 1. Facturas PENDIENTES con vencimiento >= dias_para_vencer días atrás, sin cobro
+        # 1. Facturas PENDIENTES con vencimiento >= dias_para_vencer días atrás
+        # NOTA: El cambio P->V solo depende de la fecha de vencimiento, no del importe cobrado
         cursor.execute('''
             SELECT id, numero, fecha, fvencimiento, estado, idContacto, total, fecha_ultima_carta, carta_enviada
             FROM factura
@@ -337,12 +339,12 @@ def actualizar_facturas_vencidas(dias_para_vencer: int = 15, dias_para_carta: in
             AND fvencimiento < ?
             AND total > 0
             AND (fechaCobro IS NULL OR fechaCobro = '')
-            AND (importe_cobrado IS NULL OR importe_cobrado < total)
         ''', (fecha_limite_vencer,))
         
         facturas_pendientes = cursor.fetchall()
         
-        # 2. Facturas VENCIDAS que necesitan recordatorio (>= dias_para_carta días desde fvencimiento, sin cobro)
+        # 2. Facturas VENCIDAS que necesitan recordatorio (>= dias_para_carta días desde fvencimiento)
+        # Solo si no están cobradas (importe_cobrado < total o NULL)
         cursor.execute('''
             SELECT id, numero, fecha, fvencimiento, estado, idContacto, total, fecha_ultima_carta, carta_enviada
             FROM factura
@@ -487,17 +489,92 @@ def actualizar_facturas_vencidas(dias_para_vencer: int = 15, dias_para_carta: in
         if conn:
             conn.close()
 
-def main():
+def obtener_empresa_emisor():
     """
-    Función principal para ejecutar el script
+    Obtiene la empresa del emisor desde el archivo emisor_config.json
+    o desde la variable de entorno EMPRESA_CODE
+    """
+    import json
+    
+    # Primero intentar desde variable de entorno
+    empresa_code = os.getenv('EMPRESA_CODE')
+    if empresa_code:
+        return empresa_code
+    
+    # Luego intentar desde emisor_config.json
+    try:
+        with open('/var/www/html/emisor_config.json', 'r', encoding='utf-8') as f:
+            emisor = json.load(f)
+            empresa_code = emisor.get('empresa_codigo') or emisor.get('codigo')
+            if empresa_code:
+                return empresa_code
+    except Exception as e:
+        logger.warning(f"No se pudo leer emisor_config.json: {e}")
+    
+    # Fallback: intentar obtener de la primera empresa activa
+    try:
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('SELECT codigo FROM empresas WHERE activa = 1 LIMIT 1')
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return row['codigo']
+    except Exception as e:
+        logger.error(f"Error obteniendo empresa por defecto: {e}")
+    
+    return None
+
+def obtener_db_empresa_por_codigo(empresa_codigo):
+    """
+    Obtiene la ruta de BD para una empresa dada su código
     """
     try:
-        logger.info("Iniciando búsqueda de facturas vencidas")
+        conn = sqlite3.connect(DB_USUARIOS_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute('SELECT db_path FROM empresas WHERE codigo = ? AND activa = 1', (empresa_codigo,))
+        row = cursor.fetchone()
+        conn.close()
+        if row and row['db_path'] and os.path.exists(row['db_path']):
+            return row['db_path']
+    except Exception as e:
+        logger.error(f"Error obteniendo BD para empresa {empresa_codigo}: {e}")
+    return None
+
+def main():
+    try:
+        logger.info("Iniciando búsqueda de facturas vencidas (empresa emisor)")
+        
+        empresa_codigo = obtener_empresa_emisor()
+        if not empresa_codigo:
+            logger.error("No se pudo determinar la empresa del emisor")
+            return 1
+        
+        logger.info(f"Empresa del emisor: {empresa_codigo}")
+        
+        db_path = obtener_db_empresa_por_codigo(empresa_codigo)
+        if not db_path:
+            logger.error(f"No se encontró BD para empresa {empresa_codigo}")
+            return 1
+        
+        logger.info(f"Usando BD: {db_path}")
+        
+        os.environ['EMPRESA_DB_PATH'] = db_path
+        os.environ['EMPRESA_CODE'] = empresa_codigo
+        
         params = load_batch_params()
         dias_para_vencer = params.get('dias_para_vencer', 15)
         dias_para_carta = params.get('dias_para_carta', 30)
-        actualizar_facturas_vencidas(dias_para_vencer=dias_para_vencer, dias_para_carta=dias_para_carta)
+        
+        actualizar_facturas_vencidas(
+            dias_para_vencer=dias_para_vencer, 
+            dias_para_carta=dias_para_carta
+        )
+        
         logger.info("Proceso finalizado")
+        
     except Exception as e:
         logger.error(f"Error en el proceso: {e}")
         return 1

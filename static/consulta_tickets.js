@@ -236,9 +236,12 @@ async function buscarTickets() {
         if (currentController) currentController.abort();
         currentController = new AbortController();
         console.log('Buscando tickets con URL:', url.toString());
-        const response = await fetch(url, { 
+        const fetchFn = (window.sessionManager && typeof window.sessionManager.fetch === 'function')
+            ? window.sessionManager.fetch.bind(window.sessionManager)
+            : fetch;
+        const response = await fetchFn(url.toString(), {
             signal: currentController.signal,
-            credentials: 'include'  // Incluir cookies en la petición
+            credentials: 'include'
         });
         if (!response.ok) throw new Error('Error al consultar los tickets');
         const data = await response.json();
