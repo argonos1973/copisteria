@@ -3,7 +3,7 @@
 import json
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from batch_utils import get_batch_db_path, load_batch_params
 from email_utils import enviar_email_con_adjuntos
@@ -59,7 +59,7 @@ def _map_forma_pago(code: str) -> str:
     return c
 
 
-def _query_totals(conn: sqlite3.Connection, table: str, date_col: str, date_str: str):
+def _query_totals(conn: sqlite3.Connection, table: str, date_col: str, date_str: str, date_str_fin: str = None):
     estado_col = _has_column(conn, table, 'estado')
     cobrado_col = _has_column(conn, table, 'cobrado')
 
@@ -70,8 +70,12 @@ def _query_totals(conn: sqlite3.Connection, table: str, date_col: str, date_str:
     if not total_col:
         raise RuntimeError(f"Tabla {table} no tiene columna total")
 
-    filters = [f"{date_col} = ?"]
-    params = [date_str]
+    if date_str_fin:
+        filters = [f"{date_col} >= ?", f"{date_col} <= ?"]
+        params = [date_str, date_str_fin]
+    else:
+        filters = [f"{date_col} = ?"]
+        params = [date_str]
 
     if estado_col:
         filters.append("estado = 'C'")
@@ -143,7 +147,15 @@ def main():
         raise RuntimeError(f"No existe la BD: {DB_NAME}")
 
     empresa_code = (os.getenv('EMPRESA_CODE') or '').strip()
-    today = datetime.now().strftime('%Y-%m-%d')
+    ahora = datetime.now()
+    today = ahora.strftime('%Y-%m-%d')
+
+    # Rango de la semana actual: lunes a viernes (acumulado hasta hoy si estamos antes del viernes)
+    lunes = ahora - timedelta(days=ahora.weekday())
+    viernes = lunes + timedelta(days=4)
+    fin_semana = min(ahora, viernes)
+    lunes_str = lunes.strftime('%Y-%m-%d')
+    fin_semana_str = fin_semana.strftime('%Y-%m-%d')
 
     conn = _connect(DB_NAME)
     try:
@@ -156,6 +168,14 @@ def main():
         total = fact['total'] + tix['total']
         base = fact['base'] + tix['base']
         iva = fact['iva'] + tix['iva']
+
+        # Acumulado semanal (lunes a viernes)
+        fact_sem = _query_totals(conn, 'factura', fecha_col_factura, lunes_str, fin_semana_str)
+        tix_sem = _query_totals(conn, 'tickets', fecha_col_tickets, lunes_str, fin_semana_str)
+
+        total_sem = fact_sem['total'] + tix_sem['total']
+        base_sem = fact_sem['base'] + tix_sem['base']
+        iva_sem = fact_sem['iva'] + tix_sem['iva']
 
         lines = []
         lines.append(f"Resumen de ventas del día {today}")
@@ -186,6 +206,15 @@ def main():
 
         _append_forma("Por forma de pago (tickets):", tix)
         _append_forma("Por forma de pago (facturas):", fact)
+
+        lines.append(f"ACUMULADO SEMANA ({lunes_str} a {fin_semana_str})")
+        lines.append("-")
+        lines.append(f"Total: { _fmt_euro(total_sem) } €")
+        lines.append(f"Base:  { _fmt_euro(base_sem) } €")
+        lines.append(f"IVA:   { _fmt_euro(iva_sem) } €")
+        lines.append(f"Tickets ({tix_sem['count']}): { _fmt_euro(tix_sem['total']) } €")
+        lines.append(f"Facturas ({fact_sem['count']}): { _fmt_euro(fact_sem['total']) } €")
+        lines.append("")
 
         cuerpo = "\n".join(lines).strip() + "\n"
 

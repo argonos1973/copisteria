@@ -92,75 +92,6 @@ def ingresos_gastos_mes():
         logger.error(f"ERROR EN /ingresos_gastos_mes: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
-@gastos_bp.route('/gastos', methods=['GET'])
-@gastos_bp.route('/api/gastos', methods=['GET'])
-def consulta_gastos():
-    try:
-        # Logs de entrada
-        logger.info(f"[CONSULTA_GASTOS] Petición recibida con args: {dict(request.args)}")
-        fecha_inicio = request.args.get('fecha_inicio', '')
-        if not fecha_inicio:
-            hoy = datetime.now()
-            fecha_inicio = hoy.strftime('%Y-%m-01')
-        fecha_fin = request.args.get('fecha_fin', '')
-        concepto = request.args.get('concepto', '')
-        tipo = request.args.get('tipo', 'todos')
-
-        query = "SELECT fecha_operacion, fecha_valor, concepto, importe_eur FROM gastos WHERE 1=1"
-        params = []
-        if fecha_inicio:
-            query += " AND COALESCE(fecha_operacion_iso, substr(fecha_operacion,7,4)||'-'||substr(fecha_operacion,4,2)||'-'||substr(fecha_operacion,1,2)) >= ?"
-            params.append(fecha_inicio)
-        if fecha_fin:
-            query += " AND COALESCE(fecha_operacion_iso, substr(fecha_operacion,7,4)||'-'||substr(fecha_operacion,4,2)||'-'||substr(fecha_operacion,1,2)) <= ?"
-            params.append(fecha_fin)
-        if concepto:
-            query += " AND lower(concepto) LIKE ?"
-            params.append(f'%{concepto.lower()}%')
-        if tipo == 'ingresos':
-            query += " AND importe_eur > 0"
-        elif tipo == 'gastos':
-            query += " AND importe_eur < 0"
-        # Ordenar por fecha_valor optimizada (usar columna ISO si existe, sino convertir)
-        query += " ORDER BY COALESCE(fecha_valor_iso, substr(fecha_valor,7,4)||'-'||substr(fecha_valor,4,2)||'-'||substr(fecha_valor,1,2)) DESC"
-
-        conn = get_db_connection()
-        logger.info(f"[CONSULTA_GASTOS] Ejecutando consulta SQL con params: {params}")
-        gastos = conn.execute(query, params).fetchall()
-        logger.info(f"[CONSULTA_GASTOS] Filas devueltas: {len(gastos)}")
-        conn.close()
-        # Validar y limpiar resultados
-        gastos_list = []
-        total_negativos = 0.0
-        total_positivos = 0.0
-        for g in gastos:
-            try:
-                importe = float(g['importe_eur']) if g['importe_eur'] is not None else 0.0
-            except Exception:
-                importe = 0.0
-            if importe < 0:
-                total_negativos += importe
-            elif importe > 0:
-                total_positivos += importe
-            gastos_list.append({
-                'fecha_operacion': g['fecha_operacion'],
-                'fecha_valor': g['fecha_valor'],
-                'concepto': g['concepto'],
-                'importe_eur': importe
-            })
-        diferencia = total_positivos + total_negativos
-        respuesta = {
-            'gastos': gastos_list,
-            'total_negativos': total_negativos,
-            'total_positivos': total_positivos,
-            'diferencia': diferencia
-        }
-        logger.info(f"[CONSULTA_GASTOS] Resumen totales: negativos={total_negativos}, positivos={total_positivos}, diferencia={diferencia}")
-        return jsonify(respuesta)
-    except Exception as e:
-        logger.error(f"ERROR EN CONSULTA_GASTOS: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
-
 
 # -------------------------------------------------------------------------
 #  NUEVO ENDPOINT: INGRESOS Y GASTOS TOTALES POR AÑO
@@ -209,62 +140,6 @@ def ingresos_gastos_totales():
 
             ingresos_act, gastos_act = totales(anio_actual)
             ingresos_prev, gastos_prev = totales(anio_anterior)
-            
-            # Obtener directamente el valor máximo de ts y formatearlo
-            try:
-                # Consulta para obtener el ts máximo directamente
-                cur.execute(
-                    """
-                    SELECT MAX(ts) AS ultima_fecha
-                    FROM gastos
-                    """
-                )
-                row = cur.fetchone()
-                ultima_fecha = row['ultima_fecha'] if row and row['ultima_fecha'] else None
-                
-                # Como fallback, también obtenemos la fecha_operacion
-                cur.execute(
-                    """
-                    SELECT MAX(fecha_operacion) as ultima_actualizacion
-                    FROM gastos
-                    WHERE substr(fecha_operacion, 7, 4) = ?
-                    """,
-                    (str(anio_actual),)
-                )
-                row_fecha = cur.fetchone()
-                ultima_actualizacion = row_fecha['ultima_actualizacion'] if row_fecha and row_fecha['ultima_actualizacion'] else None
-            except Exception as e:
-                logger.error(f"Error al consultar la base de datos: {e}", exc_info=True)
-                ultima_fecha = None
-                ultima_actualizacion = None
-            
-            # Crear versión con fecha y hora completa en formato dd/mm/aaaa hh:mm:ss
-            ultima_actualizacion_completa = None
-            if ultima_fecha:
-                fecha_dt = None
-                # Intentar ISO primero (incluyendo fracciones y 'T')
-                try:
-                    s = str(ultima_fecha).replace('Z', '')
-                    fecha_dt = datetime.fromisoformat(s)
-                except Exception:
-                    # Intentar con 'T' reemplazada por espacio
-                    try:
-                        s2 = str(ultima_fecha).replace('T', ' ')
-                        fecha_dt = datetime.fromisoformat(s2)
-                    except Exception:
-                        # Intentar formato clásico sin fracciones
-                        try:
-                            fecha_dt = datetime.strptime(str(ultima_fecha), '%Y-%m-%d %H:%M:%S')
-                        except Exception:
-                            fecha_dt = None
-                if fecha_dt:
-                    ultima_actualizacion_completa = fecha_dt.strftime('%d/%m/%Y %H:%M:%S')
-                else:
-                    # Fallback: usar fecha_operacion si está disponible
-                    ultima_actualizacion_completa = ultima_actualizacion
-            elif ultima_actualizacion:
-                # Fallback: Si no hay ts pero sí fecha_operacion
-                ultima_actualizacion_completa = ultima_actualizacion
 
             def pct(actual:float, prev:float):
                 if prev == 0:
@@ -277,8 +152,6 @@ def ingresos_gastos_totales():
             return jsonify({
                 'año_actual': anio_actual,
                 'año_anterior': anio_anterior,
-                'ultima_actualizacion': ultima_actualizacion,
-                'ultima_actualizacion_completa': ultima_actualizacion_completa,
                 'ingresos': {
                     'total_actual': ingresos_act,
                     'total_anterior': ingresos_prev,

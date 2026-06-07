@@ -335,6 +335,46 @@ def ensure_factura_indices():
             logger.error(f"Error: {e}", exc_info=True)
             pass
 
+
+def ensure_extra_indices():
+    """
+    Crea índices adicionales para acelerar consultas frecuentes detectadas
+    como escaneos completos (full scan):
+    - facturas_proveedores: filtros por año y JOIN por proveedor_id (dashboard/gastos)
+    - conciliacion_documentos: JOIN/filtros por conciliacion_id y (tipo_documento, documento_id)
+    - detalle_presupuesto: JOIN por id_presupuesto
+
+    Usa CREATE INDEX IF NOT EXISTS, por lo que es idempotente. Tras crearlos
+    ejecuta ANALYZE para refrescar las estadísticas del planificador.
+    """
+    conn = None
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        # facturas_proveedores (consultas dashboard/gastos por año y proveedor)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_fp_anio ON facturas_proveedores (año)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_fp_proveedor ON facturas_proveedores (proveedor_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_fp_estado_venc ON facturas_proveedores (estado, fecha_vencimiento)")
+        # conciliacion_documentos (8k+ filas, sin índices previos)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_concil_docs_conciliacion ON conciliacion_documentos (conciliacion_id, tipo_documento)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_concil_docs_documento ON conciliacion_documentos (tipo_documento, documento_id)")
+        # detalle_presupuesto (JOIN por id_presupuesto)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_det_presupuesto ON detalle_presupuesto (id_presupuesto)")
+        conn.commit()
+        # Refrescar estadísticas del planificador de consultas
+        cur.execute("ANALYZE")
+        conn.commit()
+    except Exception as e:
+        logger.info(f"[DB_UTILS] Error al crear índices extra: {e}")
+    finally:
+        try:
+            if conn:
+                conn.close()
+        except Exception as e:
+            logger.error(f"Error: {e}", exc_info=True)
+            pass
+
 # Ejecutar al importar el módulo para garantizar que existan
 ensure_factura_indices()
 ensure_gastos_indices()
+ensure_extra_indices()

@@ -22,7 +22,7 @@ DB_USUARIOS_PATH = os.path.join(BASE_DIR, 'db', 'usuarios_sistema.db')
 
 # Configuración de sesiones
 SESSION_CONFIG = {
-    'SECRET_KEY': 'e296f3311294d608621f62570ebb03ffc6036e9d4eb21854f7c878994236516e',  # Clave segura generada
+    'SECRET_KEY': os.environ.get('ALEPH70_SECRET_KEY', 'e296f3311294d608621f62570ebb03ffc6036e9d4eb21854f7c878994236516e'),
     'PERMANENT_SESSION_LIFETIME': 3600 * 4,  # 4 horas
     'SESSION_COOKIE_NAME': 'aleph70_session',
     'SESSION_COOKIE_HTTPONLY': True,
@@ -498,3 +498,26 @@ if not os.path.exists(DB_USUARIOS_PATH):
 else:
     # Verificar esquema en cada inicio para asegurar integridad
     verificar_y_actualizar_esquema()
+
+
+def _bootstrap_face_config():
+    """Reemplaza placeholders de face_config.json con variables de entorno."""
+    try:
+        face_path = os.path.join(BASE_DIR, 'face_config.json')
+        if not os.path.exists(face_path):
+            return
+        with open(face_path, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+        password = config.get('password_certificado', '')
+        if isinstance(password, str) and password.startswith('__ENV_') and password.endswith('__'):
+            env_var = password.strip('_').replace('ENV_', '')
+            real_value = os.environ.get(env_var)
+            if real_value:
+                config['password_certificado'] = real_value
+                with open(face_path, 'w', encoding='utf-8') as f:
+                    json.dump(config, f, indent=4, ensure_ascii=False)
+                logger.info("Bootstrap face_config.json: password_certificado actualizado desde env")
+    except Exception:
+        logger.warning("No se pudo bootstrap face_config.json", exc_info=True)
+
+_bootstrap_face_config()

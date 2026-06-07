@@ -1155,8 +1155,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const prodId = p.id ?? p.producto_id ?? '';
       tr.dataset.id = prodId;
       tr.dataset.nombre = p.nombre;
+      const cantFmt = Number(p.cantidad_actual || 0).toLocaleString('es-ES');
       tr.innerHTML = `<td title="${p.nombre}">${p.nombre.slice(0,28)}${p.nombre.length>28?'...':''}</td>
-        <td>${p.cantidad_actual}</td>
+        <td title="${cantFmt}" style="white-space:nowrap;">${cantFmt}</td>
         <td>${formatearImporte(p.total_actual)}</td>
         <td class="${p.porcentaje_diferencia>=0?'positive':'negative'}">${formatearPorcentaje(p.porcentaje_diferencia)}</td>`;
       tr.style.cursor = 'pointer';
@@ -1478,6 +1479,128 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tipo = document.getElementById('tipo-datos').value;
     const vista = document.getElementById('vista-ventas')?.value || 'mensual';
     const anioAnterior = anio - 1;
+
+    // === Vista por Semanas (líneas, comparativa con año anterior) ===
+    if (vista === 'semanal') {
+      const datosSem = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_semana?anio=${anio}`));
+      const semHasta = datosSem.semana_hasta;
+      const semAnterior = datosSem.semanas_anio_anterior;
+      const maxSem = Math.max(semHasta, semAnterior);
+      const semLabels = Array.from({length: maxSem}, (_, i) => `S${i + 1}`);
+
+      let serieActual, serieAnterior, labelActual, labelAnterior, colorActual, colorAnterior;
+      if (tipo === 'tickets') {
+        serieActual = datosSem.tickets.actual;
+        serieAnterior = datosSem.tickets.anterior;
+        labelActual = `Tickets ${anio}`;
+        labelAnterior = `Tickets ${anioAnterior}`;
+        colorActual = '#2ecc71'; colorAnterior = '#a9dfbf';
+      } else if (tipo === 'facturas') {
+        serieActual = datosSem.facturas.actual;
+        serieAnterior = datosSem.facturas.anterior;
+        labelActual = `Facturas ${anio}`;
+        labelAnterior = `Facturas ${anioAnterior}`;
+        colorActual = '#f1c40f'; colorAnterior = '#e5a100';
+      } else {
+        serieActual = datosSem.global.actual;
+        serieAnterior = datosSem.global.anterior;
+        labelActual = `Global ${anio}`;
+        labelAnterior = `Global ${anioAnterior}`;
+        colorActual = '#3498db'; colorAnterior = '#9b59b6';
+      }
+
+      // Totales por semana (no acumulados)
+      const semActualVals = semLabels.map((_, i) => {
+        const s = i + 1;
+        return s <= semHasta ? (serieActual[String(s)]?.total ?? 0) : null;
+      });
+      const semAnteriorVals = semLabels.map((_, i) => {
+        const s = i + 1;
+        return s <= semAnterior ? (serieAnterior[String(s)]?.total ?? 0) : null;
+      });
+
+      // Acumulados semana a semana
+      let acumActual = 0, acumAnterior = 0;
+      const valActual = semLabels.map((_, i) => {
+        const s = i + 1;
+        if (s <= semHasta) acumActual += serieActual[String(s)]?.total ?? 0;
+        return s <= semHasta ? acumActual : null;
+      });
+      const valAnterior = semLabels.map((_, i) => {
+        const s = i + 1;
+        if (s <= semAnterior) acumAnterior += serieAnterior[String(s)]?.total ?? 0;
+        return s <= semAnterior ? acumAnterior : null;
+      });
+
+      const datasets = [
+        {
+          label: `${labelAnterior} (semana)`,
+          data: semAnteriorVals,
+          borderColor: colorAnterior,
+          backgroundColor: colorAnterior + '33',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          tension: 0.3,
+          pointRadius: 1,
+          fill: false,
+          spanGaps: false,
+          yAxisID: 'y1'
+        },
+        {
+          label: `${labelActual} (semana)`,
+          data: semActualVals,
+          borderColor: colorActual,
+          backgroundColor: colorActual + '33',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          tension: 0.3,
+          pointRadius: 1,
+          fill: false,
+          spanGaps: false,
+          yAxisID: 'y1'
+        },
+        {
+          label: `${labelAnterior} (acum.)`,
+          data: valAnterior,
+          borderColor: colorAnterior,
+          backgroundColor: colorAnterior + '33',
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 1,
+          fill: false,
+          spanGaps: false
+        },
+        {
+          label: `${labelActual} (acum.)`,
+          data: valActual,
+          borderColor: colorActual,
+          backgroundColor: colorActual + '33',
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 2,
+          fill: false,
+          spanGaps: false
+        }
+      ];
+
+      if (chartEstadisticas) chartEstadisticas.destroy();
+      chartEstadisticas = new Chart(document.getElementById('chart-estadisticas').getContext('2d'), {
+        type: 'line',
+        data: { labels: semLabels, datasets },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: { title: { display: true, text: 'Semana del año' } },
+            y: { beginAtZero: true, title: { display: true, text: 'Acumulado (€)' } },
+            y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Semana (€)' } }
+          }
+        }
+      });
+      document.getElementById('modal-graficos').style.display = 'block';
+      chartCliente = null;
+      return;
+    }
 
     // === Vista por Días del Mes (líneas) ===
     if (vista === 'dia_semana') {

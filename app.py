@@ -268,8 +268,9 @@ def register_middlewares(app):
     @app.before_request
     def before_request():
         """Middleware ejecutado antes de cada request"""
-        # Log de requests para depuración
-        logger.info(f"REQUEST INCOMING: {request.method} {request.path}")
+        # Log de requests para depuración (omitir estáticos para reducir I/O de log)
+        if not request.path.startswith('/static/'):
+            logger.info(f"REQUEST INCOMING: {request.method} {request.path}")
         
         # Headers para permitir cookies cross-origin (preflight)
         if request.method == "OPTIONS":

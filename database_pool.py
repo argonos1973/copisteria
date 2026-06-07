@@ -136,6 +136,14 @@ class DatabasePool:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute("PRAGMA synchronous=NORMAL")
             conn.execute("PRAGMA cache_size=10000")
+            # Evitar que el WAL crezca sin control (causa lentitud en lecturas):
+            # checkpoint automático más frecuente y límite de tamaño del fichero WAL.
+            conn.execute("PRAGMA wal_autocheckpoint=400")
+            conn.execute("PRAGMA journal_size_limit=5242880")  # 5 MB
+            # Tablas temporales y ordenaciones en memoria
+            conn.execute("PRAGMA temp_store=MEMORY")
+            # Mapear la BD en memoria para acelerar lecturas (128 MB)
+            conn.execute("PRAGMA mmap_size=134217728")
             
             pooled_conn = PooledConnection(conn, self)
             

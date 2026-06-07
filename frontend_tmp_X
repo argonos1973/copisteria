@@ -1190,17 +1190,13 @@ def top_productos_ventas():
                 GROUP BY TRIM(df.concepto), strftime('%Y', f.fecha)
             )
             SELECT 
-                UPPER(MAX(producto_nombre)) as producto_nombre,
+                producto_nombre,
                 SUM(CASE WHEN anio = ? THEN cantidad ELSE 0 END) as cantidad_actual,
                 SUM(CASE WHEN anio = ? THEN total ELSE 0 END) as total_actual,
                 SUM(CASE WHEN anio = ? THEN cantidad ELSE 0 END) as cantidad_anterior,
                 SUM(CASE WHEN anio = ? THEN total ELSE 0 END) as total_anterior
             FROM ventas
-            WHERE TRIM(LOWER(producto_nombre)) IN (
-                SELECT TRIM(LOWER(nombre)) FROM productos WHERE nombre IS NOT NULL
-            )
-            AND TRIM(LOWER(producto_nombre)) != 'libre'
-            GROUP BY TRIM(LOWER(producto_nombre))
+            GROUP BY producto_nombre
             HAVING total_actual > 0
             ORDER BY total_actual DESC
             LIMIT 10
@@ -1221,7 +1217,7 @@ def top_productos_ventas():
             # Buscar el ID del producto más reciente (ejercicio actual) en la tabla productos
             producto_id = 0
             nombre_producto = row['producto_nombre']
-            cursor.execute('SELECT MAX(id) as id FROM productos WHERE TRIM(LOWER(nombre)) = TRIM(LOWER(?) COLLATE NOCASE)', (nombre_producto,))
+            cursor.execute('SELECT MAX(id) as id FROM productos WHERE TRIM(UPPER(nombre)) = TRIM(UPPER(?))', (nombre_producto,))
             prod_row = cursor.fetchone()
             if prod_row and prod_row['id']:
                 producto_id = prod_row['id']

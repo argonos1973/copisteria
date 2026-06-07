@@ -2,7 +2,6 @@ from flask import Blueprint, jsonify, request
 from datetime import datetime
 import sqlite3
 from db_utils import get_db_connection
-import re
 from logger_config import get_estadisticas_logger
 
 logger = get_estadisticas_logger()
@@ -10,168 +9,6 @@ logger = get_estadisticas_logger()
 estadisticas_gastos_bp = Blueprint('estadisticas_gastos', __name__)
 
 # ===== FUNCIONES AUXILIARES COMPARTIDAS =====
-
-def _inicializar_campo_puntual(conn):
-    """
-    Inicializa el campo 'puntual' en la tabla gastos si no existe.
-    El campo puntual indica si un gasto es puntual (1) o recurrente (0).
-    """
-    try:
-        cursor = conn.cursor()
-
-        # Verificar si el campo ya existe
-        cursor.execute("PRAGMA table_info(gastos)")
-        columnas = cursor.fetchall()
-        columnas_nombres = [col['name'] for col in columnas]
-
-        if 'puntual' not in columnas_nombres:
-            logger.info("Agregando campo 'puntual' a tabla gastos")
-            cursor.execute("ALTER TABLE gastos ADD COLUMN puntual INTEGER DEFAULT 0")
-
-        if 'razon_social' not in columnas_nombres:
-            logger.info("Agregando campo 'razon_social' a tabla gastos")
-            cursor.execute("ALTER TABLE gastos ADD COLUMN razon_social TEXT")
-
-        conn.commit()
-        logger.debug("Campos 'puntual' y 'razon_social' verificados/inicializados")
-    except Exception as e:
-        logger.error(f"Error al inicializar campos gastos: {e}", exc_info=True)
-        conn.rollback()
-
-def _marcar_gastos_puntuales(conn, gastos_puntuales_ids):
-    """
-    Marca los gastos puntuales en la base de datos.
-    puntual = 1: gastos puntuales automáticos (>1000€ no recurrentes)
-    puntual = 2: gastos excluidos manualmente (ej: devoluciones)
-    Args:
-        conn: conexión a la base de datos
-        gastos_puntuales_ids: set o lista de IDs de gastos que son puntuales
-    """
-    if not gastos_puntuales_ids:
-        # Si no hay gastos puntuales automáticos, desmarcar solo los automáticos (puntual=1)
-        # Preservar los manuales (puntual=2)
-        try:
-            cursor = conn.cursor()
-            cursor.execute("UPDATE gastos SET puntual = 0 WHERE puntual = 1")
-            conn.commit()
-        except Exception as e:
-            logger.error(f"Error al desmarcar gastos puntuales automáticos: {e}", exc_info=True)
-            conn.rollback()
-        return
-
-    try:
-        cursor = conn.cursor()
-
-        # Convertir set a lista si es necesario
-        ids_lista = list(gastos_puntuales_ids) if isinstance(gastos_puntuales_ids, set) else gastos_puntuales_ids
-
-        # Marcar gastos puntuales automáticos (solo si no están marcados manualmente)
-        placeholders = ','.join('?' * len(ids_lista))
-        cursor.execute(f"""
-            UPDATE gastos
-            SET puntual = 1
-            WHERE id IN ({placeholders})
-            AND (puntual = 0 OR puntual IS NULL OR puntual = 1)
-        """, ids_lista)
-
-        # Desmarcar SOLO gastos automáticos (puntual=1) que ya no son puntuales
-        # NO tocar los manuales (puntual=2)
-        cursor.execute(f"""
-            UPDATE gastos
-            SET puntual = 0
-            WHERE puntual = 1 AND id NOT IN ({placeholders})
-        """, ids_lista)
-
-        conn.commit()
-        logger.info(f"Marcados {len(gastos_puntuales_ids)} gastos como puntuales")
-    except Exception as e:
-        logger.error(f"Error al marcar gastos puntuales: {e}", exc_info=True)
-        conn.rollback()
-
-def _identificar_gastos_puntuales(conn, anio, mes=None):
-    """
-    Identifica gastos puntuales según los criterios específicos del usuario:
-    - Gastos individuales >1000€ que no se repitan durante 3 meses
-    - Múltiples gastos del mismo día que sumen >1000€ y no se repitan durante 3 meses
-
-    Args:
-        conn: conexión a la base de datos
-        anio: año para analizar
-        mes: mes hasta el cual analizar (opcional)
-
-    Returns:
-        set: IDs de gastos que son puntuales según los criterios
-    """
-    cursor = conn.cursor()
-
-    # Obtener todos los gastos del año
-    if mes:
-        cursor.execute('''
-            SELECT id, concepto, ABS(importe_eur) as importe, fecha_valor
-            FROM gastos
-            WHERE substr(fecha_valor, 7, 4) = ?
-            AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) <= ?
-            AND importe_eur < 0
-        ''', (str(anio), mes))
-    else:
-        cursor.execute('''
-            SELECT id, concepto, ABS(importe_eur) as importe, fecha_valor
-            FROM gastos
-            WHERE substr(fecha_valor, 7, 4) = ?
-            AND importe_eur < 0
-        ''', (str(anio),))
-
-    gastos = cursor.fetchall()
-
-    if not gastos:
-        return set()
-
-    gastos_puntuales = set()
-
-    # 1. Agrupar todos los gastos por (concepto normalizado + fecha)
-    gastos_por_concepto_fecha = {}
-    for gasto in gastos:
-        concepto_norm = _normalizar_concepto(gasto['concepto'])
-        fecha = gasto['fecha_valor']
-        clave = (concepto_norm, fecha)
-        
-        if clave not in gastos_por_concepto_fecha:
-            gastos_por_concepto_fecha[clave] = []
-        gastos_por_concepto_fecha[clave].append(gasto)
-
-    # 2. Identificar grupos que sumen >1000€ (individual o agregado del mismo día)
-    gastos_altos_por_concepto = {}
-    
-    for (concepto_norm, fecha), gastos_del_dia in gastos_por_concepto_fecha.items():
-        total_dia = sum(g['importe'] for g in gastos_del_dia)
-        
-        # Si el total del día >1000€, considerarlo como gasto alto
-        if total_dia > 1000:
-            if concepto_norm not in gastos_altos_por_concepto:
-                gastos_altos_por_concepto[concepto_norm] = []
-            
-            # Guardar todos los gastos de ese día junto con la fecha
-            gastos_altos_por_concepto[concepto_norm].append({
-                'gastos': gastos_del_dia,
-                'fecha': fecha,
-                'total': total_dia
-            })
-
-    # 3. Para cada concepto, verificar en cuántos meses diferentes aparece
-    for concepto_norm, dias_con_gastos in gastos_altos_por_concepto.items():
-        # Obtener los meses únicos en los que aparece este concepto con gastos >1000€
-        meses_unicos = set()
-        for dia_info in dias_con_gastos:
-            mes_gasto = dia_info['fecha'][3:5]  # Extraer MM de dd/MM/yyyy
-            meses_unicos.add(mes_gasto)
-
-        # Si este concepto aparece en menos de 3 meses diferentes, todos sus gastos son puntuales
-        if len(meses_unicos) < 3:
-            for dia_info in dias_con_gastos:
-                for g in dia_info['gastos']:
-                    gastos_puntuales.add(g['id'])
-
-    return gastos_puntuales
 
 def _calcular_media_mensual_sin_puntuales(conn, anio, mes=None):
     """
@@ -185,14 +22,9 @@ def _calcular_media_mensual_sin_puntuales(conn, anio, mes=None):
     Returns:
         tuple: (media_mensual, total_gastos_sin_puntuales, num_meses)
     """
-    # Inicializar campo puntual si no existe
-    _inicializar_campo_puntual(conn)
-
-    # Identificar y marcar gastos puntuales
-    gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
-    _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
-
-    # Calcular gastos desde facturas_proveedores
+    # NOTA: la identificación/marcado de gastos puntuales la realiza el endpoint
+    # llamante una sola vez. Esta función solo calcula la media a partir de
+    # facturas_proveedores, por lo que no se repite ese trabajo (ni sus escrituras).
     cursor = conn.cursor()
     if mes:
         cursor.execute('''
@@ -222,145 +54,6 @@ def _calcular_media_mensual_sin_puntuales(conn, anio, mes=None):
 
     return media_mensual, total_sin_puntuales, num_meses
 
-def _obtener_case_categoria_sql():
-    """Devuelve el CASE SQL para categorizar gastos"""
-    return '''
-        CASE 
-            WHEN concepto LIKE 'Recibo%' THEN 'Recibos'
-            WHEN concepto LIKE 'Liquidacion%' THEN 'Liquidaciones TPV'
-            WHEN concepto LIKE '%Transferencia%' THEN 'Transferencias'
-            WHEN concepto LIKE '%Bizum%' THEN 'Bizum'
-            WHEN (concepto LIKE '%Tarjeta%' OR concepto LIKE '%Tarj.%' OR concepto LIKE '%Compra%' OR concepto LIKE 'Pago Movil%' OR concepto LIKE 'Pago Con Tarjeta%') AND concepto NOT LIKE 'Liquidacion%' THEN 'Compras Tarjeta'
-            ELSE substr(concepto, 1, 30)
-        END
-    '''
-
-def _obtener_filtro_categoria(categoria):
-    """Devuelve el filtro SQL WHERE para una categoría específica"""
-    filtros = {
-        'Recibos': "concepto LIKE 'Recibo%'",
-        'Liquidaciones TPV': "concepto LIKE 'Liquidacion%'",
-        'Transferencias': "concepto LIKE '%Transferencia%'",
-        'Bizum': "concepto LIKE '%Bizum%'",
-        'Compras Tarjeta': "((concepto LIKE '%Tarjeta%' OR concepto LIKE '%Tarj.%' OR concepto LIKE '%Compra%' OR concepto LIKE 'Pago Movil%' OR concepto LIKE 'Pago Con Tarjeta%') AND concepto NOT LIKE 'Liquidacion%')",
-        'Otros': """(concepto NOT LIKE 'Recibo%' 
-                    AND concepto NOT LIKE 'Liquidacion%' 
-                    AND concepto NOT LIKE '%Transferencia%' 
-                    AND concepto NOT LIKE '%Bizum%' 
-                    AND concepto NOT LIKE '%Tarjeta%' 
-                    AND concepto NOT LIKE '%Tarj.%'
-                    AND concepto NOT LIKE '%Compra%'
-                    AND concepto NOT LIKE 'Pago Movil%'
-                    AND concepto NOT LIKE 'Pago Con Tarjeta%')"""
-    }
-    return filtros.get(categoria, "1=1")
-
-def _normalizar_concepto(concepto_original):
-    """Normaliza un concepto de gasto eliminando referencias, números y código redundante"""
-    # Eliminar números de recibo, referencias, códigos
-    concepto = re.sub(r'N[ºo°]\s*Recibo[:\s]+[\d\s]+', '', concepto_original, flags=re.IGNORECASE)
-    concepto = re.sub(r'Nº\s*[\d\s]+', '', concepto)
-    concepto = re.sub(r'Ref[:\.\s]+.*?Mandato[:\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r'Ref[:\.\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r'Mandato[:\s]+[\w\d\-]+', '', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r'Factura[:\s]+[\d\-\/]+', '', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r'Contracte?\s+(Num\.?|N[ºo°])?\s*[\d\s]*', '', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r'Subministrament\s+D\s+Aigua\s+Contracte\s+Num\.?', 'Subministrament D Aigua', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r'\d{2}\/\d{2}\/\d{4}', '', concepto)  # Fechas
-    concepto = re.sub(r'\d{4}-\d{2}-\d{2}', '', concepto)  # Fechas ISO
-    concepto = re.sub(r'\bBb[a-z]{5}\b', '', concepto, flags=re.IGNORECASE)  # Códigos tipo Bbfztpn
-    
-    # === NORMALIZACIÓN ESPECÍFICA POR TIPO ===
-    
-    # TRANSFERENCIAS: Agrupar por destinatario (eliminar variaciones del concepto)
-    if 'Transferencia' in concepto:
-        # Normalizar "Transferencia Inmediata" → "Transferencia"
-        concepto = re.sub(r'Transferencia\s+Inmediata\s+', 'Transferencia ', concepto, flags=re.IGNORECASE)
-        # TRUYOL: Normalizar "Truyol Digital" → "Truyol"
-        if 'truyol' in concepto.lower():
-            concepto = re.sub(r'Truyol\s+Digital', 'Truyol', concepto, flags=re.IGNORECASE)
-        # Si tiene "A Favor De", mantener solo hasta el nombre (eliminar todo después)
-        match = re.search(r'(Transferencia.*?A\s+Favor\s+De\s+[\w\s,]+?)\s+Concepto', concepto, re.IGNORECASE)
-        if match:
-            concepto = match.group(1).strip()
-    
-    # COMPRAS TARJETA: Eliminar info de tarjeta y localización
-    if 'Compra' in concepto or 'Tarjeta' in concepto:
-        # Normalizar "Compra Internet En" → "Compra En"
-        concepto = re.sub(r'Compra\s+Internet\s+En\s+', 'Compra En ', concepto, flags=re.IGNORECASE)
-        
-        # AMAZON: Normalizar todas las compras de Amazon
-        if 'amazon' in concepto.lower() or 'amzn' in concepto.lower():
-            concepto = 'Compra Amazon Business'
-        
-        # UBER EATS: Normalizar variaciones
-        if 'uber' in concepto.lower() and 'eats' in concepto.lower():
-            concepto = 'Compra Uber Eats'
-        
-        # TAXI: Normalizar taxis (Llic, Lic., etc.)
-        if 'taxi' in concepto.lower() or 'autotaxi' in concepto.lower():
-            concepto = 'Compra Taxi'
-        
-        # Eliminar información de tarjeta y comisión (con números)
-        # Formato: ", Tarjeta 4176570108340631 , Comision 0" o "Comision 0,00"
-        concepto = re.sub(r',\s*Tarjeta\s+[\d\s]+,\s*Comision\s+[\d,\.]+', '', concepto, flags=re.IGNORECASE)
-        # Formato más simple: ", Tarjeta , Comision"
-        concepto = re.sub(r',?\s*Tarjeta\s*,?\s*Comision\s*', '', concepto, flags=re.IGNORECASE)
-        # Eliminar solo ", Tarjeta" al final
-        concepto = re.sub(r',?\s*Tarjeta\s*$', '', concepto, flags=re.IGNORECASE)
-        concepto = re.sub(r',?\s*Tarj\.\s*:?\*?\d*\s*$', '', concepto, flags=re.IGNORECASE)
-        
-        # Eliminar todo después de la segunda coma (ciudad)
-        partes = concepto.split(',')
-        if len(partes) > 2:
-            concepto = ','.join(partes[:2])
-        # Eliminar ", [Ciudad]" al final
-        concepto = re.sub(r',\s*[A-Z][\w\s]+$', '', concepto)
-    
-    # Eliminar ", De" al final y variaciones
-    concepto = re.sub(r',\s*De\s*$', '', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r',\s*D\s*$', '', concepto)  # Solo ", D" al final
-    
-    # REPSOL: Eliminar texto duplicado y redundante
-    if 'repsol' in concepto.lower():
-        # Eliminar "repsol Comercializadora D"
-        concepto = re.sub(r'repsol\s+Comercializadora\s+D?', 'Repsol', concepto, flags=re.IGNORECASE)
-        # Eliminar "Repsol XXXX" donde XXXX son números (códigos de contrato)
-        concepto = re.sub(r'(Repsol)\s+\d+', r'\1', concepto, flags=re.IGNORECASE)
-        # Si aparece "Repsol" duplicado, dejarlo una vez
-        concepto = re.sub(r'(Repsol)[,\s]+(Repsol)', r'\1', concepto, flags=re.IGNORECASE)
-    
-    # ORANGE: Normalizar todas las variaciones
-    if 'orange' in concepto.lower():
-        # Normalizar TODO a "Recibo Orange"
-        if 'Recibo' in concepto:
-            concepto = 'Recibo Orange Espagne'
-    
-    # Eliminar TODOS los números que quedan (muy agresivo)
-    concepto = re.sub(r'\b\d+\b', '', concepto)  # Números aislados
-    concepto = re.sub(r'\s+[A-Z]?\d+[A-Z]?\s*$', '', concepto)  # Códigos alfanuméricos al final
-    
-    # Eliminar texto redundante común
-    concepto = re.sub(r'Periodo\s+Liquidacion[:\s]*[\/\-]*\s*,?\s*', '', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r',?\s*De\s+(No|Not\s+Provided)\s*$', '', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r'\s*[\/\-]+\s*', ' ', concepto)  # Barras y guiones sueltos
-    concepto = re.sub(r'\s*R\.e\.\s*', ' ', concepto, flags=re.IGNORECASE)  # R.e. (régimen especial)
-    concepto = re.sub(r'\bautonomos\b', 'Autónomos', concepto, flags=re.IGNORECASE)
-    
-    # Normalizar puntuación: S.l.u. → Slu, S.a.u → Sau, etc.
-    concepto = re.sub(r'S\.[lL]\.[uU]\.', 'Slu', concepto)
-    concepto = re.sub(r'S\.[aA]\.[uU]\.', 'Sau', concepto)
-    concepto = re.sub(r'S\.[lL]\.', 'Sl', concepto)
-    concepto = re.sub(r'S\.c\.c\.l\.', 'Sccl', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r'S\.a\.', 'Sa', concepto, flags=re.IGNORECASE)
-    concepto = re.sub(r'C\s+B\b', 'CB', concepto)
-    
-    # Eliminar múltiples espacios y puntuación redundante
-    concepto = re.sub(r'\s+', ' ', concepto).strip()
-    concepto = re.sub(r'[,.\s]+$', '', concepto)
-    concepto = re.sub(r'\s*,\s*,\s*', ', ', concepto)  # Comas duplicadas
-    
-    return concepto
 
 @estadisticas_gastos_bp.route('/api/gastos/estadisticas', methods=['GET'])
 def obtener_estadisticas_gastos():
@@ -375,13 +68,6 @@ def obtener_estadisticas_gastos():
         with get_db_connection() as conn:
             cursor = conn.cursor()
             
-            # Inicializar campo puntual si no existe
-            _inicializar_campo_puntual(conn)
-    
-            # Identificar y marcar gastos puntuales
-            gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
-            _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
-    
             # Gastos totales del año actual (año completo)
             # AHORA USA facturas_proveedores en lugar de gastos
             cursor.execute('''
@@ -1112,112 +798,78 @@ def obtener_detalles_categoria():
             cursor = conn.cursor()
             conn.row_factory = sqlite3.Row
             
-            # Inicializar y marcar gastos puntuales
-            _inicializar_campo_puntual(conn)
-            gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
-            _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
-            
-            # Verificar columna razon_social
-            cursor.execute("PRAGMA table_info(gastos)")
-            cols = [c['name'] for c in cursor.fetchall()]
-            col_razon = "razon_social" if "razon_social" in cols else "NULL as razon_social"
-            
-            # 1. Obtener TODOS los gastos (del año, trimestre o mes según corresponda)
-            query = f'''
-                SELECT 
-                    id, fecha_valor, concepto, ABS(importe_eur) as importe, puntual, {col_razon}
-                FROM gastos
-                WHERE substr(fecha_valor, 7, 4) = ?
-                AND importe_eur < 0
+            # Gastos desde facturas_proveedores (fuente de verdad), por proveedor.
+            # La categoría corresponde al nombre del proveedor (o 'Otros' para genéricos),
+            # de forma consistente con los gráficos de pastel del dashboard.
+            query = '''
+                SELECT
+                    COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as categoria,
+                    fp.concepto as concepto,
+                    fp.numero_factura as numero_factura,
+                    fp.total as importe,
+                    fp.fecha_emision as fecha_emision
+                FROM facturas_proveedores fp
+                LEFT JOIN proveedores p ON fp.proveedor_id = p.id
+                WHERE fp.año = ?
             '''
-            params = [str(anio)]
-            
+            params = [anio]
+
             if trimestre and trimestre >= 1 and trimestre <= 4:
-                # Filtrar por trimestre
                 mes_inicio = (trimestre - 1) * 3 + 1
                 mes_fin = mes_inicio + 2
-                query += ' AND CAST(substr(fecha_valor, 4, 2) AS INTEGER) BETWEEN ? AND ?'
+                query += ' AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) BETWEEN ? AND ?'
                 params.extend([mes_inicio, mes_fin])
             elif mes:
-                query += ' AND substr(fecha_valor, 4, 2) = ?'
-                params.append(str(mes).zfill(2))
-                
-            query += ' ORDER BY fecha_valor DESC'
-            
+                query += ' AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) = ?'
+                params.append(mes)
+
+            query += ' ORDER BY fp.fecha_emision DESC'
+
             cursor.execute(query, params)
-            todos_los_gastos = cursor.fetchall()
-            
-            # 2. Procesar y Agrupar para identificar el TOP 9
-            agrupados_totales = {}
-            gastos_procesados = []
-            
-            logger.info(f"Detalles Categoria debug: Buscando '{categoria}' en año {anio}")
-            
-            for row in todos_los_gastos:
-                importe = float(row['importe'] or 0)
-                razon_social = row['razon_social']
-                concepto_raw = row['concepto']
-                fecha = row['fecha_valor']
-                
-                if razon_social and razon_social.strip():
-                    concepto_norm = razon_social.strip()
-                else:
-                    concepto_norm = _normalizar_concepto(concepto_raw)
-                
-                if concepto_norm not in agrupados_totales:
-                    agrupados_totales[concepto_norm] = 0.0
-                agrupados_totales[concepto_norm] += importe
-                
-                gastos_procesados.append({
-                    'concepto_norm': concepto_norm,
-                    'concepto_real': concepto_raw,
-                    'fecha': fecha,
-                    'importe': importe
-                })
-            
-            # Identificar Top 9 Conceptos
-            lista_conceptos = [{'concepto': k, 'total': v} for k, v in agrupados_totales.items()]
-            lista_conceptos.sort(key=lambda x: x['total'], reverse=True)
-            top_9_conceptos = set(c['concepto'] for c in lista_conceptos[:9])
-            
-            # 3. Filtrar según la categoría solicitada
-            gastos_filtrados = []
-            
-            if categoria == 'Otros':
-                # Devolver todo lo que NO esté en el Top 9
-                gastos_filtrados = [g for g in gastos_procesados if g['concepto_norm'] not in top_9_conceptos]
-                logger.info(f"Categoria Otros: {len(gastos_filtrados)} gastos encontrados")
-            else:
-                # Devolver exactamente lo que coincida con la categoría (concepto)
-                gastos_filtrados = [g for g in gastos_procesados if g['concepto_norm'] == categoria]
-                logger.info(f"Categoria '{categoria}': {len(gastos_filtrados)} gastos encontrados")
-                if len(gastos_filtrados) == 0:
-                     # Debug si no encuentra nada
-                     ejemplos = [g['concepto_norm'] for g in gastos_procesados[:5]]
-                     logger.info(f"Ejemplos de conceptos normalizados en BD: {ejemplos}")
-                     # Buscar si existe algo parecido
-                     parecidos = [g['concepto_norm'] for g in gastos_procesados if categoria.lower() in g['concepto_norm'].lower()]
-                     if parecidos:
-                         logger.info(f"Posibles coincidencias parciales: {list(set(parecidos))[:5]}")
-                
-            # 4. Formatear respuesta para el frontend (formato lista de transacciones)
+            filas = cursor.fetchall()
+
+            logger.info(f"Detalles Categoria: buscando '{categoria}' en año {anio} ({len(filas)} facturas)")
+
+            # Nombres genéricos que se agrupan en 'Otros' (igual que en los gráficos)
+            nombres_genericos = {'Sin proveedor', 'GASTOS VARIOS', 'SIN NOMBRE', 'NO IDENTIFICADO', ''}
+
+            def _es_generico(cat):
+                return (cat in nombres_genericos) or (not cat) or (len(cat.strip()) < 2)
+
+            # Filtrar las facturas que pertenecen a la categoría (proveedor) solicitada
             gastos_view = []
-            for g in gastos_filtrados:
+            for row in filas:
+                cat = row['categoria']
+                if categoria == 'Otros':
+                    if not _es_generico(cat):
+                        continue
+                else:
+                    if cat != categoria:
+                        continue
+
+                importe = float(row['importe'] or 0)
+                # Convertir fecha_emision (YYYY-MM-DD) a DD/MM/YYYY para visualización
+                fe = row['fecha_emision'] or ''
+                if fe and len(fe) >= 10 and fe[4:5] == '-':
+                    fecha_fmt = f"{fe[8:10]}/{fe[5:7]}/{fe[0:4]}"
+                else:
+                    fecha_fmt = fe
+                concepto_real = row['concepto'] or row['numero_factura'] or 'Factura'
+
                 gastos_view.append({
-                    'concepto': g['concepto_real'], # Mostrar concepto original
+                    'concepto': concepto_real,
                     'cantidad': 1,
-                    'importe': round(g['importe'], 2), # Frontend espera 'importe'
-                    'total': round(g['importe'], 2),   # Mantener 'total' por compatibilidad
-                    'promedio': round(g['importe'], 2),
-                    'fecha': g['fecha'],               # Frontend espera 'fecha'
-                    'primera_fecha': g['fecha'],
-                    'ultima_fecha': g['fecha'],
-                    'conceptos_originales': [g['concepto_real']],
+                    'importe': round(importe, 2),
+                    'total': round(importe, 2),
+                    'promedio': round(importe, 2),
+                    'fecha': fecha_fmt,
+                    'primera_fecha': fecha_fmt,
+                    'ultima_fecha': fecha_fmt,
+                    'conceptos_originales': [concepto_real],
                     'es_puntual': False
                 })
-            
-            # Ordenar cronológicamente descendente
-            gastos_view.sort(key=lambda x: x['fecha'], reverse=True)
+
+            # Ya vienen ordenadas por fecha_emision DESC desde la consulta
 
             # Calcular estadísticas del conjunto filtrado
             total = sum(g['importe'] for g in gastos_view)
@@ -1261,65 +913,54 @@ def obtener_evolucion_mensual():
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            
-            # Inicializar campo puntual si no existe
-            _inicializar_campo_puntual(conn)
-            
-            # Identificar y marcar gastos puntuales para todo el año
-            gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio)
-            _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
-            
-            # Determinar el filtro de categoría
-            if categoria == 'global':
-                # Para global, no aplicar filtro de categoría (todas las categorías)
-                query = f'''
-                    SELECT 
-                        CAST(substr(fecha_valor, 4, 2) AS INTEGER) as mes,
-                        SUM(ABS(importe_eur)) as total,
-                        COUNT(*) as cantidad,
-                        COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales,
-                        COALESCE(SUM(CASE WHEN puntual = 1 THEN 1 ELSE 0 END), 0) as cantidad_puntuales
-                    FROM gastos
-                    WHERE substr(fecha_valor, 7, 4) = ?
-                    AND importe_eur < 0
-                    GROUP BY mes
-                    ORDER BY mes
-                '''
-            else:
-                # Para categorías específicas, aplicar filtro
-                filtro_categoria = _obtener_filtro_categoria(categoria)
-                query = f'''
-                    SELECT 
-                        CAST(substr(fecha_valor, 4, 2) AS INTEGER) as mes,
-                        SUM(ABS(importe_eur)) as total,
-                        COUNT(*) as cantidad,
-                        COALESCE(SUM(CASE WHEN puntual = 1 THEN ABS(importe_eur) ELSE 0 END), 0) as total_puntuales,
-                        COALESCE(SUM(CASE WHEN puntual = 1 THEN 1 ELSE 0 END), 0) as cantidad_puntuales
-                    FROM gastos
-                    WHERE substr(fecha_valor, 7, 4) = ?
-                    AND importe_eur < 0
-                    AND {filtro_categoria}
-                    GROUP BY mes
-                    ORDER BY mes
-                '''
-            
-            cursor.execute(query, (str(anio),))
-            
+
             # Crear array con todos los meses (0 si no hay datos)
             meses_data = {i: {'total': 0.0, 'cantidad': 0, 'total_puntuales': 0.0, 'cantidad_puntuales': 0, 'total_bruto': 0.0} for i in range(1, 13)}
-            
+
+            if categoria == 'global':
+                # Total global: todas las facturas de proveedores del año
+                cursor.execute('''
+                    SELECT
+                        CAST(substr(fecha_emision, 6, 2) AS INTEGER) as mes,
+                        COALESCE(SUM(total), 0) as total,
+                        COUNT(*) as cantidad
+                    FROM facturas_proveedores
+                    WHERE año = ?
+                    GROUP BY mes
+                    ORDER BY mes
+                ''', (anio,))
+            else:
+                # Categoría específica = proveedor (o 'Otros' para genéricos),
+                # consistente con los gráficos de pastel del dashboard.
+                nombres_genericos = ('Sin proveedor', 'GASTOS VARIOS', 'SIN NOMBRE', 'NO IDENTIFICADO', '')
+                if categoria == 'Otros':
+                    cond = ("(COALESCE(p.nombre, fp.concepto, 'Sin proveedor') IN (?,?,?,?,?) "
+                            "OR LENGTH(TRIM(COALESCE(p.nombre, fp.concepto, ''))) < 2)")
+                    cat_params = list(nombres_genericos)
+                else:
+                    cond = "COALESCE(p.nombre, fp.concepto, 'Sin proveedor') = ?"
+                    cat_params = [categoria]
+                cursor.execute(f'''
+                    SELECT
+                        CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) as mes,
+                        COALESCE(SUM(fp.total), 0) as total,
+                        COUNT(*) as cantidad
+                    FROM facturas_proveedores fp
+                    LEFT JOIN proveedores p ON fp.proveedor_id = p.id
+                    WHERE fp.año = ? AND {cond}
+                    GROUP BY mes
+                    ORDER BY mes
+                ''', [anio] + cat_params)
+
             for row in cursor.fetchall():
                 mes = int(row['mes'])
                 total_bruto = float(row['total'] or 0)
-                total_puntuales = float(row['total_puntuales'] or 0)
                 cantidad_total = int(row['cantidad'])
-                cantidad_puntuales = int(row['cantidad_puntuales'] or 0)
-                
                 meses_data[mes] = {
-                    'total': round(total_bruto - total_puntuales, 2),  # Excluir puntuales
-                    'cantidad': cantidad_total - cantidad_puntuales,
-                    'total_puntuales': round(total_puntuales, 2),
-                    'cantidad_puntuales': cantidad_puntuales,
+                    'total': round(total_bruto, 2),
+                    'cantidad': cantidad_total,
+                    'total_puntuales': 0.0,
+                    'cantidad_puntuales': 0,
                     'total_bruto': round(total_bruto, 2)
                 }
         
@@ -1436,13 +1077,6 @@ def generar_informe_situacion():
             # Total mes (facturas + tickets)
             ventas_mes = facturas_mes + tickets_mes
             
-            # Inicializar campo puntual si no existe
-            _inicializar_campo_puntual(conn)
-    
-            # Identificar y marcar gastos puntuales
-            gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
-            _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
-    
             # ===== DATOS DE GASTOS (desde facturas_proveedores) =====
             # Total gastos del año completo
             cursor.execute('''
@@ -1599,13 +1233,6 @@ def simular_escenarios():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Inicializar campo puntual si no existe
-        _inicializar_campo_puntual(conn)
-
-        # Identificar y marcar gastos puntuales
-        gastos_puntuales_ids = _identificar_gastos_puntuales(conn, anio, mes)
-        _marcar_gastos_puntuales(conn, gastos_puntuales_ids)
-
         # Obtener datos reales actuales - EXCLUYENDO GASTOS PUNTUALES
         # Facturas cobradas (año completo)
         cursor.execute('''

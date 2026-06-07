@@ -21,21 +21,6 @@ def test_db():
     # Crear esquema básico para tests
     cursor = conn.cursor()
     
-    # Tabla gastos
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS gastos (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fecha_operacion TEXT,
-            fecha_valor TEXT,
-            concepto TEXT,
-            importe_eur REAL,
-            saldo REAL,
-            ejercicio INTEGER,
-            TS TEXT,
-            puntual INTEGER DEFAULT 0
-        )
-    ''')
-    
     # Tabla contactos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS contactos (
@@ -88,26 +73,6 @@ def test_db():
     yield conn
     
     conn.close()
-
-@pytest.fixture
-def sample_gastos(test_db):
-    """Inserta gastos de ejemplo para tests"""
-    cursor = test_db.cursor()
-    
-    gastos = [
-        ('15/10/2025', '15/10/2025', 'Recibo Test 1', -100.00, 5000.00, 2025, '2025-10-15', 0),
-        ('14/10/2025', '14/10/2025', 'Compra Tarjeta Test', -50.50, 5100.00, 2025, '2025-10-14', 0),
-        ('13/10/2025', '13/10/2025', 'Liquidacion TPV', -1500.00, 5150.50, 2025, '2025-10-13', 1),
-        ('12/10/2025', '12/10/2025', 'Bizum Test', -25.00, 6650.50, 2025, '2025-10-12', 0),
-    ]
-    
-    cursor.executemany('''
-        INSERT INTO gastos (fecha_operacion, fecha_valor, concepto, importe_eur, saldo, ejercicio, TS, puntual)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', gastos)
-    
-    test_db.commit()
-    return gastos
 
 @pytest.fixture
 def sample_contactos(test_db):
