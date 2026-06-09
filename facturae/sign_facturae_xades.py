@@ -16,8 +16,6 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization.pkcs12 import load_key_and_certificates
 from lxml import etree
 
-from facturae.politica import get_politica_facturae
-
 NS = {
     "fe": "http://www.facturae.gob.es/formato/Versiones/Facturaev3_2_2.xml",
     "ds": "http://www.w3.org/2000/09/xmldsig#",
@@ -27,8 +25,15 @@ NS = {
 C14N_ALGORITHM = "http://www.w3.org/2001/10/xml-exc-c14n#"
 SIGNATURE_METHOD = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
 DIGEST_METHOD = "http://www.w3.org/2001/04/xmlenc#sha256"
+CERT_DIGEST_SHA1 = "http://www.w3.org/2000/09/xmldsig#sha1"
 ENVELOPED_TRANSFORM = "http://www.w3.org/2000/09/xmldsig#enveloped-signature"
 SIGNED_PROPS_TYPE = "http://uri.etsi.org/01903#SignedProperties"
+
+# Política de firma Facturae (XAdES-EPES) — valores oficiales aceptados por FACe
+POLICY_OID = "urn:oid:2.16.724.1.3.1.1.2.1.9"
+POLICY_HASH_ALG = "http://www.w3.org/2000/09/xmldsig#sha1"
+POLICY_HASH_VALUE = "Ohixl6upD6av8N7pEvDABhEL6hM="
+POLICY_SPURI = "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf"
 
 
 def pfx_to_pem(pfx_path: Path, password: str):
@@ -85,39 +90,39 @@ def build_xades_properties(signature_node: etree._Element, cert: x509.Certificat
     signing_time = etree.SubElement(ssp, etree.QName(NS["xades"], "SigningTime"))
     signing_time.text = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
 
-    # SigningCertificateV2 con IssuerSerialV2 completo
-    sc2 = etree.SubElement(ssp, etree.QName(NS["xades"], "SigningCertificateV2"))
-    cert_el = etree.SubElement(sc2, etree.QName(NS["xades"], "Cert"))
+    # SigningCertificate (XAdES 1.3.2) — NO usar SigningCertificateV2 (1.4.1), no aceptado por FACe
+    sc = etree.SubElement(ssp, etree.QName(NS["xades"], "SigningCertificate"))
+    cert_el = etree.SubElement(sc, etree.QName(NS["xades"], "Cert"))
     cert_digest = etree.SubElement(cert_el, etree.QName(NS["xades"], "CertDigest"))
     digest_method = etree.SubElement(cert_digest, etree.QName(NS["ds"], "DigestMethod"))
-    digest_method.set("Algorithm", DIGEST_METHOD)
+    digest_method.set("Algorithm", CERT_DIGEST_SHA1)
     digest_value = etree.SubElement(cert_digest, etree.QName(NS["ds"], "DigestValue"))
-    digest_value.text = base64.b64encode(cert.fingerprint(hashes.SHA256())).decode("ascii")
+    cert_der = cert.public_bytes(serialization.Encoding.DER)
+    digest_value.text = base64.b64encode(hashlib.sha1(cert_der).digest()).decode("ascii")
 
-    isv2 = etree.SubElement(cert_el, etree.QName(NS["xades"], "IssuerSerialV2"))
-    issuer_name = cert.issuer.rfc4514_string()
-    serial_number = str(cert.serial_number)
-    etree.SubElement(isv2, etree.QName(NS["xades"], "X509IssuerName")).text = issuer_name
-    etree.SubElement(isv2, etree.QName(NS["xades"], "X509SerialNumber")).text = serial_number
+    # IssuerSerial (XAdES 1.3.2) — NO usar IssuerSerialV2 (1.4.1), no aceptado por FACe
+    issuer_serial = etree.SubElement(cert_el, etree.QName(NS["xades"], "IssuerSerial"))
+    etree.SubElement(issuer_serial, etree.QName(NS["ds"], "X509IssuerName")).text = cert.issuer.rfc4514_string()
+    etree.SubElement(issuer_serial, etree.QName(NS["ds"], "X509SerialNumber")).text = str(cert.serial_number)
 
-    policy = get_politica_facturae("3.2")
+    # Política de firma XAdES-EPES: OID oficial + SHA-1 + SPURI (valores aceptados por FACe)
     sig_policy_identifier = etree.SubElement(ssp, etree.QName(NS["xades"], "SignaturePolicyIdentifier"))
     sig_policy_id = etree.SubElement(sig_policy_identifier, etree.QName(NS["xades"], "SignaturePolicyId"))
     sig_policy = etree.SubElement(sig_policy_id, etree.QName(NS["xades"], "SigPolicyId"))
     policy_identifier = etree.SubElement(sig_policy, etree.QName(NS["xades"], "Identifier"))
-    policy_identifier.text = policy.get("identifier_url", policy["identifier"])
+    policy_identifier.text = POLICY_OID
+    policy_identifier.set("Qualifier", "OIDAsURN")
 
     sig_policy_hash = etree.SubElement(sig_policy_id, etree.QName(NS["xades"], "SigPolicyHash"))
     policy_digest_method = etree.SubElement(sig_policy_hash, etree.QName(NS["ds"], "DigestMethod"))
-    policy_digest_method.set("Algorithm", policy["hash_algorithm"])
+    policy_digest_method.set("Algorithm", POLICY_HASH_ALG)
     policy_digest_value = etree.SubElement(sig_policy_hash, etree.QName(NS["ds"], "DigestValue"))
-    policy_digest_value.text = policy["hash_value"]
+    policy_digest_value.text = POLICY_HASH_VALUE
 
-    # Añadir calificador SPURI apuntando a la URL oficial (algunos validadores lo esperan)
     sig_policy_qualifiers = etree.SubElement(sig_policy_id, etree.QName(NS["xades"], "SigPolicyQualifiers"))
     spq = etree.SubElement(sig_policy_qualifiers, etree.QName(NS["xades"], "SigPolicyQualifier"))
     spuri = etree.SubElement(spq, etree.QName(NS["xades"], "SPURI"))
-    spuri.text = policy.get("identifier_url", policy["identifier"])
+    spuri.text = POLICY_SPURI
 
     return signed_props
 
