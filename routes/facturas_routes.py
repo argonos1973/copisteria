@@ -470,6 +470,10 @@ def descargar_xsig(factura_id):
         if not factura_data:
             return jsonify({'error': 'Factura no encontrada'}), 404
 
+        # Solo facturas marcadas para FACe tienen XSIG descargable
+        if int(factura_data.get('presentar_face', 0) or 0) != 1:
+            return jsonify({'error': 'La factura no está marcada para FACe'}), 403
+
         numero = factura_data.get('numero', '')
         if not numero:
             return jsonify({'error': 'Número de factura no disponible'}), 404

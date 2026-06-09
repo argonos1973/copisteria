@@ -1539,9 +1539,10 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
                 }
             }
             
-            // Mostrar botón XSIG si la factura tiene el archivo generado
+            // Mostrar botón XSIG solo si la factura tiene "Presentar FACe" activado
+            // y además el archivo XSIG está generado
             if (btnDescargarXsig) {
-                if (facturaData.factura_e == 1) {
+                if (facturaData.presentar_face == 1 && facturaData.factura_e == 1) {
                     btnDescargarXsig.style.removeProperty('display');
                     btnDescargarXsig.style.display = 'inline-block';
                     btnDescargarXsig.onclick = () => {
