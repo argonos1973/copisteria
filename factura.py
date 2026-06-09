@@ -545,7 +545,7 @@ def obtener_factura_completa(factura_id):
             SELECT 
                 f.id, f.numero, f.fecha, f.fvencimiento, f.estado, f.nif as nif_factura,
                 f.total, f.formaPago, f.importe_bruto, f.importe_impuestos, 
-                f.importe_cobrado, f.tipo, f.idContacto,
+                f.importe_cobrado, f.tipo, f.idContacto, f.factura_e, f.presentar_face,
                 rf.estado_envio, rf.csv, rf.id_envio_aeat, rf.fecha_envio, rf.codigo_qr, rf.hash as hash_verifactu,
                 c.razonsocial, c.identificador as nif, c.identificador, 
                 c.direccion, c.cp, c.localidad, c.provincia, c.mail as email_contacto,

@@ -461,6 +461,39 @@ def obtener_factura_abierta_legacy(idContacto, idFactura):
         return jsonify({'error': str(e)}), 500
 
 
+@facturas_bp.route('/api/facturas/<int:factura_id>/descargar-xsig', methods=['GET'])
+@login_required
+def descargar_xsig(factura_id):
+    """Descarga el archivo XSIG (Facturae firmado) de una factura"""
+    try:
+        factura_data = factura.obtener_factura_completa(factura_id)
+        if not factura_data:
+            return jsonify({'error': 'Factura no encontrada'}), 404
+
+        numero = factura_data.get('numero', '')
+        if not numero:
+            return jsonify({'error': 'Número de factura no disponible'}), 404
+
+        base_dir = '/var/www/html/factura_e'
+        files = glob.glob(os.path.join(base_dir, '**', f'{numero}.xsig'), recursive=True)
+
+        if not files:
+            return jsonify({'error': 'Archivo XSIG no encontrado. Regenere la factura FACe.'}), 404
+
+        files.sort(reverse=True)
+        xsig_path = files[0]
+
+        return send_file(
+            xsig_path,
+            as_attachment=True,
+            download_name=f'{numero}.xsig',
+            mimetype='application/octet-stream'
+        )
+    except Exception as e:
+        logger.error(f"Error descargando XSIG factura {factura_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
 @facturas_bp.route('/api/carta-reclamacion/<numero_factura>', methods=['GET'])
 def descargar_carta_reclamacion(numero_factura):
     """Descarga la carta de reclamación de una factura"""

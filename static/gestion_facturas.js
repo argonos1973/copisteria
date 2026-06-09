@@ -1430,6 +1430,7 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
             const btnAnular = document.getElementById("btnAnular");
             const btnGuardar = document.getElementById("btnGuardar");
             const btnAgregarDetalle = document.getElementById("btn-agregar-detalle");
+            const btnDescargarXsig = document.getElementById("btnDescargarXsig");
             
             // IMPORTANTE: Usar facturaData.estado (que ya tiene el código)
             const estadoFactura = facturaData.estado || 'P';
@@ -1538,6 +1539,19 @@ async function buscarFacturaAbierta(idContacto, idFactura) {
                 }
             }
             
+            // Mostrar botón XSIG si la factura tiene el archivo generado
+            if (btnDescargarXsig) {
+                if (facturaData.factura_e == 1) {
+                    btnDescargarXsig.style.removeProperty('display');
+                    btnDescargarXsig.style.display = 'inline-block';
+                    btnDescargarXsig.onclick = () => {
+                        window.location.href = `/api/facturas/${facturaData.id}/descargar-xsig`;
+                    };
+                } else {
+                    btnDescargarXsig.style.setProperty('display', 'none', 'important');
+                }
+            }
+
             // Deshabilitar botones Eliminar cuando factura cobrada
             const botonesEliminar = document.querySelectorAll('.btn-icon');
             botonesEliminar.forEach(btn => {
