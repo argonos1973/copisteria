@@ -446,7 +446,11 @@ def obtener_factura_abierta_legacy(idContacto, idFactura):
                 'cp': factura_data.get('cp'),
                 'localidad': factura_data.get('localidad'),
                 'provincia': factura_data.get('provincia'),
-                'email': factura_data.get('email_contacto')
+                'email': factura_data.get('email_contacto'),
+                'dir3_oficina': factura_data.get('dir3_oficina'),
+                'dir3_organo': factura_data.get('dir3_organo'),
+                'dir3_unidad': factura_data.get('dir3_unidad'),
+                'face_presentacion': factura_data.get('face_presentacion')
             }
             respuesta['modo'] = 'edicion'
             return jsonify(respuesta)

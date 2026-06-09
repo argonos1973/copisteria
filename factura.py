@@ -548,7 +548,8 @@ def obtener_factura_completa(factura_id):
                 f.importe_cobrado, f.tipo, f.idContacto,
                 rf.estado_envio, rf.csv, rf.id_envio_aeat, rf.fecha_envio, rf.codigo_qr, rf.hash as hash_verifactu,
                 c.razonsocial, c.identificador as nif, c.identificador, 
-                c.direccion, c.cp, c.localidad, c.provincia, c.mail as email_contacto
+                c.direccion, c.cp, c.localidad, c.provincia, c.mail as email_contacto,
+                c.dir3_oficina, c.dir3_organo, c.dir3_unidad, c.face_presentacion
             FROM factura f
             LEFT JOIN contactos c ON f.idContacto = c.idContacto
             LEFT JOIN registro_facturacion rf ON f.id = rf.factura_id AND rf.ticket_id IS NULL
@@ -2053,6 +2054,7 @@ def crear_factura_post():
 
 def actualizar_factura(id, data):
     # Aseguramos que el módulo traceback esté disponible en toda la función para evitar UnboundLocalError
+    import traceback
 
     # NIF EMISOR obtenido desde configuración para garantizar coherencia
     try:
