@@ -207,9 +207,25 @@ def crear_factura(data=None):
             num_doc = str(data.get('numero', ''))
             es_rectificativa = (estado_doc == 'RE') or (tipo_doc.upper() == 'R') or num_doc.upper().endswith('-R')
             
-            logger.debug(f"[DEBUG crear_factura] estado={estado_doc}, presentar_face_flag={presentar_face_flag}, es_rectificativa={es_rectificativa}")
+            # Determinar si la factura requiere FACe (checkbox marcado o contacto con
+            # face_presentacion=1). Las facturas FACe deben generar el XSIG aunque estén
+            # pendientes; antes solo se generaba al cobrar.
+            requiere_face = bool(presentar_face_flag)
+            if not requiere_face:
+                try:
+                    with get_db_connection() as _c_face:
+                        _r_face = _c_face.execute(
+                            'SELECT face_presentacion FROM contactos WHERE idContacto = ?',
+                            (data['idContacto'],)
+                        ).fetchone()
+                        if _r_face and _r_face[0] == 1:
+                            requiere_face = True
+                except Exception:
+                    pass
+
+            logger.debug(f"[DEBUG crear_factura] estado={estado_doc}, presentar_face_flag={presentar_face_flag}, es_rectificativa={es_rectificativa}, requiere_face={requiere_face}")
             
-            if estado_doc != 'C' and not es_rectificativa:
+            if estado_doc != 'C' and not es_rectificativa and not requiere_face:
                 push_notif("Factura guardada", tipo='success')
                 logger.info("[FACTURA] Guardada como pendiente: se omite generación de XML y envío AEAT")
                 return jsonify({
@@ -270,8 +286,8 @@ def crear_factura(data=None):
                         if faltantes:
                             mensaje_error = f"El contacto requiere FACe pero faltan códigos DIR3: {', '.join(faltantes)}"
                             logger.info(f"[FACTURAE][ERROR] {mensaje_error}")
-                            conn.rollback()
-                            return jsonify({'error': mensaje_error, 'codigo': 'DIR3_INCOMPLETO'}), 400
+                            # La factura ya tiene commit y la conexión está cerrada; no hay rollback posible.
+                            return jsonify({'error': mensaje_error, 'codigo': 'DIR3_INCOMPLETO', 'id': factura_id}), 400
 
                     direccion_completa = f"{datos_contacto['direccion']}, {datos_contacto['cp']} {datos_contacto['localidad']} ({datos_contacto['provincia']})"
                     # Obtener empresa_id de la sesión para la ruta de guardado
@@ -411,11 +427,15 @@ def crear_factura(data=None):
                 'id': factura_id,
                 'notificaciones': notificaciones  # lista de pasos realizados
             }
+            # El envío a AEAT/VERI*FACTU solo procede si la factura está cobrada o es
+            # rectificativa. Las facturas FACe pendientes generan el XSIG pero NO se
+            # envían a AEAT hasta que se cobren.
+            debe_enviar_verifactu = (estado_doc == 'C') or es_rectificativa
             try:
                 logger.info("[VERIFACTU] Iniciando integración VERI*FACTU para factura_id:", factura_id)
-                push_notif("Enviando registro AEAT ...")
-                # Generar datos VERI*FACTU para la factura (solo si está disponible)
-                if VERIFACTU_DISPONIBLE and vf_on:
+                # Generar datos VERI*FACTU para la factura (solo si está disponible y procede)
+                if VERIFACTU_DISPONIBLE and vf_on and debe_enviar_verifactu:
+                    push_notif("Enviando registro AEAT ...")
                     try:
                         # Obtener código de empresa de la ruta de la BD
                         import re
@@ -472,6 +492,13 @@ def crear_factura(data=None):
                             'verifactu': False,
                             'error': f"Error VERI*FACTU: {str(e)}"
                         }
+                elif not debe_enviar_verifactu:
+                    logger.info("[VERIFACTU] Factura pendiente (FACe): XSIG generado, envío AEAT diferido hasta el cobro")
+                    respuesta['datos_adicionales'] = {
+                        'verifactu': False,
+                        'aeat_diferido': True,
+                        'mensaje': "Factura FACe pendiente: XSIG generado, envío AEAT al cobrar"
+                    }
                 else:
                     logger.warning("[!] Módulo VERI*FACTU no disponible - Omitiendo generación de datos")
                     respuesta['datos_adicionales'] = {
@@ -2211,11 +2238,23 @@ def actualizar_factura(id, data):
                 detalle.get('fechaDetalle', data['fecha'])
             ))
 
-        # Detectar si debemos generar Facturae/VERI*FACTU tras la actualización
-        # Generar si el checkbox presentar_face está marcado y la factura está cobrada
-        trigger_generar_facturae = (estado == 'C' and presentar_face_flag == 1)
+        # Detectar si debemos generar Facturae tras la actualización.
+        # El XSIG debe generarse siempre que la factura requiera FACe (checkbox marcado
+        # o contacto con face_presentacion=1), independientemente del estado.
+        # Antes solo se generaba al cobrar (estado == 'C'); ahora también en Pendiente.
+        requiere_face = (presentar_face_flag == 1)
+        if not requiere_face:
+            try:
+                cursor.execute('SELECT face_presentacion FROM contactos WHERE idContacto = ?', (data['idContacto'],))
+                _rc_face = cursor.fetchone()
+                if _rc_face and _rc_face[0] == 1:
+                    requiere_face = True
+            except Exception:
+                pass
+
+        trigger_generar_facturae = bool(requiere_face)
         
-        logger.debug(f"[DEBUG trigger] trigger_generar_facturae={trigger_generar_facturae}, estado={estado}, presentar_face={presentar_face_flag}")
+        logger.debug(f"[DEBUG trigger] trigger_generar_facturae={trigger_generar_facturae}, estado={estado}, presentar_face={presentar_face_flag}, requiere_face={requiere_face}")
         
         try:
             with safe_append_debug('facturae_debug.log') as log_file:
