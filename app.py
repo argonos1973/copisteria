@@ -16,11 +16,27 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from flask import Flask, request, make_response, session, send_from_directory
+from flask.sessions import SecureCookieSessionInterface
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from werkzeug.middleware.proxy_fix import ProxyFix
 import logging
 from logger_config import get_logger
+
+
+class DynamicSecureSessionInterface(SecureCookieSessionInterface):
+    """Marca la cookie de sesión como Secure solo si la petición es HTTPS.
+
+    Permite que el acceso por HTTPS (Cloudflare) mantenga el flag Secure y que
+    el acceso por HTTP en la red local (por IP) también funcione, evitando el
+    bucle de login al entrar por http://<ip-local>/.
+    """
+
+    def get_cookie_secure(self, app):
+        try:
+            return request.is_secure
+        except RuntimeError:
+            return False
 
 # Rate Limiting
 try:
@@ -95,6 +111,10 @@ def create_app():
     
     # Configuración de sesiones
     application.config.update(SESSION_CONFIG)
+
+    # Flag Secure de la cookie dinámico: HTTPS (Cloudflare) -> Secure;
+    # HTTP en red local (acceso por IP) -> sin Secure, para evitar bucle de login
+    application.session_interface = DynamicSecureSessionInterface()
     
     # Configuración de límite de carga (20MB)
     max_upload_mb = int(os.getenv('MAX_CONTENT_LENGTH_MB', '200'))
