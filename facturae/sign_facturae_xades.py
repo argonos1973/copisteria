@@ -29,8 +29,9 @@ CERT_DIGEST_SHA1 = "http://www.w3.org/2000/09/xmldsig#sha1"
 ENVELOPED_TRANSFORM = "http://www.w3.org/2000/09/xmldsig#enveloped-signature"
 SIGNED_PROPS_TYPE = "http://uri.etsi.org/01903#SignedProperties"
 
-# Política de firma Facturae (XAdES-EPES) — valores oficiales aceptados por FACe
-POLICY_OID = "urn:oid:2.16.724.1.3.1.1.2.1.9"
+# Política de firma Facturae (XAdES-EPES) — valores oficiales aceptados por FACe / e-FACT (AOC)
+# Identifier como URL de la política (requerido por e-FACT/AOC), no como OID
+POLICY_IDENTIFIER = "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf"
 POLICY_HASH_ALG = "http://www.w3.org/2000/09/xmldsig#sha1"
 POLICY_HASH_VALUE = "Ohixl6upD6av8N7pEvDABhEL6hM="
 POLICY_SPURI = "http://www.facturae.es/politica_de_firma_formato_facturae/politica_de_firma_formato_facturae_v3_1.pdf"
@@ -87,8 +88,9 @@ def build_xades_properties(signature_node: etree._Element, cert: x509.Certificat
 
     ssp = etree.SubElement(signed_props, etree.QName(NS["xades"], "SignedSignatureProperties"))
 
+    # SigningTime sin sufijo 'Z' (requerido por e-FACT/AOC)
     signing_time = etree.SubElement(ssp, etree.QName(NS["xades"], "SigningTime"))
-    signing_time.text = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+    signing_time.text = datetime.datetime.now().replace(microsecond=0).isoformat()
 
     # SigningCertificate (XAdES 1.3.2) — NO usar SigningCertificateV2 (1.4.1), no aceptado por FACe
     sc = etree.SubElement(ssp, etree.QName(NS["xades"], "SigningCertificate"))
@@ -105,13 +107,12 @@ def build_xades_properties(signature_node: etree._Element, cert: x509.Certificat
     etree.SubElement(issuer_serial, etree.QName(NS["ds"], "X509IssuerName")).text = cert.issuer.rfc4514_string()
     etree.SubElement(issuer_serial, etree.QName(NS["ds"], "X509SerialNumber")).text = str(cert.serial_number)
 
-    # Política de firma XAdES-EPES: OID oficial + SHA-1 + SPURI (valores aceptados por FACe)
+    # Política de firma XAdES-EPES: Identifier como URL + SHA-1 + SPURI (e-FACT/AOC)
     sig_policy_identifier = etree.SubElement(ssp, etree.QName(NS["xades"], "SignaturePolicyIdentifier"))
     sig_policy_id = etree.SubElement(sig_policy_identifier, etree.QName(NS["xades"], "SignaturePolicyId"))
     sig_policy = etree.SubElement(sig_policy_id, etree.QName(NS["xades"], "SigPolicyId"))
     policy_identifier = etree.SubElement(sig_policy, etree.QName(NS["xades"], "Identifier"))
-    policy_identifier.text = POLICY_OID
-    policy_identifier.set("Qualifier", "OIDAsURN")
+    policy_identifier.text = POLICY_IDENTIFIER
 
     sig_policy_hash = etree.SubElement(sig_policy_id, etree.QName(NS["xades"], "SigPolicyHash"))
     policy_digest_method = etree.SubElement(sig_policy_hash, etree.QName(NS["ds"], "DigestMethod"))
@@ -176,6 +177,17 @@ def sign_with_xmlsec(xml_bytes: bytes, key_pem: bytes, cert_pem: bytes, chain_pe
     dm_doc.set("Algorithm", DIGEST_METHOD)
     dv_doc = etree.SubElement(ref_doc, etree.QName(NS["ds"], "DigestValue"))
 
+    # Referencia a KeyInfo (firmar también el KeyInfo, requerido por e-FACT/AOC)
+    key_info_id = f"{sig_id}-KeyInfo"
+    ref_keyinfo = etree.SubElement(signed_info, etree.QName(NS["ds"], "Reference"))
+    ref_keyinfo.set("URI", f"#{key_info_id}")
+    transforms_ki = etree.SubElement(ref_keyinfo, etree.QName(NS["ds"], "Transforms"))
+    t_ki_c14n = etree.SubElement(transforms_ki, etree.QName(NS["ds"], "Transform"))
+    t_ki_c14n.set("Algorithm", C14N_ALGORITHM)
+    dm_ki = etree.SubElement(ref_keyinfo, etree.QName(NS["ds"], "DigestMethod"))
+    dm_ki.set("Algorithm", DIGEST_METHOD)
+    dv_ki = etree.SubElement(ref_keyinfo, etree.QName(NS["ds"], "DigestValue"))
+
     ref_props = etree.SubElement(signed_info, etree.QName(NS["ds"], "Reference"))
     ref_props.set("Type", SIGNED_PROPS_TYPE)
     ref_props.set("URI", f"#{sig_id}-SignedProperties")
@@ -190,6 +202,7 @@ def sign_with_xmlsec(xml_bytes: bytes, key_pem: bytes, cert_pem: bytes, chain_pe
     signature_value_el = etree.SubElement(signature_node, etree.QName(NS["ds"], "SignatureValue"))
 
     key_info = etree.SubElement(signature_node, etree.QName(NS["ds"], "KeyInfo"))
+    key_info.set("Id", key_info_id)
     x509_data = etree.SubElement(key_info, etree.QName(NS["ds"], "X509Data"))
     primary_cert_el = etree.SubElement(x509_data, etree.QName(NS["ds"], "X509Certificate"))
     primary_cert_el.text = pem_to_b64(cert_pem)
@@ -207,6 +220,7 @@ def sign_with_xmlsec(xml_bytes: bytes, key_pem: bytes, cert_pem: bytes, chain_pe
 
     # Ahora calcular los digests
     dv_doc.text = compute_document_digest(root)
+    dv_ki.text = compute_sha256_digest(key_info)
     dv_props.text = compute_sha256_digest(signed_props)
 
     signed_info_c14n = canonicalize(signed_info)
