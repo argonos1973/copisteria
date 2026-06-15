@@ -20,6 +20,7 @@ from facturae.xml_template import (
     generar_individual_template,
     generar_item_template,
     generar_party_template,
+    generar_payment_details_template,
     generar_taxes_template,
     obtener_plantilla_xml,
 )
@@ -361,6 +362,23 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
                 province=receptor.get('provincia', '')
             )
 
+        # Construir PaymentDetails (IBAN del emisor) si está disponible
+        payment_details_xml = ''
+        iban = emisor.get('cuenta_transferencias', '')
+        if iban:
+            payment_template = generar_payment_details_template()
+            # Formatear fecha a ISO (YYYY-MM-DD) si viene en otro formato
+            fecha_iso = fecha
+            if fecha and len(fecha.split('/')) == 3:
+                d, m, y = fecha.split('/')
+                fecha_iso = f"{y}-{m.zfill(2)}-{d.zfill(2)}"
+            payment_details_xml = payment_template.format(
+                due_date=fecha_iso,
+                installment_amount='{:.2f}'.format(total_factura),
+                payment_means='04',
+                iban=iban
+            )
+
         # Completar la plantilla con formato correcto para cada campo
         xml_completo = xml_plantilla.format(
             batch_id=batch_id,
@@ -377,7 +395,8 @@ def generar_facturae(datos_factura, ruta_salida_xml=None):
             taxes_outputs=xml_impuestos,
             total_gross='{:.2f}'.format(base_imponible_total),
             total_tax='{:.2f}'.format(cuota_iva),
-            items=items_xml_final
+            items=items_xml_final,
+            payment_details=payment_details_xml
         )
         
         # Guardar el XML

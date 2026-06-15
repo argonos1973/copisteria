@@ -1,0 +1,15 @@
+{
+    "nombre": "BURBUJA",
+    "nif": "44007535W",
+    "direccion": "Carrer de la Legalitat, 70",
+    "cp": "28108",
+    "ciudad": "ALCOBENDAS",
+    "provincia": "MADRID",
+    "telefono": "678876344",
+    "email": "aleph70copisteria@gmail.com",
+    "web": "",
+    "certificado": "",
+    "db_path": "/var/www/html/db/BURBU/BURBU.db",
+    "codigo": "BURBU",
+    "cuenta_transferencias": "ES4200494752902216156784"
+}

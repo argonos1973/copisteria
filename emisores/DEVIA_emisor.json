@@ -1,0 +1,15 @@
+{
+    "nombre": "De viaje con la Cámara",
+    "nif": "44015615D",
+    "direccion": "Calle Alegre de Dalt 11 entlo 3",
+    "cp": "08024",
+    "ciudad": "Barcelona",
+    "provincia": "Barcelona",
+    "telefono": "",
+    "email": "polmiquel@elssons.com",
+    "web": "",
+    "certificado": "",
+    "db_path": "/var/www/html/db/DEVIA/DEVIA.db",
+    "codigo": "DEVIA",
+    "cuenta_transferencias": "ES4200494752902216156784"
+}

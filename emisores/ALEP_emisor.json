@@ -1,0 +1,14 @@
+{
+    "nombre": "ALEP",
+    "nif": "44007535W",
+    "direccion": "Carrer de la Legalitat, 70",
+    "cp": "08024",
+    "ciudad": "Barcelona",
+    "provincia": "Barcelona",
+    "telefono": "678876344",
+    "email": "aleph70copisteria@gmail.com",
+    "web": "",
+    "db_path": "/var/www/html/db/ALEP/ALEP.db",
+    "codigo": "ALEP",
+    "cuenta_transferencias": "ES4200494752902216156784"
+}

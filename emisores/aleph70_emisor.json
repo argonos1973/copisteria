@@ -1,0 +1,13 @@
+{
+    "nif": "44007535W",
+    "nombre": "SAMUEL RODRIGUEZ MIQUEL",
+    "direccion": "Carrer de la Legalitat, 70",
+    "cp": "08024",
+    "ciudad": "Barcelona",
+    "provincia": "Cataluña",
+    "pais": "ESP",
+    "email": "aleph70copisteria@gmail.com",
+    "db_path": "/var/www/html/db/aleph70/aleph70.db",
+    "codigo": "ALEPH",
+    "cuenta_transferencias": "ES4200494752902216156784"
+}

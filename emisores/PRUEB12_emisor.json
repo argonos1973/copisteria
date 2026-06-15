@@ -1,0 +1,16 @@
+{
+    "nif": "",
+    "nombre": "",
+    "direccion": "",
+    "cp": "",
+    "ciudad": "",
+    "provincia": "",
+    "pais": "ESP",
+    "email": "",
+    "certificado": "",
+    "db_path": "/var/www/html/db/PRUEB12/PRUEB12.db",
+    "codigo": "PRUEB12",
+    "verifactu_enabled": false,
+    "logo": "/static/logos/PRUEB12_logo.jpg",
+    "cuenta_transferencias": "ES4200494752902216156784"
+}

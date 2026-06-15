@@ -2325,6 +2325,16 @@ def actualizar_factura(id, data):
                     emisor_config_path = os.path.abspath(os.path.dirname(__file__)) + '/emisor_config.json'
                     with open(emisor_config_path, 'r', encoding='utf-8') as f:
                         emisor_config = json.load(f)
+
+                    # Mezclar datos del emisor específico de la empresa (incluye cuenta_transferencias)
+                    try:
+                        emisor_empresa = cargar_datos_emisor()
+                        if emisor_empresa and isinstance(emisor_empresa, dict):
+                            # No sobreescribir con valores vacíos (el fallback devuelve nif='' etc.)
+                            emisor_empresa_limpio = {k: v for k, v in emisor_empresa.items() if v not in (None, '')}
+                            emisor_config.update(emisor_empresa_limpio)
+                    except Exception as e:
+                        logger.warning(f"[XSIG] No se pudieron cargar datos del emisor empresa: {e}")
                         
                     # Preparar los datos para la generación de la factura electrónica
                     # Recuperar los totales de la factura desde la base de datos - Usar consulta directa
@@ -2650,6 +2660,141 @@ def actualizar_factura(id, data):
         except Exception:
             pass
         return jsonify({'error': str(e)}), 500
+    finally:
+        if conn:
+            conn.close()
+
+
+def regenerar_xsig_para_factura(factura_id):
+    """
+    Regenera el archivo .xsig (Facturae firmado) para una factura dada,
+    usando los datos más recientes de la base de datos.
+
+    Args:
+        factura_id (int): ID de la factura.
+
+    Returns:
+        str: Ruta al archivo .xsig generado, o None si falla.
+    """
+    from db_utils import get_db_connection
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # 1. Obtener datos de la factura
+        cursor.execute('SELECT * FROM factura WHERE id = ?', (factura_id,))
+        factura_row = cursor.fetchone()
+        if not factura_row:
+            logger.warning(f"[XSIG] Factura {factura_id} no encontrada para regenerar")
+            return None
+        data = dict(factura_row)
+
+        # 2. Obtener detalles
+        cursor.execute('''
+            SELECT d.*, p.nombre as producto_nombre
+            FROM detalle_factura d
+            LEFT JOIN productos p ON d.productoId = p.id
+            WHERE id_factura = ?
+        ''', (factura_id,))
+        detalles_bd = cursor.fetchall()
+        detalles = []
+        porcentaje_iva = 21.0
+        if detalles_bd:
+            porcentaje_iva = float(detalles_bd[0]['impuestos'])
+        for detalle_bd in detalles_bd:
+            det = dict(detalle_bd)
+            detalles.append({
+                'concepto': det['concepto'],
+                'descripcion': det.get('descripcion', ''),
+                'cantidad': float(det['cantidad']),
+                'importe': float(det['precio']),
+                'impuestos': float(det['impuestos']),
+                'productoId': det.get('productoId')
+            })
+
+        # 3. Obtener contacto
+        cursor.execute('SELECT * FROM contactos WHERE idcontacto = ?', (data['idContacto'],))
+        contacto_row = cursor.fetchone()
+        if not contacto_row:
+            logger.warning(f"[XSIG] Contacto {data['idContacto']} no encontrado para regenerar XSIG")
+            return None
+        contacto_dict = dict(contacto_row)
+
+        # 4. Obtener emisor (emisor_config.json + empresa JSON)
+        emisor_config_path = os.path.abspath(os.path.dirname(__file__)) + '/emisor_config.json'
+        with open(emisor_config_path, 'r', encoding='utf-8') as f:
+            emisor_config = json.load(f)
+        try:
+            emisor_empresa = cargar_datos_emisor()
+            if emisor_empresa and isinstance(emisor_empresa, dict):
+                # No sobreescribir con valores vacíos (el fallback devuelve nif='' etc.)
+                emisor_empresa_limpio = {k: v for k, v in emisor_empresa.items() if v not in (None, '')}
+                emisor_config.update(emisor_empresa_limpio)
+        except Exception as e:
+            logger.warning(f"[XSIG] No se pudieron cargar datos del emisor empresa: {e}")
+
+        # 5. Totales
+        cursor.execute('''
+            SELECT importe_bruto, importe_impuestos, total
+            FROM factura WHERE id = ? LIMIT 1
+        ''', (factura_id,))
+        totales = cursor.fetchone()
+        base_imponible = float(totales[0]) if totales and totales[0] is not None else 0.0
+        impuestos = float(totales[1]) if totales and totales[1] is not None else 0.0
+        total = float(totales[2]) if totales and totales[2] is not None else 0.0
+
+        # 6. Preparar datos_factura
+        datos_factura = {
+            'emisor': emisor_config,
+            'receptor': {
+                'nif': contacto_dict.get('identificador', ''),
+                'nombre': contacto_dict.get('razonsocial', ''),
+                'direccion': contacto_dict.get('direccion', ''),
+                'cp': contacto_dict.get('cp', ''),
+                'provincia': contacto_dict.get('provincia', ''),
+                'localidad': contacto_dict.get('localidad', ''),
+            },
+            'detalles': detalles,
+            'fecha': data['fecha'],
+            'numero': data['numero'],
+            'iva': porcentaje_iva,
+            'base_amount': base_imponible,
+            'taxes': impuestos,
+            'total_amount': total,
+            'presentar_face': 1,
+            'dir3_oficina': contacto_dict.get('dir3_oficina', ''),
+            'dir3_organo': contacto_dict.get('dir3_organo', ''),
+            'dir3_unidad': contacto_dict.get('dir3_unidad', '')
+        }
+
+        # Mapear claves adicionales para compatibilidad
+        datos_factura.setdefault('invoice_number', data['numero'])
+        datos_factura.setdefault('issue_date', data['fecha'])
+        datos_factura.setdefault('customer_info', datos_factura['receptor'])
+        datos_factura.setdefault('items', detalles)
+
+        # 7. Generar factura electrónica
+        from facturae.generador import generar_facturae as generar_facturae_modular
+        ruta_xml = generar_facturae_modular(datos_factura)
+
+        if ruta_xml and ruta_xml.lower().endswith('.xsig'):
+            logger.info(f"[XSIG] Regenerado correctamente para factura {factura_id}: {ruta_xml}")
+            # Actualizar flag factura_e si estaba a 0
+            cursor.execute('UPDATE factura SET factura_e = 1 WHERE id = ?', (factura_id,))
+            conn.commit()
+            return ruta_xml
+        else:
+            logger.warning(f"[XSIG] No se generó XSIG firmado para factura {factura_id}. Resultado: {ruta_xml}")
+            return None
+
+    except Exception as e:
+        logger.error(f"[XSIG] Error regenerando factura {factura_id}: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return None
     finally:
         if conn:
             conn.close()

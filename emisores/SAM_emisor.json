@@ -1,0 +1,15 @@
+{
+    "nombre": "Sam",
+    "nif": "44007535W",
+    "direccion": "LEGALITAT, 70",
+    "cp": "08024",
+    "ciudad": "Barcelona",
+    "provincia": "Barcelona",
+    "telefono": "678876344",
+    "email": "aleph70copisteria@gmail.com",
+    "web": "",
+    "certificado": "",
+    "db_path": "/var/www/html/db/SAM/SAM.db",
+    "codigo": "SAM",
+    "cuenta_transferencias": "ES4200494752902216156784"
+}

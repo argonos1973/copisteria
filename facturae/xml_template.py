@@ -75,6 +75,7 @@ def obtener_plantilla_xml():
             <Items>
                 {items}
             </Items>
+            {payment_details}
         </Invoice>
     </Invoices>
 </fe:Facturae>
@@ -195,6 +196,25 @@ def generar_item_template():
                     </Tax>
                 </TaxesOutputs>
             </InvoiceLine>"""
+
+
+def generar_payment_details_template():
+    """
+    Genera la plantilla para PaymentDetails (Installment + IBAN)
+
+    Returns:
+        str: Plantilla XML para PaymentDetails dentro de Invoice
+    """
+    return """<PaymentDetails>
+                <Installment>
+                    <InstallmentDueDate>{due_date}</InstallmentDueDate>
+                    <InstallmentAmount>{installment_amount}</InstallmentAmount>
+                    <PaymentMeans>{payment_means}</PaymentMeans>
+                    <AccountToBeCredited>
+                        <IBAN>{iban}</IBAN>
+                    </AccountToBeCredited>
+                </Installment>
+            </PaymentDetails>"""
 
 
 def generar_administrative_centre_template():

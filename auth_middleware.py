@@ -51,7 +51,7 @@ def verificar_password(password, password_hash, user_id=None):
                 nuevo_hash = generate_password_hash(password)
                 conn = sqlite3.connect(DB_USUARIOS_PATH)
                 cursor = conn.cursor()
-                cursor.execute("UPDATE usuarios SET password = ? WHERE id = ?", (nuevo_hash, user_id))
+                cursor.execute("UPDATE usuarios SET password_hash = ? WHERE id = ?", (nuevo_hash, user_id))
                 conn.commit()
                 conn.close()
                 logger.info(f"✅ Contraseña migrada de SHA256 a PBKDF2 para usuario {user_id}")

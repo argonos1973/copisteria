@@ -192,20 +192,23 @@ log "Ajustando permisos y directorios..."
 
 remote_exec "
     cd $REMOTE_DIR
-    mkdir -p logs db facturas_proveedores
-    chmod -R 755 logs db facturas_proveedores
-    echo '$REMOTE_PASS' | sudo -S chown -R $REMOTE_USER:$REMOTE_USER logs db facturas_proveedores
+    mkdir -p logs db facturas_proveedores factura_e
+    # El servicio systemd 'gunicorn' corre como www-data: dar propiedad de grupo
+    # y escritura de grupo para que pueda escribir logs/db sin PermissionError.
+    echo '$REMOTE_PASS' | sudo -S chown -R $REMOTE_USER:www-data logs db facturas_proveedores factura_e
+    echo '$REMOTE_PASS' | sudo -S chmod -R g+rwX logs db facturas_proveedores factura_e
+    echo '$REMOTE_PASS' | sudo -S find logs db facturas_proveedores factura_e -type d -exec chmod g+s {} +
     
-    # VACIAR BD DE USUARIOS (Solicitado)
-    # Borramos la BD existente para que se regenere limpia con inicializar_bd_usuarios
+    # NO BORRAR la BD de usuarios: contiene los usuarios/empresas de produccion.
+    # Solo se inicializa si NO existe (inicializar_bd_usuarios ya hace ese chequeo).
+    # Hacer copia de seguridad por si acaso antes de cualquier operacion.
     if [ -f 'db/usuarios_sistema.db' ]; then
-        echo 'Vaciando BD de usuarios (borrando archivo existente)...'
-        rm db/usuarios_sistema.db
+        echo 'BD de usuarios existente: se conserva (backup de seguridad).' 
+        cp -f db/usuarios_sistema.db db/usuarios_sistema.db.bak_\$(date +%Y%m%d_%H%M%S) 2>/dev/null || true
+    else
+        echo 'No existe BD de usuarios: inicializando por primera vez...'
+        venv/bin/python3 -c 'import sys; sys.path.append(\".\"); from multiempresa_config import inicializar_bd_usuarios; inicializar_bd_usuarios()'
     fi
-    
-    # Regenerar BD vacía usando el script de inicialización
-    echo 'Inicializando BD de usuarios vacía...'
-    venv/bin/python3 -c 'import sys; sys.path.append(\".\"); from multiempresa_config import inicializar_bd_usuarios; inicializar_bd_usuarios()'
 "
 
 # =============================================================================
@@ -213,29 +216,17 @@ remote_exec "
 # =============================================================================
 log "Reiniciando servicios..."
 
-# Detener Gunicorn existente
-remote_exec "echo '$REMOTE_PASS' | sudo -S pkill gunicorn || true"
-log "Gunicorn detenido."
-
-# Esperar un momento
-sleep 2
-
-# Iniciar Gunicorn
-# Nota: Ejecutamos como el usuario remoto (sami), no como root, para evitar problemas de permisos en logs
-log "Iniciando Gunicorn..."
+# El servidor usa el servicio systemd 'gunicorn' (www-data, bind 127.0.0.1:5001)
+# detras de nginx. NO arrancar gunicorn manualmente con nohup ni en otro puerto,
+# ya que nginx hace proxy_pass a 127.0.0.1:5001.
+log "Reiniciando servicio systemd gunicorn..."
 remote_exec "
-    cd $REMOTE_DIR
-    # Asegurar permisos de logs antes de arrancar
-    echo '$REMOTE_PASS' | sudo -S chown -R $REMOTE_USER:$REMOTE_USER logs
-    
-    # Iniciar en background
-    nohup venv/bin/gunicorn \
-        --workers 4 \
-        --bind 0.0.0.0:5002 \
-        --timeout 120 \
-        --access-logfile logs/gunicorn-access.log \
-        --error-logfile logs/gunicorn-error.log \
-        app:app > /dev/null 2>&1 &
+    # Matar cualquier gunicorn huerfano que no sea el del servicio systemd
+    echo '$REMOTE_PASS' | sudo -S pkill -f 'bind 0.0.0.0:5002' 2>/dev/null || true
+    sleep 2
+    echo '$REMOTE_PASS' | sudo -S systemctl restart gunicorn.service
+    sleep 3
+    systemctl is-active gunicorn.service
 "
 
 # =============================================================================
@@ -244,11 +235,10 @@ remote_exec "
 log "Verificando despliegue..."
 
 sleep 5
-if remote_exec "pgrep -f gunicorn > /dev/null"; then
+if remote_exec "systemctl is-active --quiet gunicorn.service && curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:5001/ | grep -qE '200|30[0-9]'"; then
     log "✅ Despliegue completado exitosamente!"
-    echo "La aplicación debería estar corriendo en http://$REMOTE_HOST:5002"
+    echo "La aplicación está corriendo (gunicorn :5001 detrás de nginx). Accede en http://$REMOTE_HOST/"
 else
-    error "Gunicorn no parece estar corriendo. Revisa los logs en $REMOTE_DIR/logs/"
-    # Mostrar últimas líneas del log de error si falla
-    remote_exec "tail -n 20 $REMOTE_DIR/logs/gunicorn-error.log"
+    error "Gunicorn (servicio systemd) no responde correctamente. Revisa el estado y los logs."
+    remote_exec "echo '$REMOTE_PASS' | sudo -S journalctl -u gunicorn.service -n 30 --no-pager"
 fi

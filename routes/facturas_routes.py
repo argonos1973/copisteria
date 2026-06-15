@@ -464,7 +464,8 @@ def obtener_factura_abierta_legacy(idContacto, idFactura):
 @facturas_bp.route('/api/facturas/<int:factura_id>/descargar-xsig', methods=['GET'])
 @login_required
 def descargar_xsig(factura_id):
-    """Descarga el archivo XSIG (Facturae firmado) de una factura"""
+    """Descarga el archivo XSIG (Facturae firmado) de una factura.
+    Siempre regenera el .xsig con los datos mas recientes antes de servirlo."""
     try:
         factura_data = factura.obtener_factura_completa(factura_id)
         if not factura_data:
@@ -478,14 +479,17 @@ def descargar_xsig(factura_id):
         if not numero:
             return jsonify({'error': 'Número de factura no disponible'}), 404
 
-        base_dir = '/var/www/html/factura_e'
-        files = glob.glob(os.path.join(base_dir, '**', f'{numero}.xsig'), recursive=True)
+        # REGENERAR el XSIG con los datos mas recientes de la BD
+        xsig_path = factura.regenerar_xsig_para_factura(factura_id)
 
-        if not files:
-            return jsonify({'error': 'Archivo XSIG no encontrado. Regenere la factura FACe.'}), 404
-
-        files.sort(reverse=True)
-        xsig_path = files[0]
+        if not xsig_path or not os.path.exists(xsig_path):
+            # Fallback: buscar archivo existente si la regeneracion fallo
+            base_dir = '/var/www/html/factura_e'
+            files = glob.glob(os.path.join(base_dir, '**', f'{numero}.xsig'), recursive=True)
+            if not files:
+                return jsonify({'error': 'Archivo XSIG no encontrado y no se pudo regenerar.'}), 404
+            files.sort(reverse=True)
+            xsig_path = files[0]
 
         return send_file(
             xsig_path,
