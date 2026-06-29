@@ -10,6 +10,7 @@ Fecha: 2025-10-21
 """
 
 import os
+import json
 from logger_config import get_logger
 
 logger = get_logger(__name__)
