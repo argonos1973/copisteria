@@ -1029,26 +1029,23 @@ async function guardarProforma(formaPago = 'E', totalPago = 0, estado = 'A') {
             return;
         }
 
-        // Solo verificar el número si es una nueva proforma (no tiene idProforma)
-        if (!idProforma) {
-   
-                // Obtener un nuevo número de proforma
-                const numResponse = await fetch('/api/proforma/numero', { credentials: 'include' });
-                if (!numResponse.ok) {
-                    throw new Error('Error al obtener nuevo número de proforma');
-                }
-                const numData = await numResponse.json();
-                const fecha = new Date();
-                const año = fecha.getFullYear().toString().slice(-2);
-                let numeroPadded = numData.numerador.toString().padStart(4, '0');
-                let nuevoNumero = `P${año}${numeroPadded}`;
-                
-                // Actualizar el número en el formulario
-                document.getElementById('numero').value = nuevoNumero;
-                numeroProforma = nuevoNumero;
-                
-                console.log('Usando nuevo número de proforma:', nuevoNumero);
+        // Solo obtener un nuevo número si es una nueva proforma y aún no tiene número asignado
+        if (!idProforma && (!numeroProforma || numeroProforma.trim() === '')) {
+            const numResponse = await fetch('/api/proforma/numero', { credentials: 'include' });
+            if (!numResponse.ok) {
+                throw new Error('Error al obtener nuevo número de proforma');
             }
+            const numData = await numResponse.json();
+            const fecha = new Date();
+            const año = fecha.getFullYear().toString().slice(-2);
+            let numeroPadded = numData.numerador.toString().padStart(4, '0');
+            let nuevoNumero = `P${año}${numeroPadded}`;
+
+            document.getElementById('numero').value = nuevoNumero;
+            numeroProforma = nuevoNumero;
+
+            console.log('Usando nuevo número de proforma:', nuevoNumero);
+        }
         
 
         // Calcular importes con redondeo
