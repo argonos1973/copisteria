@@ -16,6 +16,7 @@ let timeoutBusqueda = null;
 let facturasCache = [];
 
 let __nuevaFacturaPreviewBlobUrl = null;
+let __ocrRutaArchivoGuardado = null;
 
 function _revokeNuevaFacturaPreviewBlobUrl() {
     try {
@@ -24,6 +25,10 @@ function _revokeNuevaFacturaPreviewBlobUrl() {
         }
     } catch (_) {}
     __nuevaFacturaPreviewBlobUrl = null;
+}
+
+function _setOcrRutaArchivoGuardado(ruta) {
+    __ocrRutaArchivoGuardado = ruta || null;
 }
 
 function _renderNuevaFacturaPreview(preview) {
@@ -220,6 +225,7 @@ async function abrirNuevaFactura() {
         } catch (_) {}
 
         try { _hideNuevaFacturaPreview(); } catch (_) {}
+        _setOcrRutaArchivoGuardado(null);
 
         // Fecha por defecto
         const hoy = new Date().toISOString().split('T')[0];
@@ -240,6 +246,7 @@ async function abrirNuevaFactura() {
                 const hasFile = !!fileEl?.files?.[0];
                 if (!hasFile) {
                     try { _hideNuevaFacturaPreview(); } catch (_) {}
+                    _setOcrRutaArchivoGuardado(null);
                     return;
                 }
 
@@ -538,12 +545,16 @@ window.escanearNuevaFacturaOCR = async function() {
             }
         } catch (_) {}
 
+        // Recordar la ruta del archivo ya guardado en el servidor para no duplicar al guardar
+        _setOcrRutaArchivoGuardado(data.preview_filename || null);
+
         _setOcrEstado('✅ OCR completado. Revisa y ajusta antes de guardar.');
         mostrarNotificacion('OCR completado. Revisa los datos antes de guardar.', 'success');
     } catch (err) {
         console.error('[Facturas] Error OCR nueva factura:', err);
         try { _hideNuevaFacturaPreview(); } catch (_) {}
         _setOcrEstado('❌ Error en OCR');
+        _setOcrRutaArchivoGuardado(null);
         mostrarNotificacion('Error en OCR: ' + (err.message || err), 'error');
     }
 };
@@ -679,7 +690,13 @@ window.guardarNuevaFactura = async function() {
             formData.append('concepto', (document.getElementById('nueva-concepto')?.value || '').trim());
             formData.append('notas', (document.getElementById('nueva-notas')?.value || '').trim());
             formData.append('estado', 'P');
-            formData.append('archivos', archivoAdjunto);
+
+            // Si el OCR ya guardó el archivo en el servidor, reutilizar esa ruta en lugar de volver a subir
+            if (__ocrRutaArchivoGuardado) {
+                formData.append('ruta_archivo_ocr', __ocrRutaArchivoGuardado);
+            } else {
+                formData.append('archivos', archivoAdjunto);
+            }
 
             const respUp = await fetch('/api/facturas-proveedores/subir', {
                 method: 'POST',

@@ -315,55 +315,78 @@ def subir_factura_endpoint():
         if not proveedor_id:
             return jsonify({'error': 'Falta proveedor_id'}), 400
             
-        # Archivo
-        if 'archivos' not in request.files:
-            return jsonify({'error': 'No se envió archivo PDF'}), 400
-            
-        archivo = request.files['archivos']
-        if archivo.filename == '':
-            return jsonify({'error': 'Nombre de archivo vacío'}), 400
-            
-        # Calcular hash para duplicados
-        archivo.seek(0)
-        pdf_bytes = archivo.read()
-        pdf_hash = calcular_hash_pdf(pdf_bytes)
-        archivo.seek(0) # Resetear puntero
-        
-        # Verificar si ya existe
-        if factura_ya_procesada(pdf_hash, empresa_id):
-             return jsonify({
-                'success': False, 
-                'duplicada': True, 
-                'mensaje': 'Esta factura ya ha sido procesada anteriormente',
-                'info': 'Duplicada'
-            })
+        # Archivo: puede venir como archivo nuevo o como ruta OCR ya guardada
+        ruta_ocr = request.form.get('ruta_archivo_ocr', '').strip()
+        ruta_destino = None
+        pdf_hash = None
 
-        # Guardar archivo en disco
-        # Estándar multiempresa: facturas_proveedores/empresa_codigo/anio/filename
-        empresa_codigo = session.get('empresa_codigo')
-        if not empresa_codigo:
-            # Fallback: Obtener código desde DB si no está en sesión
-            try:
-                with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT codigo FROM empresas WHERE id = ?", (empresa_id,))
-                    res = cursor.fetchone()
-                    if res:
-                        empresa_codigo = res[0]
-            except Exception as e:
-                logger.error(f"Error obteniendo código empresa: {e}")
-        
-        # Si falla todo, usar ID como fallback temporal (no ideal pero evita crash)
-        carpeta_empresa = empresa_codigo if empresa_codigo else str(empresa_id)
-        
-        from datetime import datetime
-        anio = datetime.now().year
-        upload_folder = f"/var/www/html/facturas_proveedores/{carpeta_empresa}/{anio}"
-        os.makedirs(upload_folder, exist_ok=True)
-        
-        filename = secure_filename(archivo.filename)
-        ruta_destino = os.path.join(upload_folder, filename)
-        archivo.save(ruta_destino)
+        if ruta_ocr:
+            # Reutilizar archivo que ya guardó el OCR
+            empresa_codigo = session.get('empresa_codigo')
+            if not empresa_codigo:
+                try:
+                    with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT codigo FROM empresas WHERE id = ?", (empresa_id,))
+                        res = cursor.fetchone()
+                        if res:
+                            empresa_codigo = res[0]
+                except Exception as e:
+                    logger.error(f"Error obteniendo código empresa: {e}")
+            carpeta_empresa = empresa_codigo if empresa_codigo else str(empresa_id)
+            ruta_destino = os.path.join('/var/www/html/facturas_proveedores', carpeta_empresa, str(datetime.now().year), secure_filename(os.path.basename(ruta_ocr)))
+            if not os.path.exists(ruta_destino):
+                return jsonify({'error': 'No se encuentra el archivo OCR indicado'}), 400
+            pdf_hash = calcular_hash_pdf(open(ruta_destino, 'rb').read())
+        else:
+            if 'archivos' not in request.files:
+                return jsonify({'error': 'No se envió archivo PDF'}), 400
+
+            archivo = request.files['archivos']
+            if archivo.filename == '':
+                return jsonify({'error': 'Nombre de archivo vacío'}), 400
+
+            # Calcular hash para duplicados
+            archivo.seek(0)
+            pdf_bytes = archivo.read()
+            pdf_hash = calcular_hash_pdf(pdf_bytes)
+            archivo.seek(0) # Resetear puntero
+
+            # Verificar si ya existe
+            if factura_ya_procesada(pdf_hash, empresa_id):
+                 return jsonify({
+                    'success': False,
+                    'duplicada': True,
+                    'mensaje': 'Esta factura ya ha sido procesada anteriormente',
+                    'info': 'Duplicada'
+                })
+
+            # Guardar archivo en disco
+            # Estándar multiempresa: facturas_proveedores/empresa_codigo/anio/filename
+            empresa_codigo = session.get('empresa_codigo')
+            if not empresa_codigo:
+                # Fallback: Obtener código desde DB si no está en sesión
+                try:
+                    with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT codigo FROM empresas WHERE id = ?", (empresa_id,))
+                        res = cursor.fetchone()
+                        if res:
+                            empresa_codigo = res[0]
+                except Exception as e:
+                    logger.error(f"Error obteniendo código empresa: {e}")
+
+            # Si falla todo, usar ID como fallback temporal (no ideal pero evita crash)
+            carpeta_empresa = empresa_codigo if empresa_codigo else str(empresa_id)
+
+            from datetime import datetime
+            anio = datetime.now().year
+            upload_folder = f"/var/www/html/facturas_proveedores/{carpeta_empresa}/{anio}"
+            os.makedirs(upload_folder, exist_ok=True)
+
+            filename = secure_filename(archivo.filename)
+            ruta_destino = os.path.join(upload_folder, filename)
+            archivo.save(ruta_destino)
         
         # Datos factura dictionary
         datos_factura = {
