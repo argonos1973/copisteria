@@ -1523,27 +1523,29 @@ function mostrarModalEditar(factura) {
         if (previewPlaceholder) previewPlaceholder.style.display = 'none';
         _setEditarPreviewVisible(false);
     } else {
-        // Por defecto mostramos placeholder mientras validamos que el endpoint devuelve un archivo
+        // Mostrar placeholder mientras cargamos el PDF
         _setEditarPreviewVisible(true);
         previewFrame.src = '';
         previewFrame.style.display = 'none';
         if (previewPlaceholder) previewPlaceholder.style.display = 'flex';
 
-        // Validación ligera: si el endpoint responde JSON/HTML o 404, ocultar el preview
-        fetch(url, { method: 'HEAD' })
-            .then(resp => {
-                const ct = (resp.headers.get('content-type') || '').toLowerCase();
-                const isBad = ct.includes('application/json') || ct.includes('text/html');
-                if (!resp.ok || isBad) {
-                    previewFrame.src = '';
-                    previewFrame.style.display = 'none';
-                    if (previewPlaceholder) previewPlaceholder.style.display = 'none';
-                    _setEditarPreviewVisible(false);
-                    return;
+        // Descargar el PDF con el header de sesión (session_manager lo inyecta en fetch)
+        // y mostrarlo mediante un blob URL para evitar problemas de autenticación en iframe
+        fetch(url, { credentials: 'include' })
+            .then(async resp => {
+                if (!resp.ok) {
+                    throw new Error(`HTTP ${resp.status}`);
                 }
-                previewFrame.src = url;
+                const blob = await resp.blob();
+                if (blob.size === 0 || blob.type.toLowerCase().includes('text/html')) {
+                    throw new Error('Respuesta no es PDF');
+                }
+                const blobUrl = URL.createObjectURL(blob);
+                previewFrame.src = blobUrl;
                 previewFrame.style.display = 'block';
                 if (previewPlaceholder) previewPlaceholder.style.display = 'none';
+                // Guardar el blob URL para revocarlo al cerrar el modal
+                window.__editarPreviewBlobUrl = blobUrl;
             })
             .catch(() => {
                 previewFrame.src = '';
