@@ -627,25 +627,36 @@ def convertir_proforma_a_factura(id_proforma):
         cursor.execute('SELECT * FROM detalle_proforma WHERE id_proforma = ?', (id_proforma,))
         detalles_proforma = cursor.fetchall()
         
+        # Determinar estado de la factura según lo cobrado en la proforma
+        importe_cobrado = proforma['importe_cobrado'] or 0
+        total = proforma['total'] or 0
+        if importe_cobrado >= total and total > 0:
+            estado_factura = 'C'  # Cobrada
+            fecha_cobro = datetime.now().strftime('%Y-%m-%d')
+        else:
+            estado_factura = 'P'  # Pendiente
+            fecha_cobro = None
+
         # Crear la factura
         cursor.execute('''
             INSERT INTO factura (
                 numero, fecha, fvencimiento, estado, idContacto, nif, total, formaPago, 
-                importe_bruto, importe_impuestos, importe_cobrado, timestamp, tipo
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                importe_bruto, importe_impuestos, importe_cobrado, timestamp, tipo, fechaCobro
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             numero_formateado,
             datetime.now().strftime('%Y-%m-%d'), (datetime.now() + timedelta(days=15)).strftime('%Y-%m-%d'),  # Fecha actual y vencimiento a 15 días
-            'P',  # Estado Pendiente
+            estado_factura,
             proforma['idContacto'],
             proforma['nif'],
             proforma['total'],
             proforma['formaPago'],
             proforma['importe_bruto'],
             proforma['importe_impuestos'],
-            proforma['importe_cobrado'],
+            importe_cobrado,
             datetime.now().isoformat(),
-            proforma['tipo']  # Transferir el tipo de la proforma a la factura
+            proforma['tipo'],  # Transferir el tipo de la proforma a la factura
+            fecha_cobro
         ))
         
         factura_id = cursor.lastrowid
