@@ -692,8 +692,13 @@ window.guardarNuevaFactura = async function() {
             formData.append('estado', 'P');
 
             // Si el OCR ya guardó el archivo en el servidor, reutilizar esa ruta en lugar de volver a subir
+            // La ruta debe ser relativa: ALEPH/2026/Q2/originales/OCR_xxx.pdf
             if (__ocrRutaArchivoGuardado) {
-                formData.append('ruta_archivo_ocr', __ocrRutaArchivoGuardado);
+                const empresaCodigo = window.sessionManager?.getSessionData?.()?.empresaCodigo || 'ALEPH';
+                const año = new Date().getFullYear();
+                const trimestre = `Q${Math.floor(new Date().getMonth() / 3) + 1}`;
+                const rutaRelativa = `${empresaCodigo}/${año}/${trimestre}/originales/${__ocrRutaArchivoGuardado}`;
+                formData.append('ruta_archivo_ocr', rutaRelativa);
             } else {
                 formData.append('archivos', archivoAdjunto);
             }

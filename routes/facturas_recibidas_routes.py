@@ -198,8 +198,10 @@ def procesar_ocr_factura():
         carpeta_empresa = empresa_codigo if empresa_codigo else str(empresa_id)
 
         from datetime import datetime
-        anio = datetime.now().year
-        upload_folder = f"/var/www/html/facturas_proveedores/{carpeta_empresa}/{anio}"
+        now = datetime.now()
+        anio = now.year
+        trimestre = f"Q{(now.month - 1) // 3 + 1}"
+        upload_folder = f"/var/www/html/facturas_proveedores/{carpeta_empresa}/{anio}/{trimestre}/originales"
         os.makedirs(upload_folder, exist_ok=True)
 
         original_name = secure_filename(archivo.filename) or 'factura'
@@ -250,14 +252,15 @@ def procesar_ocr_factura():
             except Exception as e:
                 logger.error(f"Error validando NIF empresa vs proveedor: {e}")
         
-        preview_url = f"/api/facturas-proveedores/ocr-preview/{anio}/{saved_name}"
+        preview_url = f"/api/facturas-proveedores/ocr-preview/{anio}/{trimestre}/{saved_name}"
         return jsonify({
             'success': True,
             'datos': datos,
             'archivo_guardado': True,
             'preview_url': preview_url,
             'preview_filename': saved_name,
-            'preview_year': anio
+            'preview_year': anio,
+            'preview_trimestre': trimestre
         })
         
     except Exception as e:
@@ -265,10 +268,16 @@ def procesar_ocr_factura():
         return jsonify({'error': str(e), 'success': False}), 500
 
 
+@facturas_recibidas_bp.route('/facturas-proveedores/ocr-preview/<int:anio>/<trimestre>/<path:filename>', methods=['GET'])
 @facturas_recibidas_bp.route('/facturas-proveedores/ocr-preview/<int:anio>/<path:filename>', methods=['GET'])
 @login_required
-def ocr_preview_factura(anio, filename):
+def ocr_preview_factura(anio, trimestre=None, filename=None):
     try:
+        # Soportar tanto ruta antigua /anio/filename como nueva /anio/trimestre/filename
+        if filename is None:
+            filename = trimestre
+            trimestre = None
+
         empresa_id = session.get('empresa_id')
         if not empresa_id:
             return jsonify({'error': 'No hay empresa seleccionada'}), 400
@@ -291,11 +300,18 @@ def ocr_preview_factura(anio, filename):
         if not safe_name:
             return jsonify({'error': 'Nombre de archivo no válido'}), 400
 
-        ruta = os.path.join('/var/www/html/facturas_proveedores', carpeta_empresa, str(anio), safe_name)
-        if not os.path.exists(ruta):
-            return jsonify({'error': 'Archivo no encontrado'}), 404
+        # Intentar ruta nueva primero
+        if trimestre:
+            ruta = os.path.join('/var/www/html/facturas_proveedores', carpeta_empresa, str(anio), trimestre, 'originales', safe_name)
+            if os.path.exists(ruta):
+                return send_file(ruta)
 
-        return send_file(ruta)
+        # Fallback a ruta antigua
+        ruta = os.path.join('/var/www/html/facturas_proveedores', carpeta_empresa, str(anio), safe_name)
+        if os.path.exists(ruta):
+            return send_file(ruta)
+
+        return jsonify({'error': 'Archivo no encontrado'}), 404
     except Exception as e:
         logger.error(f"Error sirviendo preview OCR: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
@@ -321,20 +337,8 @@ def subir_factura_endpoint():
         pdf_hash = None
 
         if ruta_ocr:
-            # Reutilizar archivo que ya guardó el OCR
-            empresa_codigo = session.get('empresa_codigo')
-            if not empresa_codigo:
-                try:
-                    with get_database_pool(DB_USUARIOS_PATH).get_db_connection() as conn:
-                        cursor = conn.cursor()
-                        cursor.execute("SELECT codigo FROM empresas WHERE id = ?", (empresa_id,))
-                        res = cursor.fetchone()
-                        if res:
-                            empresa_codigo = res[0]
-                except Exception as e:
-                    logger.error(f"Error obteniendo código empresa: {e}")
-            carpeta_empresa = empresa_codigo if empresa_codigo else str(empresa_id)
-            ruta_destino = os.path.join('/var/www/html/facturas_proveedores', carpeta_empresa, str(datetime.now().year), secure_filename(os.path.basename(ruta_ocr)))
+            # Reutilizar archivo que ya guardó el OCR (ruta_ocr es relativa: ALEPH/2026/Q2/originales/OCR_xxx.pdf)
+            ruta_destino = os.path.join('/var/www/html/facturas_proveedores', ruta_ocr.lstrip('/'))
             if not os.path.exists(ruta_destino):
                 return jsonify({'error': 'No se encuentra el archivo OCR indicado'}), 400
             pdf_hash = calcular_hash_pdf(open(ruta_destino, 'rb').read())
@@ -380,8 +384,10 @@ def subir_factura_endpoint():
             carpeta_empresa = empresa_codigo if empresa_codigo else str(empresa_id)
 
             from datetime import datetime
-            anio = datetime.now().year
-            upload_folder = f"/var/www/html/facturas_proveedores/{carpeta_empresa}/{anio}"
+            now = datetime.now()
+            anio = now.year
+            trimestre = f"Q{(now.month - 1) // 3 + 1}"
+            upload_folder = f"/var/www/html/facturas_proveedores/{carpeta_empresa}/{anio}/{trimestre}/originales"
             os.makedirs(upload_folder, exist_ok=True)
 
             filename = secure_filename(archivo.filename)
