@@ -323,39 +323,25 @@ def guardar_ticket(data=None):
                 conn.rollback()
                 return jsonify({"error": f"Ya existe un ticket con el número {numero}"}), 400
 
-            # USAR LÓGICA UNIFICADA: Calcular importes por línea
+            # USAR LÓGICA UNIFICADA: Calcular importes por línea (igual que frontend)
             importe_bruto = Decimal('0.00')
-            bases_por_iva = {}
-            
-            # APLICAR MISMA LÓGICA QUE FRONTEND UNIFICADO
-            for detalle in detalles:
-                # Usar Decimal para precisión
-                cantidad = Decimal(str(detalle['cantidad']))
-                precio = Decimal(str(detalle['precio']))
-                impuesto = Decimal(str(detalle['impuestos']))
-                
-                # 1. Subtotal línea = ROUND(precio * cantidad, 2)
-                subtotal = (cantidad * precio).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                
-                # Acumular base total
-                importe_bruto += subtotal
-                
-                # Acumular base por tipo de IVA
-                bases_por_iva[impuesto] = bases_por_iva.get(impuesto, Decimal('0.00')) + subtotal
-            
-            # 2. Calcular IVA global sobre las bases acumuladas
             importe_impuestos = Decimal('0.00')
-            for iva_rate, base in bases_por_iva.items():
-                cuota = (base * iva_rate / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                importe_impuestos += cuota
+            total_calculado = Decimal('0.00')
             
-            # 3. Total = Base + IVA
-            total_calculado = (importe_bruto + importe_impuestos).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            for detalle in detalles:
+                res = calcular_importes(detalle['cantidad'], detalle['precio'], detalle['impuestos'])
+                importe_bruto += Decimal(str(res['subtotal']))
+                importe_impuestos += Decimal(str(res['iva']))
+                total_calculado += Decimal(str(res['total']))
             
-            # Convertir a float para DB
-            importe_bruto = float(importe_bruto)
-            importe_impuestos = float(importe_impuestos)
-            total_calculado = float(total_calculado)
+            # Redondear totales finales
+            importe_bruto = float(importe_bruto.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            importe_impuestos = float(importe_impuestos.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            total_calculado = float(total_calculado.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            
+            # Si el ticket está cobrado, asegurar que el importe cobrado coincide con el total
+            if estado == 'C':
+                importe_cobrado = total_calculado
             
             # Insertar el ticket en la tabla tickets
             cursor.execute('''
@@ -987,36 +973,25 @@ def actualizar_ticket(id_ticket=None, data=None):
         if not numero or not detalles:
             return jsonify({'error': 'Datos incompletos', 'datos_recibidos': {'numero': numero, 'detalles': len(detalles)}}), 400
 
-        # Recalcular importes usando LÓGICA UNIFICADA (redondeo por línea)
+        # Recalcular importes usando LÓGICA UNIFICADA (igual que frontend)
         importe_bruto = Decimal('0.00')
-        bases_por_iva = {}
-        
-        # APLICAR MISMA LÓGICA QUE FRONTEND UNIFICADO
-        for detalle in detalles:
-            cantidad = Decimal(str(detalle['cantidad']))
-            precio = Decimal(str(detalle['precio']))
-            impuesto = Decimal(str(detalle['impuestos']))
-            
-            # 1. Subtotal línea
-            subtotal = (cantidad * precio).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            
-            # Acumular
-            importe_bruto += subtotal
-            bases_por_iva[impuesto] = bases_por_iva.get(impuesto, Decimal('0.00')) + subtotal
-        
-        # 2. Calcular IVA global
         importe_impuestos = Decimal('0.00')
-        for iva_rate, base in bases_por_iva.items():
-            cuota = (base * iva_rate / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            importe_impuestos += cuota
+        total_calculado = Decimal('0.00')
         
-        # 3. Total
-        total_calculado = (importe_bruto + importe_impuestos).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        for detalle in detalles:
+            res = calcular_importes(detalle['cantidad'], detalle['precio'], detalle['impuestos'])
+            importe_bruto += Decimal(str(res['subtotal']))
+            importe_impuestos += Decimal(str(res['iva']))
+            total_calculado += Decimal(str(res['total']))
         
-        # Convertir a float
-        importe_bruto = float(importe_bruto)
-        importe_impuestos = float(importe_impuestos)
-        total_calculado = float(total_calculado)
+        # Redondear totales finales
+        importe_bruto = float(importe_bruto.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        importe_impuestos = float(importe_impuestos.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        total_calculado = float(total_calculado.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        
+        # Si el ticket está cobrado, asegurar que el importe cobrado coincide con el total
+        if estado == 'C':
+            importe_cobrado = total_calculado
         
         conn = get_db_connection()
         cursor = conn.cursor()
