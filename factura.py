@@ -2149,6 +2149,10 @@ def actualizar_factura(id, data):
         importe_impuestos = float(importe_impuestos_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
         total = float(total_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
 
+        # Si la factura está cobrada, asegurar que importe_cobrado = total (evita diferencias de redondeo)
+        if estado == 'C':
+            importe_cobrado = total
+
         # Determinar fecha de cobro según el cambio de estado
         fecha_cobro = None
         
