@@ -591,6 +591,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Porcentaje: % completado del objetivo anual (año anterior total)
         const tktTotalAnualPrev = datos.tickets.anterior?.total || tktTotalHastaPrev;
         datos.tickets.porcentaje_diferencia = tktTotalAnualPrev > 0 ? ((tktTotalHasta / tktTotalAnualPrev) * 100) - 100 : 0;
+        // Media mensual año anterior (YTD hasta el mes seleccionado, excluyendo ese mes) para comparativa
+        const tktMesTotalPrev = valMes(totalesPrev.tickets, 'total');
+        datos.tickets.anterior.media_mensual = (mesNum - 1) > 0 ? (tktTotalHastaPrev - tktMesTotalPrev) / (mesNum - 1) : 0;
 
         // Facturas (año actual hasta el mes seleccionado)
         const facTotalHasta = sumHasta(totales.facturas, 'total');
@@ -625,6 +628,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Porcentaje: % completado del objetivo anual (año anterior total)
         const facTotalAnualPrev = datos.facturas.anterior?.total || facTotalHastaPrev;
         datos.facturas.porcentaje_diferencia = facTotalAnualPrev > 0 ? ((facTotalHasta / facTotalAnualPrev) * 100) - 100 : 0;
+        // Media mensual año anterior (YTD hasta el mes seleccionado, excluyendo ese mes) para comparativa
+        const facMesTotalPrev = valMes(totalesPrev.facturas, 'total');
+        datos.facturas.anterior.media_mensual = (mesNum - 1) > 0 ? (facTotalHastaPrev - facMesTotalPrev) / (mesNum - 1) : 0;
 
         // Global (recalculado con los valores ajustados)
         if (datos.global) {
@@ -657,6 +663,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           // Porcentaje: % completado del objetivo anual (año anterior total)
           const globTotalAnualPrev = datos.global.anterior?.total || globTotalHastaPrev;
           datos.global.porcentaje_diferencia = globTotalAnualPrev > 0 ? ((globTotalHasta / globTotalAnualPrev) * 100) - 100 : 0;
+          // Media mensual año anterior global (YTD hasta el mes seleccionado, excluyendo ese mes)
+          const globMesTotalPrev = tktMesTotalPrev + facMesTotalPrev;
+          datos.global.anterior.media_mensual = (mesNum - 1) > 0 ? (globTotalHastaPrev - globMesTotalPrev) / (mesNum - 1) : 0;
         }
       }
     } catch (e) {
@@ -934,6 +943,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     const totalMesSeleccionado = data.actual.mes_actual?.total ?? 0;
     const cantidadMes = data.actual.mes_actual?.cantidad ?? 0;
     safeSetAmount(`${prefijo}MediaMensual`, formatearImporte(data.actual.media_mensual), data.actual.media_mensual);
+    // Comparativa de medias vs año anterior
+    {
+      // 1) Media del mes seleccionado (coincide con el número grande mostrado) vs mismo mes año anterior
+      const totMesC = parsearImporte(data.actual.mes_actual?.total || 0) || 0;
+      const cantMesC = parsearImporte(data.actual.mes_actual?.cantidad || 0) || 0;
+      const mediaMesActual = cantMesC > 0 ? (totMesC / cantMesC) : 0;
+      const totMesAnt = parsearImporte(data.anterior?.mismo_mes?.total ?? 0) || 0;
+      const cantMesAnt = parsearImporte(data.anterior?.mismo_mes?.cantidad ?? 0) || 0;
+      const mediaMesAnt = cantMesAnt > 0 ? (totMesAnt / cantMesAnt) : 0;
+      safeSet(`${prefijo}MediaMesAnterior`, `Mismo mes año anterior: ${formatearImporte(mediaMesAnt)}`);
+      actualizarPorcentaje(`${prefijo}PorcentajeMediaMes`, (mediaMesAnt > 0 && cantMesC > 0) ? ((mediaMesActual - mediaMesAnt) / mediaMesAnt) * 100 : null);
+      // 2) Media YTD (acumulado del año hasta hoy) vs año anterior hasta la misma fecha
+      const mediaActualYTD = parsearImporte(data.actual?.media ?? 0);
+      const mediaAntYTD = parsearImporte(data.anterior?.media ?? 0);
+      safeSet(`${prefijo}MediaAnterior`, `Año anterior (hasta fecha): ${formatearImporte(mediaAntYTD)}`);
+      actualizarPorcentaje(`${prefijo}PorcentajeMedia`, mediaAntYTD > 0 ? ((mediaActualYTD - mediaAntYTD) / mediaAntYTD) * 100 : null);
+      // 3) Media mensual (promedio por mes) vs año anterior
+      const mmActual = parsearImporte(data.actual?.media_mensual ?? 0);
+      const mmAnt = parsearImporte(data.anterior?.media_mensual ?? 0);
+      safeSet(`${prefijo}MediaMensualAnterior`, `Año anterior (hasta fecha): ${formatearImporte(mmAnt)}`);
+      actualizarPorcentaje(`${prefijo}PorcentajeMediaMensual`, mmAnt > 0 ? ((mmActual - mmAnt) / mmAnt) * 100 : null);
+    }
     // Cantidad debe ser del mes seleccionado (o 0 si no hay)
     safeSet(`${prefijo}Cantidad`, cantidadMes);
     safeSet(`${prefijo}Anterior`, `Año anterior: ${formatearImporte(data.anterior.total)}`);
@@ -1028,6 +1059,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     safeSetAmount('globalMedia', formatearImporte(globalMedia), globalMedia);
     safeSetAmount('globalMediaMensual', formatearImporte(global.actual.media_mensual), global.actual.media_mensual);
+    // Comparativa de medias global vs año anterior
+    {
+      // 1) Media del mes seleccionado vs mismo mes año anterior
+      const gTotMesC = parsearImporte(global.actual.mes_actual?.total || 0) || 0;
+      const gCantMesC = parsearImporte(global.actual.mes_actual?.cantidad || 0) || 0;
+      const gMediaMesAct = gCantMesC > 0 ? (gTotMesC / gCantMesC) : 0;
+      const gTotMesAnt = parsearImporte(global.anterior?.mismo_mes?.total ?? 0) || 0;
+      const gCantMesAnt = parsearImporte(global.anterior?.mismo_mes?.cantidad ?? 0) || 0;
+      const gMediaMesAnt = gCantMesAnt > 0 ? (gTotMesAnt / gCantMesAnt) : 0;
+      safeSet('globalMediaMesAnterior', `Mismo mes año anterior: ${formatearImporte(gMediaMesAnt)}`);
+      actualizarPorcentaje('globalPorcentajeMediaMes', (gMediaMesAnt > 0 && gCantMesC > 0) ? ((gMediaMesAct - gMediaMesAnt) / gMediaMesAnt) * 100 : null);
+      // 2) Media YTD (acumulado del año hasta hoy) vs año anterior hasta la misma fecha
+      const gMediaAct = parsearImporte(global.actual?.media ?? 0);
+      const gMediaAnt = parsearImporte(global.anterior?.media ?? 0);
+      safeSet('globalMediaAnterior', `Año anterior (hasta fecha): ${formatearImporte(gMediaAnt)}`);
+      actualizarPorcentaje('globalPorcentajeMedia', gMediaAnt > 0 ? ((gMediaAct - gMediaAnt) / gMediaAnt) * 100 : null);
+      const gMMAct = parsearImporte(global.actual?.media_mensual ?? 0);
+      const gMMAnt = parsearImporte(global.anterior?.media_mensual ?? 0);
+      safeSet('globalMediaMensualAnterior', `Año anterior (hasta fecha): ${formatearImporte(gMMAnt)}`);
+      actualizarPorcentaje('globalPorcentajeMediaMensual', gMMAnt > 0 ? ((gMMAct - gMMAnt) / gMMAnt) * 100 : null);
+    }
     document.getElementById('globalCantidad').textContent = global.actual.cantidad;
     document.getElementById('globalAnterior').textContent = `Año anterior: ${formatearImporte(global.anterior.total)}`;
     actualizarPorcentaje('globalPorcentaje', global.porcentaje_diferencia);
@@ -1173,7 +1225,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // INGRESOS & GASTOS TOTALES
   // ==============================
   async function cargarIngresosGastosTotales(mes, anio){
-    const data = await fetchConManejadorErrores(buildApiUrl(`/api/ingresos_gastos_totales?anio=${anio}&mes=${mes}&t=${Date.now()}`));
+    const gastoEmpresa = window.getGastoEmpresaParam ? window.getGastoEmpresaParam() : '1';
+    const data = await fetchConManejadorErrores(buildApiUrl(`/api/ingresos_gastos_totales?anio=${anio}&mes=${mes}&gasto_empresa=${gastoEmpresa}&t=${Date.now()}`));
     const ingresos = data.ingresos;
     const gastos   = data.gastos;
     const ingresosEl = document.getElementById('ig-total-ingresos');
@@ -1999,6 +2052,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.abrirGraficoCliente = abrirGraficoCliente;
   window.abrirGraficoProducto = abrirGraficoProducto;
   window.recargarEstadisticas = recargarEstadisticas;
+  window.cargarIngresosGastosTotales = cargarIngresosGastosTotales;
   window.descargarCSV = descargarCSV;
 
   

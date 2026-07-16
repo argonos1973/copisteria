@@ -142,7 +142,8 @@ def crear_factura_manual():
             'total': float(factura_data.get('total') or 0),
             'concepto': factura_data.get('concepto'),
             'notas': factura_data.get('notas', ''),
-            'estado': _normalizar_estado_factura(factura_data.get('estado')) or 'pagada'
+            'estado': _normalizar_estado_factura(factura_data.get('estado')) or 'pagada',
+            'gasto_empresa': int(factura_data.get('gasto_empresa', 1))
         }
 
         # Hash manual para evitar colisiones y que factura_ya_procesada no bloquee
@@ -405,7 +406,8 @@ def subir_factura_endpoint():
             'total': float(request.form.get('total') or 0),
             'concepto': request.form.get('concepto'),
             'notas': request.form.get('notas', ''),
-            'estado': _normalizar_estado_factura(request.form.get('estado')) or 'pagada'
+            'estado': _normalizar_estado_factura(request.form.get('estado')) or 'pagada',
+            'gasto_empresa': int(request.form.get('gasto_empresa', 1))
         }
         
         factura_id = guardar_factura_bd(

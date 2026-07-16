@@ -10,7 +10,7 @@ estadisticas_gastos_bp = Blueprint('estadisticas_gastos', __name__)
 
 # ===== FUNCIONES AUXILIARES COMPARTIDAS =====
 
-def _calcular_media_mensual_sin_puntuales(conn, anio, mes=None):
+def _calcular_media_mensual_sin_puntuales(conn, anio, mes=None, gasto_empresa_filter='', gasto_empresa_params=None):
     """
     Calcula la media mensual excluyendo gastos puntuales
 
@@ -18,31 +18,34 @@ def _calcular_media_mensual_sin_puntuales(conn, anio, mes=None):
         conn: conexión a la base de datos
         anio: año para calcular
         mes: mes hasta el cual calcular (opcional)
+        gasto_empresa_filter: str con filtro SQL adicional (ej. ' AND gasto_empresa = ?')
+        gasto_empresa_params: lista de parámetros para el filtro
 
     Returns:
         tuple: (media_mensual, total_gastos_sin_puntuales, num_meses)
     """
+    gasto_empresa_params = gasto_empresa_params or []
     # NOTA: la identificación/marcado de gastos puntuales la realiza el endpoint
     # llamante una sola vez. Esta función solo calcula la media a partir de
     # facturas_proveedores, por lo que no se repite ese trabajo (ni sus escrituras).
     cursor = conn.cursor()
     if mes:
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT
                 COALESCE(SUM(total), 0) as total_sin_puntuales,
                 COUNT(*) as cantidad_sin_puntuales
             FROM facturas_proveedores
             WHERE año = ?
-            AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) <= ?
-        ''', (anio, mes))
+            AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) <= ?{gasto_empresa_filter}
+        ''', (anio, mes, *gasto_empresa_params))
     else:
-        cursor.execute('''
+        cursor.execute(f'''
             SELECT
                 COALESCE(SUM(total), 0) as total_sin_puntuales,
                 COUNT(*) as cantidad_sin_puntuales
             FROM facturas_proveedores
-            WHERE año = ?
-        ''', (anio,))
+            WHERE año = ?{gasto_empresa_filter}
+        ''', (anio, *gasto_empresa_params))
 
     resultado = cursor.fetchone()
     total_sin_puntuales = float(resultado['total_sin_puntuales'] or 0)
@@ -64,45 +67,52 @@ def obtener_estadisticas_gastos():
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
         mes = request.args.get('mes', datetime.now().month, type=int)
-        
+
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
+
         with get_db_connection() as conn:
             cursor = conn.cursor()
             
             # Gastos totales del año actual (año completo)
             # AHORA USA facturas_proveedores en lugar de gastos
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT
                     COALESCE(SUM(total), 0) as total_gastos_anio,
                     COUNT(*) as cantidad_gastos_anio
                 FROM facturas_proveedores
-                WHERE año = ?
-            ''', (anio,))
+                WHERE año = ?{gasto_empresa_filter}
+            ''', (anio, *gasto_empresa_params))
     
             datos_anio = cursor.fetchone()
             total_gastos_anio = float(datos_anio['total_gastos_anio'] or 0)
             cantidad_gastos_anio = int(datos_anio['cantidad_gastos_anio'] or 0)
 
             # Gastos del MES seleccionado (por fecha_emision)
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT
                     COALESCE(SUM(total), 0) as total,
                     COUNT(*) as cantidad
                 FROM facturas_proveedores
                 WHERE año = ?
-                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) = ?
-            ''', (anio, mes))
+                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) = ?{gasto_empresa_filter}
+            ''', (anio, mes, *gasto_empresa_params))
             datos_mes_solo = cursor.fetchone()
             total_gastos_mes_solo = float(datos_mes_solo['total'] or 0)
             cantidad_gastos_mes_solo = int(datos_mes_solo['cantidad'] or 0)
 
             # Gastos del mismo mes del año anterior (por fecha_emision)
             anio_anterior = anio - 1
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT COALESCE(SUM(total), 0) as total
                 FROM facturas_proveedores
                 WHERE año = ?
-                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) = ?
-            ''', (anio_anterior, mes))
+                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) = ?{gasto_empresa_filter}
+            ''', (anio_anterior, mes, *gasto_empresa_params))
             total_gastos_mes_solo_anterior = float(cursor.fetchone()['total'] or 0)
 
             # Gastos del mes anterior (mes-1) para comparación mes a mes
@@ -111,12 +121,12 @@ def obtener_estadisticas_gastos():
             if mes_prev < 1:
                 mes_prev = 12
                 anio_prev = anio - 1
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT COALESCE(SUM(total), 0) as total
                 FROM facturas_proveedores
                 WHERE año = ?
-                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) = ?
-            ''', (anio_prev, mes_prev))
+                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) = ?{gasto_empresa_filter}
+            ''', (anio_prev, mes_prev, *gasto_empresa_params))
             total_gastos_mes_previo = float(cursor.fetchone()['total'] or 0)
             pct_mes_previo = ((total_gastos_mes_solo - total_gastos_mes_previo) / total_gastos_mes_previo * 100) if total_gastos_mes_previo > 0 else 0
 
@@ -125,41 +135,41 @@ def obtener_estadisticas_gastos():
             trimestre = ((mes - 1) // 3) + 1
             mes_inicio_trimestre = (trimestre - 1) * 3 + 1
             mes_fin_trimestre = min(mes_inicio_trimestre + 2, mes)  # No pasar del mes actual
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT
                     COALESCE(SUM(total), 0) as total_gastos_mes,
                     COUNT(*) as cantidad_gastos_mes
                 FROM facturas_proveedores
                 WHERE año = ?
-                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) BETWEEN ? AND ?
-            ''', (anio, mes_inicio_trimestre, mes_fin_trimestre))
+                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) BETWEEN ? AND ?{gasto_empresa_filter}
+            ''', (anio, mes_inicio_trimestre, mes_fin_trimestre, *gasto_empresa_params))
 
             datos_mes = cursor.fetchone()
             total_gastos_mes = float(datos_mes['total_gastos_mes'] or 0)
             cantidad_gastos_mes = int(datos_mes['cantidad_gastos_mes'] or 0)
     
             # Gastos del año anterior HASTA el mismo mes (para comparación justa)
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT COALESCE(SUM(total), 0) as total_gastos_anio_anterior
                 FROM facturas_proveedores
                 WHERE año = ?
-                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) <= ?
-            ''', (anio_anterior, mes))
+                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) <= ?{gasto_empresa_filter}
+            ''', (anio_anterior, mes, *gasto_empresa_params))
     
             total_gastos_anio_anterior = float(cursor.fetchone()['total_gastos_anio_anterior'] or 0)
 
             # Gastos del mismo TRIMESTRE del año anterior
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT COALESCE(SUM(total), 0) as total_gastos_mes_anterior
                 FROM facturas_proveedores
                 WHERE año = ?
-                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) BETWEEN ? AND ?
-            ''', (anio_anterior, mes_inicio_trimestre, mes_fin_trimestre))
+                AND CAST(substr(fecha_emision, 6, 2) AS INTEGER) BETWEEN ? AND ?{gasto_empresa_filter}
+            ''', (anio_anterior, mes_inicio_trimestre, mes_fin_trimestre, *gasto_empresa_params))
 
             total_gastos_mes_anterior = float(cursor.fetchone()['total_gastos_mes_anterior'] or 0)
             
             # Media mensual de gastos (excluyendo gastos puntuales)
-            media_mensual, total_gastos_sin_puntuales, meses_transcurridos = _calcular_media_mensual_sin_puntuales(conn, anio, mes)
+            media_mensual, total_gastos_sin_puntuales, meses_transcurridos = _calcular_media_mensual_sin_puntuales(conn, anio, mes, gasto_empresa_filter, gasto_empresa_params)
             
             # Previsión de gastos hasta fin de año
             meses_restantes = 12 - mes
@@ -205,6 +215,13 @@ def obtener_top10_gastos():
     """
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
+
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND fp.gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -212,15 +229,15 @@ def obtener_top10_gastos():
             
             # 1. Obtener TODOS los gastos del año desde facturas_proveedores
             # Agrupar por proveedor
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT 
                     p.nombre as proveedor_nombre,
                     fp.concepto,
                     fp.total as importe
                 FROM facturas_proveedores fp
                 LEFT JOIN proveedores p ON fp.proveedor_id = p.id
-                WHERE fp.año = ?
-            ''', (anio,))
+                WHERE fp.año = ?{gasto_empresa_filter}
+            ''', (anio, *gasto_empresa_params))
             
             gastos_anio = cursor.fetchall()
             
@@ -268,15 +285,15 @@ def obtener_top10_gastos():
             
             # 4. Obtener datos del año anterior para comparación
             anio_anterior = anio - 1
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT 
                     p.nombre as proveedor_nombre,
                     fp.concepto,
                     fp.total as importe
                 FROM facturas_proveedores fp
                 LEFT JOIN proveedores p ON fp.proveedor_id = p.id
-                WHERE fp.año = ?
-            ''', (anio_anterior,))
+                WHERE fp.año = ?{gasto_empresa_filter}
+            ''', (anio_anterior, *gasto_empresa_params))
             
             gastos_anterior = cursor.fetchall()
             
@@ -316,6 +333,13 @@ def obtener_detalles_gasto():
     try:
         concepto_buscado = request.args.get('concepto', '')
         anio = request.args.get('anio', datetime.now().year, type=int)
+
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND fp.gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
         
         if not concepto_buscado:
             return jsonify({'error': 'Se requiere el parámetro concepto'}), 400
@@ -325,7 +349,7 @@ def obtener_detalles_gasto():
             conn.row_factory = sqlite3.Row
             
             # Obtener facturas del proveedor buscado
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT 
                     fp.id,
                     p.nombre as proveedor_nombre,
@@ -337,9 +361,9 @@ def obtener_detalles_gasto():
                     fp.iva_importe
                 FROM facturas_proveedores fp
                 LEFT JOIN proveedores p ON fp.proveedor_id = p.id
-                WHERE fp.año = ?
+                WHERE fp.año = ?{gasto_empresa_filter}
                 ORDER BY fp.fecha_emision DESC
-            ''', (anio,))
+            ''', (anio, *gasto_empresa_params))
             
             gastos_filtrados = []
             importes = []
@@ -442,21 +466,28 @@ def obtener_evolucion_trimestral():
     """
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
+
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
             
             # Obtener gastos por trimestre desde facturas_proveedores
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT 
                     trimestre,
                     COALESCE(SUM(total), 0) as total,
                     COUNT(*) as cantidad
                 FROM facturas_proveedores
-                WHERE año = ?
+                WHERE año = ?{gasto_empresa_filter}
                 GROUP BY trimestre
                 ORDER BY trimestre
-            ''', (anio,))
+            ''', (anio, *gasto_empresa_params))
             
             # Inicializar trimestres
             trimestres_data = {
@@ -501,24 +532,31 @@ def obtener_gastos_por_categoria_mes_solo():
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
         mes = request.args.get('mes', datetime.now().month, type=int)
+
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND fp.gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
 
             # Obtener gastos del mes desde facturas_proveedores agrupados por proveedor
             # Criterio: fecha_emision
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT 
                     COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as categoria,
                     COALESCE(SUM(fp.total), 0) as total
                 FROM facturas_proveedores fp
                 LEFT JOIN proveedores p ON fp.proveedor_id = p.id
                 WHERE fp.año = ?
-                AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) = ?
+                AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) = ?{gasto_empresa_filter}
                 GROUP BY categoria
                 HAVING total > 0
                 ORDER BY total DESC
-            ''', (anio, mes))
+            ''', (anio, mes, *gasto_empresa_params))
             
             lista_categorias = [{'categoria': row['categoria'], 'total': float(row['total'])} for row in cursor.fetchall()]
             
@@ -563,6 +601,13 @@ def obtener_gastos_por_categoria_mes():
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
         mes = request.args.get('mes', datetime.now().month, type=int)
+
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND fp.gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -572,18 +617,18 @@ def obtener_gastos_por_categoria_mes():
             mes_fin_trimestre = min(mes_inicio_trimestre + 2, mes)
 
             # Obtener gastos del trimestre desde facturas_proveedores agrupados por proveedor
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT 
                     COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as categoria,
                     COALESCE(SUM(fp.total), 0) as total
                 FROM facturas_proveedores fp
                 LEFT JOIN proveedores p ON fp.proveedor_id = p.id
                 WHERE fp.año = ?
-                AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) BETWEEN ? AND ?
+                AND CAST(substr(fp.fecha_emision, 6, 2) AS INTEGER) BETWEEN ? AND ?{gasto_empresa_filter}
                 GROUP BY categoria
                 HAVING total > 0
                 ORDER BY total DESC
-            ''', (anio, mes_inicio_trimestre, mes_fin_trimestre))
+            ''', (anio, mes_inicio_trimestre, mes_fin_trimestre, *gasto_empresa_params))
             
             lista_categorias = [{'categoria': row['categoria'], 'total': float(row['total'])} for row in cursor.fetchall()]
             
@@ -631,22 +676,29 @@ def obtener_gastos_por_categoria_anio():
     """
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
+
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND fp.gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
 
             # Obtener gastos del año desde facturas_proveedores agrupados por proveedor
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT 
                     COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as categoria,
                     COALESCE(SUM(fp.total), 0) as total
                 FROM facturas_proveedores fp
                 LEFT JOIN proveedores p ON fp.proveedor_id = p.id
-                WHERE fp.año = ?
+                WHERE fp.año = ?{gasto_empresa_filter}
                 GROUP BY categoria
                 HAVING total > 0
                 ORDER BY total DESC
-            ''', (anio,))
+            ''', (anio, *gasto_empresa_params))
             
             lista_categorias = [{'categoria': row['categoria'], 'total': float(row['total'])} for row in cursor.fetchall()]
             
@@ -694,6 +746,13 @@ def obtener_detalles_proveedor():
         mes = request.args.get('mes', type=int)
         trimestre = request.args.get('trimestre', type=int)
 
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND fp.gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
+
         if not proveedor:
             return jsonify({'error': 'Proveedor requerido'}), 400
 
@@ -701,15 +760,15 @@ def obtener_detalles_proveedor():
             cursor = conn.cursor()
 
             # Construir query base
-            query = '''
+            query = f'''
                 SELECT fp.id, fp.numero_factura, fp.fecha_emision, fp.concepto,
                        fp.base_imponible, fp.iva_porcentaje, fp.total, fp.estado,
                        COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as proveedor_nombre
                 FROM facturas_proveedores fp
                 LEFT JOIN proveedores p ON fp.proveedor_id = p.id
-                WHERE fp.año = ?
+                WHERE fp.año = ?{gasto_empresa_filter}
             '''
-            params = [anio]
+            params = [anio, *gasto_empresa_params]
 
             # Filtro por proveedor (puede ser "Otros")
             # "Otros" = solo facturas sin proveedor identificado

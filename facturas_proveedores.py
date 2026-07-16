@@ -97,9 +97,20 @@ def ensure_facturas_proveedores_tables(conn=None):
                 usuario_alta TEXT,
                 concepto TEXT,
                 notas TEXT,
+                gasto_empresa INTEGER DEFAULT 1,
                 FOREIGN KEY (proveedor_id) REFERENCES proveedores(id)
             )
         """)
+        
+        # Migración: añadir columna gasto_empresa si no existe
+        try:
+            cursor.execute("PRAGMA table_info(facturas_proveedores)")
+            columnas = [col[1] for col in cursor.fetchall()]
+            if 'gasto_empresa' not in columnas:
+                cursor.execute("ALTER TABLE facturas_proveedores ADD COLUMN gasto_empresa INTEGER DEFAULT 1")
+                logger.info("Columna gasto_empresa añadida a facturas_proveedores")
+        except Exception as e:
+            logger.warning(f"No se pudo verificar/añadir columna gasto_empresa: {e}")
         
         # Tabla de líneas de factura
         cursor.execute("""
@@ -1097,6 +1108,7 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
             f.confianza_extraccion,
             f.revisado,
             f.concepto,
+            f.gasto_empresa,
             p.id as proveedor_id,
             p.nombre as proveedor_nombre,
             p.nif as proveedor_nif,
@@ -1151,6 +1163,10 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
         busqueda = f"%{filtros['busqueda']}%"
         params.extend([busqueda, busqueda, busqueda])
     
+    if filtros.get('gasto_empresa') is not None and filtros.get('gasto_empresa') != 'todos':
+        query += " AND f.gasto_empresa = ?"
+        params.append(int(filtros['gasto_empresa']))
+    
     # Contar total CON LOS MISMOS FILTROS (antes de ordenar y paginar)
     query_count = """
         SELECT COUNT(*) as total
@@ -1198,6 +1214,10 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
         )"""
         busqueda = f"%{filtros['busqueda']}%"
         params_count.extend([busqueda, busqueda, busqueda])
+    
+    if filtros.get('gasto_empresa') is not None and filtros.get('gasto_empresa') != 'todos':
+        query_count += " AND f.gasto_empresa = ?"
+        params_count.append(int(filtros['gasto_empresa']))
     
     cursor.execute(query_count, params_count)
     total = cursor.fetchone()['total']
@@ -1272,6 +1292,10 @@ def consultar_facturas_recibidas(empresa_id, filtros=None):
         )"""
         busqueda = f"%{filtros['busqueda']}%"
         params_resumen.extend([busqueda, busqueda, busqueda])
+    
+    if filtros.get('gasto_empresa') is not None and filtros.get('gasto_empresa') != 'todos':
+        query_resumen += " AND f.gasto_empresa = ?"
+        params_resumen.append(int(filtros['gasto_empresa']))
     
     cursor.execute(query_resumen, params_resumen)
     resumen = dict(cursor.fetchone())
@@ -1396,8 +1420,8 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
                 ruta_archivo, pdf_hash, email_origen,
                 trimestre, año,
                 metodo_extraccion, confianza_extraccion, revisado,
-                usuario_alta, concepto, notas
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                usuario_alta, concepto, notas, gasto_empresa
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             empresa_id,
             proveedor_id,
@@ -1421,7 +1445,8 @@ def guardar_factura_bd(empresa_id, proveedor_id, datos_factura, ruta_pdf, pdf_ha
             0,  # Requiere revisión
             usuario,
             datos_factura.get('concepto'),
-            datos_factura.get('notas')
+            datos_factura.get('notas'),
+            int(datos_factura.get('gasto_empresa', 1))
         ))
         
         factura_id = cursor.lastrowid
@@ -1566,7 +1591,7 @@ def actualizar_factura_proveedor(factura_id, empresa_id, datos, usuario='sistema
             'proveedor_id',
             'numero_factura', 'fecha_emision', 'fecha_vencimiento',
             'base_imponible', 'iva_porcentaje', 'iva_importe', 'total',
-            'concepto', 'notas', 'revisado', 'estado'
+            'concepto', 'notas', 'revisado', 'estado', 'gasto_empresa'
         ]
         
         campos_update = []

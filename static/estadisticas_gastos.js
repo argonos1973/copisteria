@@ -90,7 +90,8 @@ async function cargarEstadisticasGastos() {
         const apiHost = window.location.hostname;
         const protocol = window.location.protocol;
         const usePort = window.location.port ? `:${window.location.port}` : '';
-        const response = await fetch(`${protocol}//${apiHost}${usePort}/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`);
+        const gastoEmpresa = window.getGastoEmpresaParam ? window.getGastoEmpresaParam() : '1';
+        const response = await fetch(`${protocol}//${apiHost}${usePort}/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}&gasto_empresa=${gastoEmpresa}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -177,7 +178,8 @@ async function cargarGraficoGastosMesSolo(anio, mes) {
         const apiHost = window.location.hostname;
         const protocol = window.location.protocol;
         const usePort = window.location.port ? `:${window.location.port}` : '';
-        const response = await fetch(`${protocol}//${apiHost}${usePort}/api/gastos/por-categoria-mes-solo?anio=${anio}&mes=${mes}`);
+        const gastoEmpresa = window.getGastoEmpresaParam ? window.getGastoEmpresaParam() : '1';
+        const response = await fetch(`${protocol}//${apiHost}${usePort}/api/gastos/por-categoria-mes-solo?anio=${anio}&mes=${mes}&gasto_empresa=${gastoEmpresa}`);
         
         if (!response.ok) return;
         
@@ -256,7 +258,8 @@ async function cargarTop10Gastos(anio) {
         const apiHost = window.location.hostname;
         const protocol = window.location.protocol;
         const usePort = window.location.port ? `:${window.location.port}` : '';
-        const response = await fetch(`${protocol}//${apiHost}${usePort}/api/gastos/top10?anio=${anio}`);
+        const gastoEmpresa = window.getGastoEmpresaParam ? window.getGastoEmpresaParam() : '1';
+        const response = await fetch(`${protocol}//${apiHost}${usePort}/api/gastos/top10?anio=${anio}&gasto_empresa=${gastoEmpresa}`);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -353,7 +356,8 @@ async function abrirModalDetallesProveedor(proveedor, anio, mes, trimestre) {
         const apiHost = window.location.hostname;
         const protocol = window.location.protocol;
         const usePort = window.location.port ? `:${window.location.port}` : '';
-        let url = `${protocol}//${apiHost}${usePort}/api/gastos/detalles-proveedor?proveedor=${encodeURIComponent(proveedor)}&anio=${anio}`;
+        const gastoEmpresa = window.getGastoEmpresaParam ? window.getGastoEmpresaParam() : '1';
+        let url = `${protocol}//${apiHost}${usePort}/api/gastos/detalles-proveedor?proveedor=${encodeURIComponent(proveedor)}&anio=${anio}&gasto_empresa=${gastoEmpresa}`;
         if (mes) url += `&mes=${mes}`;
         if (trimestre) url += `&trimestre=${trimestre}`;
 
@@ -404,6 +408,7 @@ async function abrirModalDetallesProveedor(proveedor, anio, mes, trimestre) {
 
 // Exponer globalmente para que los gráficos inline puedan usarla
 window.abrirModalDetallesProveedor = abrirModalDetallesProveedor;
+window.cargarEstadisticasGastos = cargarEstadisticasGastos;
 
 // ===== FUNCIONES AUXILIARES =====
 // Las funciones formatearImporte, formatearPorcentaje y escaparHtml 

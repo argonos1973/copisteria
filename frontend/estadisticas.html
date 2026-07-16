@@ -43,6 +43,22 @@
     
     // Definir función global ANTES de cargar estadisticas_facturas.js
     window.cargarGraficoGastosAnio = async function() {
+
+    // Helper global: obtiene el valor del filtro gasto_empresa para la pestaña activa
+    window.getGastoEmpresaParam = function() {
+        // Si estamos en la pestaña gastos, usar su checkbox
+        const checkGastos = document.getElementById('check-gasto-empresa-gastos');
+        const checkVentas = document.getElementById('check-gasto-empresa-ventas');
+        // Determinar qué pestaña está activa
+        const tabGastos = document.getElementById('tab-gastos');
+        if (tabGastos && tabGastos.classList.contains('active') && checkGastos) {
+            return checkGastos.checked ? '1' : '0';
+        }
+        if (checkVentas) {
+            return checkVentas.checked ? '1' : '0';
+        }
+        return '1';
+    };
         try {
             const selectorFecha = document.getElementById('selector-fecha');
             let anio;
@@ -55,7 +71,7 @@
                 // console.log('[GRAFICO ANIO] Usando año actual:', anio);
             }
             
-            const response = await fetch(`${API_BASE}/api/gastos/por-categoria-anio?anio=${anio}`);
+            const response = await fetch(`${API_BASE}/api/gastos/por-categoria-anio?anio=${anio}&gasto_empresa=${window.getGastoEmpresaParam()}`);
             
             if (!response.ok) {
                 // console.error('[GRAFICO ANIO] Error en respuesta:', response.status);
@@ -152,7 +168,7 @@
     };
     </script>
     
-    <script src="/static/estadisticas_facturas.js?v=1768390595" type="module"></script>
+    <script src="/static/estadisticas_facturas.js?v=1768665600" type="module"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css?v=1763897790_1052">
     <link rel="stylesheet" href="/static/css/page_header.css">
     <link rel="stylesheet" href="/static/css/styles.css?v=1763897790?v=1763897790_1052">
@@ -652,10 +668,22 @@
                     <div class="stats-row">
                         <div class="stats-label">Media por Ticket</div>
                         <div class="stats-value" id="ticketsMedia">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="ticketsPorcentajeMediaMes">0%</span>
+                            <span class="stats-previous" id="ticketsMediaMesAnterior">Mismo mes año anterior: 0,00 €</span>
+                        </div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="ticketsPorcentajeMedia">0%</span>
+                            <span class="stats-previous" id="ticketsMediaAnterior">Año anterior (hasta fecha): 0,00 €</span>
+                        </div>
                     </div>
                     <div class="stats-row">
                         <div class="stats-label">Media Mensual</div>
                         <div class="stats-value" id="ticketsMediaMensual">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="ticketsPorcentajeMediaMensual">0%</span>
+                            <span class="stats-previous" id="ticketsMediaMensualAnterior">Año anterior (hasta fecha): 0,00 €</span>
+                        </div>
                     </div>
                     <div class="stats-row">
                         <div class="stats-label">% Falta para Media Mensual</div>
@@ -716,10 +744,22 @@
                     <div class="stats-row">
                         <div class="stats-label">Media por Factura</div>
                         <div class="stats-value" id="facturasMedia">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="facturasPorcentajeMediaMes">0%</span>
+                            <span class="stats-previous" id="facturasMediaMesAnterior">Mismo mes año anterior: 0,00 €</span>
+                        </div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="facturasPorcentajeMedia">0%</span>
+                            <span class="stats-previous" id="facturasMediaAnterior">Año anterior (hasta fecha): 0,00 €</span>
+                        </div>
                     </div>
                     <div class="stats-row">
                         <div class="stats-label">Media Mensual</div>
                         <div class="stats-value" id="facturasMediaMensual">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="facturasPorcentajeMediaMensual">0%</span>
+                            <span class="stats-previous" id="facturasMediaMensualAnterior">Año anterior (hasta fecha): 0,00 €</span>
+                        </div>
                     </div>
                     <div class="stats-row">
                         <div class="stats-label">% Falta para Media Mensual</div>
@@ -785,10 +825,22 @@
                     <div class="stats-row">
                         <div class="stats-label">Media Global</div>
                         <div class="stats-value" id="globalMedia">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalPorcentajeMediaMes">0%</span>
+                            <span class="stats-previous" id="globalMediaMesAnterior">Mismo mes año anterior: 0,00 €</span>
+                        </div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalPorcentajeMedia">0%</span>
+                            <span class="stats-previous" id="globalMediaAnterior">Año anterior (hasta fecha): 0,00 €</span>
+                        </div>
                     </div>
                     <div class="stats-row">
                         <div class="stats-label">Media Mensual</div>
                         <div class="stats-value" id="globalMediaMensual">0,00 €</div>
+                        <div class="stats-comparison">
+                            <span class="stats-percentage" id="globalPorcentajeMediaMensual">0%</span>
+                            <span class="stats-previous" id="globalMediaMensualAnterior">Año anterior (hasta fecha): 0,00 €</span>
+                        </div>
                     </div>
                     <div class="stats-row">
                         <div class="stats-label">% Falta para Media Mensual</div>
@@ -811,6 +863,12 @@
         <div class="stats-card" id="card-ingresos-gastos-totales">
             <h3>Ingresos y Gastos (Año) <button class="toggle-card" title="Ocultar"><i class="fas fa-eye-slash"></i></button></h3>
             <div class="stats-content">
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                <label style="display:flex; align-items:center; gap:5px; cursor:pointer; font-size:0.85rem; font-weight:bold;">
+                    <input type="checkbox" id="check-gasto-empresa-ventas" style="width:15px; height:15px;" checked onchange="cargarIngresosGastosTotales()">
+                    Gasto de empresa
+                </label>
+            </div>
             <div class="stats-row">
                 <div class="stats-label">Ingresos</div>
                 <div class="stats-value importe-positivo" id="ig-total-ingresos">0,00 €</div>
@@ -877,6 +935,12 @@
 
 <!-- Contenido Gastos -->
 <div class="tab-content" id="tab-gastos">
+    <div style="display:flex; align-items:center; gap:10px; padding:8px 0; margin-bottom:5px;">
+        <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:bold; font-size:0.9rem;">
+            <input type="checkbox" id="check-gasto-empresa-gastos" style="width:16px; height:16px;" checked onchange="cargarEstadisticasGastos()">
+            Gasto de empresa
+        </label>
+    </div>
     <div class="stats-container">
                 <!-- Gastos del Mes Seleccionado -->
                 <div class="stats-card" id="card-gastos-mes-solo">
@@ -1443,7 +1507,7 @@ window.cargarDatosGastos = async function() {
         // console.log(`[INLINE] ✅ Año: ${anio}, Mes: ${mes}`);
         
         // Cargar estadísticas generales (usar protocolo y host dinámicos)
-        const urlEstadisticas = `${API_BASE}/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}`;
+        const urlEstadisticas = `${API_BASE}/api/gastos/estadisticas?anio=${anio}&mes=${parseInt(mes)}&gasto_empresa=${window.getGastoEmpresaParam()}`;
         // console.log('[INLINE] 📡 Haciendo fetch a:', urlEstadisticas);
         
         const respuesta = await fetch(urlEstadisticas);
@@ -1522,7 +1586,7 @@ async function cargarTop10GastosInline(anio) {
         
         tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:1rem;">⏳ Cargando Top 10...</td></tr>';
         
-        const url = `${API_BASE}/api/gastos/top10?anio=${anio}`;
+        const url = `${API_BASE}/api/gastos/top10?anio=${anio}&gasto_empresa=${window.getGastoEmpresaParam()}`;
         // console.log('[INLINE] URL:', url);
         
         const respuesta = await fetch(url);
@@ -1651,7 +1715,7 @@ async function abrirModalDetallesGasto(concepto, anio) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
-        const url = `${API_BASE}/api/gastos/detalles?concepto=${encodeURIComponent(concepto)}&anio=${anio}`;
+        const url = `${API_BASE}/api/gastos/detalles?concepto=${encodeURIComponent(concepto)}&anio=${anio}&gasto_empresa=${window.getGastoEmpresaParam()}`;
         // console.log('[MODAL] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1758,7 +1822,7 @@ async function abrirModalDetallesGastoMes(categoria) {
     
     try {
         // Llamar sin mes para obtener todo el año, filtraremos por trimestre en cliente
-        const url = `${API_BASE}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&trimestre=${trimestre}`;
+        const url = `${API_BASE}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&trimestre=${trimestre}&gasto_empresa=${window.getGastoEmpresaParam()}`;
         // console.log('[MODAL MES] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1837,7 +1901,7 @@ async function abrirModalDetallesGastoAnio(categoria) {
         '<tr><td colspan="5" style="text-align:center;padding:2rem;">⏳ Cargando detalles...</td></tr>';
     
     try {
-        const url = `${API_BASE}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
+        const url = `${API_BASE}/api/gastos/detalles-categoria?categoria=${encodeURIComponent(categoria)}&anio=${anio}&gasto_empresa=${window.getGastoEmpresaParam()}`;
         // console.log('[MODAL ANIO] Cargando desde:', url);
         
         const respuesta = await fetch(url);
@@ -1910,7 +1974,7 @@ async function cargarGraficoGastosMes() {
         const [anio, mes] = selectorFecha.value.split('-');
         // console.log('[GRAFICO] Cargando gráfico para:', mes, '/', anio);
         
-        const response = await fetch(`${API_BASE}/api/gastos/por-categoria-mes?anio=${anio}&mes=${parseInt(mes)}`);
+        const response = await fetch(`${API_BASE}/api/gastos/por-categoria-mes?anio=${anio}&mes=${parseInt(mes)}&gasto_empresa=${window.getGastoEmpresaParam()}`);
         
         if (!response.ok) {
             // console.error('[GRAFICO] Error en respuesta:', response.status);
@@ -2043,7 +2107,7 @@ async function cargarGraficoGastosMensual(categoria, vista = 'mensual') {
         // Usar endpoint según vista
         let url;
         if (vista === 'trimestral') {
-            url = `${API_BASE}/api/gastos/evolucion-trimestral?anio=${anio}`;
+            url = `${API_BASE}/api/gastos/evolucion-trimestral?anio=${anio}&gasto_empresa=${window.getGastoEmpresaParam()}`;
         } else {
             url = `${API_BASE}/api/gastos/evolucion-mensual?categoria=${encodeURIComponent(categoria)}&anio=${anio}`;
         }

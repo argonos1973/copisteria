@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function configurarEventListeners() {
     // Búsqueda interactiva en todos los filtros con debounce
-    const filtros = ['proveedorFilter', 'trimestreFilter', 'anioFilter', 'busquedaFilter'];
+    const filtros = ['proveedorFilter', 'trimestreFilter', 'anioFilter', 'busquedaFilter', 'gastoEmpresaFilter'];
     filtros.forEach(filtroId => {
         const elemento = document.getElementById(filtroId);
         if (elemento) {
@@ -690,6 +690,7 @@ window.guardarNuevaFactura = async function() {
             formData.append('concepto', (document.getElementById('nueva-concepto')?.value || '').trim());
             formData.append('notas', (document.getElementById('nueva-notas')?.value || '').trim());
             formData.append('estado', 'P');
+            formData.append('gasto_empresa', document.getElementById('nueva-gasto-empresa')?.checked ? '1' : '0');
 
             // Si el OCR ya guardó el archivo en el servidor, reutilizar esa ruta en lugar de volver a subir
             // La ruta debe ser relativa: ALEPH/2026/Q2/originales/OCR_xxx.pdf
@@ -742,7 +743,8 @@ window.guardarNuevaFactura = async function() {
                 total,
                 concepto: (document.getElementById('nueva-concepto')?.value || '').trim(),
                 notas: (document.getElementById('nueva-notas')?.value || '').trim(),
-                estado: 'P'
+                estado: 'P',
+                gasto_empresa: document.getElementById('nueva-gasto-empresa')?.checked ? 1 : 0
             }
         };
 
@@ -984,6 +986,12 @@ async function cargarFacturas() {
         const busqueda = document.getElementById('busquedaFilter').value.trim();
         if (busqueda) {
             filtros.busqueda = busqueda;
+        }
+        
+        // Filtro gasto_empresa
+        const gastoEmpresa = document.getElementById('gastoEmpresaFilter')?.value;
+        if (gastoEmpresa && gastoEmpresa !== 'todos') {
+            filtros.gasto_empresa = parseInt(gastoEmpresa);
         }
         
         filtrosActuales = filtros;
@@ -1322,6 +1330,12 @@ function mostrarModalDetalle(factura) {
     document.getElementById('detalle-concepto').textContent = factura.concepto || '-';
     document.getElementById('detalle-notas').textContent = factura.notas || '-';
     
+    // Gasto de empresa
+    const gastoEmpresaEl = document.getElementById('detalle-gasto-empresa');
+    if (gastoEmpresaEl) {
+        gastoEmpresaEl.textContent = factura.gasto_empresa === 1 || factura.gasto_empresa === undefined ? 'Sí' : 'No';
+    }
+    
     // Líneas (si existen)
     if (factura.lineas && factura.lineas.length > 0) {
         const tbody = document.getElementById('detalle-lineas-body');
@@ -1489,6 +1503,12 @@ function mostrarModalEditar(factura) {
     document.getElementById('editar-concepto').value = factura.concepto || '';
     document.getElementById('editar-notas').value = factura.notas || '';
     // Checkbox eliminado: document.getElementById('editar-revisado').checked = factura.revisado === 1;
+    
+    // Gasto de empresa
+    const checkGastoEmpresa = document.getElementById('editar-gasto-empresa');
+    if (checkGastoEmpresa) {
+        checkGastoEmpresa.checked = factura.gasto_empresa === 1 || factura.gasto_empresa === undefined;
+    }
     
     // Configurar recurrencia
     const checkRecurrente = document.getElementById('editar-recurrente');
@@ -1700,7 +1720,8 @@ window.guardarEdicion = async function() {
         total: parseFloat(document.getElementById('editar-total').value),
         concepto: document.getElementById('editar-concepto').value,
         notas: document.getElementById('editar-notas').value,
-        revisado: 1 // Al editar manualmente, marcamos como revisado por defecto
+        revisado: 1, // Al editar manualmente, marcamos como revisado por defecto
+        gasto_empresa: document.getElementById('editar-gasto-empresa')?.checked ? 1 : 0
     };
     
     try {

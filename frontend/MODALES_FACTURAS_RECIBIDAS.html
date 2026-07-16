@@ -87,6 +87,10 @@
                     <label>Notas:</label>
                     <p id="detalle-notas"></p>
                 </div>
+                <div class="info-item">
+                    <label>Gasto de empresa:</label>
+                    <span id="detalle-gasto-empresa"></span>
+                </div>
             </div>
             
             <!-- Líneas de Factura -->
@@ -258,6 +262,15 @@
                         <textarea id="editar-notas" class="form-control" rows="2" style="resize: vertical;"></textarea>
                     </div>
                     
+                    <!-- Gasto de empresa -->
+                    <div class="form-group container-centered-limited" style="margin-top: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold;">
+                            <input type="checkbox" id="editar-gasto-empresa" style="width: 18px; height: 18px;" checked>
+                            Gasto de empresa
+                        </label>
+                        <small style="margin-left: 26px; color: var(--text-muted, #666);">Si está activado, esta factura se incluye en los cálculos de gastos de empresa.</small>
+                    </div>
+
                     <!-- Sección Recurrencia -->
                     <div class="form-group container-centered-limited" style="margin-top: 15px; padding: 12px; background: var(--bg-elevated, rgba(0,123,255,0.05)); border: 1px solid var(--border, #ccc); border-radius: 6px;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold; margin-bottom: 8px;">
@@ -450,6 +463,14 @@
                         <div class="form-group container-centered-limited">
                             <label for="nueva-notas">Notas</label>
                             <textarea id="nueva-notas" class="form-control" rows="2" style="resize: vertical;"></textarea>
+                        </div>
+
+                        <div class="form-group container-centered-limited" style="margin-top: 10px;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold;">
+                                <input type="checkbox" id="nueva-gasto-empresa" style="width: 18px; height: 18px;" checked>
+                                Gasto de empresa
+                            </label>
+                            <small style="margin-left: 26px; color: var(--text-muted, #666);">Si está activado, esta factura se incluye en los cálculos de gastos de empresa.</small>
                         </div>
                             </div>
                         </div>

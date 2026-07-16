@@ -37,6 +37,14 @@ def estadisticas_gastos():
             mes_param = request.args.get('mes')
             año = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
             mes = int(mes_param) if mes_param and mes_param.isdigit() else ahora.month
+
+            gasto_empresa_param = request.args.get('gasto_empresa', '1')
+            gasto_empresa_filter = ''
+            gasto_empresa_params = []
+            if gasto_empresa_param != 'todos':
+                gasto_empresa_filter = ' AND gasto_empresa = ?'
+                gasto_empresa_params = [int(gasto_empresa_param)]
+
             # Calcular Total Facturado (Tickets + Facturas) del año para INGRESOS
             logger.info(f"[DASHBOARD] Calculando ingresos para año: {año}")
             
@@ -64,7 +72,7 @@ def estadisticas_gastos():
             logger.info(f"[DASHBOARD] Total Ingresos Calculado: {total_ingresos}")
 
             # Gastos desde facturas_proveedores (facturas recibidas) - año completo
-            cur.execute("SELECT COALESCE(SUM(total), 0) FROM facturas_proveedores WHERE año = ?", (año,))
+            cur.execute(f"SELECT COALESCE(SUM(total), 0) FROM facturas_proveedores WHERE año = ?{gasto_empresa_filter}", (año, *gasto_empresa_params))
             total_gastos = cur.fetchone()[0] or 0
             total_gastos = -abs(total_gastos)  # Convertir a negativo para mantener compatibilidad con balance
             
@@ -93,10 +101,10 @@ def estadisticas_gastos():
             ingresos_mes_actual = tickets_mes + facturas_mes
 
             # Gastos del mes desde facturas_proveedores
-            cur.execute("""
+            cur.execute(f"""
                 SELECT COALESCE(SUM(total), 0) FROM facturas_proveedores 
-                WHERE año = ? AND substr(fecha_emision, 6, 2) = ?
-            """, (año, str(mes).zfill(2)))
+                WHERE año = ? AND substr(fecha_emision, 6, 2) = ?{gasto_empresa_filter}
+            """, (año, str(mes).zfill(2), *gasto_empresa_params))
             gastos_mes_actual = cur.fetchone()[0] or 0
             gastos_mes_actual = -abs(gastos_mes_actual)  # Negativo para balance
     

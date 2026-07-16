@@ -28,6 +28,13 @@ def ingresos_gastos_mes():
         anio_param = request.args.get('anio')
         anio = int(anio_param) if anio_param and anio_param.isdigit() else ahora.year
 
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
+
         conn = get_db_connection()
         cur = conn.cursor()
         
@@ -67,14 +74,14 @@ def ingresos_gastos_mes():
         
         # GASTOS: Desde facturas_proveedores (formato fecha_emision: YYYY-MM-DD)
         cur.execute(
-            """
+            f"""
             SELECT substr(fecha_emision, 6, 2) as mes,
                    SUM(total) as total_gastos
             FROM facturas_proveedores
-            WHERE año = ?
+            WHERE año = ?{gasto_empresa_filter}
             GROUP BY mes
             """,
-            (anio,)
+            (anio, *gasto_empresa_params)
         )
         for r in cur.fetchall():
             mes = str(r['mes']).zfill(2)
@@ -107,6 +114,13 @@ def ingresos_gastos_totales():
         mes = request.args.get('mes', None)
         anio_anterior = anio_actual - 1
 
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
+
         conn = get_db_connection()
         try:
             cur = conn.cursor()
@@ -125,12 +139,12 @@ def ingresos_gastos_totales():
 
                 # 2. Calcular Gastos: Suma de totales de facturas_proveedores
                 cur.execute(
-                    """
+                    f"""
                     SELECT COALESCE(SUM(total), 0)
                     FROM facturas_proveedores
-                    WHERE año = ?
+                    WHERE año = ?{gasto_empresa_filter}
                     """,
-                    (anio,)
+                    (anio, *gasto_empresa_params)
                 )
                 row = cur.fetchone()
                 # Convertir a negativo para mantener compatibilidad con balance
