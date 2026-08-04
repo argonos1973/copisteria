@@ -131,7 +131,11 @@ def ingresos_gastos_totales():
                 val = cur.fetchone()
                 t_tickets = val[0] if val else 0
                 
-                cur.execute("SELECT COALESCE(SUM(total), 0) FROM factura WHERE estado = 'C' AND substr(fecha, 1, 4) = ?", (str(anio),))
+                cur.execute("""
+                    SELECT COALESCE(SUM(total), 0) 
+                    FROM factura 
+                    WHERE estado = 'C' AND substr(COALESCE(NULLIF(fechaCobro, ''), fecha), 1, 4) = ?
+                """, (str(anio),))
                 val = cur.fetchone()
                 t_facturas = val[0] if val else 0
                 
