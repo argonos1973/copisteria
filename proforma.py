@@ -48,11 +48,30 @@ def crear_proforma(data=None):
             return jsonify({'error': 'No se recibieron datos'}), 400
 
         # Verificar si ya existe una proforma con el mismo número
+        # Si existe, buscar automáticamente el siguiente número disponible
         verificacion = verificar_numero_proforma(data['numero'])
         if isinstance(verificacion, tuple):
             return verificacion  # Error desde la función
         if verificacion.json['existe']:
-            return jsonify({'error': 'Ya existe una proforma con este número'}), 400
+            # Extraer prefijo y número del número actual
+            num_actual = data['numero']
+            import re
+            match = re.match(r'^([A-Za-z]+\d{2})(\d+)', num_actual)
+            if match:
+                prefijo = match.group(1)
+                num_base = int(match.group(2))
+                # Buscar el siguiente número disponible
+                for intento in range(num_base + 1, num_base + 100):
+                    nuevo_num = f"{prefijo}{intento:04}"
+                    verif = verificar_numero_proforma(nuevo_num)
+                    if not isinstance(verif, tuple) and not verif.json['existe']:
+                        data['numero'] = nuevo_num
+                        logger.info(f"Número original {num_actual} ya existe, usando {nuevo_num}")
+                        break
+                else:
+                    return jsonify({'error': 'No se pudo encontrar un número disponible'}), 400
+            else:
+                return jsonify({'error': 'Ya existe una proforma con este número'}), 400
 
         conn = get_db_connection()
         conn.execute('PRAGMA busy_timeout = 10000')

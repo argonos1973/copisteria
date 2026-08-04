@@ -6,6 +6,10 @@ from logger_config import get_estadisticas_logger
 
 logger = get_estadisticas_logger()
 
+# Fecha efectiva para facturas de clientes: si está cobrada, usar fechaCobro; si no, usar fecha de emisión
+FECHA_EFECTIVA_FACTURA = "CASE WHEN estado = 'C' AND fechaCobro IS NOT NULL AND fechaCobro != '' THEN fechaCobro ELSE fecha END"
+FECHA_EFECTIVA_COBRADA = "COALESCE(NULLIF(fechaCobro, ''), fecha)"
+
 estadisticas_gastos_bp = Blueprint('estadisticas_gastos', __name__)
 
 # ===== FUNCIONES AUXILIARES COMPARTIDAS =====
@@ -1056,6 +1060,13 @@ def generar_informe_situacion():
     try:
         anio = request.args.get('anio', datetime.now().year, type=int)
         mes = request.args.get('mes', datetime.now().month, type=int)
+
+        gasto_empresa_param = request.args.get('gasto_empresa', '1')
+        gasto_empresa_filter = ''
+        gasto_empresa_params = []
+        if gasto_empresa_param != 'todos':
+            gasto_empresa_filter = ' AND gasto_empresa = ?'
+            gasto_empresa_params = [int(gasto_empresa_param)]
         
         with get_db_connection() as conn:
             cursor = conn.cursor()
@@ -1064,15 +1075,15 @@ def generar_informe_situacion():
             # Total ventas del año hasta el mes actual (FACTURAS + TICKETS)
             mes_str = str(mes).zfill(2)
             
-            # Facturas del año (cobradas + pendientes + vencidas) - usar total para consistencia con dashboard
-            cursor.execute('''
+            # Facturas del año (solo cobradas)
+            cursor.execute(f'''
                 SELECT 
                     COALESCE(SUM(total), 0) as total_ventas,
                     COUNT(*) as num_facturas
                 FROM factura
-                WHERE CAST(substr(fecha, 1, 4) AS INTEGER) = ?
-                AND CAST(substr(fecha, 6, 2) AS INTEGER) <= ?
-                AND estado IN ('C', 'P', 'V')
+                WHERE CAST(substr({FECHA_EFECTIVA_COBRADA}, 1, 4) AS INTEGER) = ?
+                AND CAST(substr({FECHA_EFECTIVA_COBRADA}, 6, 2) AS INTEGER) <= ?
+                AND estado = 'C'
             ''', (anio, mes))
             facturas_anio = cursor.fetchone()
             total_facturas = float(facturas_anio['total_ventas'] or 0)
@@ -1113,13 +1124,13 @@ def generar_informe_situacion():
             total_ventas = total_facturas + total_tickets
             num_documentos = num_facturas + num_tickets
             
-            # Ventas del mes actual (facturas C+P+V) - usar total para consistencia
-            cursor.execute('''
+            # Ventas del mes actual (facturas solo cobradas)
+            cursor.execute(f'''
                 SELECT COALESCE(SUM(total), 0) as total_mes
                 FROM factura
-                WHERE substr(fecha, 1, 4) = ?
-                AND substr(fecha, 6, 2) = ?
-                AND estado IN ('C', 'P', 'V')
+                WHERE substr({FECHA_EFECTIVA_COBRADA}, 1, 4) = ?
+                AND substr({FECHA_EFECTIVA_COBRADA}, 6, 2) = ?
+                AND estado = 'C'
             ''', (str(anio), mes_str))
             facturas_mes = float(cursor.fetchone()['total_mes'] or 0)
             
@@ -1138,24 +1149,24 @@ def generar_informe_situacion():
             
             # ===== DATOS DE GASTOS (desde facturas_proveedores) =====
             # Total gastos del año completo
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT
                     COALESCE(SUM(total), 0) as total_gastos,
                     COUNT(*) as num_gastos
                 FROM facturas_proveedores
-                WHERE año = ?
-            ''', (anio,))
+                WHERE año = ?{gasto_empresa_filter}
+            ''', (anio, *gasto_empresa_params))
             gastos_anio = cursor.fetchone()
             total_gastos = float(gastos_anio['total_gastos'] or 0)
             num_gastos = int(gastos_anio['num_gastos'] or 0)
     
             # Gastos del mes actual
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT COALESCE(SUM(total), 0) as total_mes
                 FROM facturas_proveedores
                 WHERE año = ?
-                AND substr(fecha_emision, 6, 2) = ?
-            ''', (anio, mes_str))
+                AND substr(fecha_emision, 6, 2) = ?{gasto_empresa_filter}
+            ''', (anio, mes_str, *gasto_empresa_params))
             gastos_mes = float(cursor.fetchone()['total_mes'] or 0)
             
             # ===== ANÁLISIS Y MÉTRICAS =====
@@ -1171,7 +1182,7 @@ def generar_informe_situacion():
             # Fórmula dashboard: (total - mes_actual) / (mes - 1)
             ventas_sin_mes_actual = total_ventas - ventas_mes
             media_ventas_mensual = ventas_sin_mes_actual / (mes - 1) if mes > 1 else 0
-            media_gastos_mensual, gastos_sin_puntuales, _ = _calcular_media_mensual_sin_puntuales(conn, anio, mes)
+            media_gastos_mensual, gastos_sin_puntuales, _ = _calcular_media_mensual_sin_puntuales(conn, anio, mes, gasto_empresa_filter, gasto_empresa_params)
             media_balance_mensual = balance_anio / mes if mes > 0 else 0
             
             # Proyecciones para fin de año - usar fórmula dashboard
@@ -1181,18 +1192,18 @@ def generar_informe_situacion():
             proyeccion_balance = proyeccion_ventas - proyeccion_gastos
             
             # Top 10 gastos por proveedor (desde facturas_proveedores) - año completo
-            cursor.execute('''
+            cursor.execute(f'''
                 SELECT 
                     COALESCE(p.nombre, fp.concepto, 'Sin proveedor') as nombre_gasto,
                     COALESCE(SUM(fp.total), 0) as total,
                     COUNT(*) as cantidad
                 FROM facturas_proveedores fp
                 LEFT JOIN proveedores p ON fp.proveedor_id = p.id
-                WHERE fp.año = ?
+                WHERE fp.año = ?{gasto_empresa_filter}
                 GROUP BY nombre_gasto
                 ORDER BY total DESC
                 LIMIT 10
-            ''', (anio,))
+            ''', (anio, *gasto_empresa_params))
             
             top_categorias_gastos = []
             for row in cursor.fetchall():

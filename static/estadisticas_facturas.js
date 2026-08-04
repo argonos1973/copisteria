@@ -632,40 +632,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         const facMesTotalPrev = valMes(totalesPrev.facturas, 'total');
         datos.facturas.anterior.media_mensual = (mesNum - 1) > 0 ? (facTotalHastaPrev - facMesTotalPrev) / (mesNum - 1) : 0;
 
-        // Global (recalculado con los valores ajustados)
+        // Global: NO recalcular, usar el valor del backend (solo facturas cobradas)
         if (datos.global) {
-          const globTotalHasta = tktTotalHasta + facTotalHasta;
-          const globCantHastaOri = (datos.global.actual?.cantidad || 0);
-          const globCantHastaRecalc = (tktCantHasta || 0) + (facCantHasta || 0);
-          const globCantHasta = globCantHastaRecalc > 0 ? globCantHastaRecalc : globCantHastaOri;
-          const globMesTotal   = tktMesTotal + facMesTotal;
-          const globMesCantRecalc = (tktMesCant || 0) + (facMesCant || 0);
-          const globMesCantOri = (datos.tickets.actual.mes_actual?.cantidad || 0) + (datos.facturas.actual.mes_actual?.cantidad || 0);
-          const globMesCant    = globMesCantRecalc > 0 ? globMesCantRecalc : globMesCantOri;
-          datos.global.actual.total = globTotalHasta;
-          datos.global.actual.cantidad = globCantHasta;
-          datos.global.actual.media = globCantHasta > 0 ? (globTotalHasta / globCantHasta) : (datos.global.actual.media || 0);
-          datos.global.actual.mes_actual = { total: globMesTotal, cantidad: globMesCant };
-          // Global trimestre
-          const globTrimestreTotal = tktTrimestreTotal + facTrimestreTotal;
-          const globTrimestreTotalPrev = tktTrimestreTotalPrev + facTrimestreTotalPrev;
+          // Global trimestre: tickets + facturas cobradas (usar global del backend si existe)
+          const globTrimestreTotal = (datos.global.actual?.trimestre?.total > 0)
+            ? datos.global.actual.trimestre.total
+            : (tktTrimestreTotal + facTrimestreTotal);
+          const globTrimestreTotalPrev = (datos.global.anterior?.mismo_trimestre?.total > 0)
+            ? datos.global.anterior.mismo_trimestre.total
+            : (tktTrimestreTotalPrev + facTrimestreTotalPrev);
           datos.global.actual.trimestre = { total: globTrimestreTotal };
           datos.global.anterior.mismo_trimestre = { total: globTrimestreTotalPrev };
           datos.global.porcentaje_diferencia_trimestre = globTrimestreTotalPrev > 0 ? ((globTrimestreTotal - globTrimestreTotalPrev) / globTrimestreTotalPrev) * 100 : 0;
-          const globTotalHastaPrev = tktTotalHastaPrev + facTotalHastaPrev;
-          const globCantHastaPrev  = tktCantHastaPrev + facCantHastaPrev;
-          // NO sobrescribir datos.global.anterior.total - mantener el total ANUAL del backend
-          // Solo usar YTD para el porcentaje de comparación
-          if (globCantHastaPrev > 0) {
-            // datos.global.anterior.cantidad = globCantHastaPrev; // Mantener cantidad anual
-            datos.global.anterior.media    = globCantHastaPrev > 0 ? (globTotalHastaPrev / globCantHastaPrev) : (datos.global.anterior.media || 0);
+          // NO sobrescribir datos.global.actual.total ni datos.global.anterior.total
+          // El backend ya los calcula con solo facturas cobradas
+          if (datos.global.anterior?.media === undefined || datos.global.anterior?.media === 0) {
+            const globCantHastaPrev = (tktCantHastaPrev || 0);
+            datos.global.anterior.media = globCantHastaPrev > 0 ? (tktTotalHastaPrev / globCantHastaPrev) : 0;
           }
-          // Porcentaje: % completado del objetivo anual (año anterior total)
-          const globTotalAnualPrev = datos.global.anterior?.total || globTotalHastaPrev;
-          datos.global.porcentaje_diferencia = globTotalAnualPrev > 0 ? ((globTotalHasta / globTotalAnualPrev) * 100) - 100 : 0;
-          // Media mensual año anterior global (YTD hasta el mes seleccionado, excluyendo ese mes)
-          const globMesTotalPrev = tktMesTotalPrev + facMesTotalPrev;
-          datos.global.anterior.media_mensual = (mesNum - 1) > 0 ? (globTotalHastaPrev - globMesTotalPrev) / (mesNum - 1) : 0;
+          // Porcentaje: usar los totales del backend (solo cobradas)
+          const globTotalAnualPrev = datos.global.anterior?.total || 0;
+          const globTotalActual = datos.global.actual?.total || 0;
+          datos.global.porcentaje_diferencia = globTotalAnualPrev > 0 ? ((globTotalActual / globTotalAnualPrev) * 100) - 100 : 0;
+          // Media mensual año anterior global
+          datos.global.anterior.media_mensual = datos.global.anterior?.media_mensual || 0;
         }
       }
     } catch (e) {
@@ -770,10 +760,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fTotP = sumHasta(totPrev.facturas, 'total');
     const fCntP = sumHasta(totPrev.facturas, 'cantidad');
 
-    const gTot = tTot + fTot;
-    const gCnt = tCnt + fCnt;
-    const gTotP = tTotP + fTotP;
-    const gCntP = tCntP + fCntP;
+    // Global: usar los datos del backend (solo facturas cobradas), no recalcular con facturas C+P+V
+    const gTot = totAct.global ? Object.values(totAct.global).reduce((s, v) => s + (v.total || 0), 0) : tTot;
+    const gTotP = totPrev.global ? Object.values(totPrev.global).reduce((s, v) => s + (v.total || 0), 0) : tTotP;
 
     const pct = (a, p) => p > 0 ? ((a - p) / p) * 100 : 0;
 
@@ -825,17 +814,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       };
       aplicarCant(datos.tickets, md.tickets);
       aplicarCant(datos.facturas, md.facturas);
-      // Global a partir de sumas
-      const gActCant = (parsearImporte(datos.tickets.actual.cantidad) || 0) + (parsearImporte(datos.facturas.actual.cantidad) || 0);
-      const gAntCant = (parsearImporte(datos.tickets.anterior.cantidad) || 0) + (parsearImporte(datos.facturas.anterior.cantidad) || 0);
-      datos.global.actual.cantidad = gActCant > 0 ? gActCant : datos.global.actual.cantidad;
-      datos.global.anterior.cantidad = gAntCant > 0 ? gAntCant : datos.global.anterior.cantidad;
+      // Global: NO recalcular con facturas C+P+V, el backend ya envía el global con solo cobradas
+      // Solo completar cantidades si el backend no las envió
+      if (!datos.global.actual.cantidad || datos.global.actual.cantidad === 0) {
+        datos.global.actual.cantidad = parsearImporte(datos.tickets.actual.cantidad) || 0;
+      }
+      if (!datos.global.anterior.cantidad || datos.global.anterior.cantidad === 0) {
+        datos.global.anterior.cantidad = parsearImporte(datos.tickets.anterior.cantidad) || 0;
+      }
       datos.global.actual.media = (datos.global.actual.cantidad > 0) ? (parsearImporte(datos.global.actual.total) / datos.global.actual.cantidad) : datos.global.actual.media;
       datos.global.anterior.media = (datos.global.anterior.cantidad > 0) ? (parsearImporte(datos.global.anterior.total) / datos.global.anterior.cantidad) : datos.global.anterior.media;
-      const gMesCant = (parsearImporte(datos.tickets.actual.mes_actual.cantidad)||0) + (parsearImporte(datos.facturas.actual.mes_actual.cantidad)||0);
-      const gMesAntCant = (parsearImporte(datos.tickets.anterior.mismo_mes.cantidad)||0) + (parsearImporte(datos.facturas.anterior.mismo_mes.cantidad)||0);
-      if (gMesCant > 0) datos.global.actual.mes_actual.cantidad = gMesCant;
-      if (gMesAntCant > 0) datos.global.anterior.mismo_mes.cantidad = gMesAntCant;
+      // Global: NO sobrescribir cantidades del mes con facturas C+P+V, el backend ya lo calcula con solo cobradas
     } catch (e) {
       console.warn('[estadisticas] No se pudieron completar cantidades desde media_por_documento:', e);
     }
@@ -893,12 +882,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       datos.facturas.actual.mes_actual.total = fMesTot;
 
-      // Global del mes seleccionado
+      // Global del mes seleccionado: usar el global del backend (solo facturas cobradas)
       datos.global = datos.global || { actual: {} };
       datos.global.actual = datos.global.actual || {};
+      const gMesTotBackend = getTotalMes(totales?.global);
+      const gMesCantBackend = getCantidadMes(totales?.global);
       datos.global.actual.mes_actual = {
-        total: (tMesTot || 0) + (fMesTot || 0),
-        cantidad: (parsearImporte(datos.tickets.actual.mes_actual.cantidad)||0) + (parsearImporte(datos.facturas.actual.mes_actual.cantidad)||0)
+        total: gMesTotBackend || ((tMesTot || 0) + (fMesTot || 0)),
+        cantidad: gMesCantBackend || ((parsearImporte(datos.tickets.actual.mes_actual.cantidad)||0) + (parsearImporte(datos.facturas.actual.mes_actual.cantidad)||0))
       };
     } catch (e) {
       console.debug('[estadisticas] No se pudo completar cantidades del mes desde total_mes:', e);
@@ -1225,6 +1216,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // INGRESOS & GASTOS TOTALES
   // ==============================
   async function cargarIngresosGastosTotales(mes, anio){
+    if (mes === undefined || anio === undefined) {
+      const fecha = getFechaSeleccionada();
+      mes = fecha.mes;
+      anio = fecha.anio;
+    }
     const gastoEmpresa = window.getGastoEmpresaParam ? window.getGastoEmpresaParam() : '1';
     const data = await fetchConManejadorErrores(buildApiUrl(`/api/ingresos_gastos_totales?anio=${anio}&mes=${mes}&gasto_empresa=${gastoEmpresa}&t=${Date.now()}`));
     const ingresos = data.ingresos;
@@ -1538,6 +1534,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const datosSem = await fetchConManejadorErrores(buildApiUrl(`/api/ventas/total_semana?anio=${anio}`));
       const semHasta = datosSem.semana_hasta;
       const semAnterior = datosSem.semanas_anio_anterior;
+      const semAnteriorHastaFecha = datosSem.semana_hasta_anterior ?? semAnterior;
+      const totalAnteriorHastaFecha = datosSem.global_anterior_hasta_fecha?.total ?? 0;
       const maxSem = Math.max(semHasta, semAnterior);
       const semLabels = Array.from({length: maxSem}, (_, i) => `S${i + 1}`);
 
@@ -1581,8 +1579,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       const valAnterior = semLabels.map((_, i) => {
         const s = i + 1;
-        if (s <= semAnterior) acumAnterior += serieAnterior[String(s)]?.total ?? 0;
-        return s <= semAnterior ? acumAnterior : null;
+        if (s > semAnteriorHastaFecha) return null;
+        if (s < semAnteriorHastaFecha) {
+          acumAnterior += serieAnterior[String(s)]?.total ?? 0;
+          return acumAnterior;
+        }
+        // En la semana que contiene la fecha de corte exacta, usar el acumulado exacto del dashboard
+        return totalAnteriorHastaFecha;
       });
 
       const datasets = [

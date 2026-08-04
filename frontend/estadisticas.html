@@ -41,24 +41,35 @@
     let graficoGastosAnio = null;
     const API_BASE = window.location.origin;
     
-    // Definir función global ANTES de cargar estadisticas_facturas.js
-    window.cargarGraficoGastosAnio = async function() {
-
     // Helper global: obtiene el valor del filtro gasto_empresa para la pestaña activa
     window.getGastoEmpresaParam = function() {
-        // Si estamos en la pestaña gastos, usar su checkbox
-        const checkGastos = document.getElementById('check-gasto-empresa-gastos');
-        const checkVentas = document.getElementById('check-gasto-empresa-ventas');
-        // Determinar qué pestaña está activa
         const tabGastos = document.getElementById('tab-gastos');
-        if (tabGastos && tabGastos.classList.contains('active') && checkGastos) {
-            return checkGastos.checked ? '1' : '0';
+        if (tabGastos && tabGastos.classList.contains('active')) {
+            const checkGastos = document.getElementById('check-gasto-empresa-gastos');
+            if (checkGastos) return checkGastos.checked ? '1' : '0';
         }
+        const checkVentas = document.getElementById('check-gasto-empresa-ventas');
         if (checkVentas) {
             return checkVentas.checked ? '1' : '0';
         }
         return '1';
     };
+
+    // Aplica el filtro gasto_empresa sincronizando checkboxes
+    window.aplicarFiltroGastoEmpresa = function(checked) {
+        const val = !!checked;
+        const checkGastos = document.getElementById('check-gasto-empresa-gastos');
+        if (checkGastos) checkGastos.checked = val;
+        if (typeof window.cargarEstadisticasGastos === 'function') {
+            window.cargarEstadisticasGastos();
+        }
+        if (typeof window.cargarDatosGastos === 'function') {
+            window.cargarDatosGastos();
+        }
+    };
+
+    // Definir función global ANTES de cargar estadisticas_facturas.js
+    window.cargarGraficoGastosAnio = async function() {
         try {
             const selectorFecha = document.getElementById('selector-fecha');
             let anio;
@@ -937,7 +948,7 @@
 <div class="tab-content" id="tab-gastos">
     <div style="display:flex; align-items:center; gap:10px; padding:8px 0; margin-bottom:5px;">
         <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:bold; font-size:0.9rem;">
-            <input type="checkbox" id="check-gasto-empresa-gastos" style="width:16px; height:16px;" checked onchange="cargarEstadisticasGastos()">
+            <input type="checkbox" id="check-gasto-empresa-gastos" style="width:16px; height:16px;" checked onchange="window.aplicarFiltroGastoEmpresa(this.checked)">
             Gasto de empresa
         </label>
     </div>
@@ -2255,7 +2266,7 @@ async function abrirModalInformeSituacion() {
     const [anio, mes] = selectorFecha.value.split('-');
     
     try {
-        const response = await fetch(`${API_BASE}/api/informe-situacion?anio=${anio}&mes=${parseInt(mes)}`);
+        const response = await fetch(`${API_BASE}/api/informe-situacion?anio=${anio}&mes=${parseInt(mes)}&gasto_empresa=${window.getGastoEmpresaParam()}`);
         
         if (!response.ok) {
             throw new Error(`Error HTTP: ${response.status}`);
