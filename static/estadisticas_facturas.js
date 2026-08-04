@@ -1371,7 +1371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // TOP GASTOS
   // ==============================
   async function cargarTopGastos(anio) {
-    const datos = await fetchConManejadorErrores(buildApiUrl(`/api/gastos/top_gastos?anio=${anio}&t=${Date.now()}`));
+    const datos = await fetchConManejadorErrores(buildApiUrl(`/api/gastos/top10?anio=${anio}&t=${Date.now()}`));
     actualizarTopGastos(datos);
   }
   
