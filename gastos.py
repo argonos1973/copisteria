@@ -42,13 +42,13 @@ def ingresos_gastos_mes():
         ingresos = {str(m).zfill(2): 0.0 for m in range(1, 13)}
         gastos_dict = {str(m).zfill(2): 0.0 for m in range(1, 13)}
         
-        # INGRESOS: Facturas emitidas (formato fecha: YYYY-MM-DD)
+        # INGRESOS: Facturas cobradas (por fechaCobro si existe, sino fecha)
         cur.execute(
             """
-            SELECT substr(fecha, 6, 2) as mes,
+            SELECT substr(COALESCE(NULLIF(fechaCobro, ''), fecha), 6, 2) as mes,
                    SUM(total) as total_facturas
             FROM factura
-            WHERE substr(fecha, 1, 4) = ?
+            WHERE estado = 'C' AND substr(COALESCE(NULLIF(fechaCobro, ''), fecha), 1, 4) = ?
             GROUP BY mes
             """,
             (str(anio),)
