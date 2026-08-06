@@ -12,7 +12,7 @@ from auth_middleware import login_required
 logger = get_logger(__name__)
 
 # Fecha efectiva para facturas: si está cobrada, usar fechaCobro; si no, usar fecha de emisión
-FECHA_EFECTIVA_FACTURA = "CASE WHEN estado = 'C' AND fechaCobro IS NOT NULL AND fechaCobro != '' THEN fechaCobro ELSE fecha END"
+FECHA_EFECTIVA_FACTURA = 'fecha'
 FECHA_EFECTIVA_COBRADA = "COALESCE(NULLIF(fechaCobro, ''), fecha)"
 
 # Crear Blueprint para las rutas del dashboard
