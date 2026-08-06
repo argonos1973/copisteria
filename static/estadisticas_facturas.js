@@ -435,12 +435,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const el = document.getElementById(id);
     if (!el) return;
     if (val === null || val === undefined) {
-      el.textContent = "N/A";
+      el.textContent = '';
       el.className = 'stats-percentage';
+      el.style.display = 'none';
       return;
     }
     el.textContent = formatearPorcentaje(val);
     el.className = 'stats-percentage ' + (val >= 0 ? 'positive' : 'negative');
+    el.style.display = '';
   }
   
   function actualizarPorcentajeFaltaMediaMensual(valorId, porcentajeId, total, media, cardId = null) {
