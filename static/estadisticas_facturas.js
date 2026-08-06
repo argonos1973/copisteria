@@ -954,13 +954,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // Cantidad debe ser del mes seleccionado (o 0 si no hay)
     safeSet(`${prefijo}Cantidad`, cantidadMes);
-    // Año anterior hasta la misma fecha (YTD comparacion justa)
+    // Año anterior hasta la misma fecha (YTD)
     const anioHastaFechaTotal = data.anio_anterior_hasta_fecha?.total ?? 0;
-    const anioHastaFechaDia = data.anio_anterior_hasta_fecha?.dia ?? '';
+    const anioAnteriorTotal = data.anterior?.total ?? 0;
     safeSet(`${prefijo}Anterior`, `Año anterior (hasta fecha): ${formatearImporte(anioHastaFechaTotal)}`);
     actualizarPorcentaje(`${prefijo}Porcentaje`, data.porcentaje_diferencia);
-    safeSet(`${prefijo}AnioAnteriorHastaFecha`, `Año anterior (hasta fecha): ${formatearImporte(anioHastaFechaTotal)}`);
-    actualizarPorcentaje(`${prefijo}PorcentajeAnioHastaFecha`, data.porcentaje_diferencia_anio_hasta_fecha);
+    safeSet(`${prefijo}AnioAnteriorHastaFecha`, `Año anterior (total): ${formatearImporte(anioAnteriorTotal)}`);
+    actualizarPorcentaje(`${prefijo}PorcentajeAnioHastaFecha`, null);
 
     // Siempre actualizamos la fila del mes para evitar valores residuales
     const totalMes = totalMesSeleccionado;
@@ -1068,12 +1068,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       actualizarPorcentaje('globalPorcentajeMediaMensual', gMMAnt > 0 ? ((gMMAct - gMMAnt) / gMMAnt) * 100 : null);
     }
     document.getElementById('globalCantidad').textContent = global.actual.cantidad;
-    document.getElementById('globalAnterior').textContent = `Año anterior: ${formatearImporte(global.anterior.total)}`;
-    actualizarPorcentaje('globalPorcentaje', global.porcentaje_diferencia);
-    // Año anterior hasta la misma fecha (global)
+    // Año anterior hasta la misma fecha (global YTD)
     const globalAnioHastaFechaTotal = global.anio_anterior_hasta_fecha?.total ?? 0;
-    safeSet('globalAnioAnteriorHastaFecha', `Año anterior (hasta fecha): ${formatearImporte(globalAnioHastaFechaTotal)}`);
-    actualizarPorcentaje('globalPorcentajeAnioHastaFecha', global.porcentaje_diferencia_anio_hasta_fecha);
+    safeSet('globalAnterior', `Año anterior (hasta fecha): ${formatearImporte(globalAnioHastaFechaTotal)}`);
+    actualizarPorcentaje('globalPorcentaje', global.porcentaje_diferencia);
+    safeSet('globalAnioAnteriorHastaFecha', `Año anterior (total): ${formatearImporte(global.anterior.total)}`);
+    actualizarPorcentaje('globalPorcentajeAnioHastaFecha', null);
     
     // Total Trimestre Global
     const totalTrimestreGlobal = global.actual?.trimestre?.total ?? 0;
