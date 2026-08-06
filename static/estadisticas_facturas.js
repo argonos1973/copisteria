@@ -588,9 +588,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           // datos.tickets.anterior.cantidad = tktCantHastaPrev; // Mantener cantidad anual
           datos.tickets.anterior.media = tktCantHastaPrev > 0 ? (tktTotalHastaPrev / tktCantHastaPrev) : (datos.tickets.anterior.media || 0);
         }
-        // Porcentaje: % completado del objetivo anual (año anterior total)
-        const tktTotalAnualPrev = datos.tickets.anterior?.total || tktTotalHastaPrev;
-        datos.tickets.porcentaje_diferencia = tktTotalAnualPrev > 0 ? ((tktTotalHasta / tktTotalAnualPrev) * 100) - 100 : 0;
+        // Porcentaje: YTD actual vs YTD año anterior hasta la misma fecha (usar backend)
+        // datos.tickets.porcentaje_diferencia ya viene del backend comparando YTD vs YTD
         // Media mensual año anterior (YTD hasta el mes seleccionado, excluyendo ese mes) para comparativa
         const tktMesTotalPrev = valMes(totalesPrev.tickets, 'total');
         datos.tickets.anterior.media_mensual = (mesNum - 1) > 0 ? (tktTotalHastaPrev - tktMesTotalPrev) / (mesNum - 1) : 0;
@@ -625,9 +624,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           // datos.facturas.anterior.cantidad = facCantHastaPrev; // Mantener cantidad anual
           datos.facturas.anterior.media = facCantHastaPrev > 0 ? (facTotalHastaPrev / facCantHastaPrev) : (datos.facturas.anterior.media || 0);
         }
-        // Porcentaje: % completado del objetivo anual (año anterior total)
-        const facTotalAnualPrev = datos.facturas.anterior?.total || facTotalHastaPrev;
-        datos.facturas.porcentaje_diferencia = facTotalAnualPrev > 0 ? ((facTotalHasta / facTotalAnualPrev) * 100) - 100 : 0;
+        // Porcentaje: YTD actual vs YTD año anterior hasta la misma fecha (usar backend)
+        // datos.facturas.porcentaje_diferencia ya viene del backend comparando YTD vs YTD
         // Media mensual año anterior (YTD hasta el mes seleccionado, excluyendo ese mes) para comparativa
         const facMesTotalPrev = valMes(totalesPrev.facturas, 'total');
         datos.facturas.anterior.media_mensual = (mesNum - 1) > 0 ? (facTotalHastaPrev - facMesTotalPrev) / (mesNum - 1) : 0;
@@ -650,10 +648,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const globCantHastaPrev = (tktCantHastaPrev || 0);
             datos.global.anterior.media = globCantHastaPrev > 0 ? (tktTotalHastaPrev / globCantHastaPrev) : 0;
           }
-          // Porcentaje: usar los totales del backend (solo cobradas)
-          const globTotalAnualPrev = datos.global.anterior?.total || 0;
-          const globTotalActual = datos.global.actual?.total || 0;
-          datos.global.porcentaje_diferencia = globTotalAnualPrev > 0 ? ((globTotalActual / globTotalAnualPrev) * 100) - 100 : 0;
+          // Porcentaje: YTD actual vs YTD año anterior (usar backend, solo cobradas)
+          // datos.global.porcentaje_diferencia ya viene del backend comparando YTD vs YTD
           // Media mensual año anterior global
           datos.global.anterior.media_mensual = datos.global.anterior?.media_mensual || 0;
         }
@@ -958,11 +954,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // Cantidad debe ser del mes seleccionado (o 0 si no hay)
     safeSet(`${prefijo}Cantidad`, cantidadMes);
-    safeSet(`${prefijo}Anterior`, `Año anterior: ${formatearImporte(data.anterior.total)}`);
-    actualizarPorcentaje(`${prefijo}Porcentaje`, data.porcentaje_diferencia);
-    // Año anterior hasta la misma fecha
+    // Año anterior hasta la misma fecha (YTD comparacion justa)
     const anioHastaFechaTotal = data.anio_anterior_hasta_fecha?.total ?? 0;
     const anioHastaFechaDia = data.anio_anterior_hasta_fecha?.dia ?? '';
+    safeSet(`${prefijo}Anterior`, `Año anterior (hasta fecha): ${formatearImporte(anioHastaFechaTotal)}`);
+    actualizarPorcentaje(`${prefijo}Porcentaje`, data.porcentaje_diferencia);
     safeSet(`${prefijo}AnioAnteriorHastaFecha`, `Año anterior (hasta fecha): ${formatearImporte(anioHastaFechaTotal)}`);
     actualizarPorcentaje(`${prefijo}PorcentajeAnioHastaFecha`, data.porcentaje_diferencia_anio_hasta_fecha);
 

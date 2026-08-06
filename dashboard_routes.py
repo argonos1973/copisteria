@@ -738,7 +738,7 @@ def media_ventas_por_documento():
             'porcentaje_diferencia': redondear_importe(
                 calcular_porcentaje(
                     tickets_actual['total'], 
-                    tickets_anterior['total']
+                    tickets_anio_anterior_hasta_fecha['total']
                 )
             ),
             'porcentaje_diferencia_mes': redondear_importe(
@@ -793,7 +793,7 @@ def media_ventas_por_documento():
             'porcentaje_diferencia': redondear_importe(
                 calcular_porcentaje(
                     facturas_actual['total'], 
-                    facturas_anterior['total']
+                    facturas_anio_anterior_hasta_fecha['total']
                 )
             ),
             'porcentaje_diferencia_mes': redondear_importe(
@@ -854,7 +854,7 @@ def media_ventas_por_documento():
                     proformas_actual['total'], 
                     proformas_anterior['total']
                 )
-            ),
+            ), # Proformas: no hay YTD anterior disponible, mantener comparacion anual
             'porcentaje_diferencia_mes': redondear_importe(
                 calcular_porcentaje(
                     proformas_mes_actual['total'],
@@ -886,7 +886,7 @@ def media_ventas_por_documento():
                     'cantidad': tickets_mes_anterior['num_documentos'] + facturas_mes_anterior['num_documentos']
                 }
             },
-            'porcentaje_diferencia': redondear_importe(calcular_porcentaje(global_actual_total, global_anterior_total)),
+            'porcentaje_diferencia': redondear_importe(calcular_porcentaje(global_actual_total, global_anio_anterior_hasta_fecha_total)),
             'porcentaje_diferencia_mes': redondear_importe(calcular_porcentaje(global_mes_actual_total, global_mes_anterior_total)),
             'porcentaje_diferencia_mes_hasta_dia': redondear_importe(calcular_porcentaje(global_mes_actual_total, global_mes_anterior_hasta_dia_total)),
             'mismo_mes_hasta_dia': {
