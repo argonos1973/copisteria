@@ -208,6 +208,7 @@ def get_facturas_data(year):
 def get_facturas_data_cobradas(year):
     query = f'''
         SELECT COUNT(*) as num_documentos, 
+               COALESCE(AVG(total), 0) as media,
                COALESCE(SUM(total), 0) as total
         FROM factura 
         WHERE estado = 'C' AND strftime('%Y', {FECHA_EFECTIVA_COBRADA}) = ?
@@ -229,6 +230,7 @@ def get_facturas_data_mes(year, month):
 def get_facturas_data_mes_cobradas(year, month):
     query = f'''
         SELECT COUNT(*) as num_documentos, 
+               COALESCE(AVG(total), 0) as media,
                COALESCE(SUM(total), 0) as total
         FROM factura 
         WHERE estado = 'C' AND strftime('%Y', {FECHA_EFECTIVA_COBRADA}) = ? AND strftime('%m', {FECHA_EFECTIVA_COBRADA}) = ?
@@ -258,9 +260,10 @@ def get_facturas_data_anio_hasta_fecha(year, month, day):
     return fetch_data(query, (str(year), str(month).zfill(2), str(month).zfill(2), day))
 
 def get_facturas_data_anio_hasta_fecha_cobradas(year, month, day):
-    """Facturas cobradas del año hasta la fecha indicada (para global)"""
+    """Facturas cobradas del año hasta la fecha indicada"""
     query = f'''
         SELECT COUNT(*) as num_documentos, 
+               COALESCE(AVG(total), 0) as media,
                COALESCE(SUM(total), 0) as total
         FROM factura 
         WHERE estado = 'C' AND strftime('%Y', {FECHA_EFECTIVA_COBRADA}) = ?
@@ -280,9 +283,10 @@ def get_facturas_data_mes_hasta_dia(year, month, day):
     return fetch_data(query, (str(year), str(month).zfill(2), day))
 
 def get_facturas_data_mes_hasta_dia_cobradas(year, month, day):
-    """Facturas cobradas del mes hasta el día indicado (para global)"""
+    """Facturas cobradas del mes hasta el día indicado"""
     query = f'''
         SELECT COUNT(*) as num_documentos, 
+               COALESCE(AVG(total), 0) as media,
                COALESCE(SUM(total), 0) as total
         FROM factura 
         WHERE estado = 'C' AND strftime('%Y', {FECHA_EFECTIVA_COBRADA}) = ? AND strftime('%m', {FECHA_EFECTIVA_COBRADA}) = ?
@@ -359,10 +363,9 @@ def ventas_total_mes():
             return {str(m).zfill(2): datos.get(str(m).zfill(2), 0.0) for m in range(1,13)}
 
         tickets = obtener_totales('tickets')
-        facturas = obtener_totales('factura')
-        facturas_cobradas = obtener_totales('factura', solo_cobradas=True)
+        facturas = obtener_totales('factura', solo_cobradas=True)
     
-    globales = {mes: redondear_importe(tickets[mes] + facturas_cobradas[mes]) for mes in tickets}
+    globales = {mes: redondear_importe(tickets[mes] + facturas[mes]) for mes in tickets}
 
     total_tickets = redondear_importe(sum(tickets.values()))
     total_facturas = redondear_importe(sum(facturas.values()))
@@ -633,48 +636,42 @@ def media_ventas_por_documento():
 
     # Obtener datos actuales (proformas solo para su sección)
     tickets_actual = get_tickets_data(año_actual)
-    facturas_actual = get_facturas_data(año_actual)
+    facturas_actual = get_facturas_data_cobradas(año_actual)
     proformas_actual = get_proformas_data(año_actual)
 
     # Obtener datos del mes actual (sin proformas)
     tickets_mes_actual = get_tickets_data_mes(año_actual, mes_actual)
-    facturas_mes_actual = get_facturas_data_mes(año_actual, mes_actual)
+    facturas_mes_actual = get_facturas_data_mes_cobradas(año_actual, mes_actual)
     proformas_mes_actual = get_proformas_data_mes(año_actual, mes_actual)
     
     # Obtener datos del período comparativo (selector)
     tickets_mes_anterior = get_tickets_data_mes(año_anterior, mes_selector)
-    facturas_mes_anterior = get_facturas_data_mes(año_anterior, mes_selector)
+    facturas_mes_anterior = get_facturas_data_mes_cobradas(año_anterior, mes_selector)
     proformas_mes_anterior = get_proformas_data_mes(año_anterior, mes_selector)
 
     # Mismo mes año anterior HASTA el día actual (comparación justa)
     dia_actual = ahora.day
     tickets_mes_anterior_hasta_dia = get_tickets_data_mes_hasta_dia(año_anterior, mes_selector, dia_actual)
-    facturas_mes_anterior_hasta_dia = get_facturas_data_mes_hasta_dia(año_anterior, mes_selector, dia_actual)
-    facturas_mes_anterior_hasta_dia_cobradas = get_facturas_data_mes_hasta_dia_cobradas(año_anterior, mes_selector, dia_actual)
-    global_mes_anterior_hasta_dia_total = tickets_mes_anterior_hasta_dia['total'] + facturas_mes_anterior_hasta_dia_cobradas['total']
+    facturas_mes_anterior_hasta_dia = get_facturas_data_mes_hasta_dia_cobradas(año_anterior, mes_selector, dia_actual)
+    global_mes_anterior_hasta_dia_total = tickets_mes_anterior_hasta_dia['total'] + facturas_mes_anterior_hasta_dia['total']
 
     # Año anterior HASTA la misma fecha (mes/día) para comparación justa del total anual
     tickets_anio_anterior_hasta_fecha = get_tickets_data_anio_hasta_fecha(año_anterior, mes_actual, dia_actual)
-    facturas_anio_anterior_hasta_fecha = get_facturas_data_anio_hasta_fecha(año_anterior, mes_actual, dia_actual)
-    facturas_anio_anterior_hasta_fecha_cobradas = get_facturas_data_anio_hasta_fecha_cobradas(año_anterior, mes_actual, dia_actual)
-    global_anio_anterior_hasta_fecha_total = tickets_anio_anterior_hasta_fecha['total'] + facturas_anio_anterior_hasta_fecha_cobradas['total']
+    facturas_anio_anterior_hasta_fecha = get_facturas_data_anio_hasta_fecha_cobradas(año_anterior, mes_actual, dia_actual)
+    global_anio_anterior_hasta_fecha_total = tickets_anio_anterior_hasta_fecha['total'] + facturas_anio_anterior_hasta_fecha['total']
 
     # Calcular totales globales del mes (solo cobradas para global)
-    facturas_mes_actual_cobradas = get_facturas_data_mes_cobradas(año_actual, mes_actual)
-    facturas_mes_anterior_cobradas = get_facturas_data_mes_cobradas(año_anterior, mes_selector)
-    global_mes_actual_total = tickets_mes_actual['total'] + facturas_mes_actual_cobradas['total']
-    global_mes_anterior_total = tickets_mes_anterior['total'] + facturas_mes_anterior_cobradas['total']
+    global_mes_actual_total = tickets_mes_actual['total'] + facturas_mes_actual['total']
+    global_mes_anterior_total = tickets_mes_anterior['total'] + facturas_mes_anterior['total']
 
     # Obtener datos anteriores (proformas solo para su sección)
     tickets_anterior = get_tickets_data(año_anterior)
-    facturas_anterior = get_facturas_data(año_anterior)
+    facturas_anterior = get_facturas_data_cobradas(año_anterior)
     proformas_anterior = get_proformas_data(año_anterior)
 
     # Calcular totales globales SIN PROFORMAS (solo facturas cobradas)
-    facturas_actual_cobradas = get_facturas_data_cobradas(año_actual)
-    facturas_anterior_cobradas = get_facturas_data_cobradas(año_anterior)
-    global_actual_total = tickets_actual['total'] + facturas_actual_cobradas['total']
-    global_anterior_total = tickets_anterior['total'] + facturas_anterior_cobradas['total']
+    global_actual_total = tickets_actual['total'] + facturas_actual['total']
+    global_anterior_total = tickets_anterior['total'] + facturas_anterior['total']
 
     # Calcular medias mensuales SIN PROFORMAS, EXCLUYENDO EL MES ACTUAL
     def calcular_media_mensual_excluyendo_mes_actual(total, mes_actual):
@@ -688,7 +685,7 @@ def media_ventas_por_documento():
     tickets_media_mensual = calcular_media_mensual_excluyendo_mes_actual(tickets_actual['total'] - tickets_mes_actual['total'], mes_actual)
     tickets_media = tickets_actual['media'] if tickets_actual['num_documentos'] > 0 else 0
 
-    # Procesar facturas
+    # Procesar facturas (cobradas)
     facturas_media_mensual = calcular_media_mensual_excluyendo_mes_actual(facturas_actual['total'] - facturas_mes_actual['total'], mes_actual)
     facturas_media = facturas_actual['media'] if facturas_actual['num_documentos'] > 0 else 0
 
