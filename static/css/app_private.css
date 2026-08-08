@@ -186,7 +186,7 @@ body, html {
 /* Stats container */
 .stats-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(540px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(max-content, 1fr));
     gap: 20px;
     margin: 20px 0;
 }
@@ -211,6 +211,7 @@ body, html {
     font-weight: bold;
     color: var(--text) !important;
     margin: 10px 0;
+    white-space: nowrap;
 }
 
 .stats-comparison {
@@ -228,6 +229,10 @@ body, html {
     font-weight: bold;
     text-align: center;
     box-sizing: border-box;
+    white-space: nowrap;
+}
+
+.stats-previous {
     white-space: nowrap;
 }
 
