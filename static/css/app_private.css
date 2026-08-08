@@ -186,7 +186,7 @@ body, html {
 /* Stats container */
 .stats-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
     gap: 20px;
     margin: 20px 0;
 }
@@ -214,9 +214,10 @@ body, html {
 }
 
 .stats-comparison {
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: 60px 1fr;
     gap: 10px;
+    align-items: start;
     margin-top: 10px;
 }
 
@@ -225,6 +226,9 @@ body, html {
     border-radius: 4px;
     font-size: 14px;
     font-weight: bold;
+    text-align: center;
+    box-sizing: border-box;
+    white-space: nowrap;
 }
 
 .stats-percentage.positive {
