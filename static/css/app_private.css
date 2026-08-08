@@ -196,6 +196,7 @@ body, html {
     color: var(--text) !important;
     border-radius: 8px;
     padding: 15px;
+    min-width: 550px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
@@ -216,7 +217,7 @@ body, html {
 
 .stats-comparison {
     display: grid;
-    grid-template-columns: 60px 1fr;
+    grid-template-columns: minmax(60px, max-content) minmax(max-content, 1fr);
     gap: 8px;
     align-items: start;
     margin-top: 10px;
