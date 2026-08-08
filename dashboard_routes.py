@@ -294,6 +294,36 @@ def get_facturas_data_mes_hasta_dia_cobradas(year, month, day):
     '''
     return fetch_data(query, (str(year), str(month).zfill(2), day))
 
+def get_facturas_data_mes_emitidas_cobradas(year, month):
+    """Facturas emitidas y cobradas en el mismo mes"""
+    query = '''
+        SELECT COUNT(*) as num_documentos, 
+               COALESCE(AVG(total), 0) as media,
+               COALESCE(SUM(total), 0) as total
+        FROM factura 
+        WHERE estado = 'C' 
+          AND strftime('%Y', fecha) = ? AND strftime('%m', fecha) = ?
+          AND strftime('%Y', COALESCE(NULLIF(fechaCobro, ''), fecha)) = ?
+          AND strftime('%m', COALESCE(NULLIF(fechaCobro, ''), fecha)) = ?
+    '''
+    return fetch_data(query, (str(year), str(month).zfill(2), str(year), str(month).zfill(2)))
+
+def get_facturas_data_mes_hasta_dia_emitidas_cobradas(year, month, day):
+    """Facturas emitidas y cobradas en el mismo mes hasta el día indicado"""
+    query = '''
+        SELECT COUNT(*) as num_documentos, 
+               COALESCE(AVG(total), 0) as media,
+               COALESCE(SUM(total), 0) as total
+        FROM factura 
+        WHERE estado = 'C' 
+          AND strftime('%Y', fecha) = ? AND strftime('%m', fecha) = ?
+          AND CAST(strftime('%d', fecha) AS INTEGER) <= ?
+          AND strftime('%Y', COALESCE(NULLIF(fechaCobro, ''), fecha)) = ?
+          AND strftime('%m', COALESCE(NULLIF(fechaCobro, ''), fecha)) = ?
+          AND CAST(strftime('%d', COALESCE(NULLIF(fechaCobro, ''), fecha)) AS INTEGER) <= ?
+    '''
+    return fetch_data(query, (str(year), str(month).zfill(2), day, str(year), str(month).zfill(2), day))
+
 def get_proformas_data(year):
     query = '''
         SELECT COUNT(DISTINCT p.id) as num_documentos, 
@@ -653,6 +683,7 @@ def media_ventas_por_documento():
     dia_actual = ahora.day
     tickets_mes_anterior_hasta_dia = get_tickets_data_mes_hasta_dia(año_anterior, mes_selector, dia_actual)
     facturas_mes_anterior_hasta_dia = get_facturas_data_mes_hasta_dia_cobradas(año_anterior, mes_selector, dia_actual)
+    facturas_mes_anterior_hasta_dia_emitidas_cobradas = get_facturas_data_mes_hasta_dia_emitidas_cobradas(año_anterior, mes_selector, dia_actual)
     global_mes_anterior_hasta_dia_total = tickets_mes_anterior_hasta_dia['total'] + facturas_mes_anterior_hasta_dia['total']
 
     # Año anterior HASTA la misma fecha (mes/día) para comparación justa del total anual
@@ -663,6 +694,10 @@ def media_ventas_por_documento():
     # Calcular totales globales del mes (solo cobradas para global)
     global_mes_actual_total = tickets_mes_actual['total'] + facturas_mes_actual['total']
     global_mes_anterior_total = tickets_mes_anterior['total'] + facturas_mes_anterior['total']
+
+    # Facturas emitidas y cobradas en el mes (para visualización diferenciada)
+    facturas_mes_actual_emitidas_cobradas = get_facturas_data_mes_emitidas_cobradas(año_actual, mes_actual)
+    facturas_mes_anterior_emitidas_cobradas = get_facturas_data_mes_emitidas_cobradas(año_anterior, mes_selector)
 
     # Obtener datos anteriores (proformas solo para su sección)
     tickets_anterior = get_tickets_data(año_anterior)
@@ -688,6 +723,20 @@ def media_ventas_por_documento():
     # Procesar facturas (cobradas)
     facturas_media_mensual = calcular_media_mensual_excluyendo_mes_actual(facturas_actual['total'] - facturas_mes_actual['total'], mes_actual)
     facturas_media = facturas_actual['media'] if facturas_actual['num_documentos'] > 0 else 0
+
+    # Facturas porcentajes mes (emitidas y cobradas)
+    porcentaje_diferencia_mes_emitidas_cobradas = redondear_importe(
+        calcular_porcentaje(
+            facturas_mes_actual_emitidas_cobradas['total'], 
+            facturas_mes_anterior_emitidas_cobradas['total']
+        )
+    )
+    porcentaje_diferencia_mes_hasta_dia_emitidas_cobradas = redondear_importe(
+        calcular_porcentaje(
+            facturas_mes_actual_emitidas_cobradas['total'], 
+            facturas_mes_anterior_hasta_dia_emitidas_cobradas['total']
+        )
+    )
 
     # Procesar proformas (solo para su sección)
     proformas_media = (
@@ -776,6 +825,10 @@ def media_ventas_por_documento():
                 'mes_actual': {
                     'total': redondear_importe(facturas_mes_actual['total']),
                     'cantidad': facturas_mes_actual['num_documentos']
+                },
+                'mes_actual_emitidas_cobradas': {
+                    'total': redondear_importe(facturas_mes_actual_emitidas_cobradas['total']),
+                    'cantidad': facturas_mes_actual_emitidas_cobradas['num_documentos']
                 }
             },
             'anterior': {
@@ -785,6 +838,10 @@ def media_ventas_por_documento():
                 'mismo_mes': {
                     'total': redondear_importe(facturas_mes_anterior['total']),
                     'cantidad': facturas_mes_anterior['num_documentos']
+                },
+                'mismo_mes_emitidas_cobradas': {
+                    'total': redondear_importe(facturas_mes_anterior_emitidas_cobradas['total']),
+                    'cantidad': facturas_mes_anterior_emitidas_cobradas['num_documentos']
                 }
             },
             'porcentaje_diferencia': redondear_importe(
@@ -807,6 +864,12 @@ def media_ventas_por_documento():
             ),
             'mismo_mes_hasta_dia': {
                 'total': redondear_importe(facturas_mes_anterior_hasta_dia['total']),
+                'dia': dia_actual
+            },
+            'porcentaje_diferencia_mes_emitidas_cobradas': redondear_importe(porcentaje_diferencia_mes_emitidas_cobradas),
+            'porcentaje_diferencia_mes_hasta_dia_emitidas_cobradas': redondear_importe(porcentaje_diferencia_mes_hasta_dia_emitidas_cobradas),
+            'mismo_mes_hasta_dia_emitidas_cobradas': {
+                'total': redondear_importe(facturas_mes_anterior_hasta_dia_emitidas_cobradas['total']),
                 'dia': dia_actual
             },
             'porcentaje_diferencia_anio_hasta_fecha': redondear_importe(

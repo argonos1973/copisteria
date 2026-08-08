@@ -1022,6 +1022,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (el) { el.textContent = 'N/A'; el.className = 'stats-percentage'; }
       }
     }
+
+    // Fila adicional para facturas: emitidas y cobradas en el mes
+    if (prefijo === 'facturas') {
+      const ecMesTotal = data.actual?.mes_actual_emitidas_cobradas?.total ?? 0;
+      const ecMesCant = data.actual?.mes_actual_emitidas_cobradas?.cantidad ?? 0;
+      const ecMesAntTotal = data.anterior?.mismo_mes_emitidas_cobradas?.total ?? 0;
+      const ecHastaDiaTotal = data.mismo_mes_hasta_dia_emitidas_cobradas?.total ?? 0;
+      const ecHastaDiaDia = data.mismo_mes_hasta_dia_emitidas_cobradas?.dia ?? '';
+      safeSetAmount(`${prefijo}TotalMesEmitidasCobradas`, formatearImporte(ecMesTotal), ecMesTotal);
+      safeSet(`${prefijo}MesAnteriorEmitidasCobradas`, `Mismo mes año anterior: ${formatearImporte(ecMesAntTotal)}`);
+      safeSet(`${prefijo}MesAnteriorHastaDiaEmitidasCobradas`, `Mismo mes año anterior (hasta día ${ecHastaDiaDia}): ${formatearImporte(ecHastaDiaTotal)}`);
+      actualizarPorcentaje(`${prefijo}PorcentajeMesEmitidasCobradas`, data.porcentaje_diferencia_mes_emitidas_cobradas);
+      actualizarPorcentaje(`${prefijo}PorcentajeMesHastaDiaEmitidasCobradas`, data.porcentaje_diferencia_mes_hasta_dia_emitidas_cobradas);
+    }
   }
   
   function actualizarGlobal(global) {
