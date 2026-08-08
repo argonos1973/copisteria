@@ -1,4 +1,4 @@
-import { formatearFecha, formatearImporte, fetchConManejadorErrores, parsearImporte, buildApiUrl } from './scripts_utils.js?v=MIXED_CONTENT_FIX';
+import { formatearFecha, formatearImporte, fetchConManejadorErrores, parsearImporte, buildApiUrl } from './scripts_utils.js?v=ALINEAR_AÑOS';
 import { IP_SERVER, PORT, IS_PROD } from './constantes.js';
 
 // ==============================

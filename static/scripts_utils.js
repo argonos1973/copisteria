@@ -329,7 +329,7 @@ export function formatearImporte(importe, usarGuionSiNulo = false) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
     useGrouping: true
-  }) + ' €';
+  }) + '\xa0€';
 }
 
 // Redondeo financiero a 2 decimales (ROUND_HALF_UP equivalente en JS)
@@ -353,7 +353,7 @@ export function formatearImporteVariable(importe, minDecimals = 2, maxDecimals =
     minimumFractionDigits: minDecimals,
     maximumFractionDigits: maxDecimals,
     useGrouping: true
-  }) + ' €';
+  }) + '\xa0€';
 }
 
 // Función específica para formatear precios unitarios con 5 decimales
