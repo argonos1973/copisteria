@@ -936,7 +936,7 @@ function obtenerDetallesDeTabla() {
 /**
  * Guardar o actualizar el ticket en la base de datos
  */
-export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTicket) {
+export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTicket, esSoloCobro = false) {
   try {
     // Evitar múltiples intentos de guardado
     if (window.isTicketSaving) {
@@ -1014,23 +1014,37 @@ export async function guardarTicket(formaPago, totalPago, totalTicket, estadoTic
     // Asegurar que el importe cobrado esté redondeado
     const importe_cobrado = redondearImporte(totalPago);
 
-    const ticketData = {
-      id: idticket,
-      fecha: fecha,
-      idcontacto: idcontacto,
-      numero: numero,
-      estado: estadoTicket,
-      formaPago: formaPago,
-      importe_bruto: importe_bruto,
-      importe_impuestos: importe_impuestos,
-      importe_cobrado: importe_cobrado,
-      total: redondearImporte(totalTicket),
-      detalles: detalles.map(d => ({
-        ...d,
-        precio: d.precio,
-        total: redondearImporte(d.total)
-      }))
-    };
+    let ticketData;
+    if (esSoloCobro) {
+      // Solo cobro: no tocar detalles ni recalcular totales
+      ticketData = {
+        id: idticket,
+        fecha: fecha,
+        numero: numero,
+        estado: estadoTicket,
+        formaPago: formaPago,
+        importe_cobrado: importe_cobrado,
+        cobro: true
+      };
+    } else {
+      ticketData = {
+        id: idticket,
+        fecha: fecha,
+        idcontacto: idcontacto,
+        numero: numero,
+        estado: estadoTicket,
+        formaPago: formaPago,
+        importe_bruto: importe_bruto,
+        importe_impuestos: importe_impuestos,
+        importe_cobrado: importe_cobrado,
+        total: redondearImporte(totalTicket),
+        detalles: detalles.map(d => ({
+          ...d,
+          precio: d.precio,
+          total: redondearImporte(d.total)
+        }))
+      };
+    }
 
     console.log('Datos del ticket a guardar:', JSON.stringify(ticketData, null, 2));
 
@@ -1399,10 +1413,10 @@ export function procesarPago() {
     formaPago
   });
 
-  // Primero cerramos el modal para mejorar la UX y evitar bloqueos visuales
-  cerrarModalPagos();
-  // Luego realizamos la llamada de guardado
-  guardarTicket(formaPago, importeCobrado, totalTicket, estadoTicket).then(() => {
+    // Primero cerramos el modal para mejorar la UX y evitar bloqueos visuales
+    cerrarModalPagos();
+    // Luego realizamos la llamada de guardado
+    guardarTicket(formaPago, totalPago, totalTicket, estadoTicket, !esGuardar).then(() => {
     // Si estamos guardando desde el menú, resolver la promesa
     if (window.__resolveGuardadoMenu) {
       console.log('[Tickets] Resolviendo promesa de guardado desde menú');

@@ -944,6 +944,42 @@ def actualizar_ticket(id_ticket=None, data=None):
         if not id_ticket:
             return jsonify({'error': 'El campo id es requerido'}), 400
 
+        # Si es solo un cobro, no tocar detalles ni recalcular totales
+        if data.get('cobro'):
+            try:
+                importes = calcular_importes(1, data.get('importe_cobrado', 0), 0)
+                importe_cobrado = importes['total']
+            except Exception as e:
+                return jsonify({'error': 'Importe cobrado inválido', 'detalle': str(e)}), 400
+
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            try:
+                conn.execute('BEGIN TRANSACTION')
+                cursor.execute('SELECT id FROM tickets WHERE id = ?', (id_ticket,))
+                if not cursor.fetchone():
+                    return jsonify({'error': 'Ticket no encontrado'}), 404
+
+                estado = data.get('estado') or 'C'
+                formaPago = data.get('formaPago', 'E')
+                cursor.execute('''
+                    UPDATE tickets
+                    SET importe_cobrado = ?, estado = ?, formaPago = ?, timestamp = ?
+                    WHERE id = ?
+                ''', (importe_cobrado, estado, formaPago, datetime.now().isoformat(), id_ticket))
+                conn.commit()
+                return jsonify({'mensaje': 'Cobro registrado correctamente', 'id': id_ticket})
+            except Exception as e:
+                if conn:
+                    conn.rollback()
+                return jsonify({'error': str(e)}), 500
+            finally:
+                if conn:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+
         # Procesar fecha (aceptar DD/MM/YYYY o YYYY-MM-DD)
         fecha_str = data.get('fecha')
         if not fecha_str:
