@@ -1416,7 +1416,9 @@ export function procesarPago() {
     // Primero cerramos el modal para mejorar la UX y evitar bloqueos visuales
     cerrarModalPagos();
     // Luego realizamos la llamada de guardado
-    guardarTicket(formaPago, importeCobrado, totalTicket, estadoTicket, estadoTicket === 'C').then(() => {
+    const idticketActual = document.getElementById('idticket')?.value || '';
+    const esSoloCobro = estadoTicket === 'C' && idticketActual !== '';
+    guardarTicket(formaPago, importeCobrado, totalTicket, estadoTicket, esSoloCobro).then(() => {
     // Si estamos guardando desde el menú, resolver la promesa
     if (window.__resolveGuardadoMenu) {
       console.log('[Tickets] Resolviendo promesa de guardado desde menú');
