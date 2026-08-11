@@ -295,7 +295,7 @@ function asociarEventos() {
   // Botón "Guardar" => abrir el modal de pagos
   const btnGuardar = document.getElementById("btn-guardar-ticket");
   if (btnGuardar) {
-    btnGuardar.addEventListener('click', () => abrirModalPagos(true));
+    btnGuardar.addEventListener('click', () => abrirModalPagos());
   }
 
   // Botón "Imprimir" => imprimirFactura
@@ -445,7 +445,7 @@ export function volverAConsulta() {
 /**
  * Abre el modal de pagos
  */
-export function abrirModalPagos(modoGuardar = false) {
+export function abrirModalPagos() {
   // Tomar exactamente el valor mostrado en pantalla (formato europeo con €)
   const totalDisplay = document.getElementById('total-ticket').value;
   const fechaInput = document.getElementById('fecha-ticket').value;
@@ -464,7 +464,6 @@ export function abrirModalPagos(modoGuardar = false) {
     fecha: fechaFormateada,
     formaPago: formaPago,
     titulo: 'Añadir Pago',
-    modoGuardar: modoGuardar,
     onCobrar: (formaPago, totalPago, total) => {
       procesarPago();
     }
@@ -1375,9 +1374,6 @@ export function procesarPago() {
   var totalPago = parsearImporte(document.getElementById('modal-total-ticket').value);
   var totalEntregado = parsearImporte(document.getElementById('modal-total-entregado').value);
 
-  const btnCobrar = document.getElementById('btn-cobrar');
-  const esGuardar = btnCobrar && btnCobrar.dataset.modo === 'guardar';
-
   let formaPago = document.getElementById('modal-metodo-pago').value;
 
   if (isNaN(totalTicket) || isNaN(totalPago)) {
@@ -1403,15 +1399,8 @@ export function procesarPago() {
   // El ticket estará cobrado solo si el importe cobrado es igual al total
   var estadoTicket = importeCobrado === totalTicket ? 'C' : 'P';
 
-  // Si el modal está en modo "Guardar", forzar guardar como pendiente
-  if (esGuardar) {
-    totalPago = 0;
-    importeCobrado = 0;
-    estadoTicket = 'P';
-  }
-
-  // Si es cobro parcial y no es guardar, la forma de pago es '?'
-  if (importeCobrado !== totalTicket && !esGuardar) {
+  // Si el importe cobrado es diferente al total, la forma de pago es '?'
+  if (importeCobrado !== totalTicket) {
     formaPago = '?';
   }
 
@@ -1427,7 +1416,7 @@ export function procesarPago() {
     // Primero cerramos el modal para mejorar la UX y evitar bloqueos visuales
     cerrarModalPagos();
     // Luego realizamos la llamada de guardado
-    guardarTicket(formaPago, totalPago, totalTicket, estadoTicket, !esGuardar).then(() => {
+    guardarTicket(formaPago, importeCobrado, totalTicket, estadoTicket, estadoTicket === 'C').then(() => {
     // Si estamos guardando desde el menú, resolver la promesa
     if (window.__resolveGuardadoMenu) {
       console.log('[Tickets] Resolviendo promesa de guardado desde menú');
