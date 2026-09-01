@@ -969,23 +969,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Siempre actualizamos la fila del mes para evitar valores residuales
     const totalMes = totalMesSeleccionado;
     const cantMes = cantidadMes;
-    // Recalcular y pintar la MEDIA: usar MES si hay datos; si no, fallback a YTD
-    try {
-      const totMesNum = parsearImporte(totalMes) || 0;
-      const cantMesNum = parsearImporte(cantMes) || 0;
-      const totAcumNum = parsearImporte(data.actual.total) || 0;
-      const cantAcumNum = parsearImporte(data.actual.cantidad || 0) || 0;
-      let mediaPreferida = 0;
-      if (cantMesNum > 0) {
-        mediaPreferida = totMesNum / cantMesNum;
-      } else if (cantAcumNum > 0) {
-        mediaPreferida = totAcumNum / cantAcumNum;
-      }
-      console.debug(`[stats] ${prefijo} media recalculada (Mes→YTD)`, { mediaPreferida, totMesNum, cantMesNum, totAcumNum, cantAcumNum });
-      safeSetAmount(`${prefijo}Media`, formatearImporte(mediaPreferida), mediaPreferida);
-    } catch (e) {
-      console.warn(`[stats] ${prefijo} no se pudo recalcular media`, e);
-    }
+    // Media por documento: usa la media YTD ya calculada (no la del mes)
     safeSetAmount(`${prefijo}TotalMes`, formatearImporte(totalMes), totalMes);
     const mesAnteriorTotal = data.anterior?.mismo_mes?.total ?? 0;
     safeSet(`${prefijo}MesAnterior`, `Mismo mes año anterior: ${formatearImporte(mesAnteriorTotal)}`);
