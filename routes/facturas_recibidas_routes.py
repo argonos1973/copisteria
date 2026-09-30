@@ -1,6 +1,8 @@
 import traceback
 import os
+import re
 import uuid
+import hashlib
 from flask import Blueprint, request, jsonify, session, send_file
 from werkzeug.utils import secure_filename
 from facturas_proveedores import (
@@ -8,7 +10,8 @@ from facturas_proveedores import (
     actualizar_proveedor, eliminar_proveedor, obtener_factura_por_id, 
     actualizar_factura_proveedor, eliminar_factura, registrar_pago_factura,
     guardar_factura_bd, calcular_hash_pdf, factura_ya_procesada,
-    obtener_o_crear_proveedor  # Importar la función inteligente
+    obtener_o_crear_proveedor,  # Importar la función inteligente
+    detectar_proveedor_conocido  # Post-OCR: detectar proveedores conocidos por texto del PDF
 )
 from factura_ocr import procesar_imagen_factura
 from auth_middleware import login_required
@@ -252,6 +255,15 @@ def procesar_ocr_factura():
                             datos['proveedor']['advertencia'] = 'El NIF detectado coincidía con su empresa y ha sido eliminado.'
             except Exception as e:
                 logger.error(f"Error validando NIF empresa vs proveedor: {e}")
+        
+        # POST-OCR: Detectar proveedores conocidos por texto del PDF
+        # Esto corrige asignaciones erróneas del OCR (ej: Amazon asignado a otro proveedor)
+        proveedor_detectado = detectar_proveedor_conocido(imagen_bytes)
+        if proveedor_detectado:
+            logger.info(f"🔧 POST-OCR: Sobreescribiendo proveedor OCR '{datos.get('proveedor', {}).get('nombre')}' -> '{proveedor_detectado['nombre']}'")
+            datos['proveedor']['nombre'] = proveedor_detectado['nombre']
+            datos['proveedor']['nif'] = proveedor_detectado['nif'] or datos.get('proveedor', {}).get('nif', '')
+            datos['proveedor']['detectado_por_texto'] = True
         
         preview_url = f"/api/facturas-proveedores/ocr-preview/{anio}/{trimestre}/{saved_name}"
         return jsonify({
@@ -645,6 +657,100 @@ def registrar_pago_endpoint(factura_id):
         return jsonify({'error': str(e), 'success': False}), 500
 
 
+def _resolver_ruta_archivo_factura(ruta_archivo, pdf_hash=None):
+    """Busca el archivo físico incluso si la ruta guardada es incorrecta o fue movida.
+
+    Prefiere: mismo año, nombre exacto, carpeta 'originales', y evita directorios
+    de extracción temporal ('.extract') o copias de respaldo ('caca').
+    """
+    if ruta_archivo and os.path.exists(ruta_archivo):
+        return ruta_archivo
+    if not ruta_archivo:
+        return None
+
+    def normalizar(nombre):
+        base, ext = os.path.splitext(nombre)
+        return re.sub(r'[\s_\-]+', '', base.lower()) + ext.lower()
+
+    base_dir = '/var/www/html/facturas_proveedores'
+    nombre_guardado = os.path.basename(ruta_archivo)
+    if not nombre_guardado:
+        return None
+
+    base_guardado, ext_guardado = os.path.splitext(nombre_guardado)
+    ext_guardado = ext_guardado.lower()
+    norm_guardado = normalizar(nombre_guardado)
+
+    # Año preferido según la ruta guardada
+    anio_match = re.search(r'/\d{4}/', ruta_archivo)
+    anio_preferido = anio_match.group(0).strip('/') if anio_match else None
+
+    # Si nos dan el hash, intentar resolución directa por hash una sola vez
+    if pdf_hash:
+        for root, _, files in os.walk(base_dir):
+            for f in files:
+                p = os.path.join(root, f)
+                try:
+                    import hashlib
+                    with open(p, 'rb') as fp:
+                        h = hashlib.md5(fp.read()).hexdigest()
+                    if h == pdf_hash:
+                        return p
+                except Exception:
+                    continue
+
+    def score(ruta_candidato):
+        s = 0
+        ruta_lower = ruta_candidato.lower()
+        # Penalizar rutas de extracción/copia o directorios poco fiables
+        if '.extract' in ruta_lower or ruta_lower.count('/inbox/') > 1:
+            s += 50
+        if '/caca/' in ruta_lower:
+            s += 30
+        # Preferir carpeta originales
+        if '/originales/' not in ruta_lower:
+            s += 5
+        # Preferir mismo año
+        if anio_preferido:
+            if f'/{anio_preferido}/' not in ruta_candidato:
+                s += 20
+        # Preferir rutas más cortas (más cercanas al estándar)
+        s += len(ruta_candidato) * 0.001
+        return s
+
+    candidatos = []
+    for root, _, files in os.walk(base_dir):
+        for f in files:
+            p = os.path.join(root, f)
+            base_f, ext_f = os.path.splitext(f)
+            ext_f = ext_f.lower()
+
+            # 1) Coincidencia exacta de nombre (case-insensitive)
+            if f.lower() == nombre_guardado.lower():
+                candidatos.append((p, score(p) + 0))
+                continue
+
+            # 2) Normalización de espacios/guiones/barras bajas
+            if normalizar(f) == norm_guardado:
+                candidatos.append((p, score(p) + 5))
+                continue
+
+            # 3) Mismo nombre base y misma extensión con sufijo _timestamp_userid
+            if base_f.lower().startswith(base_guardado.lower() + '_') and ext_f == ext_guardado:
+                candidatos.append((p, score(p) + 10))
+                continue
+
+            # 4) Mismo nombre base sin extensión (p.ej. el archivo es .jpg y la BD dice .pdf)
+            if base_f.lower() == base_guardado.lower():
+                candidatos.append((p, score(p) + 15))
+                continue
+
+    if candidatos:
+        candidatos.sort(key=lambda x: x[1])
+        return candidatos[0][0]
+    return None
+
+
 @facturas_recibidas_bp.route('/facturas-proveedores/<int:factura_id>/pdf', methods=['GET'])
 @login_required
 def descargar_pdf_factura(factura_id):
@@ -652,15 +758,16 @@ def descargar_pdf_factura(factura_id):
         empresa_id = session.get('empresa_id')
         if not empresa_id:
             return jsonify({'error': 'No hay empresa seleccionada'}), 400
-            
+
         factura = obtener_factura_por_id(factura_id, empresa_id)
         if not factura or not factura.get('ruta_archivo'):
             return jsonify({'error': 'Factura o archivo no encontrado'}), 404
-            
-        ruta_archivo = factura['ruta_archivo']
-        if not os.path.exists(ruta_archivo):
-             return jsonify({'error': 'El archivo físico no existe en el servidor'}), 404
-             
+
+        ruta_archivo = _resolver_ruta_archivo_factura(factura['ruta_archivo'], factura.get('pdf_hash'))
+        if not ruta_archivo:
+            logger.warning(f"PDF no encontrado para factura {factura_id}: {factura.get('ruta_archivo')}")
+            return jsonify({'error': 'El archivo físico no existe en el servidor'}), 404
+
         return send_file(ruta_archivo)
     except Exception as e:
         logger.error(f"Error sirviendo PDF factura {factura_id}: {e}")

@@ -900,6 +900,95 @@ def buscar_proveedor_similar(empresa_id, nombre, nif, telefono=None, direccion=N
     return mejor_match
 
 
+def detectar_proveedor_conocido(pdf_bytes):
+    """
+    Analiza el texto del PDF para detectar proveedores conocidos que el OCR
+    puede confundir (Amazon, Google, Adobe, etc.).
+
+    Returns:
+        dict con 'nombre' y 'nif' del proveedor detectado, o None si no hay match.
+    """
+    import subprocess, tempfile
+
+    # Tabla de proveedores conocidos: patrones de texto -> (nombre, nif)
+    # El NIF se usa para buscar el proveedor existente en la BD
+    PROVEEDORES_CONOCIDOS = [
+        # Amazon Business (facturas de compras)
+        {
+            'patrones': ['amazon web services', 'amazonaws', 'amazon business',
+                         'amazon.es', 'amazon.eu', 'amazon.com',
+                         'amazon eu sarl', 'european amazon'],
+            'nombre': 'AMAZON BUSINESS',
+            'nif': 'ESW0264006H',
+        },
+        # Google (facturas de Google Ads / Google Cloud)
+        {
+            'patrones': ['google ireland', 'google llc', 'google ads',
+                         'google cloud', 'google workspace'],
+            'nombre': 'GOOGLE IRELAND LIMITED',
+            'nif': 'IE6388047V',
+        },
+        # Adobe (suscripciones Creative Cloud)
+        {
+            'patrones': ['adobe systems', 'adobe inc', 'adobe software',
+                         'adobe creative cloud', 'adobe europe'],
+            'nombre': 'ADOBE',
+            'nif': 'IE6346929H',
+        },
+        # Canon (facturas de alquiler/venta)
+        {
+            'patrones': ['canon espa', 'canon europe', 'canon s.l'],
+            'nombre': 'CANON',
+            'nif': 'A28122125',
+        },
+        # Vodafone
+        {
+            'patrones': ['vodafone espa', 'vodafone group', 'vodafone ono'],
+            'nombre': 'VODAFONE',
+            'nif': 'A80907397',
+        },
+        # IONOS (hosting)
+        {
+            'patrones': ['ionos sarl', '1&1 ionos', 'ionos se'],
+            'nombre': 'IONOS',
+            'nif': 'B85049435',
+        },
+        # OpenAI
+        {
+            'patrones': ['openai', 'openai llc', 'openai opc'],
+            'nombre': 'OPENAI',
+            'nif': None,  # No sabemos el NIF, buscar por nombre
+        },
+    ]
+
+    try:
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+            tmp.write(pdf_bytes)
+            tmp_path = tmp.name
+
+        result = subprocess.run(
+            ['pdftotext', tmp_path, '-'],
+            capture_output=True, timeout=10
+        )
+        os.unlink(tmp_path)
+
+        texto = result.stdout.decode('utf-8', errors='ignore').lower()
+
+        if not texto or len(texto) < 10:
+            return None
+
+        for prov in PROVEEDORES_CONOCIDOS:
+            for patron in prov['patrones']:
+                if patron in texto:
+                    logger.info(f"🔍 Proveedor conocido detectado por texto del PDF: {prov['nombre']} (patrón: '{patron}')")
+                    return {'nombre': prov['nombre'], 'nif': prov['nif']}
+
+    except Exception as e:
+        logger.debug(f"Error en detectar_proveedor_conocido: {e}")
+
+    return None
+
+
 def obtener_o_crear_proveedor(nif, nombre, empresa_id, datos_adicionales=None, email_origen=None):
     """
     Busca un proveedor por NIF y nombre, si no existe lo crea automáticamente

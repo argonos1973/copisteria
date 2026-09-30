@@ -250,6 +250,14 @@ def procesar_email_factura(mail, email_id, empresa_id, empresa_codigo):
             logger.error("❌ Falta proveedor (NIF y nombre vacíos)")
             return False
 
+        # POST-OCR: Detectar proveedores conocidos por texto del PDF
+        # Esto corrige asignaciones erróneas del OCR (ej: Amazon asignado a otro proveedor)
+        proveedor_detectado = facturas_proveedores.detectar_proveedor_conocido(pdf_bytes)
+        if proveedor_detectado:
+            logger.info(f"🔧 POST-OCR: Sobreescribiendo proveedor OCR '{datos_factura.get('proveedor_nombre')}' -> '{proveedor_detectado['nombre']}'")
+            datos_factura['proveedor_nombre'] = proveedor_detectado['nombre']
+            datos_factura['proveedor_nif'] = proveedor_detectado['nif'] or datos_factura.get('proveedor_nif')
+
         # Buscar o crear proveedor
         logger.info("🔍 Buscando proveedor...")
         proveedor_id = facturas_proveedores.obtener_o_crear_proveedor(

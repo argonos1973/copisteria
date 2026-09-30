@@ -25,21 +25,21 @@ echo "[$TS] Deteniendo gunicorn en .18..." >> "$LOG"
 ssh -i "$SSH_KEY" -o BatchMode=yes sami@"$DST_HOST" \
   "echo sami | sudo -S systemctl stop gunicorn 2>/dev/null; echo gunicorn_stopped" >> "$LOG" 2>&1 || true
 
-# 3. Dump local a archivo, scp a .18 y restaurar
-DUMP_FILE="/tmp/aleph70_dump.sql"
+# 3. Backup binario local, scp a .18 y reemplazo atomico
+BACKUP_FILE="/tmp/aleph70_backup.db"
 
-echo "[$TS] Volcando BD a archivo local..." >> "$LOG"
-if ! sqlite3 "$SRC_DB" .dump > "$DUMP_FILE"; then
-  echo "[$TS] ERROR: Fallo al volcar BD de .55" >> "$LOG"
+echo "[$TS] Creando backup binario de la BD..." >> "$LOG"
+if ! sqlite3 "$SRC_DB" ".backup '$BACKUP_FILE'"; then
+  echo "[$TS] ERROR: Fallo al hacer backup de BD de .55" >> "$LOG"
   ssh -i "$SSH_KEY" -o BatchMode=yes sami@"$DST_HOST" \
     "echo sami | sudo -S systemctl start gunicorn 2>/dev/null; echo gunicorn_started" >> "$LOG" 2>&1 || true
   exit 1
 fi
-SIZE=$(ls -la "$DUMP_FILE" | awk '{print $5}')
-echo "[$TS] Archivo dump generado: $SIZE bytes" >> "$LOG"
+SIZE=$(ls -la "$BACKUP_FILE" | awk '{print $5}')
+echo "[$TS] Backup binario generado: $SIZE bytes" >> "$LOG"
 
-echo "[$TS] Copiando dump a .18..." >> "$LOG"
-if ! scp -i "$SSH_KEY" -o BatchMode=yes "$DUMP_FILE" sami@"$DST_HOST":/tmp/aleph70_dump.sql; then
+echo "[$TS] Copiando backup a .18..." >> "$LOG"
+if ! scp -i "$SSH_KEY" -o BatchMode=yes "$BACKUP_FILE" sami@"$DST_HOST":/tmp/aleph70_incoming.db; then
   echo "[$TS] ERROR: Fallo al copiar a .18" >> "$LOG"
   ssh -i "$SSH_KEY" -o BatchMode=yes sami@"$DST_HOST" \
     "echo sami | sudo -S systemctl start gunicorn 2>/dev/null; echo gunicorn_started" >> "$LOG" 2>&1 || true
@@ -48,23 +48,22 @@ fi
 
 echo "[$TS] Restaurando BD en .18..." >> "$LOG"
 if ! ssh -i "$SSH_KEY" -o BatchMode=yes sami@"$DST_HOST" \
-  "rm -f /tmp/aleph70_incoming.db /tmp/aleph70_incoming.db-shm /tmp/aleph70_incoming.db-wal && \
-   sqlite3 /tmp/aleph70_incoming.db < /tmp/aleph70_dump.sql && \
+  "rm -f /tmp/aleph70_incoming.db-shm /tmp/aleph70_incoming.db-wal && \
    sqlite3 /tmp/aleph70_incoming.db 'PRAGMA integrity_check;' && \
    rm -f '$DST_DB-shm' '$DST_DB-wal' && \
    mv -f /tmp/aleph70_incoming.db '$DST_DB' && \
    chmod 664 '$DST_DB' && \
    chgrp www-data '$DST_DB' && \
-   rm -f /tmp/aleph70_dump.sql && \
+   rm -f /tmp/aleph70_incoming.db* && \
    echo DB_REPLACED" >> "$LOG" 2>&1; then
   echo "[$TS] ERROR: Fallo al restaurar BD en .18" >> "$LOG"
   ssh -i "$SSH_KEY" -o BatchMode=yes sami@"$DST_HOST" \
     "echo sami | sudo -S systemctl start gunicorn 2>/dev/null; echo gunicorn_started" >> "$LOG" 2>&1 || true
-  rm -f "$DUMP_FILE"
+  rm -f "$BACKUP_FILE"
   exit 1
 fi
 
-rm -f "$DUMP_FILE"
+rm -f "$BACKUP_FILE"
 
 # 4. Verificar resultado en destino
 ULTIMA=$(ssh -i "$SSH_KEY" -o BatchMode=yes sami@"$DST_HOST" \

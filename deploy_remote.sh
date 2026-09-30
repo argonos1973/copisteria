@@ -111,7 +111,18 @@ remote_exec "echo '$REMOTE_PASS' | sudo -S mkdir -p $REMOTE_DIR"
 remote_exec "echo '$REMOTE_PASS' | sudo -S chown -R $REMOTE_USER:$REMOTE_USER $REMOTE_DIR"
 
 # =============================================================================
-# 3. TRANSFERENCIA DE ARCHIVOS
+# 3. BACKUP PRE-DEPLOY: sincronizar PDFs de .55 -> .18
+# =============================================================================
+log "Backup pre-deploy: sincronizando facturas_proveedores .55 -> .18..."
+sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_HOST" \
+    "mkdir -p /var/www/html/logs && rsync -avz --no-perms --omit-dir-times \
+    /var/www/html/facturas_proveedores/ sami@192.168.1.18:/var/www/html/facturas_proveedores/ \
+    >> /var/www/html/logs/backup_facturas.log 2>&1" \
+    && log "Backup pre-deploy OK" \
+    || log "WARNING: Backup pre-deploy fallo (continuando deploy)"
+
+# =============================================================================
+# 4. TRANSFERENCIA DE ARCHIVOS
 # =============================================================================
 log "Transfiriendo archivos..."
 
@@ -126,6 +137,10 @@ sshpass -p "$REMOTE_PASS" rsync -avz --delete \
     --exclude '*.db' \
     --exclude '*.sqlite' \
     --exclude 'db/*' \
+    --exclude 'facturas_proveedores/*' \
+    --exclude 'factura_e/*' \
+    --exclude 'flask_session/*' \
+    --exclude 'sessions.db' \
     "$LOCAL_DIR/" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
 
 # Transferir explícitamente el script de inicialización SQL (estaba excluido por db/*)
