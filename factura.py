@@ -1584,8 +1584,9 @@ def enviar_factura_email(id_factura, email_destino_override=None, return_dict=Fa
             # CRÍTICO: Redondear IVA por línea a 2 decimales (igual que frontend)
             iva_linea = (subtotal * iva_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             total_linea = (subtotal + iva_linea).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            
-            importe_bruto_dec += subtotal
+
+            # Subtotal redondeado por línea: debe coincidir con GrossAmount del Facturae
+            importe_bruto_dec += subtotal.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             importe_impuestos_dec += iva_linea
             total_dec += total_linea
         
@@ -2139,8 +2140,9 @@ def actualizar_factura(id, data):
             # CRÍTICO: Redondear IVA por línea a 2 decimales (igual que frontend)
             iva_linea = (subtotal * iva_pct / Decimal('100')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             total_linea = (subtotal + iva_linea).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            
-            importe_bruto_dec += subtotal
+
+            # Subtotal redondeado por línea: debe coincidir con GrossAmount del Facturae
+            importe_bruto_dec += subtotal.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             importe_impuestos_dec += iva_linea
             total_dec += total_linea
         
