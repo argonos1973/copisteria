@@ -372,18 +372,14 @@ def ventas_total_mes():
     with get_db_connection() as conn:
         cursor = conn.cursor()
 
-        def obtener_totales(tabla, solo_cobradas=False):
-            if tabla == 'factura' and not solo_cobradas:
-                estado_filter = "estado IN ('C', 'P', 'V')"
-                fecha_expr = FECHA_EFECTIVA_FACTURA
-            else:
-                estado_filter = "estado = 'C'"
-                fecha_expr = FECHA_EFECTIVA_COBRADA if tabla == 'factura' else 'fecha'
+        def obtener_totales(tabla):
+            # Mismo criterio que /api/exportar: fecha de emisión y todos los estados
+            # (las anuladas se compensan con sus rectificativas en el propio mes)
             cursor.execute(
                 f"""
-                SELECT strftime('%m', {fecha_expr}) as mes, COALESCE(SUM(total),0) as total
+                SELECT strftime('%m', fecha) as mes, COALESCE(SUM(total),0) as total
                 FROM {tabla}
-                WHERE {estado_filter} AND strftime('%Y', {fecha_expr}) = ?
+                WHERE strftime('%Y', fecha) = ?
                 GROUP BY mes
                 """,
                 (str(año),)
@@ -393,7 +389,7 @@ def ventas_total_mes():
             return {str(m).zfill(2): datos.get(str(m).zfill(2), 0.0) for m in range(1,13)}
 
         tickets = obtener_totales('tickets')
-        facturas = obtener_totales('factura', solo_cobradas=True)
+        facturas = obtener_totales('factura')
     
     globales = {mes: redondear_importe(tickets[mes] + facturas[mes]) for mes in tickets}
 
