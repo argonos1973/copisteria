@@ -10,7 +10,9 @@
 #   4. Integrity check
 #   5. Commit + push (solo si la BD cambió)
 #
-# Cron (.23): 0 22 * * * /var/www/html/sync_db_from_55.sh
+# Cron (.23): 30 23 * * * /var/www/html/sync_db_from_55.sh
+# NOTA: no programar a las 22:00 — colisiona con Timeshift en .55
+# (rechaza conexiones SSH nuevas durante la copia del sistema)
 # =============================================================================
 
 set -euo pipefail
@@ -35,9 +37,21 @@ sshpass -p "$REMOTE_PASS" ssh -o StrictHostKeyChecking=no "$REMOTE_USER@$REMOTE_
     "sqlite3 '$REMOTE_DB' '.backup $REMOTE_TMP'" >> "$LOG" 2>&1
 echo "[$(TS)] Backup en .55 OK" >> "$LOG"
 
-# 2. Copiar a .23
-sshpass -p "$REMOTE_PASS" scp -o StrictHostKeyChecking=no \
-    "$REMOTE_USER@$REMOTE_HOST:$REMOTE_TMP" "$LOCAL_TMP" >> "$LOG" 2>&1
+# 2. Copiar a .23 (con reintentos: .55 puede rechazar SSH durante Timeshift)
+SCP_OK=0
+for i in 1 2 3 4 5; do
+    if sshpass -p "$REMOTE_PASS" scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
+        "$REMOTE_USER@$REMOTE_HOST:$REMOTE_TMP" "$LOCAL_TMP" >> "$LOG" 2>&1; then
+        SCP_OK=1
+        break
+    fi
+    echo "[$(TS)] scp intento $i/5 fallo, reintento en 30s" >> "$LOG"
+    sleep 30
+done
+if [ "$SCP_OK" != "1" ]; then
+    echo "[$(TS)] ERROR: scp fallo tras 5 intentos" >> "$LOG"
+    exit 1
+fi
 echo "[$(TS)] Copia a .23 OK ($(du -h "$LOCAL_TMP" | cut -f1))" >> "$LOG"
 
 # 3. Restore en la BD local (mantiene inodo/permisos, gestiona WAL correctamente)
