@@ -56,6 +56,9 @@ echo "[$(TS)] Copia a .23 OK ($(du -h "$LOCAL_TMP" | cut -f1))" >> "$LOG"
 
 # 3. Restore en la BD local (mantiene inodo/permisos, gestiona WAL correctamente)
 sqlite3 "$LOCAL_DB" ".restore '$LOCAL_TMP'" >> "$LOG" 2>&1
+# CRÍTICO: .restore escribe en el WAL; sin checkpoint git ve el .db sin cambios
+# y no commitearía nunca. Volcar WAL -> .db antes del git add.
+sqlite3 "$LOCAL_DB" "PRAGMA wal_checkpoint(TRUNCATE);" >> "$LOG" 2>&1
 chown sami:www-data "$LOCAL_DB"
 chmod 664 "$LOCAL_DB"
 rm -f "$LOCAL_TMP"
