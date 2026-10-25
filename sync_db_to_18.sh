@@ -13,6 +13,12 @@ TS=$(date "+%Y-%m-%d %H:%M:%S")
 
 echo "[$TS] Iniciando sincronizacion .55 -> .18" >> "$LOG"
 
+# SAFETY NET: si el script muere a mitad (kill, corte ssh, caida),
+# garantizar que gunicorn en .18 queda levantado. systemctl start es
+# idempotente, asi que es seguro ejecutarlo aunque ya este activo.
+trap 'ssh -i "$SSH_KEY" -o BatchMode=yes -o ConnectTimeout=10 sami@"$DST_HOST" \
+  "echo sami | sudo -S systemctl start gunicorn 2>/dev/null" >> "$LOG" 2>&1 || true' EXIT
+
 # 1. Verificar integridad en origen
 INTEGRIDAD=$(sqlite3 "$SRC_DB" "PRAGMA integrity_check;" 2>&1)
 if [[ "$INTEGRIDAD" != "ok" ]]; then
